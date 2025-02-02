@@ -1,14 +1,18 @@
 import axios from "axios";
+import { debounce } from "lodash";
 
-export const calculateNewPlayerPosition = (event, containerRef, selectedPlayer) => {
+export const calculateNewPlayerPosition = (x, y, containerRef, selectedPlayer) => {
+  console.log(x);
+  console.log(y);
+
   const boundingRect = containerRef.current.getBoundingClientRect();
-  const newX = (event.clientX - boundingRect.left) / boundingRect.width; // Normalize to 0-1
-  const newY = (event.clientY - boundingRect.top) / boundingRect.height; // Normalize to 0-1
-
-  return { x: newX, y: newY };
+  const newPlayerPosition = {
+    x: (x - boundingRect.left) / boundingRect.width,  // Normalize to 0-1
+    y: (y - boundingRect.top) / boundingRect.height,  // Normalize to 0-1
+  };
+  return newPlayerPosition;
 };
 
-// movement.js
 export const updatePlayerPosition = (players, selectedPlayer, newPos, playerSize) => {
   const halfSize = playerSize / 2;
   const maxWidth = 1 - halfSize;
@@ -27,7 +31,7 @@ export const updatePlayerPosition = (players, selectedPlayer, newPos, playerSize
 };
 
 // Function to update player position in the backend
-export const updatePlayerInBackend = async (playerUID, newPos) => {
+const updatePlayerInBackendUnsafe = async (playerUID, newPos) => {
   try {
     // Await the axios PUT request and store the response
     const response = await axios.put(
@@ -42,3 +46,7 @@ export const updatePlayerInBackend = async (playerUID, newPos) => {
     console.error("Error updating player position in backend:", error);
   }
 };
+
+export const updatePlayerInBackend = debounce((playerUID, newPos) => {
+  updatePlayerInBackendUnsafe(playerUID, newPos);
+}, 200);  // 200ms debounce time

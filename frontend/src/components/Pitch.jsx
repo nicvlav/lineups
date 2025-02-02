@@ -11,23 +11,42 @@ const Pitch = ({ players, setPlayers, padding, playerSize = 0.05 }) => {
   // Pitch.jsx
   const handleMouseMove = (event) => {
     if (dragging && selectedPlayer) {
-      const newPos = calculateNewPlayerPosition(event, containerRef, selectedPlayer);
+      if (event.type === 'touchmove') {
+        event.preventDefault();
 
-      // Update the player's position in the frontend state (for immediate visual feedback)
-      setPlayers(updatePlayerPosition(players, selectedPlayer, newPos, playerSize));
+        if (event.touches > 0) {
+          const newPos = calculateNewPlayerPosition(event.touches[0].clientX, event.touches[0].clientY, containerRef, selectedPlayer);
+
+          // requestAnimationFrame(() => {
+            setPlayers(updatePlayerPosition(players, selectedPlayer, newPos, playerSize));
+          // });
+        }
+      } else {
+        const newPos = calculateNewPlayerPosition(event.clientX, event.clientY, containerRef, selectedPlayer);
+        setPlayers(updatePlayerPosition(players, selectedPlayer, newPos, playerSize));
+      }
+
+
     }
   };
 
   // Handle mouse down to begin dragging
   const handleMouseDown = (event, player) => {
+    if (event.type === 'touchstart') {
+      event.preventDefault(); // Prevents page scroll during touch drag
+    }
+
     setDragging(true);
     setSelectedPlayer(player);
   };
 
   // Handle mouse up to stop dragging and send the update to backend
-  const handleMouseUp = () => {
+  const handleMouseUp = (event) => {
     if (selectedPlayer) {
-      // Send updated position to the backend
+      if (event.type === 'touchend') {
+        event.preventDefault(); // Prevents page scroll during touch drag
+      } 
+
       updatePlayerInBackend(selectedPlayer.uid, { x: selectedPlayer.x, y: selectedPlayer.y });
     }
     setDragging(false);
@@ -55,10 +74,17 @@ const Pitch = ({ players, setPlayers, padding, playerSize = 0.05 }) => {
     container.addEventListener("mouseup", handleMouseUp);
     container.addEventListener("mouseleave", handleMouseUp);
 
+    container.addEventListener("touchmove", handleMouseMove);
+    container.addEventListener("touchend", handleMouseUp);
+    container.addEventListener("touchcancel", handleMouseUp);
+
     return () => {
       container.removeEventListener("mousemove", handleMouseMove);
       container.removeEventListener("mouseup", handleMouseUp);
       container.removeEventListener("mouseleave", handleMouseUp);
+      container.removeEventListener("touchmove", handleMouseMove);
+      container.removeEventListener("touchend", handleMouseUp);
+      container.removeEventListener("touchcancel", handleMouseUp);
     };
   }, [dragging, selectedPlayer]);
 
@@ -77,6 +103,7 @@ const Pitch = ({ players, setPlayers, padding, playerSize = 0.05 }) => {
         <div
           key={player.name}
           onMouseDown={(e) => handleMouseDown(e, player)}
+          onTouchStart={(e) => handleMouseDown(e, player)}
           style={{
             position: "absolute",
             left: `${player.x * 100}%`,
