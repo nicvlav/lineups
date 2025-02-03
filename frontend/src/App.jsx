@@ -35,7 +35,7 @@ const App = () => {
         }}>
         <PlayerContainer
           players={players}
-          playerSize={30}
+          playerSize={40}
         />
       </div>
 

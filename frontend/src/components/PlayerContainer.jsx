@@ -4,11 +4,16 @@ import { calculateNewPlayerPosition, updatePlayerPosition, updatePlayerInBackend
 import DraggablePlayer from './DraggablePlayer';
 
 // Helper function to convert player coordinates (0-1) to pixel values for positioning
-const getPlayerPosition = (player, containerWidth, containerHeight) => {
-  const left = player.x * containerWidth; // Convert relative x to pixel value
-  const top = player.y * containerHeight; // Convert relative y to pixel value
+const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) => {
+  const halfSize = playerSize / 2;
+  const maxWidth = containerWidth - halfSize;
+  const maxHeight = containerHeight - halfSize;
+
+  const left = Math.max(halfSize, Math.min(player.x * containerWidth, maxWidth)); // Convert relative x to pixel value
+  const top = Math.max(halfSize, Math.min(player.y * containerHeight, maxHeight)); // Convert relative y to pixel value
 
   return { left, top };
+
 };
 
 const PlayerContainer = ({ players, playerSize = 50 }) => {
@@ -34,19 +39,15 @@ const PlayerContainer = ({ players, playerSize = 50 }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+
   const handleDrop = (player, dropX, dropY) => {
     // Clamp the drop position to container bounds
-    const clampedX = Math.max(0, Math.min(dropX, 1)); // Clamp within [0, 1] for x position
-    const clampedY = Math.max(0, Math.min(dropY, 1)); // Clamp within [0, 1] for y position
-
-    // Directly modify the player's position
-    player.x = clampedX;
-    player.y = clampedY;
+    player.x = Math.max(0, Math.min(dropX, 1)); // Clamp within [0, 1] for x position
+    player.y = Math.max(0, Math.min(dropY, 1)); // Clamp within [0, 1] for y position
 
     // Refresh the player positions
     setPlayerList([...players]); // Trigger re-render by updating the state
   };
-
 
   return (
     <div
@@ -59,25 +60,25 @@ const PlayerContainer = ({ players, playerSize = 50 }) => {
         // Prevent default behavior (e.g., open as link)
         e.preventDefault();
 
-        // Calculate the position where the drop occurred
-        const rect = e.target.getBoundingClientRect();
-        const dropX = (e.clientX - rect.left) / rect.width; // Calculate normalized x
-        const dropY = (e.clientY - rect.top) / rect.height; // Calculate normalized y
-
         // Find the player being dropped
-        const playerName = e.dataTransfer.getData('playerName');
+        const playerUID =  parseInt(e.dataTransfer.getData('playerUID'));
 
-        console.log(playerName);
-        const player = players.find((p) => p.name === playerName);
+        console.log(playerUID);
+        const player = players.find((p) => p.uid === playerUID);
 
         if (player) {
+          // Calculate the position where the drop occurred
+          const rect = e.target.getBoundingClientRect();
+          const dropX = (e.clientX - rect.left) / rect.width; // Calculate normalized x
+          const dropY = (e.clientY - rect.top) / rect.height; // Calculate normalized y
+
           handleDrop(player, dropX, dropY);
         }
       }}
       onDragOver={(e) => e.preventDefault()} // Allow the drop by preventing default
     >
       {players.map((player) => {
-        const { left, top } = getPlayerPosition(player, containerSize.width, containerSize.height);
+        const { left, top } = getPlayerPosition(player, playerSize, containerSize.width, containerSize.height);
 
         return (
           <DraggablePlayer
