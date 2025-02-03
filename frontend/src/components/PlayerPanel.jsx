@@ -1,20 +1,22 @@
-import React, { useState } from 'react';
+import { useDrag } from "react-dnd";
+import DraggablePlayer from './DraggablePanelPlayer';
 
 const PlayerPanel = ({ players }) => {
   return (
-    <div className="player-panel">
-      <h2>Active Players</h2>
-      <ul>
-        {players.map(player => (
-          <li
-            key={player.name}
-            className="player-list-item"
-          >
-            {player.name}
-          </li>
-        ))}
-      </ul>
-
+    <div
+      className="relative bg-green-500"
+      style={{
+        width: "100%",
+        height: "100%",
+        overflowY: "auto",
+        padding: "10px",
+      }}
+    >
+      {players.length > 0 ? (
+        players.map((player) => <DraggablePlayer key={player.id} player={player} />)
+      ) : (
+        <p>No players available</p>
+      )}
     </div>
   );
 };
