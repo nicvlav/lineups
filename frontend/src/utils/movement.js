@@ -2,7 +2,7 @@ import axios from "axios";
 import { debounce } from "lodash";
 
 export const calculateNewPlayerPosition = (x, y, containerRef, selectedPlayer) => {
-  console.log(x);
+  // console.log(x);
   console.log(y);
 
   const boundingRect = containerRef.current.getBoundingClientRect();
