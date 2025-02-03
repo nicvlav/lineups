@@ -18,9 +18,15 @@
   width: 100%;
 }
 
+.player-container {
+  background-color: #70D87E;
+  padding: 20px;
+  border-left: 2px solid #ddd;
+}
+
 .player-panel {
   width: 250px; /* Adjust size of the player panel */
-  background-color: #f4f4f4;
+  background-color: #70D87E;
   padding: 20px;
   border-left: 2px solid #ddd;
 }
@@ -31,7 +37,6 @@
   margin: 5px 0;
   border-radius: 4px;
 }
-
 
 .logo {
   height: 6em;

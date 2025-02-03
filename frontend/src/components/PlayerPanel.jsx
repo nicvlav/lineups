@@ -4,7 +4,7 @@ import DraggablePlayer from './DraggablePanelPlayer';
 const PlayerPanel = ({ players }) => {
   return (
     <div
-      className="relative bg-green-500"
+      className="relative bg-secondary"
       style={{
         width: "100%",
         height: "100%",

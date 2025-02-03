@@ -87,8 +87,15 @@ button:focus-visible {
   --color-avocado-500: oklch(0.84 0.18 117.33);
   --color-avocado-600: oklch(0.53 0.12 118.34);
 
-  --color-primary: oklch(54.61% 0.2152 262.88);
-  --color-background: oklch(98.42% 0.0034 247.86);
+  --color-cust-1: oklch(79.78% 0.1588 146.79);
+  --color-cust-2: oklch(79.78% 0.1588 146.79);
+  --color-cust-3: oklch(79.78% 0.1588 146.79);
+  --color-cust-4: oklch(79.78% 0.1588 146.79);
+
+  --color-primary: oklch(79.78% 0.1588 146.79);
+  --color-secondary: oklch(67.24% 0.1073 261.03);
+  --color-tertiary: oklch(69.43% 0.1696 332.48);
+  --color-quaternary: oklch(78.29% 0.095 80.48);
 
   --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
   --ease-snappy: cubic-bezier(0.2, 0, 0, 1);

@@ -21,6 +21,7 @@ const App = () => {
   return (
     <DndProvider backend={HTML5Backend}>
       <div
+        className="relative bg-quaternary"
         style={{
           display: "flex",
           flexDirection: "row",
@@ -30,7 +31,7 @@ const App = () => {
           width: "100vw",
           overflow: "auto",
           padding: "2px",
-          backgroundColor: "#f0f0f0",
+          backgroundColor: "#9C7E63",
         }}
       >
         {/* Multiple instances of PlayerArea */}

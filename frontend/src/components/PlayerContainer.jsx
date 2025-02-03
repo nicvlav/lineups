@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-
+import { useDrop } from 'react-dnd';
 import { calculateNewPlayerPosition, updatePlayerPosition, updatePlayerInBackend } from "./../utils/movement"; // Import the utility
 import DraggablePlayer from './DraggablePlayer';
 
@@ -53,7 +53,7 @@ const PlayerContainer = ({ players, playerSize = 50 }) => {
 
   return (
     <div
-      className="relative bg-green-500"
+      className="relative bg-primary"
       ref={containerRef}
       style={{
         width: '100%',
@@ -67,6 +67,8 @@ const PlayerContainer = ({ players, playerSize = 50 }) => {
         const playerUID = parseInt(e.dataTransfer.getData('playerUID'));
         const player = players.find((p) => p.uid === playerUID);
 
+        console.log(playerUID);
+
         if (player) {
           // Calculate the position where the drop occurred
           const rect = containerRef.current.getBoundingClientRect();
@@ -76,6 +78,7 @@ const PlayerContainer = ({ players, playerSize = 50 }) => {
           handleDrop(player, dropX, dropY);
         }
       }}
+      
       onDragOver={(e) => e.preventDefault()} // Allow the drop by preventing default
     >
       {players.map((player) => {
