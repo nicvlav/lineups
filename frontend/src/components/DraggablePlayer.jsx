@@ -3,7 +3,7 @@ import React from 'react';
 const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop }) => {
   const handleDragStart = (e) => {
     // Store player name in dataTransfer object for use in the drop target
-    e.dataTransfer.setData('playerUID', player.uid);
+    e.dataTransfer.setData('playerUID', String(player.uid));
     console.log(player);
     
   };

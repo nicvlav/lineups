@@ -1,6 +1,7 @@
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import PlayerContainer from "./components/PlayerContainer";
+import PlayerPanel from "./components/PlayerPanel";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
@@ -25,7 +26,7 @@ const App = () => {
           height: "100vh",  // Take full viewport height
           width: "100vw",   // Take full viewport width
           display: "flex",  // Enable Flexbox layout
-          flexDirection: "column",  // Stack the content vertically
+          flexDirection: "row",  // Stack the content vertically
           justifyContent: "center",  // Center the content vertically
           alignItems: "center",  // Center horizontally
           textAlign: "center",  // Center the header text
@@ -36,6 +37,9 @@ const App = () => {
         <PlayerContainer
           players={players}
           playerSize={40}
+        />
+        <PlayerPanel
+          players={players}
         />
       </div>
 

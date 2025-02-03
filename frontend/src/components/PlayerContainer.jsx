@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 import { calculateNewPlayerPosition, updatePlayerPosition, updatePlayerInBackend } from "./../utils/movement"; // Import the utility
 import DraggablePlayer from './DraggablePlayer';
@@ -17,6 +17,8 @@ const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) 
 };
 
 const PlayerContainer = ({ players, playerSize = 50 }) => {
+  const containerRef = useRef(null);
+
   const [playerList, setPlayerList] = useState(players);
 
   // Set initial positions of players when container size changes
@@ -52,6 +54,7 @@ const PlayerContainer = ({ players, playerSize = 50 }) => {
   return (
     <div
       className="relative bg-green-500"
+      ref={containerRef}
       style={{
         width: '100%',
         height: '100%',
@@ -61,14 +64,12 @@ const PlayerContainer = ({ players, playerSize = 50 }) => {
         e.preventDefault();
 
         // Find the player being dropped
-        const playerUID =  parseInt(e.dataTransfer.getData('playerUID'));
-
-        console.log(playerUID);
+        const playerUID = parseInt(e.dataTransfer.getData('playerUID'));
         const player = players.find((p) => p.uid === playerUID);
 
         if (player) {
           // Calculate the position where the drop occurred
-          const rect = e.target.getBoundingClientRect();
+          const rect = containerRef.current.getBoundingClientRect();
           const dropX = (e.clientX - rect.left) / rect.width; // Calculate normalized x
           const dropY = (e.clientY - rect.top) / rect.height; // Calculate normalized y
 
@@ -78,7 +79,8 @@ const PlayerContainer = ({ players, playerSize = 50 }) => {
       onDragOver={(e) => e.preventDefault()} // Allow the drop by preventing default
     >
       {players.map((player) => {
-        const { left, top } = getPlayerPosition(player, playerSize, containerSize.width, containerSize.height);
+        const rect = containerRef.current.getBoundingClientRect();
+        const { left, top } = getPlayerPosition(player, playerSize, rect.width, rect.height);
 
         return (
           <DraggablePlayer
