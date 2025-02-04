@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useDrop } from 'react-dnd';
-import { calculateNewPlayerPosition, updatePlayerPosition, updatePlayerInBackend } from "./../utils/movement"; // Import the utility
 import DraggablePlayer from './DraggablePlayer';
 
 // Helper function to convert player coordinates (0-1) to pixel values for positioning
