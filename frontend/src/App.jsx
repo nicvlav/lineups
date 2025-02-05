@@ -2,6 +2,7 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { PlayersProvider } from "./components/global/PlayersContext";
 import PlayerList from "./components/players/PlayerList";
+import CurrentGame from "./components/game/CurrentGame";
 import React from "react";
 
 const App = () => {
@@ -23,6 +24,7 @@ const App = () => {
           }}
         >
           <PlayerList />
+          <CurrentGame />
         </div>
       </DndProvider>
     </PlayersProvider>

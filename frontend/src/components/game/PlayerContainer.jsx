@@ -81,8 +81,9 @@ const PlayerContainer = ({ players, playerSize = 50 }) => {
       onDragOver={(e) => e.preventDefault()} // Allow the drop by preventing default
     >
       {players.map((player) => {
-        const rect = containerRef.current.getBoundingClientRect();
-        const { left, top } = getPlayerPosition(player, playerSize, rect.width, rect.height);
+        const w = containerRef ? containerRef.current.getBoundingClientRect().width : 0;
+        const h = containerRef ? containerRef.current.getBoundingClientRect().height : 0;
+        const { left, top } = getPlayerPosition(player, playerSize, w, h);
 
         return (
           <DraggablePlayer
