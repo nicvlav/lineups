@@ -6,6 +6,8 @@ export const PlayersContext = createContext();
 
 export const PlayersProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
+    const [gameData, setGame] = useState({});
+    const [loading, setLoading] = useState(true);
 
     // Function to fetch players
     const fetchPlayers = async () => {
@@ -20,10 +22,6 @@ export const PlayersProvider = ({ children }) => {
     // Function to add a new player
     const addPlayer = async (n) => {
         if (!n.trim()) return;
-
-        console.log(n);
-        console.log(typeof n);
-
         try {
             // First, add the player with the provided name
             const response = await axios.post("http://localhost:8000/players",  // The URL for your POST endpoint
@@ -44,19 +42,34 @@ export const PlayersProvider = ({ children }) => {
         try {
             // The DELETE request now sends the uid in the URL, not in the body
             await axios.delete(`http://localhost:8000/players/${uid}`);
-            setPlayers((prevPlayers) => prevPlayers.filter((player) => player.uid !== uid));
+
+            // After adding the player, fetch the updated players list
+            await fetchPlayers();
         } catch (error) {
             console.error("Error deleting player:", error);
+        }
+    };
+
+    const fetchGame = async () => {
+        try {
+            setLoading(true);
+            const response = await axios.get("http://localhost:8000/game");
+            setGame(response.data);
+        } catch (error) {
+            console.error("Error fetching game data:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
     // Fetch players on mount
     useEffect(() => {
         fetchPlayers();
+        fetchGame();
     }, []);
 
     return (
-        <PlayersContext.Provider value={{ players, setPlayers, fetchPlayers, addPlayer, deletePlayer }}>
+        <PlayersContext.Provider value={{ players, setPlayers, gameData, setGame, fetchPlayers, addPlayer, deletePlayer, fetchGame, loading }}>
             {children}
         </PlayersContext.Provider>
     );

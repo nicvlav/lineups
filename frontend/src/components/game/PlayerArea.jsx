@@ -2,7 +2,7 @@ import PlayerContainer from "./PlayerContainer";
 import PlayerPanel from "./PlayerPanel";
 import React, { useState } from "react";
 
-const PlayerArea = ({ players }) => {
+const PlayerArea = ({ team, players }) => {
   return (
     <div
       className="relative bg-primary"
@@ -18,6 +18,7 @@ const PlayerArea = ({ players }) => {
         backgroundColor: "#f0f0f0",
       }}
     >
+      <div>{team}</div>
       <div
         style={{
           width: "100%", // Adjust width if necessary

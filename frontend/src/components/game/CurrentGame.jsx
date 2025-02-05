@@ -4,7 +4,11 @@ import React, { useState, useContext, useRef, useEffect } from "react";
 import { PlayersContext } from "../global/PlayersContext";
 
 const CurrentGame = () => {
-  const { players, addPlayer, deletePlayer } = useContext(PlayersContext);
+  const { players, gameData, addPlayer, deletePlayer, loading } = useContext(PlayersContext);
+
+
+
+  if (loading || !gameData) return <div>Loading game data...</div>;
 
   return (
     <div
@@ -21,7 +25,7 @@ const CurrentGame = () => {
         backgroundColor: "#9C7E63",
       }}
     >
-      <PlayerArea team="team1" players={players} />
+      <PlayerArea team="team1" players={gameData.teams.team1.players} />
       {/* <PlayerArea team="team2" players={gameData.teams.team2} /> */}
     </div>
   );

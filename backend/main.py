@@ -8,6 +8,8 @@ app = FastAPI()
 
 PLAYERS_FILE = "players.json"
 
+GAME_FILE = "game.json"
+
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
@@ -32,6 +34,26 @@ def load_players():
 def save_players(players):
     with open(PLAYERS_FILE, "w") as file:
         json.dump(players, file, indent=4)
+
+
+def load_game():
+    with open(GAME_FILE, "r") as file:
+        return json.load(file)
+
+def save_game(data):
+    with open(GAME_FILE, "w") as file:
+        json.dump(data, file, indent=4)
+
+def assign_zone(y):
+    if y < 0.1:
+        return "keeper"
+    elif y < 0.4:
+        return "defender"
+    elif y < 0.7:
+        return "midfielder"
+    else:
+        return "attacker"
+
 
 @app.get("/players")
 def get_players():
@@ -94,19 +116,37 @@ def update_player_position(uid: str, x: float, y: float):
     except Exception as e:
         return {"error": f"An error occurred: {str(e)}"}
     
-# # Directly call the API within the .py file
-# def test_add_player():
-#     response = client.post("/players", json={"name": "Dummy Player"})
-#     if response.status_code == 200:
-#         print("Player added successfully:", response.json())
-#     else:
-#         print("Failed to add player:", response.status_code)
 
-# def test_get_players():
-#     response = client.get("/players")
-#     if response.status_code == 200:
-#         print("Player added successfully:", response.json())
-#     else:
-#         print("Failed to add player:", response.status_code)
 
-# test_add_player()
+@app.get("/game")
+def get_game():
+    return load_game()
+
+@app.post("/add_player")
+def add_player(team: str, uid: int, x: float, y: float):
+    game = load_game()
+    if team not in game["teams"]:
+        raise HTTPException(status_code=400, detail="Invalid team")
+
+    zone = assign_zone(y)
+    game["teams"][team]["players"].append({"uid": uid, "x": x, "y": y, "zone": zone})
+    save_game(game)
+    return {"message": "Player added", "team": team, "uid": uid}
+
+@app.post("/update_player")
+def update_player(team: str, uid: int, x: float, y: float):
+    game = load_game()
+    for player in game["teams"][team]["players"]:
+        if player["uid"] == uid:
+            player["x"], player["y"] = x, y
+            player["zone"] = assign_zone(y)
+            save_game(game)
+            return {"message": "Player updated", "uid": uid}
+    raise HTTPException(status_code=404, detail="Player not found")
+
+@app.delete("/remove_player")
+def remove_player(team: str, uid: int):
+    game = load_game()
+    game["teams"][team]["players"] = [p for p in game["teams"][team]["players"] if p["uid"] != uid]
+    save_game(game)
+    return {"message": "Player removed", "uid": uid}

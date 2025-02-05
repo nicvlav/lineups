@@ -1,18 +1,15 @@
 import React from 'react';
+import { useDrag } from "react-dnd";
 
-const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop }) => {
-  const handleDragStart = (e) => {
-    // Store player name in dataTransfer object for use in the drop target
-    e.dataTransfer.setData('playerUID', String(player.uid));
-    console.log(player);
-
-  };
+const DraggablePlayer = ({ player,  playerSize, initialLeft, initialTop }) => {
+  const [, drag] = useDrag(() => ({
+    type: "PLAYER",
+    item: { uid: player.uid },
+  }));
 
   return (
-    <div
-      draggable
-      onDragStart={handleDragStart}
-      className="relative bg-tertiary"
+    <div ref={drag}
+      className="p-2  cursor-pointer relative bg-tertiary"
       style={{
         position: 'absolute',
         left: `${initialLeft}px`,
@@ -23,11 +20,11 @@ const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop }) => {
         cursor: 'pointer',
         borderRadius: '50%',
         transform: 'translate(-50%, -50%)', // Center the player
-      }}
-    >
-      {player.name}
+      }}>
+      {/* {player.uid} */}
     </div>
   );
 };
+
 
 export default DraggablePlayer;

@@ -1,11 +1,12 @@
 import React, { useState, useContext, useRef, useEffect } from "react";
 import { PlayersContext } from "../global/PlayersContext";
+import { useDrag } from "react-dnd";
 
 const PlayerList = () => {
     const { players, addPlayer, deletePlayer } = useContext(PlayersContext);
     const [newPlayerName, setNewPlayerName] = useState("");
     const [isAdding, setIsAdding] = useState(false);
-    const [sortOrder, setSortOrder] = useState("asc"); // State for sorting
+    const [sortOrder, setSortOrder] = useState("dsc"); // State for sorting
 
     const inputRef = useRef(null);
 
@@ -52,7 +53,7 @@ const PlayerList = () => {
     }, [isAdding]);
 
     return (
-        <div className="p-4 w-80 bg-secondary shadow-lg rounded-lg">
+        <div className="p-4 bg-secondary shadow-lg rounded-lg">
             <h2 className="text-lg font-bold mb-2">Players</h2>
 
             {/* Sort Options */}
@@ -61,7 +62,7 @@ const PlayerList = () => {
                 <select
                     value={sortOrder}
                     onChange={handleSortChange}
-                    className="p-2 border rounded  bg-secondary shadow"
+                    className="p-2 border rounded bg-secondary shadow"
                 >
                     <option value="asc">Ascending</option>
                     <option value="desc">Descending</option>
@@ -71,7 +72,7 @@ const PlayerList = () => {
             <ul>
                 {sortedPlayers.map((player) => (
                     <li key={player.uid} className="p-2 border-b flex justify-between items-center">
-                        <span>{player.name}</span>
+                        <DraggablePlayer key={player.uid} player={player} />
                         <button
                             onClick={() => handleDeletePlayer(player.uid)}
                             className="text-red-500 ml-2"
@@ -105,5 +106,20 @@ const PlayerList = () => {
         </div>
     );
 };
+
+
+const DraggablePlayer = ({ player }) => {
+    const [, drag] = useDrag(() => ({
+        type: "PLAYER",
+        item: { uid: player.uid, name: player.name },
+    }));
+
+    return (
+        <li ref={drag} className="p-2  cursor-pointer">
+            {player.name}
+        </li>
+    );
+};
+
 
 export default PlayerList;

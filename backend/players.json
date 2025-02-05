@@ -1,18 +1,14 @@
 [
     {
-        "uid": 0,
         "name": "Alice",
-        "x": 0.6256410316602719,
-        "y": 0.3522708082509889
+        "uid": "c0f18706-2477-465f-bccd-f11ad7d64bb4"
     },
     {
-        "uid": 1,
         "name": "Bob",
-        "x": 0.025,
-        "y": 0.025
+        "uid": "ea978db8-afef-474d-a4ed-c11ca35ea2ae"
     },
     {
-        "name": "sadsd",
-        "uid": "467e3f5b-de65-40aa-abb2-bb5fbb8ce7e8"
+        "name": "Chris",
+        "uid": "a83967ee-7cd0-45a4-b542-2200d55aaa28"
     }
 ]

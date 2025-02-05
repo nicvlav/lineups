@@ -6,15 +6,18 @@ const DraggablePanelPlayer = ({ player, playerSize, initialLeft, initialTop }) =
     e.dataTransfer.setData('playerUID', String(player.uid));
   };
 
+  console.log()
+
   return (
     <div
       draggable
       onDragStart={handleDragStart}
       style={{
         cursor: 'pointer',
+        colour: "#9C7E63"
       }}
     >
-      {player.name}
+      {player.uid}
     </div>
   );
 };

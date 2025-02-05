@@ -1,0 +1,15 @@
+{
+    "teams": {
+      "team1": {
+        "players": [
+          { "uid": "c0f18706-2477-465f-bccd-f11ad7d64bb4", "x": 0.5, "y": 0.4, "zone": "defender" }
+        ]
+      },
+      "team2": {
+        "players": [
+
+        ]
+      }
+    }
+  }
+  

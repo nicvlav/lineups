@@ -2,92 +2,81 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useDrop } from 'react-dnd';
 import DraggablePlayer from './DraggablePlayer';
 
-// Helper function to convert player coordinates (0-1) to pixel values for positioning
+const mergeRefs = (...refs) => (el) => {
+  refs.forEach((ref) => {
+    if (typeof ref === 'function') ref(el);
+    else if (ref) ref.current = el;
+  });
+};
+
 const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) => {
   const halfSize = playerSize / 2;
   const maxWidth = containerWidth - halfSize;
   const maxHeight = containerHeight - halfSize;
 
-  const left = Math.max(halfSize, Math.min(player.x * containerWidth, maxWidth)); // Convert relative x to pixel value
-  const top = Math.max(halfSize, Math.min(player.y * containerHeight, maxHeight)); // Convert relative y to pixel value
+  const left = Math.max(halfSize, Math.min(player.x * containerWidth, maxWidth));
+  const top = Math.max(halfSize, Math.min(player.y * containerHeight, maxHeight));
 
   return { left, top };
-
 };
 
 const PlayerContainer = ({ players, playerSize = 50 }) => {
   const containerRef = useRef(null);
-
   const [playerList, setPlayerList] = useState(players);
-
-  // Set initial positions of players when container size changes
-  const [containerSize, setContainerSize] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight, // Set default height or calculate dynamically
-  });
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    const handleResize = () => {
-      setContainerSize({
-        width: window.innerWidth,
-        height: window.innerHeight, // Set the new height based on container's height (or dynamic calculation)
-      });
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setContainerSize({ width: rect.width, height: rect.height });
+      }
     };
 
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial size calculation
+    window.addEventListener('resize', updateSize);
+    updateSize(); // Initial size calculation
 
-    return () => window.removeEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', updateSize);
   }, []);
 
+  // useDrop hook to handle dropped players
+  const [, drop] = useDrop(() => ({
+    accept: 'PLAYER',
+    drop: (item, monitor) => {
+      if (!containerRef.current) return;
+ 
+      const rect = containerRef.current.getBoundingClientRect();
+      const { x, y } = monitor.getSourceClientOffset(); // Get the drop coordinates
+      const dropX = (x - rect.left) / rect.width;
+      const dropY = (y - rect.top) / rect.height;
 
-  const handleDrop = (player, dropX, dropY) => {
-    // Clamp the drop position to container bounds
-    player.x = Math.max(0, Math.min(dropX, 1)); // Clamp within [0, 1] for x position
-    player.y = Math.max(0, Math.min(dropY, 1)); // Clamp within [0, 1] for y position
+      handleDrop(item.uid, dropX, dropY);
+    },
+  }));
 
-    // Refresh the player positions
-    setPlayerList([...players]); // Trigger re-render by updating the state
+  const handleDrop = (playerUID, dropX, dropY) => {
+    setPlayerList((prevPlayers) =>
+      prevPlayers.map((player) =>
+        player.uid === playerUID ? { ...player, x: dropX, y: dropY } : player
+      )
+    );
   };
 
   return (
     <div
+    ref={mergeRefs(drop, containerRef)} // Attach useDrop hook to container
       className="relative bg-primary"
-      ref={containerRef}
       style={{
         width: '100%',
         height: '100%',
       }}
-      onDrop={(e) => {
-        // Prevent default behavior (e.g., open as link)
-        e.preventDefault();
-
-        // Find the player being dropped
-        const playerUID = parseInt(e.dataTransfer.getData('playerUID'));
-        const player = players.find((p) => p.uid === playerUID);
-
-        console.log(playerUID);
-
-        if (player) {
-          // Calculate the position where the drop occurred
-          const rect = containerRef.current.getBoundingClientRect();
-          const dropX = (e.clientX - rect.left) / rect.width; // Calculate normalized x
-          const dropY = (e.clientY - rect.top) / rect.height; // Calculate normalized y
-
-          handleDrop(player, dropX, dropY);
-        }
-      }}
-      
-      onDragOver={(e) => e.preventDefault()} // Allow the drop by preventing default
     >
-      {players.map((player) => {
-        const w = containerRef ? containerRef.current.getBoundingClientRect().width : 0;
-        const h = containerRef ? containerRef.current.getBoundingClientRect().height : 0;
-        const { left, top } = getPlayerPosition(player, playerSize, w, h);
+      {playerList.map((player) => {
+        const { left, top } = getPlayerPosition(player, playerSize, containerSize.width, containerSize.height);
 
         return (
           <DraggablePlayer
-            key={player.name}
+            key={player.uid}
             player={player}
             playerSize={playerSize}
             initialLeft={left}
