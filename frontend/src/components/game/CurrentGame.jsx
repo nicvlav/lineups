@@ -12,7 +12,7 @@ const CurrentGame = () => {
 
   return (
     <div
-      className="relative bg-quaternary"
+      className="relative bg-secondary"
       style={{
         display: "flex",
         flexDirection: "row",
@@ -22,11 +22,12 @@ const CurrentGame = () => {
         width: "100vw",
         overflow: "auto",
         padding: "2px",
-        backgroundColor: "#9C7E63",
+        gap: "2px",
+        // backgroundColor: "#9C7E63",
       }}
     >
-      <PlayerArea team="team1" players={gameData.teams.team1.players} />
-      {/* <PlayerArea team="team2" players={gameData.teams.team2} /> */}
+      <PlayerArea team="Team 1" players={gameData.teams.team1.players} />
+      <PlayerArea team="Team 2" players={gameData.teams.team2.players} />
     </div>
   );
 };

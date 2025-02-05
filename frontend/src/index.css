@@ -92,10 +92,10 @@ button:focus-visible {
   --color-cust-3: oklch(79.78% 0.1588 146.79);
   --color-cust-4: oklch(79.78% 0.1588 146.79);
 
-  --color-primary: oklch(79.78% 0.1588 146.79);
-  --color-secondary: oklch(67.24% 0.1073 261.03);
-  --color-tertiary: oklch(69.43% 0.1696 332.48);
-  --color-quaternary: oklch(78.29% 0.095 80.48);
+  --color-primary: oklch(62.88% 0.0669 139.29);
+  --color-secondary: oklch(86.07% 0.0676 122.51);
+  --color-tertiary: oklch(67.71% 0.0604 177.6);
+  --color-quaternary: oklch(50.01% 0.0277 8.45);
 
   --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
   --ease-snappy: cubic-bezier(0.2, 0, 0, 1);

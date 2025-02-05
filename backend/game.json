@@ -7,7 +7,7 @@
       },
       "team2": {
         "players": [
-
+          { "uid": "ea978db8-afef-474d-a4ed-c11ca35ea2ae", "x": 0.5, "y": 0.9, "zone": "defender" }
         ]
       }
     }

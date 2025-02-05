@@ -5,7 +5,7 @@ import React, { useState } from "react";
 const PlayerArea = ({ team, players }) => {
   return (
     <div
-      className="relative bg-primary"
+      className="relative bg-tertiary"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -18,11 +18,23 @@ const PlayerArea = ({ team, players }) => {
         backgroundColor: "#f0f0f0",
       }}
     >
-      <div>{team}</div>
+      <div
+      className="relative bg-tertiary"
+        style={{
+          width: "100%", // Adjust width if necessary
+          height: "40px", // Ensuring container doesn't take full height
+          // border: "2px solid black", // Debugging: See if it's rendering
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {team}
+      </div>
       <div
         style={{
           width: "100%", // Adjust width if necessary
-          height: "65vh", // Ensuring container doesn't take full height
+          height: "100vh", // Ensuring container doesn't take full height
           // border: "2px solid black", // Debugging: See if it's rendering
           display: "flex",
           justifyContent: "center",
@@ -32,16 +44,16 @@ const PlayerArea = ({ team, players }) => {
         <PlayerContainer players={players} />
       </div>
 
-      <div
+      {/* <div
         style={{
           width: "100%",
-          height: "30vh", // Ensures PlayerPanel has space to render
+          height: "45vh", // Ensures PlayerPanel has space to render
           // border: "2px solid red", // Debugging: See if it's rendering
           overflowY: "auto",
         }}
       >
         <PlayerPanel players={players} />
-      </div>
+      </div> */}
     </div>
   );
 };

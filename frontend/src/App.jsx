@@ -15,11 +15,11 @@ const App = () => {
             display: "flex",
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "center",
+            // justifyContent: "center",
             height: "100vh",
             width: "100vw",
             overflow: "auto",
-            padding: "2px",
+            padding: "4px",
             backgroundColor: "#9C7E63",
           }}
         >

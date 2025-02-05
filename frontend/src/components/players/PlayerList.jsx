@@ -6,7 +6,7 @@ const PlayerList = () => {
     const { players, addPlayer, deletePlayer } = useContext(PlayersContext);
     const [newPlayerName, setNewPlayerName] = useState("");
     const [isAdding, setIsAdding] = useState(false);
-    const [sortOrder, setSortOrder] = useState("dsc"); // State for sorting
+    const [sortOrder, setSortOrder] = useState("desc"); // State for sorting
 
     const inputRef = useRef(null);
 
@@ -39,10 +39,11 @@ const PlayerList = () => {
         const nameA = a.name.toLowerCase();
         const nameB = b.name.toLowerCase();
 
-        if (sortOrder === "asc") {
-            return nameA > nameB ? -1 : nameA < nameB ? 1 : 0; // Ascending 
-        } else {
+        if (sortOrder === "desc") {
             return nameA < nameB ? -1 : nameA > nameB ? 1 : 0; // Descending
+        } else {
+            return nameA > nameB ? -1 : nameA < nameB ? 1 : 0; // Ascending 
+
         }
     });
 
@@ -53,7 +54,7 @@ const PlayerList = () => {
     }, [isAdding]);
 
     return (
-        <div className="p-4 bg-secondary shadow-lg rounded-lg">
+        <div className="p-4 bg-quaternary shadow-lg rounded-lg">
             <h2 className="text-lg font-bold mb-2">Players</h2>
 
             {/* Sort Options */}
@@ -62,10 +63,10 @@ const PlayerList = () => {
                 <select
                     value={sortOrder}
                     onChange={handleSortChange}
-                    className="p-2 border rounded bg-secondary shadow"
+                    className="p-2 border rounded bg-quaternary shadow"
                 >
-                    <option value="asc">Ascending</option>
                     <option value="desc">Descending</option>
+                    <option value="asc">Ascending</option>
                 </select>
             </div>
 

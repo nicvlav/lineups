@@ -9,7 +9,7 @@ const DraggablePlayer = ({ player,  playerSize, initialLeft, initialTop }) => {
 
   return (
     <div ref={drag}
-      className="p-2  cursor-pointer relative bg-tertiary"
+      className="p-2  cursor-pointer relative bg-quaternary"
       style={{
         position: 'absolute',
         left: `${initialLeft}px`,
