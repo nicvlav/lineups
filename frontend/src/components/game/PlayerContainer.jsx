@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useDrop } from 'react-dnd';
 import DraggablePlayer from './DraggablePlayer';
+import { PlayersContext } from "../global/PlayersContext";
 
 const mergeRefs = (...refs) => (el) => {
   refs.forEach((ref) => {
@@ -20,10 +21,11 @@ const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) 
   return { left, top };
 };
 
-const PlayerContainer = ({ players, playerSize = 50 }) => {
+const PlayerContainer = ({ team, players, playerSize = 50 }) => {
   const containerRef = useRef(null);
   const [playerList, setPlayerList] = useState(players);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const { addPlayerToGame, updateGamePlayer } = useContext(PlayersContext);
 
   useEffect(() => {
     const updateSize = () => {
@@ -44,27 +46,33 @@ const PlayerContainer = ({ players, playerSize = 50 }) => {
     accept: 'PLAYER',
     drop: (item, monitor) => {
       if (!containerRef.current) return;
- 
+
+      const halfSize = playerSize / 2;
+
       const rect = containerRef.current.getBoundingClientRect();
+
       const { x, y } = monitor.getSourceClientOffset(); // Get the drop coordinates
-      const dropX = (x - rect.left) / rect.width;
-      const dropY = (y - rect.top) / rect.height;
+      const dropX = (x - rect.left + halfSize) / rect.width;
+      const dropY = (y - rect.top + halfSize) / rect.height;
 
       handleDrop(item.uid, dropX, dropY);
     },
   }));
 
   const handleDrop = (playerUID, dropX, dropY) => {
-    setPlayerList((prevPlayers) =>
-      prevPlayers.map((player) =>
-        player.uid === playerUID ? { ...player, x: dropX, y: dropY } : player
-      )
-    );
+    if (players.find((p) => p.uid === playerUID)) {
+      console.log("update");
+      updateGamePlayer(team, playerUID, dropX, dropY);
+    } else {
+      addPlayerToGame(team, playerUID, dropX, dropY);
+    }
+
+
   };
 
   return (
     <div
-    ref={mergeRefs(drop, containerRef)} // Attach useDrop hook to container
+      ref={mergeRefs(drop, containerRef)} // Attach useDrop hook to container
       className="relative bg-primary"
       style={{
         width: '100%',

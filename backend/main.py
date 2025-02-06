@@ -24,6 +24,11 @@ class Player(BaseModel):
     name: str = ""
     uid: str = ""
 
+class PlayerInGame(BaseModel):
+    uid: str = ""
+    x: float = 0.5
+    y: float = 0.5
+
 def load_players():
     try:
         with open(PLAYERS_FILE, "r") as file:
@@ -43,6 +48,15 @@ def load_game():
 def save_game(data):
     with open(GAME_FILE, "w") as file:
         json.dump(data, file, indent=4)
+
+def remove_from_game(game, team, uid):
+    if team not in game["teams"]:
+        return False
+    
+    print(game["teams"][team]["players"])
+    print(uid)
+    game["teams"][team]["players"] = [p for p in game["teams"][team]["players"] if p["uid"] != uid]
+    return True
 
 def assign_zone(y):
     if y < 0.1:
@@ -81,67 +95,63 @@ def delete_player(uid: str):
         return {"detail": "Player deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error: {e}")
-    
-@app.put("/players/{uid}")
-def update_player_position(uid: str, x: float, y: float):
-    try:
-        # Open players.json and load the data
-        with open("players.json", "r") as file:
-            data = json.load(file)
-
-        # Create a dictionary for faster lookup
-        player_dict = {p['uid']: p for p in data}
-
-        # Check if the player exists by UID
-        if uid not in player_dict:
-            return {"error": f"Player with UID {uid} not found"}
-
-        # Update the player's position
-        player_dict[uid]["x"] = x
-        player_dict[uid]["y"] = y
-
-        # Convert the dictionary back to a list
-        updated_data = list(player_dict.values())
-
-        print("start write")
-
-        # Save the updated player data to the file
-        with open("players.json", "w") as file:
-            json.dump(updated_data, file, indent=4)
-
-        print("end write")
-
-        return {"message": f"Player {uid} updated", "player": {"x": x, "y": y}}
-
-    except Exception as e:
-        return {"error": f"An error occurred: {str(e)}"}
-    
 
 
 @app.get("/game")
 def get_game():
     return load_game()
 
-@app.post("/add_player")
-def add_player(team: str, uid: int, x: float, y: float):
+@app.delete("/game/{team}")
+def remove_player(team: str, player: PlayerInGame):
     game = load_game()
+
+    if not remove_from_game(game, team, player.uid):
+        raise HTTPException(status_code=400, detail="Invalid team")
+    
+    save_game(game)
+    return {"message": "Player removed", "uid": player.uid}
+
+@app.post("/game/{team}")
+def add_player_to_game(team : str, player: PlayerInGame):
+    players = load_players()
+    print(players)
+    print(player)
+    if not any(p["uid"] == player.uid for p in players):
+        raise HTTPException(status_code=400, detail="Invalid uid")
+        
+    game = load_game()
+    print("player")
+
     if team not in game["teams"]:
         raise HTTPException(status_code=400, detail="Invalid team")
+    
+    if any(p["uid"] == player.uid for p in game["teams"][team]["players"]):
+        raise HTTPException(status_code=400, detail="Already Added")
 
-    zone = assign_zone(y)
-    game["teams"][team]["players"].append({"uid": uid, "x": x, "y": y, "zone": zone})
+    print (team)
+    if team == "A":
+        remove_from_game(game, "B", player.uid)
+    elif team == "B":
+       remove_from_game(game, "A", player.uid)
+    
+    player_dict = player.model_dump()
+    game["teams"][team]["players"].append(player_dict)
     save_game(game)
-    return {"message": "Player added", "team": team, "uid": uid}
+    return {"message": "Player added", "team": team, "uid": player.uid}
 
-@app.post("/update_player")
-def update_player(team: str, uid: int, x: float, y: float):
+@app.put("/game/{team}")
+def update_player_in_game(team : str, updatePlayer: PlayerInGame):
+    print("player")
     game = load_game()
+
+    if team not in game["teams"]:
+        raise HTTPException(status_code=400, detail="Invalid team")
+    
     for player in game["teams"][team]["players"]:
-        if player["uid"] == uid:
-            player["x"], player["y"] = x, y
-            player["zone"] = assign_zone(y)
+        if player["uid"] == updatePlayer.uid:
+            player["x"], player["y"] = updatePlayer.x, updatePlayer.y
             save_game(game)
-            return {"message": "Player updated", "uid": uid}
+            return {"message": "Player updated", "uid": updatePlayer.uid}
     raise HTTPException(status_code=404, detail="Player not found")
 
 @app.delete("/remove_player")
@@ -150,3 +160,4 @@ def remove_player(team: str, uid: int):
     game["teams"][team]["players"] = [p for p in game["teams"][team]["players"] if p["uid"] != uid]
     save_game(game)
     return {"message": "Player removed", "uid": uid}
+

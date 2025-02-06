@@ -1,5 +1,4 @@
 import PlayerContainer from "./PlayerContainer";
-import PlayerPanel from "./PlayerPanel";
 import React, { useState } from "react";
 
 const PlayerArea = ({ team, players }) => {
@@ -29,7 +28,7 @@ const PlayerArea = ({ team, players }) => {
           alignItems: "center",
         }}
       >
-        {team}
+        Team {team}
       </div>
       <div
         style={{
@@ -41,19 +40,8 @@ const PlayerArea = ({ team, players }) => {
           alignItems: "center",
         }}
       >
-        <PlayerContainer players={players} />
+        <PlayerContainer team = {team} players={players} />
       </div>
-
-      {/* <div
-        style={{
-          width: "100%",
-          height: "45vh", // Ensures PlayerPanel has space to render
-          // border: "2px solid red", // Debugging: See if it's rendering
-          overflowY: "auto",
-        }}
-      >
-        <PlayerPanel players={players} />
-      </div> */}
     </div>
   );
 };

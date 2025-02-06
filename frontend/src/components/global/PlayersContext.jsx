@@ -20,12 +20,12 @@ export const PlayersProvider = ({ children }) => {
     };
 
     // Function to add a new player
-    const addPlayer = async (n) => {
-        if (!n.trim()) return;
+    const addPlayer = async (newPlayerName) => {
+        if (!newPlayerName.trim()) return;
         try {
             // First, add the player with the provided name
             const response = await axios.post("http://localhost:8000/players",  // The URL for your POST endpoint
-                { name: n }  // Pass the name in the request body as a JSON object
+                { name: newPlayerName }  // Pass the name in the request body as a JSON object
             );
             console.log('Player added:', response.data);
 
@@ -54,6 +54,7 @@ export const PlayersProvider = ({ children }) => {
         try {
             setLoading(true);
             const response = await axios.get("http://localhost:8000/game");
+            console.log(response.data);
             setGame(response.data);
         } catch (error) {
             console.error("Error fetching game data:", error);
@@ -62,6 +63,54 @@ export const PlayersProvider = ({ children }) => {
         }
     };
 
+    const addPlayerToGame = async (placedTeam, newUid, dropX, dropY) => {
+        try {
+            // First, add the player with the provided name
+            const response = await axios.post(`http://localhost:8000/game/${placedTeam}`,  // The URL for your POST endpoint
+                {
+                    uid: newUid,
+                    x: dropX,
+                    y: dropY
+
+                }  // Pass the name in the request body as a JSON object
+            );
+            console.log('Player added:', response.data);
+
+            // After adding the player, fetch the updated players list
+            await fetchGame();
+
+        } catch (error) {
+            console.error("Error adding player:", error);
+        }
+    };
+
+    const updateGamePlayer = async (placedTeam, newUid, dropX, dropY) => {
+        try {
+            // First, add the player with the provided name
+            const response = await axios.put(`http://localhost:8000/game/${placedTeam}`,  // The URL for your POST endpoint
+                {
+                    uid: newUid,
+                    x: dropX,
+                    y: dropY
+
+                }  // Pass the name in the request body as a JSON object
+            );
+            console.log('Player updating:', response.data);
+
+            // After adding the player, fetch the updated players list
+            await fetchGame();
+
+        } catch (error) {
+            console.error("Error updating player:", error);
+        }
+    };
+
+    const findNameByUid = (uid) => {
+        const player = players.find((p) => p.uid === uid);
+        return player ? player.name : 'Unknown';
+    };
+
+
     // Fetch players on mount
     useEffect(() => {
         fetchPlayers();
@@ -69,7 +118,7 @@ export const PlayersProvider = ({ children }) => {
     }, []);
 
     return (
-        <PlayersContext.Provider value={{ players, setPlayers, gameData, setGame, fetchPlayers, addPlayer, deletePlayer, fetchGame, loading }}>
+        <PlayersContext.Provider value={{ players, setPlayers, gameData, setGame, fetchPlayers, addPlayer, deletePlayer, fetchGame, addPlayerToGame, updateGamePlayer, loading, findNameByUid }}>
             {children}
         </PlayersContext.Provider>
     );

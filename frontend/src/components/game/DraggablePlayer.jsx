@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useState, useContext, useRef, useEffect } from "react";
 import { useDrag } from "react-dnd";
+import { PlayersContext } from "../global/PlayersContext";
 
-const DraggablePlayer = ({ player,  playerSize, initialLeft, initialTop }) => {
+const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop }) => {
+  const { findNameByUid } = useContext(PlayersContext);
+
+  const name = findNameByUid(player.uid)
+
   const [, drag] = useDrag(() => ({
     type: "PLAYER",
     item: { uid: player.uid },
@@ -21,7 +26,7 @@ const DraggablePlayer = ({ player,  playerSize, initialLeft, initialTop }) => {
         borderRadius: '50%',
         transform: 'translate(-50%, -50%)', // Center the player
       }}>
-      {/* {player.uid} */}
+      {name}
     </div>
   );
 };
