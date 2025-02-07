@@ -9,7 +9,7 @@ export const PlayersProvider = ({ children }) => {
     const [gameData, setGame] = useState({});
     const [loading, setLoading] = useState(true);
 
-    // Function to fetch players
+    // Fetch players from API
     const fetchPlayers = async () => {
         try {
             const response = await axios.get("http://localhost:8000/players");
@@ -19,42 +19,33 @@ export const PlayersProvider = ({ children }) => {
         }
     };
 
-    // Function to add a new player
+    // Add new player
     const addPlayer = async (newPlayerName) => {
         if (!newPlayerName.trim()) return;
         try {
-            // First, add the player with the provided name
-            const response = await axios.post("http://localhost:8000/players",  // The URL for your POST endpoint
-                { name: newPlayerName }  // Pass the name in the request body as a JSON object
-            );
-            console.log('Player added:', response.data);
-
-            // After adding the player, fetch the updated players list
+            const response = await axios.post("http://localhost:8000/players", { name: newPlayerName });
+            console.log("Player added:", response.data);
             await fetchPlayers();
-
         } catch (error) {
             console.error("Error adding player:", error);
         }
     };
 
+    // Delete player
     const deletePlayer = async (uid) => {
-        console.log(uid);
         try {
-            // The DELETE request now sends the uid in the URL, not in the body
             await axios.delete(`http://localhost:8000/players/${uid}`);
-
-            // After adding the player, fetch the updated players list
             await fetchPlayers();
         } catch (error) {
             console.error("Error deleting player:", error);
         }
     };
 
+    // Fetch game data
     const fetchGame = async () => {
         try {
             setLoading(true);
             const response = await axios.get("http://localhost:8000/game");
-            console.log(response.data);
             setGame(response.data);
         } catch (error) {
             console.error("Error fetching game data:", error);
@@ -63,62 +54,49 @@ export const PlayersProvider = ({ children }) => {
         }
     };
 
+    // Add player to game
     const addPlayerToGame = async (placedTeam, newUid, dropX, dropY) => {
+        console.log("hello ",{placedTeam}, newUid);
         try {
-            // First, add the player with the provided name
-            const response = await axios.post(`http://localhost:8000/game/${placedTeam}`,  // The URL for your POST endpoint
-                {
-                    uid: newUid,
-                    x: dropX,
-                    y: dropY
-
-                }  // Pass the name in the request body as a JSON object
-            );
-            console.log('Player added:', response.data);
-
-            // After adding the player, fetch the updated players list
+            await axios.post(`http://localhost:8000/game/${placedTeam}`, { base_player_uid: newUid, x: dropX, y: dropY });
             await fetchGame();
-
         } catch (error) {
             console.error("Error adding player:", error);
         }
     };
 
+    // Update player position in game
     const updateGamePlayer = async (placedTeam, newUid, dropX, dropY) => {
         try {
-            // First, add the player with the provided name
-            const response = await axios.put(`http://localhost:8000/game/${placedTeam}`,  // The URL for your POST endpoint
-                {
-                    uid: newUid,
-                    x: dropX,
-                    y: dropY
-
-                }  // Pass the name in the request body as a JSON object
-            );
-            console.log('Player updating:', response.data);
-
-            // After adding the player, fetch the updated players list
-            await fetchGame();
-
+            const response = await axios.put(`http://localhost:8000/game/${placedTeam}`, { base_player_uid: newUid, x: dropX, y: dropY });
         } catch (error) {
             console.error("Error updating player:", error);
         }
     };
 
+    // Find player name by UID
     const findNameByUid = (uid) => {
         const player = players.find((p) => p.uid === uid);
-        return player ? player.name : 'Unknown';
+        return player ? player.name : "Unknown";
     };
 
+    // Get players filtered by team
+    const getTeamPlayers = (team) => {
+        if (!gameData || !Array.isArray(gameData)) {
+            console.warn("Invalid gameData format:", gameData);
+            return [];
+        }
+    
+        return gameData.filter(player => player.team === team);
+    };
 
-    // Fetch players on mount
     useEffect(() => {
         fetchPlayers();
         fetchGame();
     }, []);
 
     return (
-        <PlayersContext.Provider value={{ players, setPlayers, gameData, setGame, fetchPlayers, addPlayer, deletePlayer, fetchGame, addPlayerToGame, updateGamePlayer, loading, findNameByUid }}>
+        <PlayersContext.Provider value={{ players, gameData, addPlayer, deletePlayer, fetchGame, addPlayerToGame, updateGamePlayer, loading, findNameByUid, getTeamPlayers }}>
             {children}
         </PlayersContext.Provider>
     );

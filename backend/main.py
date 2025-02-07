@@ -1,14 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import json
-import uuid
+import sqlite3
+from uuid import uuid4
 
 app = FastAPI()
-
-PLAYERS_FILE = "players.json"
-
-GAME_FILE = "game.json"
 
 # Enable CORS
 app.add_middleware(
@@ -19,145 +15,143 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load player data
+DB_FILE = "game.db"
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def initialize_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Create the players table (master list of all players)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS players (
+            uid TEXT PRIMARY KEY,
+            name TEXT NOT NULL
+        )
+    """)
+
+    # Create the game table (tracks player positions and teams)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS game (
+            game_uid TEXT PRIMARY KEY,       -- Unique ID for each player entry in the game
+            base_player_uid TEXT,   -- Foreign key referencing players(uid)
+            team TEXT NOT NULL,
+            x REAL DEFAULT 0.5,
+            y REAL DEFAULT 0.5,
+            FOREIGN KEY (base_player_uid) REFERENCES players(uid) ON DELETE CASCADE
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+initialize_db()
+
 class Player(BaseModel):
-    name: str = ""
-    uid: str = ""
+    name: str
 
 class PlayerInGame(BaseModel):
-    uid: str = ""
+    game_uid: str = ""
+    base_player_uid: str = ""
+    team: str = ""
     x: float = 0.5
     y: float = 0.5
 
-def load_players():
-    try:
-        with open(PLAYERS_FILE, "r") as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return []  # Return empty list if file does not exist
-    
-def save_players(players):
-    with open(PLAYERS_FILE, "w") as file:
-        json.dump(players, file, indent=4)
-
-
-def load_game():
-    with open(GAME_FILE, "r") as file:
-        return json.load(file)
-
-def save_game(data):
-    with open(GAME_FILE, "w") as file:
-        json.dump(data, file, indent=4)
-
-def remove_from_game(game, team, uid):
-    if team not in game["teams"]:
-        return False
-    
-    print(game["teams"][team]["players"])
-    print(uid)
-    game["teams"][team]["players"] = [p for p in game["teams"][team]["players"] if p["uid"] != uid]
-    return True
-
-def assign_zone(y):
-    if y < 0.1:
-        return "keeper"
-    elif y < 0.4:
-        return "defender"
-    elif y < 0.7:
-        return "midfielder"
-    else:
-        return "attacker"
-
-
 @app.get("/players")
 def get_players():
-    return  load_players()
+    conn = get_db_connection()
+    players = conn.execute("SELECT * FROM players").fetchall()
+    conn.close()
+    return [dict(player) for player in players]
 
 @app.post("/players")
 def add_player(player: Player):
-    try:
-        players = load_players()
-        player_dict = player.model_dump()
-        player_dict["uid"] = str(uuid.uuid4())  # Assign generated UUID
+    conn = get_db_connection()
+    uid = str(uuid4())
+    conn.execute("INSERT INTO players (uid, name) VALUES (?, ?)", (uid, player.name))
+    conn.commit()
+    conn.close()
+    return {"uid": uid, "name": player.name}
 
-        players.append(player_dict)
-        save_players(players)
-        return player_dict
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error: {e}")
-    
 @app.delete("/players/{uid}")
 def delete_player(uid: str):
-    try:
-        players = load_players()
-        players = [player for player in players if player["uid"] != uid]
-        save_players(players)
-        return {"detail": "Player deleted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error: {e}")
-
+    conn = get_db_connection()
+    conn.execute("DELETE FROM players WHERE uid = ?", (uid,))
+    conn.commit()
+    conn.close()
+    return {"detail": "Player deleted successfully"}
 
 @app.get("/game")
 def get_game():
-    return load_game()
-
-@app.delete("/game/{team}")
-def remove_player(team: str, player: PlayerInGame):
-    game = load_game()
-
-    if not remove_from_game(game, team, player.uid):
-        raise HTTPException(status_code=400, detail="Invalid team")
-    
-    save_game(game)
-    return {"message": "Player removed", "uid": player.uid}
+    conn = get_db_connection()
+    game = conn.execute("SELECT * FROM game").fetchall()
+    conn.close()
+    return [dict(entry) for entry in game]
 
 @app.post("/game/{team}")
-def add_player_to_game(team : str, player: PlayerInGame):
-    players = load_players()
-    print(players)
-    print(player)
-    if not any(p["uid"] == player.uid for p in players):
-        raise HTTPException(status_code=400, detail="Invalid uid")
-        
-    game = load_game()
-    print("player")
+def add_player_to_game(team: str, player: PlayerInGame):
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-    if team not in game["teams"]:
-        raise HTTPException(status_code=400, detail="Invalid team")
-    
-    if any(p["uid"] == player.uid for p in game["teams"][team]["players"]):
-        raise HTTPException(status_code=400, detail="Already Added")
+    # Ensure the player exists in the main players table
+    player_exists = cursor.execute("SELECT 1 FROM players WHERE uid = ?", (player.base_player_uid,)).fetchone()
+    if not player_exists:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Invalid UID")
 
-    print (team)
-    if team == "A":
-        remove_from_game(game, "B", player.uid)
-    elif team == "B":
-       remove_from_game(game, "A", player.uid)
-    
-    player_dict = player.model_dump()
-    game["teams"][team]["players"].append(player_dict)
-    save_game(game)
-    return {"message": "Player added", "team": team, "uid": player.uid}
+    # Check if player is already in the game
+    existing_entry = cursor.execute("SELECT team FROM game WHERE base_player_uid = ?", (player.base_player_uid,)).fetchone()
+
+    if existing_entry:
+        # If the player exists, update the team if different
+        cursor.execute("UPDATE game SET team = ?, x = ?, y = ? WHERE base_player_uid = ?", (team, player.x, player.y, player.base_player_uid))
+        print("found!")
+    else:
+        # Otherwise, insert the player into the game
+        cursor.execute("INSERT INTO game (game_uid, base_player_uid, team, x, y) VALUES (?, ?, ?, ?, ?)", (str(uuid4()), player.base_player_uid, team, player.x, player.y))
+        print("not found!")
+
+    conn.commit()
+    conn.close()
+    return {"message": "Player added or updated", "team": team, "base_player_uid": player.base_player_uid}
 
 @app.put("/game/{team}")
-def update_player_in_game(team : str, updatePlayer: PlayerInGame):
-    print("player")
-    game = load_game()
+def update_player_in_game(team: str, player: PlayerInGame):
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-    if team not in game["teams"]:
-        raise HTTPException(status_code=400, detail="Invalid team")
-    
-    for player in game["teams"][team]["players"]:
-        if player["uid"] == updatePlayer.uid:
-            player["x"], player["y"] = updatePlayer.x, updatePlayer.y
-            save_game(game)
-            return {"message": "Player updated", "uid": updatePlayer.uid}
-    raise HTTPException(status_code=404, detail="Player not found")
+    # Ensure the player exists in the game
+    existing_entry = cursor.execute("SELECT 1 FROM game WHERE base_player_uid = ?", (player.base_player_uid,)).fetchone()
 
-@app.delete("/remove_player")
-def remove_player(team: str, uid: int):
-    game = load_game()
-    game["teams"][team]["players"] = [p for p in game["teams"][team]["players"] if p["uid"] != uid]
-    save_game(game)
+    print(player)
+
+    if not existing_entry:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Player not found in game")
+
+    # Update the player's position
+    cursor.execute("UPDATE game SET x = ?, y = ? WHERE base_player_uid = ?", (player.x, player.y, player.base_player_uid))
+
+    conn.commit()
+    conn.close()
+    return {"message": "Player position updated", "team": team, "uid": player.base_player_uid}
+
+@app.delete("/game/{uid}")
+def remove_player_from_game(uid: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Delete the player from the game table
+    cursor.execute("DELETE FROM game WHERE uid = ?", (uid,))
+
+    if cursor.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Player not found in game")
+
+    conn.commit()
+    conn.close()
     return {"message": "Player removed", "uid": uid}
-

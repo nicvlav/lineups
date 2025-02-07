@@ -70,9 +70,9 @@ const PlayerList = () => {
                 </select>
             </div>
 
-            <ul>
+            <div>
                 {sortedPlayers.map((player) => (
-                    <li key={player.uid} className="p-2 border-b flex justify-between items-center">
+                    <div key={player.uid} className="p-2 border-b flex justify-between items-center">
                         <DraggablePlayer key={player.uid} player={player} />
                         <button
                             onClick={() => handleDeletePlayer(player.uid)}
@@ -80,9 +80,9 @@ const PlayerList = () => {
                         >
                             X
                         </button>
-                    </li>
+                    </div>
                 ))}
-            </ul>
+            </div>
 
             {isAdding ? (
                 <div className="flex mt-2">
@@ -116,9 +116,9 @@ const DraggablePlayer = ({ player }) => {
     }));
 
     return (
-        <li ref={drag} className="p-2  cursor-pointer">
+        <div ref={drag} className="p-2  cursor-pointer">
             {player.name}
-        </li>
+        </div>
     );
 };
 

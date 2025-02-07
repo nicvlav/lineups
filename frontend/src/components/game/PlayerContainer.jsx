@@ -55,19 +55,22 @@ const PlayerContainer = ({ team, players, playerSize = 50 }) => {
       const dropX = (x - rect.left + halfSize) / rect.width;
       const dropY = (y - rect.top + halfSize) / rect.height;
 
+      console.log(item);
+
       handleDrop(item.uid, dropX, dropY);
     },
   }));
 
   const handleDrop = (playerUID, dropX, dropY) => {
+    console.log(team);
+    console.log(playerUID);
+
     if (players.find((p) => p.uid === playerUID)) {
-      console.log("update");
       updateGamePlayer(team, playerUID, dropX, dropY);
+      setPlayerList(updateGamePlayer(team, playerUID, dropX, dropY));
     } else {
       addPlayerToGame(team, playerUID, dropX, dropY);
     }
-
-
   };
 
   return (
@@ -84,7 +87,7 @@ const PlayerContainer = ({ team, players, playerSize = 50 }) => {
 
         return (
           <DraggablePlayer
-            key={player.uid}
+            key={player.base_player_uid}
             player={player}
             playerSize={playerSize}
             initialLeft={left}

@@ -5,11 +5,11 @@ import { PlayersContext } from "../global/PlayersContext";
 const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop }) => {
   const { findNameByUid } = useContext(PlayersContext);
 
-  const name = findNameByUid(player.uid)
+  const name = findNameByUid(player.base_player_uid);
 
   const [, drag] = useDrag(() => ({
     type: "PLAYER",
-    item: { uid: player.uid },
+    item: { uid: player.base_player_uid },
   }));
 
   return (
