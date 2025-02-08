@@ -1,11 +1,10 @@
 import React, { useState, useContext } from "react";
 import { useDrag } from "react-dnd";
 import PlayerIcon from "../../assets/shirt.svg";
-import { PlayersContext } from "../global/PlayersContext";
+
 import PlayerDialog from "./PlayerDialog"; // New component for search dialog
 
-const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop, onSwitchPlayer }) => {
-  const { players } = useContext(PlayersContext);
+const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop, onSwitchPlayer, onSwitchToGuest, onAddAndSwitchToPlayer }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const [, drag] = useDrag(() => ({
@@ -67,9 +66,10 @@ const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop, onSwitch
       {isDialogOpen && (
         <PlayerDialog
           player={player}
-          players={players}
           onClose={() => setIsDialogOpen(false)}
-          onSelect={onSwitchPlayer}
+          onSelectExistingPlayer={onSwitchPlayer}
+          onSelectGuestPlayer={onSwitchToGuest}
+          onAddAndSelectNewPlayer={onAddAndSwitchToPlayer}
         />
       )}
     </>

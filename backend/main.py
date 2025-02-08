@@ -156,10 +156,12 @@ def get_players():
 @app.post("/players")
 def add_player(player: Player):
     conn = get_db_connection()
-    conn.execute("INSERT INTO players (name) VALUES (?)", (player.name,))
+    r = conn.execute("INSERT INTO players (name) VALUES (?)", (player.name,))
+    print("added ")
+    print(player)
     conn.commit()
     conn.close()
-    return {"name": player.name}
+    return {"id": r.lastrowid}
 
 @app.delete("/players/{uid}")
 def delete_player(uid: int):
@@ -200,8 +202,11 @@ def add_player_to_game(team: str, player: PlayerInGame):
         player_data = cursor.execute("SELECT name FROM players WHERE uid = ?", (player.base_player_uid,)).fetchone()
 
         if (not player.base_player_uid == None) and (player_data):
-            cursor.execute("INSERT INTO game (base_player_uid, name, team, x, y) VALUES (?, ? , ?, ?, ?)", (player.base_player_uid, player_data[0], team, player.x, player.y,))
-            print("not found!")
+            player_in_game = cursor.execute("SELECT team FROM game WHERE base_player_uid = ?", (player.base_player_uid,)).fetchone()
+            if player_in_game:
+                cursor.execute("UPDATE game SET team = ?, x = ?, y = ? WHERE base_player_uid = ?", (team, player.x, player.y, player.base_player_uid ))
+            else:
+                cursor.execute("INSERT INTO game (base_player_uid, name, team, x, y) VALUES (?, ? , ?, ?, ?)", (player.base_player_uid, player_data[0], team, player.x, player.y,))
         else:
             cursor.execute("INSERT INTO game (name, team, x, y) VALUES (?, ?, ? , ?, ?, ?)", (player.name, team, player.x, player.y))
 
@@ -244,6 +249,8 @@ def switch_player_in_game(team: str, player: PlayerInGame):
     
     player_data = cursor.execute("SELECT name FROM players WHERE uid = ?", (player.base_player_uid,)).fetchone()
 
+    print(player)
+
     # Step 2: If base_player_uid is not None and exists in the players table
     if player.base_player_uid and  player_data:
         # Check if another game entry exists with this base_player_uid
@@ -258,7 +265,7 @@ def switch_player_in_game(team: str, player: PlayerInGame):
                         (player.base_player_uid, player_data[0], team, player.id))
     else:
         # Case 4: If base_player_uid is None, set base_player_uid to NULL
-        cursor.execute("UPDATE game SET base_player_uid = NULL WHERE id = ?", (player.id,))
+        cursor.execute("UPDATE game SET base_player_uid = ?, name = ? WHERE id = ?", (None, player.name, player.id,))
 
     conn.commit()
     conn.close()

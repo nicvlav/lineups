@@ -24,7 +24,7 @@ const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) 
 const PlayerContainer = ({ team }) => {
   const containerRef = useRef(null);
 
-  const { addGamePlayerToGame, addRealPlayerToGame, updateGamePlayer, getTeamPlayers, switchGamePlayer } = useContext(PlayersContext);
+  const { addGamePlayerToGame, addRealPlayerToGame, updateGamePlayer, getTeamPlayers, switchGamePlayer, switchGamePlayerToGuest, addAndSwitchGamePlayer } = useContext(PlayersContext);
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [playerSize, setPlayerSize] = useState(80);
@@ -101,9 +101,24 @@ const PlayerContainer = ({ team }) => {
   };
 
   const handleSwitchPlayer = (playerId, newPlayer) => {
-    console.log(newPlayer);
     switchGamePlayer(team, playerId, newPlayer.uid);
-      setPlayers(getTeamPlayers(team)); // Refresh player list
+    setPlayers(getTeamPlayers(team)); // Refresh player list
+    // setGamePlayers((prev) =>
+    //   prev.map((p) => (p.id === playerId ? { ...p, ...newPlayer } : p))
+    // );
+  };
+
+  const handleSwitchPlayerToGuest = (playerId, newPlayerName) => {
+    switchGamePlayerToGuest(team, playerId, newPlayerName);
+    // setPlayers(getTeamPlayers(team)); // Refresh player list
+    // setGamePlayers((prev) =>
+    //   prev.map((p) => (p.id === playerId ? { ...p, ...newPlayer } : p))
+    // );
+  };
+
+  const handleAddAndSwitchPlayerToGuest = (playerId, newPlayerName) => {
+    addAndSwitchGamePlayer(team, playerId, newPlayerName);
+    // setPlayers(getTeamPlayers(team)); // Refresh player list
     // setGamePlayers((prev) =>
     //   prev.map((p) => (p.id === playerId ? { ...p, ...newPlayer } : p))
     // );
@@ -128,7 +143,10 @@ const PlayerContainer = ({ team }) => {
             playerSize={80}
             initialLeft={left}
             initialTop={top}
+
             onSwitchPlayer={handleSwitchPlayer}
+            onSwitchToGuest={handleSwitchPlayerToGuest}
+            onAddAndSwitchToPlayer={handleAddAndSwitchPlayerToGuest}
           />
         );
       })}
