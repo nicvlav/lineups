@@ -22,11 +22,66 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def populate_formations():
+    conn = get_db_connection()
+    conn.execute("DELETE FROM formations")
+    cursor = conn.cursor()
+
+    formations = [
+        # 5-player formations
+        ("2-2", 5, [(0.5, 1.0, "GK"), (0.3, 0.5, "DF"), (0.7, 0.5, "DF"), (0.4, 0.2, "FW"), (0.6, 0.2, "FW")]),
+        
+        # 6-player formations
+        ("2-2-1", 6, [(0.5, 1.0, "GK"), (0.3, 0.6, "DF"), (0.7, 0.6, "DF"), (0.4, 0.4, "MF"), (0.6, 0.4, "MF"), (0.5, 0.2, "FW")]),
+        
+        # 7-player formations
+        ("2-3-1", 7, [(0.5, 1.0, "GK"), (0.2, 0.6, "DF"), (0.8, 0.6, "DF"),
+                      (0.3, 0.4, "MF"), (0.5, 0.4, "MF"), (0.7, 0.4, "MF"), (0.5, 0.2, "FW")]),
+        
+        # 8-player formations
+        ("3-3-1", 8, [(0.5, 1.0, "GK"), (0.2, 0.6, "DF"), (0.5, 0.6, "DF"), (0.8, 0.6, "DF"),
+                      (0.3, 0.4, "MF"), (0.5, 0.4, "MF"), (0.7, 0.4, "MF"), (0.5, 0.2, "FW")]),
+        
+        # 9-player formations
+        ("3-3-2", 9, [(0.5, 1.0, "GK"), (0.2, 0.7, "DF"), (0.5, 0.7, "DF"), (0.8, 0.7, "DF"),
+                      (0.3, 0.5, "MF"), (0.5, 0.5, "MF"), (0.7, 0.5, "MF"), (0.4, 0.2, "FW"), (0.6, 0.2, "FW")]),
+        
+        # 10-player formations
+        ("4-3-2", 10, [(0.5, 1.0, "GK"), (0.1, 0.7, "DF"), (0.4, 0.7, "DF"), (0.6, 0.7, "DF"), (0.9, 0.7, "DF"),
+                       (0.3, 0.5, "MF"), (0.5, 0.5, "MF"), (0.7, 0.5, "MF"), (0.4, 0.2, "FW"), (0.6, 0.2, "FW")]),
+        
+        # 11-player formations
+        ("4-4-2", 11, [(0.5, 1.0, "GK"), (0.1, 0.7, "LB"), (0.3, 0.7, "CB1"), (0.7, 0.7, "CB2"), (0.9, 0.7, "RB"),
+                       (0.2, 0.5, "LM"), (0.4, 0.5, "CM1"), (0.6, 0.5, "CM2"), (0.8, 0.5, "RM"),
+                       (0.35, 0.2, "ST1"), (0.65, 0.2, "ST2")]),
+        ("3-5-2", 11, [(0.5, 1.0, "GK"), (0.2, 0.7, "CB"), (0.5, 0.7, "CB"), (0.8, 0.7, "CB"),
+                       (0.1, 0.5, "LM"), (0.3, 0.5, "CM1"), (0.5, 0.5, "CM2"), (0.7, 0.5, "CM3"), (0.9, 0.5, "RM"),
+                       (0.35, 0.2, "ST1"), (0.65, 0.2, "ST2")]),
+        
+        # 12-player formations
+        ("4-4-3", 12, [(0.5, 1.0, "GK"), (0.1, 0.7, "LB"), (0.3, 0.7, "CB1"), (0.7, 0.7, "CB2"), (0.9, 0.7, "RB"),
+                       (0.2, 0.5, "LM"), (0.4, 0.5, "CM1"), (0.6, 0.5, "CM2"), (0.8, 0.5, "RM"),
+                       (0.25, 0.2, "LW"), (0.5, 0.2, "ST"), (0.75, 0.2, "RW")])
+    ]
+
+    for name, num_players, positions in formations:
+        cursor.execute("INSERT INTO formations (name, num_players) VALUES (?, ?)", (name, num_players))
+        formation_id = cursor.lastrowid  # Get the last inserted formation ID
+        
+        for x, y, position_name in positions:
+            cursor.execute("INSERT INTO formation_positions (formation_id, x, y, position_name) VALUES (?, ?, ?, ?)",
+                           (formation_id, x, y, position_name))
+
+    conn.commit()
+    conn.close()
+
+
+
 def initialize_db():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Create the players table (master list of all players)
+    # Create tables
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS players (
             uid TEXT PRIMARY KEY,
@@ -34,11 +89,11 @@ def initialize_db():
         )
     """)
 
-    # Create the game table (tracks player positions and teams)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS game (
-            game_uid TEXT PRIMARY KEY,       -- Unique ID for each player entry in the game
-            base_player_uid TEXT,   -- Foreign key referencing players(uid)
+            game_uid TEXT PRIMARY KEY,
+            base_player_uid TEXT DEFAULT NULL,
+            name TEXT NOT NULL,
             team TEXT NOT NULL,
             x REAL DEFAULT 0.5,
             y REAL DEFAULT 0.5,
@@ -46,8 +101,33 @@ def initialize_db():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS formations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            num_players INTEGER NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS formation_positions (
+            formation_id INTEGER,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            position_name TEXT,
+            FOREIGN KEY (formation_id) REFERENCES formations(id) ON DELETE CASCADE
+        )
+    """)
+
     conn.commit()
     conn.close()
+
+    # Populate default formations
+    populate_formations()
+
+# Run the initialization
+initialize_db()
+
 
 initialize_db()
 
@@ -57,6 +137,7 @@ class Player(BaseModel):
 class PlayerInGame(BaseModel):
     game_uid: str = ""
     base_player_uid: str = ""
+    name: str = "Guest"
     team: str = ""
     x: float = 0.5
     y: float = 0.5
@@ -92,16 +173,26 @@ def get_game():
     conn.close()
     return [dict(entry) for entry in game]
 
+@app.post("/game/clear")
+def clear_game():
+    conn = get_db_connection()
+    conn.execute("DELETE FROM game")
+    conn.close()
+    return {"detail": "Game cleared successfully"}
+
 @app.post("/game/{team}")
 def add_player_to_game(team: str, player: PlayerInGame):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Ensure the player exists in the main players table
-    player_exists = cursor.execute("SELECT 1 FROM players WHERE uid = ?", (player.base_player_uid,)).fetchone()
-    if not player_exists:
+     # Check if the player exists in the main players table
+    player_data = cursor.execute("SELECT name FROM players WHERE uid = ?", (player.base_player_uid,)).fetchone()
+
+    if not player_data:
         conn.close()
         raise HTTPException(status_code=400, detail="Invalid UID")
+    
+    player_name = player_data[0] if player_data else player.guest_name if player.guest_name else "Guest"
 
     # Check if player is already in the game
     existing_entry = cursor.execute("SELECT team FROM game WHERE base_player_uid = ?", (player.base_player_uid,)).fetchone()
@@ -112,7 +203,7 @@ def add_player_to_game(team: str, player: PlayerInGame):
         print("found!")
     else:
         # Otherwise, insert the player into the game
-        cursor.execute("INSERT INTO game (game_uid, base_player_uid, team, x, y) VALUES (?, ?, ?, ?, ?)", (str(uuid4()), player.base_player_uid, team, player.x, player.y))
+        cursor.execute("INSERT INTO game (game_uid, base_player_uid, name, team, x, y) VALUES (?, ?, ? , ?, ?, ?)", (str(uuid4()), player.base_player_uid, player_name, team, player.x, player.y))
         print("not found!")
 
     conn.commit()
@@ -143,6 +234,7 @@ def update_player_in_game(team: str, player: PlayerInGame):
 @app.delete("/game/{uid}")
 def remove_player_from_game(uid: str):
     conn = get_db_connection()
+    conn.execute("DELETE FROM game")
     cursor = conn.cursor()
 
     # Delete the player from the game table
@@ -155,3 +247,35 @@ def remove_player_from_game(uid: str):
     conn.commit()
     conn.close()
     return {"message": "Player removed", "uid": uid}
+
+@app.get("/formations")
+def get_formations():
+    conn = get_db_connection()
+    formations = conn.execute("SELECT * FROM formations").fetchall()
+    conn.close()
+    return [dict(f) for f in formations]
+
+@app.post("/game/formation/{formation_id}")
+def apply_formation(formation_id: int):
+    print(formation_id)
+    conn = get_db_connection()
+    conn.execute("DELETE FROM game")
+    
+    positions = conn.execute(
+        "SELECT x, y, position_name FROM formation_positions WHERE formation_id = ?", 
+        (formation_id,)
+    ).fetchall()
+
+    for pos in positions:
+        conn.execute(
+            "INSERT INTO game (team, base_player_uid, name, x, y) VALUES (?, ?, ?, ?, ?)",
+            ("A", None, pos["position_name"] or "Guest", pos["x"], pos["y"])
+        )
+        conn.execute(
+            "INSERT INTO game (team, base_player_uid, name, x, y) VALUES (?, ?, ?, ?, ?)",
+            ("B", None, pos["position_name"] or "Guest", pos["x"], pos["y"])
+        )
+
+    conn.commit()
+    conn.close()
+    return {"message": "Formation applied", "formation_id": formation_id}

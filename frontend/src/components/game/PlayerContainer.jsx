@@ -55,16 +55,11 @@ const PlayerContainer = ({ team, players, playerSize = 50 }) => {
       const dropX = (x - rect.left + halfSize) / rect.width;
       const dropY = (y - rect.top + halfSize) / rect.height;
 
-      console.log(item);
-
       handleDrop(item.uid, dropX, dropY);
     },
   }));
 
   const handleDrop = (playerUID, dropX, dropY) => {
-    console.log(team);
-    console.log(playerUID);
-
     if (players.find((p) => p.uid === playerUID)) {
       updateGamePlayer(team, playerUID, dropX, dropY);
       setPlayerList(updateGamePlayer(team, playerUID, dropX, dropY));

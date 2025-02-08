@@ -6,8 +6,10 @@ export const PlayersContext = createContext();
 
 export const PlayersProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
-    const [gameData, setGame] = useState({});
+    const [gameData, setGame] = useState({ teams: {} });
     const [loading, setLoading] = useState(true);
+    const [formations, setFormations] = useState([]);
+    const [selectedFormation, setSelectedFormation] = useState(null);
 
     // Fetch players from API
     const fetchPlayers = async () => {
@@ -54,9 +56,19 @@ export const PlayersProvider = ({ children }) => {
         }
     };
 
+    // Clear game data
+    const clearGame = async () => {
+        try {
+            await axios.post("http://localhost:8000/game/clear");
+            await fetchGame();
+        } catch (error) {
+            console.error("Error clearing game:", error);
+        }
+    };
+
     // Add player to game
     const addPlayerToGame = async (placedTeam, newUid, dropX, dropY) => {
-        console.log("hello ",{placedTeam}, newUid);
+        console.log("Adding player to team:", placedTeam, newUid);
         try {
             await axios.post(`http://localhost:8000/game/${placedTeam}`, { base_player_uid: newUid, x: dropX, y: dropY });
             await fetchGame();
@@ -68,7 +80,7 @@ export const PlayersProvider = ({ children }) => {
     // Update player position in game
     const updateGamePlayer = async (placedTeam, newUid, dropX, dropY) => {
         try {
-            const response = await axios.put(`http://localhost:8000/game/${placedTeam}`, { base_player_uid: newUid, x: dropX, y: dropY });
+            await axios.put(`http://localhost:8000/game/${placedTeam}`, { base_player_uid: newUid, x: dropX, y: dropY });
         } catch (error) {
             console.error("Error updating player:", error);
         }
@@ -77,7 +89,7 @@ export const PlayersProvider = ({ children }) => {
     // Find player name by UID
     const findNameByUid = (uid) => {
         const player = players.find((p) => p.uid === uid);
-        return player ? player.name : "Unknown";
+        return player ? player.name : "Guest";
     };
 
     // Get players filtered by team
@@ -86,17 +98,57 @@ export const PlayersProvider = ({ children }) => {
             console.warn("Invalid gameData format:", gameData);
             return [];
         }
-    
+
         return gameData.filter(player => player.team === team);
+    };
+
+    // Fetch formations
+    const fetchFormations = async () => {
+        try {
+            const response = await axios.get("http://localhost:8000/formations");
+            setFormations(response.data);
+        } catch (error) {
+            console.error("Error fetching formations:", error);
+        }
+    };
+
+    // Apply a formation to a team
+    const applyFormation = async (formationId, team) => {
+        try {
+            console.log(formationId);
+            await axios.post(`http://localhost:8000/game/formation/${formationId}`);
+            setSelectedFormation(formationId);
+            await fetchGame();
+        } catch (error) {
+            console.error("Error applying formation:", error);
+        }
     };
 
     useEffect(() => {
         fetchPlayers();
         fetchGame();
+        fetchFormations();
     }, []);
 
     return (
-        <PlayersContext.Provider value={{ players, gameData, addPlayer, deletePlayer, fetchGame, addPlayerToGame, updateGamePlayer, loading, findNameByUid, getTeamPlayers }}>
+        <PlayersContext.Provider
+            value={{
+                players,
+                gameData,
+                formations,
+                selectedFormation,
+                loading,
+                addPlayer,
+                deletePlayer,
+                fetchGame,
+                addPlayerToGame,
+                updateGamePlayer,
+                applyFormation,
+                findNameByUid,
+                getTeamPlayers,
+                clearGame
+            }}
+        >
             {children}
         </PlayersContext.Provider>
     );

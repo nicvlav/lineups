@@ -1,7 +1,7 @@
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { PlayersProvider } from "./components/global/PlayersContext";
-import PlayerList from "./components/players/PlayerList";
+import Sidebar from "./components/sidebar/Sidebar";
 import CurrentGame from "./components/game/CurrentGame";
 import React from "react";
 
@@ -23,7 +23,7 @@ const App = () => {
             backgroundColor: "#9C7E63",
           }}
         >
-          <PlayerList />
+          <Sidebar />
           <CurrentGame />
         </div>
       </DndProvider>
