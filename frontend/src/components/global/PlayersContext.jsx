@@ -66,6 +66,16 @@ export const PlayersProvider = ({ children }) => {
         }
     };
 
+    const switchGamePlayer = async (placedTeam, gamePlayerUID, realPlayerUID) => {
+        try {
+            await axios.put(`http://localhost:8000/game/switch/${placedTeam}`, { id: gamePlayerUID, base_player_uid: realPlayerUID});
+            await fetchGame();
+        } catch (error) {
+            console.error("Error adding player:", error);
+        }
+    };
+
+
     const addRealPlayerToGame = async (placedTeam, realPlayerUID, dropX, dropY) => {
         console.log("Adding player to team:", placedTeam, realPlayerUID);
         try {
@@ -147,6 +157,7 @@ export const PlayersProvider = ({ children }) => {
                 fetchGame,
                 addRealPlayerToGame,
                 addGamePlayerToGame,
+                switchGamePlayer,
                 updateGamePlayer,
                 applyFormation,
                 getTeamPlayers,

@@ -1,7 +1,7 @@
 // CurrentGame Component
 import PlayerArea from "./PlayerArea";
 import React, { useContext } from "react";
-import { PlayersContext } from "../global/PlayersContext";
+import { PlayersContext } from "../global/PlayersContext.jsx";
 
 const CurrentGame = () => {
     const { getTeamPlayers, loading } = useContext(PlayersContext);

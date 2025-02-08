@@ -1,6 +1,6 @@
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { PlayersProvider } from "./components/global/PlayersContext";
+import { PlayersProvider } from "./components/global/PlayersContext.jsx";
 import Sidebar from "./components/sidebar/Sidebar";
 import CurrentGame from "./components/game/CurrentGame";
 import React from "react";

@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { PlayersContext } from "../global/PlayersContext";
+import { PlayersContext } from "../global/PlayersContext.jsx";
 
 const FormationSelector = () => {
     const { formations, selectedFormation, applyFormation } = useContext(PlayersContext);

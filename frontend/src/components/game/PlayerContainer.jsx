@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useDrop } from 'react-dnd';
 import DraggablePlayer from './DraggablePlayer';
-import { PlayersContext } from "../global/PlayersContext";
+import { PlayersContext } from "../global/PlayersContext.jsx";
 
 const mergeRefs = (...refs) => (el) => {
   refs.forEach((ref) => {
@@ -24,7 +24,7 @@ const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) 
 const PlayerContainer = ({ team }) => {
   const containerRef = useRef(null);
 
-  const { addGamePlayerToGame, addRealPlayerToGame, updateGamePlayer, getTeamPlayers } = useContext(PlayersContext);
+  const { addGamePlayerToGame, addRealPlayerToGame, updateGamePlayer, getTeamPlayers, switchGamePlayer } = useContext(PlayersContext);
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [playerSize, setPlayerSize] = useState(80);
@@ -100,6 +100,15 @@ const PlayerContainer = ({ team }) => {
     }
   };
 
+  const handleSwitchPlayer = (playerId, newPlayer) => {
+    console.log(newPlayer);
+    switchGamePlayer(team, playerId, newPlayer.uid);
+      setPlayers(getTeamPlayers(team)); // Refresh player list
+    // setGamePlayers((prev) =>
+    //   prev.map((p) => (p.id === playerId ? { ...p, ...newPlayer } : p))
+    // );
+  };
+
   return (
     <div
       ref={mergeRefs(drop, containerRef)} // Attach useDrop hook to container
@@ -119,6 +128,7 @@ const PlayerContainer = ({ team }) => {
             playerSize={80}
             initialLeft={left}
             initialTop={top}
+            onSwitchPlayer={handleSwitchPlayer}
           />
         );
       })}

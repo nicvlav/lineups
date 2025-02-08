@@ -86,7 +86,10 @@ def initialize_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS players (
             uid INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL
+            name TEXT NOT NULL,
+            attack INTEGER DEFAULT 3,
+            defense INTEGER DEFAULT 3,
+            athleticism INTEGER DEFAULT 3      
         )
     """)
 
@@ -131,6 +134,9 @@ initialize_db()
 
 class Player(BaseModel):
     name: str
+    defense: int = 3
+    attack: int = 3
+    athleticism: int = 3 
 
 class PlayerInGame(BaseModel):
     id: Optional[int] = None
@@ -182,9 +188,6 @@ def add_player_to_game(team: str, player: PlayerInGame):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Check if the player exists in the main players table
-
-
     # Check if player is already in the game
     existing_entry = cursor.execute("SELECT team FROM game WHERE id = ?", (player.id,)).fetchone()
 
@@ -200,7 +203,7 @@ def add_player_to_game(team: str, player: PlayerInGame):
             cursor.execute("INSERT INTO game (base_player_uid, name, team, x, y) VALUES (?, ? , ?, ?, ?)", (player.base_player_uid, player_data[0], team, player.x, player.y,))
             print("not found!")
         else:
-            cursor.execute("INSERT INTO game (name, team, x, y) VALUES (?, ?, ? , ?, ?, ?)", ("Guest", team, player.x, player.y))
+            cursor.execute("INSERT INTO game (name, team, x, y) VALUES (?, ?, ? , ?, ?, ?)", (player.name, team, player.x, player.y))
 
     conn.commit()
     conn.close()
@@ -228,6 +231,40 @@ def update_player_in_game(team: str, player: PlayerInGame):
     conn.commit()
     conn.close()
     return {"message": "Player position updated", "team": team, "id": player.id}
+
+@app.put("/game/switch/{team}")
+def switch_player_in_game(team: str, player: PlayerInGame):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Step 1: Validate that player.id exists in the game table
+    existing_entry = cursor.execute("SELECT team FROM game WHERE id = ?", (player.id,)).fetchone()
+    if not existing_entry:
+        raise HTTPException(status_code=404, detail="Player not found in game")
+    
+    player_data = cursor.execute("SELECT name FROM players WHERE uid = ?", (player.base_player_uid,)).fetchone()
+
+    # Step 2: If base_player_uid is not None and exists in the players table
+    if player.base_player_uid and  player_data:
+        # Check if another game entry exists with this base_player_uid
+        matching_player = cursor.execute("SELECT id FROM game WHERE base_player_uid = ?", (player.base_player_uid,)).fetchone()
+
+        if matching_player:
+            # Case 2: Remove the existing game entry with the same base_player_uid
+            cursor.execute("DELETE FROM game WHERE base_player_uid = ?", (player.base_player_uid,))
+        
+        # Case 2 & 3: Update current game entry with new base_player_uid and name
+        cursor.execute("UPDATE game SET base_player_uid = ?, name = ?, team = ? WHERE id = ?", 
+                        (player.base_player_uid, player_data[0], team, player.id))
+    else:
+        # Case 4: If base_player_uid is None, set base_player_uid to NULL
+        cursor.execute("UPDATE game SET base_player_uid = NULL WHERE id = ?", (player.id,))
+
+    conn.commit()
+    conn.close()
+    
+    return {"message": "Player switched successfully", "team": team, "id": player.id, "new_base_player_uid": player.base_player_uid}
+
 
 @app.delete("/game/{uid}")
 def remove_player_from_game(uid: str):

@@ -1,5 +1,5 @@
 import React, { useState, useContext, useRef, useEffect } from "react";
-import { PlayersContext } from "../global/PlayersContext";
+import { PlayersContext } from "../global/PlayersContext.jsx";
 import { useDrag } from "react-dnd";
 
 const PlayerList = () => {

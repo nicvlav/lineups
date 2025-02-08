@@ -1,57 +1,78 @@
-import React, { useContext } from "react";
+import React, { useState, useContext } from "react";
 import { useDrag } from "react-dnd";
-import PlayerIcon from "../../assets/shirt.svg"; // Import SVG file
+import PlayerIcon from "../../assets/shirt.svg";
+import { PlayersContext } from "../global/PlayersContext";
+import PlayerDialog from "./PlayerDialog"; // New component for search dialog
 
-const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop }) => {
+const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop, onSwitchPlayer }) => {
+  const { players } = useContext(PlayersContext);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const [, drag] = useDrag(() => ({
     type: "PLAYER",
     item: { game_uid: player.id },
   }));
 
+  const handleOpenDialog = (event) => {
+    event.preventDefault(); // Prevent default right-click behavior
+    setIsDialogOpen(true);
+  };
+
   return (
-    <div
-      ref={drag}
-      className="cursor-pointer relative"
-      style={{
-        position: "absolute",
-        left: `${initialLeft}px`,
-        top: `${initialTop}px`,
-        width: `${playerSize}px`,
-        height: `${playerSize}px`,
-        transform: "translate(-50%, -50%)", // Center the player
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}
-    >
-      {/* Name above the player icon */}
+    <>
       <div
+        ref={drag}
+        className="cursor-pointer relative"
         style={{
           position: "absolute",
-          top: "-20px", // Adjust distance above the icon
-          fontSize: "12px",
-          fontWeight: "bold",
-          background: "rgba(0, 0, 0, 0.7)", // Optional: Background for readability
-          color: "white",
-          padding: "2px 6px",
-          borderRadius: "4px",
-          whiteSpace: "nowrap",
+          left: `${initialLeft}px`,
+          top: `${initialTop}px`,
+          width: `${playerSize}px`,
+          height: `${playerSize}px`,
+          transform: "translate(-50%, -50%)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
         }}
+        onContextMenu={handleOpenDialog} // Right-click to open dialog
+        onDoubleClick={handleOpenDialog} // Double-click to open dialog
       >
-        {player.name}
+        <div
+          style={{
+            position: "absolute",
+            top: "-20px",
+            fontSize: "12px",
+            fontWeight: "bold",
+            background: "rgba(0, 0, 0, 0.7)",
+            color: "white",
+            padding: "2px 6px",
+            borderRadius: "4px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {player.name}
+        </div>
+
+        <img
+          src={PlayerIcon}
+          alt={player.name}
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: "50%",
+          }}
+        />
       </div>
 
-      {/* Player Icon */}
-      <img
-        src={PlayerIcon}
-        alt={player.name}
-        style={{
-          width: "100%",
-          height: "100%",
-          borderRadius: "50%", // Keep circular shape
-        }}
-      />
-    </div>
+      {isDialogOpen && (
+        <PlayerDialog
+          player={player}
+          players={players}
+          onClose={() => setIsDialogOpen(false)}
+          onSelect={onSwitchPlayer}
+        />
+      )}
+    </>
   );
 };
 
