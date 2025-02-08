@@ -19,6 +19,7 @@ DB_FILE = "game.db"
 
 def get_db_connection():
     conn = sqlite3.connect(DB_FILE)
+    conn.execute("PRAGMA foreign_keys = ON;")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -100,7 +101,7 @@ def initialize_db():
             team TEXT NOT NULL,
             x REAL DEFAULT 0.5,
             y REAL DEFAULT 0.5,
-            FOREIGN KEY (base_player_uid) REFERENCES players(uid) ON DELETE CASCADE
+            FOREIGN KEY (base_player_uid) REFERENCES players(uid) ON DELETE SET NULL
         )
     """)
 
