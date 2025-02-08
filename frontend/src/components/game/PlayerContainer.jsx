@@ -21,7 +21,7 @@ const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) 
   return { left, top };
 };
 
-const PlayerContainer = ({ team, players, playerSize = 50 }) => {
+const PlayerContainer = ({ team, players, playerSize = 80 }) => {
   const containerRef = useRef(null);
   const [playerList, setPlayerList] = useState(players);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
