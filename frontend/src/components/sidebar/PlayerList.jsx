@@ -112,7 +112,7 @@ const PlayerList = () => {
 const DraggablePlayer = ({ player }) => {
     const [, drag] = useDrag(() => ({
         type: "PLAYER",
-        item: { uid: player.uid, name: player.name },
+        item: { player_uid: player.uid, name: player.name },
     }));
 
     return (

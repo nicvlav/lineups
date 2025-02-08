@@ -12,8 +12,8 @@ const CurrentGame = () => {
 
     return (
         <div className="relative bg-secondary" style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", height: "100vh", width: "100vw", overflow: "auto", padding: "2px", gap: "2px" }}>
-            <PlayerArea team="A" players={getTeamPlayers("A")} />
-            <PlayerArea team="B" players={getTeamPlayers("B")} />
+            <PlayerArea team="A" />
+            <PlayerArea team="B" />
         </div>
     );
 };

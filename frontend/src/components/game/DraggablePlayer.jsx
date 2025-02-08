@@ -1,15 +1,11 @@
 import React, { useContext } from "react";
 import { useDrag } from "react-dnd";
-import { PlayersContext } from "../global/PlayersContext";
 import PlayerIcon from "../../assets/shirt.svg"; // Import SVG file
 
 const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop }) => {
-  const { findNameByUid } = useContext(PlayersContext);
-  const name = findNameByUid(player.base_player_uid);
-
   const [, drag] = useDrag(() => ({
     type: "PLAYER",
-    item: { uid: player.base_player_uid },
+    item: { game_uid: player.id },
   }));
 
   return (
@@ -42,13 +38,13 @@ const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop }) => {
           whiteSpace: "nowrap",
         }}
       >
-        {name}
+        {player.name}
       </div>
 
       {/* Player Icon */}
       <img
         src={PlayerIcon}
-        alt={name}
+        alt={player.name}
         style={{
           width: "100%",
           height: "100%",

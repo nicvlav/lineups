@@ -66,11 +66,21 @@ export const PlayersProvider = ({ children }) => {
         }
     };
 
-    // Add player to game
-    const addPlayerToGame = async (placedTeam, newUid, dropX, dropY) => {
-        console.log("Adding player to team:", placedTeam, newUid);
+    const addRealPlayerToGame = async (placedTeam, realPlayerUID, dropX, dropY) => {
+        console.log("Adding player to team:", placedTeam, realPlayerUID);
         try {
-            await axios.post(`http://localhost:8000/game/${placedTeam}`, { base_player_uid: newUid, x: dropX, y: dropY });
+            await axios.post(`http://localhost:8000/game/${placedTeam}`, { base_player_uid: realPlayerUID, x: dropX, y: dropY });
+            await fetchGame();
+        } catch (error) {
+            console.error("Error adding player:", error);
+        }
+    };
+
+    // Add player to game
+    const addGamePlayerToGame = async (placedTeam, gamePlayerUID, dropX, dropY) => {
+        console.log("Adding player to team:", placedTeam, gamePlayerUID);
+        try {
+            await axios.post(`http://localhost:8000/game/${placedTeam}`, { id: gamePlayerUID, x: dropX, y: dropY });
             await fetchGame();
         } catch (error) {
             console.error("Error adding player:", error);
@@ -78,19 +88,14 @@ export const PlayersProvider = ({ children }) => {
     };
 
     // Update player position in game
-    const updateGamePlayer = async (placedTeam, newUid, dropX, dropY) => {
+    const updateGamePlayer = async (placedTeam, gamePlayer, dropX, dropY) => {
         try {
-            await axios.put(`http://localhost:8000/game/${placedTeam}`, { base_player_uid: newUid, x: dropX, y: dropY });
+            await axios.put(`http://localhost:8000/game/${placedTeam}`, { id: gamePlayer.id, base_player_uid: gamePlayer.base_player_uid, x: dropX, y: dropY });
         } catch (error) {
             console.error("Error updating player:", error);
         }
     };
 
-    // Find player name by UID
-    const findNameByUid = (uid) => {
-        const player = players.find((p) => p.uid === uid);
-        return player ? player.name : "Guest";
-    };
 
     // Get players filtered by team
     const getTeamPlayers = (team) => {
@@ -115,7 +120,6 @@ export const PlayersProvider = ({ children }) => {
     // Apply a formation to a team
     const applyFormation = async (formationId, team) => {
         try {
-            console.log(formationId);
             await axios.post(`http://localhost:8000/game/formation/${formationId}`);
             setSelectedFormation(formationId);
             await fetchGame();
@@ -141,10 +145,10 @@ export const PlayersProvider = ({ children }) => {
                 addPlayer,
                 deletePlayer,
                 fetchGame,
-                addPlayerToGame,
+                addRealPlayerToGame,
+                addGamePlayerToGame,
                 updateGamePlayer,
                 applyFormation,
-                findNameByUid,
                 getTeamPlayers,
                 clearGame
             }}
