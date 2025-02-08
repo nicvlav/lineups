@@ -29,7 +29,7 @@ Ensure you have the following installed:
    ```
 3. Start the FastAPI server with Uvicorn:
    ```sh
-   uvicorn backend.main:app --reload
+   uvicorn main:app --reload
    ```
    The API will now be running at `http://127.0.0.1:8000/`.
 
