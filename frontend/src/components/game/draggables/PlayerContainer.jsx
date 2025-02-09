@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useDrop } from 'react-dnd';
 import DraggablePlayer from './DraggablePlayer';
-import { PlayersContext } from "../global/PlayersContext.jsx";
+import { PlayersContext } from "../../global/PlayersContext.jsx";
 
 const mergeRefs = (...refs) => (el) => {
   refs.forEach((ref) => {
@@ -127,7 +127,8 @@ const PlayerContainer = ({ team }) => {
   return (
     <div
       ref={mergeRefs(drop, containerRef)} // Attach useDrop hook to container
-      className="relative bg-primary"
+      // className="relative bg-primary"
+      className="soccer-pitch"
       style={{
         width: '100%',
         height: '100%',

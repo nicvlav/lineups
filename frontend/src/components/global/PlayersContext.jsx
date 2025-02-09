@@ -43,6 +43,19 @@ export const PlayersProvider = ({ children }) => {
         }
     };
 
+    const updatePlayerAttributes = async (uid, updates) => {
+        try {
+            await axios.patch(`http://localhost:8000/players/${uid}`, updates);
+            setPlayers((prevPlayers) =>
+                prevPlayers.map((player) =>
+                    player.uid === uid ? { ...player, ...updates } : player
+                )
+            );
+        } catch (error) {
+            console.error("Error updating player attributes:", error);
+        }
+    };
+
     // Fetch game data
     const fetchGame = async () => {
         try {
@@ -68,7 +81,7 @@ export const PlayersProvider = ({ children }) => {
 
     const switchGamePlayer = async (placedTeam, gamePlayerUID, realPlayerUID) => {
         try {
-            await axios.put(`http://localhost:8000/game/switch/${placedTeam}`, { id: gamePlayerUID, base_player_uid: realPlayerUID});
+            await axios.put(`http://localhost:8000/game/switch/${placedTeam}`, { id: gamePlayerUID, base_player_uid: realPlayerUID });
             await fetchGame();
         } catch (error) {
             console.error("Error switching real player:", error);
@@ -77,13 +90,13 @@ export const PlayersProvider = ({ children }) => {
 
     const switchGamePlayerToGuest = async (placedTeam, gamePlayerUID, newPlayerName) => {
         try {
-            await axios.put(`http://localhost:8000/game/switch/${placedTeam}`, { id: gamePlayerUID, name: newPlayerName});
+            await axios.put(`http://localhost:8000/game/switch/${placedTeam}`, { id: gamePlayerUID, name: newPlayerName });
             await fetchGame();
         } catch (error) {
             console.error("Error switching guest player:", error);
         }
-    };    
-    
+    };
+
     const addAndSwitchGamePlayer = async (placedTeam, gamePlayerUID, newPlayerName) => {
 
         if (!newPlayerName.trim()) return;
@@ -172,6 +185,7 @@ export const PlayersProvider = ({ children }) => {
                 loading,
                 addPlayer,
                 deletePlayer,
+                updatePlayerAttributes,
                 fetchGame,
                 addRealPlayerToGame,
                 addGamePlayerToGame,

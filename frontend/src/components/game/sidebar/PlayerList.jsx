@@ -1,5 +1,5 @@
 import React, { useState, useContext, useRef, useEffect } from "react";
-import { PlayersContext } from "../global/PlayersContext.jsx";
+import { PlayersContext } from "../../global/PlayersContext.jsx";
 import { useDrag } from "react-dnd";
 
 const PlayerList = () => {
@@ -54,7 +54,7 @@ const PlayerList = () => {
     }, [isAdding]);
 
     return (
-        <div className="p-4 bg-quaternary shadow-lg rounded-lg">
+        <div className="p-4shadow-lg rounded-lg">
             <h2 className="text-lg font-bold mb-2">Players</h2>
 
             {/* Sort Options */}
@@ -63,7 +63,7 @@ const PlayerList = () => {
                 <select
                     value={sortOrder}
                     onChange={handleSortChange}
-                    className="p-2 border rounded bg-quaternary shadow"
+                    className="p-2 border rounded bg-gray-800 shadow"
                 >
                     <option value="desc">Descending</option>
                     <option value="asc">Ascending</option>

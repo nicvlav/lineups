@@ -53,6 +53,21 @@
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
+.ant-drawer-header {
+  background-color: #5340ff;
+  border-radius: 0;
+}
+
+.ant-drawer-title {
+  color: #fff;
+}
+
+.ant-drawer-body {
+  background-color: #5340ff;
+  color: #fff;
+  height: calc(100vh - 55px);
+}
+
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);

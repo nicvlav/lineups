@@ -87,9 +87,9 @@ def initialize_db():
         CREATE TABLE IF NOT EXISTS players (
             uid INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            attack INTEGER DEFAULT 3,
-            defense INTEGER DEFAULT 3,
-            athleticism INTEGER DEFAULT 3      
+            attack INTEGER DEFAULT 5,
+            defense INTEGER DEFAULT 5,
+            athleticism INTEGER DEFAULT 5      
         )
     """)
 
@@ -134,9 +134,9 @@ initialize_db()
 
 class Player(BaseModel):
     name: str
-    defense: int = 3
-    attack: int = 3
-    athleticism: int = 3 
+    defense: int = 5
+    attack: int = 5
+    athleticism: int = 5 
 
 class PlayerInGame(BaseModel):
     id: Optional[int] = None
@@ -170,6 +170,40 @@ def delete_player(uid: int):
     conn.commit()
     conn.close()
     return {"detail": "Player deleted successfully"}
+
+# Model for updating a player
+class PlayerParameters(BaseModel):
+    attack: Optional[int] = None
+    defense: Optional[int] = None
+    athleticism: Optional[int] = None
+
+# Update player attributes
+@app.patch("/players/{player_id}")
+def update_player(player_id: int, player_update: PlayerParameters):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    update_fields = []
+    params = []
+
+    if player_update.attack is not None:
+        update_fields.append("attack = ?")
+        params.append(player_update.attack)
+    if player_update.defense is not None:
+        update_fields.append("defense = ?")
+        params.append(player_update.defense)
+    if player_update.athleticism is not None:
+        update_fields.append("athleticism = ?")
+        params.append(player_update.athleticism)
+
+    params.append(player_id)
+    
+    if update_fields:
+        cursor.execute(f"UPDATE players SET {', '.join(update_fields)} WHERE uid = ?", params)
+        conn.commit()
+    
+    conn.close()
+    return {"detail": "Player updated successfully"}
 
 @app.get("/game")
 def get_game():

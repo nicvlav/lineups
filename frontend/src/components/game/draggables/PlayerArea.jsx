@@ -4,7 +4,7 @@ import React, { useState } from "react";
 const PlayerArea = ({ team, players }) => {
   return (
     <div
-      className="relative bg-tertiary"
+      className="relative bg-primary"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -14,11 +14,11 @@ const PlayerArea = ({ team, players }) => {
         width: "100vw",
         overflow: "auto",
         // padding: "4px",
-        backgroundColor: "#f0f0f0",
+        // backgroundColor: "#f0f0f0",
       }}
     >
       <div
-      className="relative bg-tertiary"
+      className="relative bg-primary"
         style={{
           width: "100%", // Adjust width if necessary
           height: "40px", // Ensuring container doesn't take full height

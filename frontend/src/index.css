@@ -59,6 +59,81 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+.ant-drawer-header {
+  background-color: #1e2939;
+  border-radius: 0;
+}
+
+.ant-drawer-title {
+  color: #fff;
+}
+
+.ant-drawer-body {
+  background-color: #1e2939;
+  color: #fff;
+  height: calc(100vh - 55px);
+}
+
+.soccer-pitch {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(160deg, #1b5e20, #2e7d32);
+  /* Deep green gradient */
+  border-radius: 12px;
+  /* Smooth edges */
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+  /* Adds depth */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.soccer-pitch::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 10%, transparent 70%);
+  opacity: 0.3;
+  pointer-events: none;
+  /* So it doesn’t interfere */
+}
+
+.pitch-lines {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 2px solid white;
+  box-sizing: border-box;
+}
+
+.pitch-lines::before,
+.pitch-lines::after {
+  content: "";
+  position: absolute;
+  background: white;
+}
+
+.pitch-lines::before {
+  /* Center Circle */
+  width: 15%;
+  height: 15%;
+  border-radius: 50%;
+  border: 2px solid white;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pitch-lines::after {
+  /* Half-line */
+  width: 100%;
+  height: 2px;
+  top: 50%;
+  left: 0;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;

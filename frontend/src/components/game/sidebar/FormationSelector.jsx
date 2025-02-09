@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { PlayersContext } from "../global/PlayersContext.jsx";
+import { PlayersContext } from "../../global/PlayersContext.jsx";
 
 const FormationSelector = () => {
     const { formations, selectedFormation, applyFormation } = useContext(PlayersContext);
@@ -18,9 +18,9 @@ const FormationSelector = () => {
     }, {});
 
     return (
-        <div className="relative bg-quaternary">
+        <div className="relative">
             <label htmlFor="formation-select">Formation:</label>
-            <select className="relative bg-quaternary" id="formation-select" value={selectedFormation} onChange={handleChange}>
+            <select className="relative bg-gray-800" id="formation-select" value={selectedFormation} onChange={handleChange}>
                 <option value="custom">Custom</option>
                 {Object.keys(groupedFormations)
                     .sort((a, b) => a - b) // Ensure sorted order (e.g., 5, 7, 11 players)

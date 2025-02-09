@@ -1,6 +1,6 @@
 import React, { useState, useContext } from "react";
 import { useDrag } from "react-dnd";
-import PlayerIcon from "../../assets/shirt.svg";
+import PlayerIcon from "../../../assets/shirt.svg";
 
 import PlayerDialog from "./PlayerDialog"; // New component for search dialog
 
