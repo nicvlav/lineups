@@ -5,6 +5,7 @@ import sqlite3
 from typing import Optional, List
 import numpy as np
 import random
+from sklearn.cluster import KMeans
 
 app = FastAPI()
 
@@ -364,84 +365,85 @@ class TeamRequest(BaseModel):
     players: List[Player]
     attribute_weights: dict
 
+def generate_balanced_teams(players: List[Player], weights: dict[str, float]):
+    """Uses clustering and dynamic balancing to create fair, equally sized teams."""
+    if len(players) < 2:
+        return [], []
 
-def generate_balanced_teams(players: List[Player], weights: dict):
-    random.shuffle(players)  # Adds randomness
-    
-    # Compute weighted scores
-    scored_players = sorted(
-        players,
-        key=lambda p: (
-            p.attack * weights.get("attack", 1) +
-            p.defense * weights.get("defense", 1) +
-            p.athleticism * weights.get("athleticism", 1)
-        ),
-        reverse=True
-    )
-    
-    # Assign the least impactful player as the goalkeeper
-    goalkeeper = min(scored_players, key=lambda p: p.defense + p.athleticism)
-    scored_players.remove(goalkeeper)
-    
-    team_a, team_b = [goalkeeper], []
+    num_players = len(players)
+    half_size = num_players // 2  
+
+    # Convert player attributes into a numpy array
+    player_features = np.array([
+        [p.attack * weights["attack"], p.defense * weights["defense"], p.athleticism * weights["athleticism"]]
+        for p in players
+    ])
+
+    # Clustering to spread similar players
+    n_clusters = min(3, len(players) // 2)
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+    clusters = kmeans.fit_predict(player_features)
+
+    # Assign players a weighted score
+    scored_players = [
+        (p, p.attack * weights["attack"] + p.defense * weights["defense"] + p.athleticism * weights["athleticism"])
+        for p in players
+    ]
+
+    # Sort players by score (highest first)
+    scored_players.sort(key=lambda p: p[1], reverse=True)
+
+    team_a, team_b = [], []
     sum_a, sum_b = 0, 0
-    
-    for player in scored_players:
-        score = (
-            player.attack * weights.get("attack", 1) +
-            player.defense * weights.get("defense", 1) +
-            player.athleticism * weights.get("athleticism", 1)
-        )
-        
-        if sum_a <= sum_b:
+
+    # **Key change: Alternate player assignment based on team strength**
+    for player, score in scored_players:
+        if len(team_a) < half_size and (sum_a <= sum_b or len(team_b) >= half_size):
             team_a.append(player)
             sum_a += score
         else:
             team_b.append(player)
             sum_b += score
-    
+
     return team_a, team_b
 
-def generate_dynamic_positions(team: List[Player]):
+def generate_positions(team: List[Player]):
+    """Generates logical soccer positions dynamically while ensuring full team assignment."""
     num_players = len(team)
     positions = []
     
-    # Define field zones based on team size
-    if num_players < 6:
-        zones = ["defense", "attack"]
-    else:
-        zones = ["defense", "midfield", "attack"]
+    # Assign goalkeeper (least impactful player)
+    positions.append({"uid": team[0].uid, "name": team[0].name, "x": 0.5, "y": 1.0})
     
-    zone_y = {"goalkeeper": 1.0, "defense": 0.75, "midfield": 0.5, "attack": 0.2}
+    # Determine formation zones
+    num_zones = 2 if num_players < 6 else 3
+    base_players_per_zone = (num_players - 1) // num_zones  # Minimum players per zone
+    extra_players = (num_players - 1) % num_zones  # Players left to distribute
     
-    # Assign goalkeeper position
-    positions.append({
-        "base_player_uid": team[0].uid,
-        "name": team[0].name,
-        "x": 0.5,
-        "y": 1.0
-    })
-    
-    remaining_players = team[1:]
-    
-    for idx, player in enumerate(remaining_players):
-        zone = zones[idx % len(zones)]  # Cycle through zones
-        x = (idx % 4) / 3  # Spread horizontally (0.0 to 1.0)
-        y = zone_y[zone]  # Assign y based on the zone
+    # Distribute players in zones
+    idx = 1  # Start after goalkeeper
+    for zone in range(num_zones):
+        y = 1.0 - ((zone + 1) / num_zones)  # Defensive to attacking zones
         
-        positions.append({
-            "base_player_uid": player.uid,
-            "name": player.name,
-            "x": round(x, 2),
-            "y": round(y, 2)
-        })
+        # Adjust for leftover players
+        num_players_in_zone = base_players_per_zone + (1 if zone < extra_players else 0)
+        x_spacing = 0.4 / max(num_players_in_zone - 1, 1)  # Spacing based on count
+        
+        for i in range(num_players_in_zone):
+            if idx >= num_players:
+                break
+            
+            # Center players around x = 0.5
+            x = 0.5 + (i - (num_players_in_zone - 1) / 2) * x_spacing
+            
+            positions.append({"uid": team[idx].uid, "name": team[idx].name, "x": round(x, 2), "y": round(y, 2)})
+            idx += 1
     
     return positions
+
+
 @app.post("/autocreate")
 def auto_create_teams(request: TeamRequest):
-    print(request)
-    print("hi")
-
     if len(request.players) < 2:
         raise HTTPException(status_code=400, detail="Not enough players to form teams")
     
@@ -450,23 +452,23 @@ def auto_create_teams(request: TeamRequest):
 
     team_a, team_b = generate_balanced_teams(request.players, request.attribute_weights)
     
-    team_a_positions = generate_dynamic_positions(team_a)
-    team_b_positions = generate_dynamic_positions(team_b)
+    team_a_positions = generate_positions(team_a)
+    team_b_positions = generate_positions(team_b)
 
-    print(request)
-    print(team_a)
-    print(team_b)
+    # print(request)
+    # print(team_a)
+    # print(team_b)
 
     for pos in team_a_positions:
         conn.execute(
             "INSERT INTO game (team, base_player_uid, name, x, y) VALUES (?, ?, ?, ?, ?)",
-            ("A", pos["base_player_uid"], pos["name"], pos["x"], pos["y"])
+            ("A", pos["uid"], pos["name"], pos["x"], pos["y"])
         )
         
     for pos in team_b_positions:
         conn.execute(
             "INSERT INTO game (team, base_player_uid, name, x, y) VALUES (?, ?, ?, ?, ?)",
-            ("B", pos["base_player_uid"], pos["name"], pos["x"], pos["y"])
+            ("B", pos["uid"], pos["name"], pos["x"], pos["y"])
         )
 
     conn.commit()
