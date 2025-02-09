@@ -149,64 +149,6 @@ class PlayerInGame(BaseModel):
     x: float = 0.5
     y: float = 0.5
 
-class TeamRequest(BaseModel):
-    players: List[Player]
-    attribute_weights: dict
-
-class TeamResponse(BaseModel):
-    team_a: List[dict]
-    team_b: List[dict]
-
-def generate_balanced_teams(players: List[Player], weights: dict):
-    random.shuffle(players)  # Adds randomness
-    
-    # Create a new list of players with scores
-    scored_players = [
-        {
-            "player": player,  
-            "score": (
-                player.attack * weights.get("attack", 1) +
-                player.defense * weights.get("defense", 1) +
-                player.athleticism * weights.get("athleticism", 1)
-            )
-        }
-        for player in players
-    ]
-    
-    # Sort players by score in descending order
-    scored_players.sort(key=lambda p: p["score"], reverse=True)
-    
-    team_a, team_b = [], []
-    sum_a, sum_b = 0, 0
-    
-    for entry in scored_players:
-        player = entry["player"]
-        score = entry["score"]
-
-        if sum_a <= sum_b:
-            team_a.append(player)
-            sum_a += score
-        else:
-            team_b.append(player)
-            sum_b += score
-    
-    return team_a, team_b
-
-def generate_dynamic_positions(team: List[Player]):
-    positions = []
-    num_players = len(team)
-    
-    for idx, player in enumerate(team):
-        x = (idx % 4) / 3  # Spread horizontally
-        y = (idx // 4) / (num_players // 4 + 1)  # Stagger vertically
-        positions.append({
-            "base_player_uid": player.uid,
-            "name": player.name,
-            "x": round(x, 2),
-            "y": round(y, 2)
-        })
-    return positions
-
 
 @app.get("/players")
 def get_players():
@@ -418,7 +360,83 @@ def apply_formation(formation_id: int):
     conn.close()
     return {"message": "Formation applied", "formation_id": formation_id}
 
+class TeamRequest(BaseModel):
+    players: List[Player]
+    attribute_weights: dict
 
+
+def generate_balanced_teams(players: List[Player], weights: dict):
+    random.shuffle(players)  # Adds randomness
+    
+    # Compute weighted scores
+    scored_players = sorted(
+        players,
+        key=lambda p: (
+            p.attack * weights.get("attack", 1) +
+            p.defense * weights.get("defense", 1) +
+            p.athleticism * weights.get("athleticism", 1)
+        ),
+        reverse=True
+    )
+    
+    # Assign the least impactful player as the goalkeeper
+    goalkeeper = min(scored_players, key=lambda p: p.defense + p.athleticism)
+    scored_players.remove(goalkeeper)
+    
+    team_a, team_b = [goalkeeper], []
+    sum_a, sum_b = 0, 0
+    
+    for player in scored_players:
+        score = (
+            player.attack * weights.get("attack", 1) +
+            player.defense * weights.get("defense", 1) +
+            player.athleticism * weights.get("athleticism", 1)
+        )
+        
+        if sum_a <= sum_b:
+            team_a.append(player)
+            sum_a += score
+        else:
+            team_b.append(player)
+            sum_b += score
+    
+    return team_a, team_b
+
+def generate_dynamic_positions(team: List[Player]):
+    num_players = len(team)
+    positions = []
+    
+    # Define field zones based on team size
+    if num_players < 6:
+        zones = ["defense", "attack"]
+    else:
+        zones = ["defense", "midfield", "attack"]
+    
+    zone_y = {"goalkeeper": 1.0, "defense": 0.75, "midfield": 0.5, "attack": 0.2}
+    
+    # Assign goalkeeper position
+    positions.append({
+        "base_player_uid": team[0].uid,
+        "name": team[0].name,
+        "x": 0.5,
+        "y": 1.0
+    })
+    
+    remaining_players = team[1:]
+    
+    for idx, player in enumerate(remaining_players):
+        zone = zones[idx % len(zones)]  # Cycle through zones
+        x = (idx % 4) / 3  # Spread horizontally (0.0 to 1.0)
+        y = zone_y[zone]  # Assign y based on the zone
+        
+        positions.append({
+            "base_player_uid": player.uid,
+            "name": player.name,
+            "x": round(x, 2),
+            "y": round(y, 2)
+        })
+    
+    return positions
 @app.post("/autocreate")
 def auto_create_teams(request: TeamRequest):
     print(request)
