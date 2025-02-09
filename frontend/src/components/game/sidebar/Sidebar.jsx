@@ -3,9 +3,11 @@ import PlayerList from "./PlayerList";
 import FormationSelector from "./FormationSelector";
 import { Button, Drawer } from "antd";
 import PlayerTable from "./PlayerTable";
+import AutoTeamSelector from "./AutoTeamSelector"; // The AI-based team generation drawer
 
 const Sidebar = () => {
-    const [isDrawerOpen, setDrawerOpen] = useState(false);
+    const [isPlayerDrawerOpen, setPlayerDrawerOpen] = useState(false);
+    const [isAutoTeamDrawerOpen, setAutoTeamDrawerOpen] = useState(false);
 
     return (
         <div className="w-[300px] h-full p-4 bg-gray-900 rounded-lg shadow-lg flex flex-col gap-4">
@@ -20,29 +22,55 @@ const Sidebar = () => {
             </div>
 
             {/* Manage Players Button */}
-            <button 
+            <button
                 className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg shadow-md transition duration-300"
-                onClick={() => setDrawerOpen(true)}
+                onClick={() => setPlayerDrawerOpen(true)}
             >
                 Manage Players
             </button>
 
-            {/* Drawer for PlayerTable */}
-            <Drawer
-                className="bg-black"
-                title={<span className=" text-lg font-semibold">Player Attributes</span>}
-                placement="right"
-                closable
-                onClose={() => setDrawerOpen(false)}
-                open={isDrawerOpen}
-                width={600}
-                styles={{ background: "#000000", color: "black" }}
+            {/* Auto Team Generator Button */}
+            <button
+                className="mt-2 w-full bg-green-600 hover:bg-green-500 text-white p-3 rounded-lg shadow-md transition duration-300"
+                onClick={() => setAutoTeamDrawerOpen(true)}
             >
-                <div className="p-6">
-                    <PlayerTable />
-                </div>
-            </Drawer>
+                Auto Create Team (AI)
+            </button>
+
+            {/* Reusable Drawer Component */}
+            <CustomDrawer
+                title="Player Attributes"
+                isOpen={isPlayerDrawerOpen}
+                onClose={() => setPlayerDrawerOpen(false)}
+            >
+                <PlayerTable />
+            </CustomDrawer>
+
+            <CustomDrawer
+                title="AI Team Generator"
+                isOpen={isAutoTeamDrawerOpen}
+                onClose={() => setAutoTeamDrawerOpen(false)}
+            >
+                <AutoTeamSelector />
+            </CustomDrawer>
         </div>
+    );
+};
+
+// Reusable Drawer Component
+const CustomDrawer = ({ title, isOpen, onClose, children }) => {
+    return (
+        <Drawer
+            title={<span className="text-lg font-semibold">{title}</span>}
+            placement="right"
+            closable
+            onClose={onClose}
+            open={isOpen}
+            width={600}
+            styles={{ background: "#000", color: "white" }}
+        >
+            <div className="p-6">{children}</div>
+        </Drawer>
     );
 };
 

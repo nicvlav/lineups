@@ -169,6 +169,18 @@ export const PlayersProvider = ({ children }) => {
         }
     };
 
+    const generateTeams = async (filteredPlayers, weighting) => {
+        console.log(filteredPlayers);
+        try {
+            const response =  await axios.post(`http://localhost:8000/autocreate/`,  { players: filteredPlayers, attribute_weights: weighting });
+            console.log(response.data);
+            await fetchGame();
+        } catch (error) {
+            console.error("Error applying formation:", error);
+        }
+    };
+
+
     useEffect(() => {
         fetchPlayers();
         fetchGame();
@@ -195,7 +207,8 @@ export const PlayersProvider = ({ children }) => {
                 updateGamePlayer,
                 applyFormation,
                 getTeamPlayers,
-                clearGame
+                clearGame,
+                generateTeams
             }}
         >
             {children}

@@ -2,7 +2,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sqlite3
-from typing import Optional
+from typing import Optional, List
+import numpy as np
+import random
 
 app = FastAPI()
 
@@ -133,6 +135,7 @@ def initialize_db():
 initialize_db()
 
 class Player(BaseModel):
+    uid: Optional[int] = None
     name: str
     defense: int = 5
     attack: int = 5
@@ -145,6 +148,65 @@ class PlayerInGame(BaseModel):
     team: str = ""
     x: float = 0.5
     y: float = 0.5
+
+class TeamRequest(BaseModel):
+    players: List[Player]
+    attribute_weights: dict
+
+class TeamResponse(BaseModel):
+    team_a: List[dict]
+    team_b: List[dict]
+
+def generate_balanced_teams(players: List[Player], weights: dict):
+    random.shuffle(players)  # Adds randomness
+    
+    # Create a new list of players with scores
+    scored_players = [
+        {
+            "player": player,  
+            "score": (
+                player.attack * weights.get("attack", 1) +
+                player.defense * weights.get("defense", 1) +
+                player.athleticism * weights.get("athleticism", 1)
+            )
+        }
+        for player in players
+    ]
+    
+    # Sort players by score in descending order
+    scored_players.sort(key=lambda p: p["score"], reverse=True)
+    
+    team_a, team_b = [], []
+    sum_a, sum_b = 0, 0
+    
+    for entry in scored_players:
+        player = entry["player"]
+        score = entry["score"]
+
+        if sum_a <= sum_b:
+            team_a.append(player)
+            sum_a += score
+        else:
+            team_b.append(player)
+            sum_b += score
+    
+    return team_a, team_b
+
+def generate_dynamic_positions(team: List[Player]):
+    positions = []
+    num_players = len(team)
+    
+    for idx, player in enumerate(team):
+        x = (idx % 4) / 3  # Spread horizontally
+        y = (idx // 4) / (num_players // 4 + 1)  # Stagger vertically
+        positions.append({
+            "base_player_uid": player.uid,
+            "name": player.name,
+            "x": round(x, 2),
+            "y": round(y, 2)
+        })
+    return positions
+
 
 @app.get("/players")
 def get_players():
@@ -242,7 +304,7 @@ def add_player_to_game(team: str, player: PlayerInGame):
             else:
                 cursor.execute("INSERT INTO game (base_player_uid, name, team, x, y) VALUES (?, ? , ?, ?, ?)", (player.base_player_uid, player_data[0], team, player.x, player.y,))
         else:
-            cursor.execute("INSERT INTO game (name, team, x, y) VALUES (?, ?, ? , ?, ?, ?)", (player.name, team, player.x, player.y))
+            cursor.execute("INSERT INTO game (name, team, x, y) VALUES (? , ?, ?, ?)", (player.name, team, player.x, player.y))
 
     conn.commit()
     conn.close()
@@ -355,3 +417,40 @@ def apply_formation(formation_id: int):
     conn.commit()
     conn.close()
     return {"message": "Formation applied", "formation_id": formation_id}
+
+
+@app.post("/autocreate")
+def auto_create_teams(request: TeamRequest):
+    print(request)
+    print("hi")
+
+    if len(request.players) < 2:
+        raise HTTPException(status_code=400, detail="Not enough players to form teams")
+    
+    conn = get_db_connection()
+    conn.execute("DELETE FROM game")
+
+    team_a, team_b = generate_balanced_teams(request.players, request.attribute_weights)
+    
+    team_a_positions = generate_dynamic_positions(team_a)
+    team_b_positions = generate_dynamic_positions(team_b)
+
+    print(request)
+    print(team_a)
+    print(team_b)
+
+    for pos in team_a_positions:
+        conn.execute(
+            "INSERT INTO game (team, base_player_uid, name, x, y) VALUES (?, ?, ?, ?, ?)",
+            ("A", pos["base_player_uid"], pos["name"], pos["x"], pos["y"])
+        )
+        
+    for pos in team_b_positions:
+        conn.execute(
+            "INSERT INTO game (team, base_player_uid, name, x, y) VALUES (?, ?, ?, ?, ?)",
+            ("B", pos["base_player_uid"], pos["name"], pos["x"], pos["y"])
+        )
+
+    conn.commit()
+    conn.close()
+    return ("success")
