@@ -29,7 +29,7 @@ const PlayerTable = () => {
                     min={1}
                     max={10}
                     value={record.attack}
-                    onChange={(value) => handleAttributeChange(record.uid, "attack", value)}
+                    onChange={(value) => handleAttributeChange(record.id, "attack", value)}
                     className="w-16 border-none bg-gray-700 text-white text-center rounded"
                 />
             ),
@@ -43,7 +43,7 @@ const PlayerTable = () => {
                     min={1}
                     max={10}
                     value={record.defense}
-                    onChange={(value) => handleAttributeChange(record.uid, "defense", value)}
+                    onChange={(value) => handleAttributeChange(record.id, "defense", value)}
                     className="w-16 border-none bg-gray-700 text-black text-center rounded"
                 />
             ),
@@ -57,7 +57,7 @@ const PlayerTable = () => {
                     min={1}
                     max={10}
                     value={record.athleticism}
-                    onChange={(value) => handleAttributeChange(record.uid, "athleticism", value)}
+                    onChange={(value) => handleAttributeChange(record.id, "athleticism", value)}
                     className="w-16 border-none bg-gray-700 text-black text-center rounded"
                 />
             ),

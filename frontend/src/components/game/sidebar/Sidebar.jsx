@@ -4,6 +4,7 @@ import FormationSelector from "./FormationSelector";
 import { Button, Drawer } from "antd";
 import PlayerTable from "./PlayerTable";
 import AutoTeamSelector from "./AutoTeamSelector"; // The AI-based team generation drawer
+import ShareButton from "./ShareButton"; // The AI-based team generation drawer
 
 const Sidebar = () => {
     const [isPlayerDrawerOpen, setPlayerDrawerOpen] = useState(false);
@@ -35,7 +36,12 @@ const Sidebar = () => {
                 onClick={() => setAutoTeamDrawerOpen(true)}
             >
                 Auto Create Team (AI)
-            </button>
+            </button>           
+             {/* Auto Team Generator Button */}
+            <ShareButton
+                className="mt-2 w-full bg-green-600 hover:bg-green-500 text-white p-3 rounded-lg shadow-md transition duration-300"
+                onClick={() => setAutoTeamDrawerOpen(true)}
+            />
 
             {/* Reusable Drawer Component */}
             <CustomDrawer

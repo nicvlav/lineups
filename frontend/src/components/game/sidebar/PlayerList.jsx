@@ -72,10 +72,10 @@ const PlayerList = () => {
 
             <div>
                 {sortedPlayers.map((player) => (
-                    <div key={player.uid} className="p-2 border-b flex justify-between items-center">
-                        <DraggablePlayer key={player.uid} player={player} />
+                    <div key={player.id} className="p-2 border-b flex justify-between items-center">
+                        <DraggablePlayer key={player.id} player={player} />
                         <button
-                            onClick={() => handleDeletePlayer(player.uid)}
+                            onClick={() => handleDeletePlayer(player.id)}
                             className="text-red-500 ml-2"
                         >
                             X
@@ -112,7 +112,7 @@ const PlayerList = () => {
 const DraggablePlayer = ({ player }) => {
     const [, drag] = useDrag(() => ({
         type: "PLAYER",
-        item: { player_uid: player.uid, name: player.name },
+        item: { player_uid: player.id, name: player.name },
     }));
 
     return (

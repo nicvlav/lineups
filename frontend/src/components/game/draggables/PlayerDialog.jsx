@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { PlayersContext } from "../../global/PlayersContext";
 
 const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPlayer, onAddAndSelectNewPlayer }) => {
-    const { players, gameData } = useContext(PlayersContext);
+    const { players } = useContext(PlayersContext);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedPlayer, setSelectedPlayer] = useState(null);
 
@@ -16,16 +16,10 @@ const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPl
             inputRef.current.focus();
         }
     }, []); // Empty dependency array means it runs once after the initial render
-
-    // Helper: Get team by player ID
-    const getPlayerTeam = (playerId) => {
-        const teamData = gameData.find((data) => data.base_player_uid === playerId);
-        return teamData ? teamData.team : null;
-    };
     
     // Filter players based on search term
     const filteredPlayers = players.map((p) => {
-        const team = getPlayerTeam(p.uid);
+        const team = p.team || null;
         return {
             ...p,
             team: team,

@@ -21,14 +21,13 @@ const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) 
   return { left, top };
 };
 
-const PlayerContainer = ({ team }) => {
+const PlayerContainer = ({ team, teamPlayers}) => {
   const containerRef = useRef(null);
 
-  const { addGamePlayerToGame, addRealPlayerToGame, updateGamePlayer, getTeamPlayers, switchGamePlayer, switchGamePlayerToGuest, addAndSwitchGamePlayer } = useContext(PlayersContext);
+  const { addGamePlayerToGame, addRealPlayerToGame, updateGamePlayer, switchGamePlayer, switchGamePlayerToGuest, addAndSwitchGamePlayer } = useContext(PlayersContext);
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [playerSize, setPlayerSize] = useState(80);
-  const [players, setPlayers] = useState(getTeamPlayers(team));
 
   useEffect(() => {
     const updateSize = () => {
@@ -50,6 +49,8 @@ const PlayerContainer = ({ team }) => {
     drop: (item, monitor) => {
       if (!containerRef.current) return;
 
+      console.log("drop:", {item});
+
       const halfSize = playerSize / 2;
       const rect = containerRef.current.getBoundingClientRect();
       const { x, y } = monitor.getSourceClientOffset(); // Get the drop coordinates
@@ -67,42 +68,29 @@ const PlayerContainer = ({ team }) => {
   }));
 
   const handleMainPlayerDrop = (playerUID, dropX, dropY) => {
-    const gamePlayer = players.find((p) => p.base_player_uid === playerUID);
-    if (gamePlayer) {
-      updateGamePlayer(team, gamePlayer, dropX, dropY);
-      setPlayers((prevPlayers) => {
-        return prevPlayers.map((p) =>
-          p.base_player_uid === playerUID
-            ? { ...p, x: dropX, y: dropY } // Update position
-            : p
-        );
-      });
-    } else {
       addRealPlayerToGame(team, playerUID, dropX, dropY);
-      setPlayers(getTeamPlayers(team)); // Refresh player list
-    }
   };
 
   const handleGamePlayerDrop = (gamePlayerUID, dropX, dropY) => {
-    const gamePlayer = players.find((p) => p.id === gamePlayerUID);
+    const gamePlayer = teamPlayers.find((p) => p.id === gamePlayerUID);
     if (gamePlayer) {
       updateGamePlayer(team, gamePlayer, dropX, dropY);
-      setPlayers((prevPlayers) => {
-        return prevPlayers.map((p) =>
-          p.id === gamePlayerUID
-            ? { ...p, x: dropX, y: dropY } // Update position
-            : p
-        );
-      });
+      // setTeamPlayers((prevPlayers) => {
+      //   return prevPlayers.map((p) =>
+      //     p.id === gamePlayerUID
+      //       ? { ...p, x: dropX, y: dropY } // Update position
+      //       : p
+      //   );
+      // });
     } else {
       addGamePlayerToGame(team, gamePlayerUID, dropX, dropY);
-      setPlayers(getTeamPlayers(team)); // Refresh player list
+      // setPlayers(getTeamPlayers(team)); // Refresh player list
     }
   };
 
   const handleSwitchPlayer = (playerId, newPlayer) => {
-    switchGamePlayer(team, playerId, newPlayer.uid);
-    setPlayers(getTeamPlayers(team)); // Refresh player list
+    switchGamePlayer(team, playerId, newPlayer.id);
+    // setPlayers(getTeamPlayers(team)); // Refresh player list
     // setGamePlayers((prev) =>
     //   prev.map((p) => (p.id === playerId ? { ...p, ...newPlayer } : p))
     // );
@@ -134,7 +122,7 @@ const PlayerContainer = ({ team }) => {
         height: '100%',
       }}
     >
-      {players.map((player) => {
+      {teamPlayers.map((player) => {
         const { left, top } = getPlayerPosition(player, playerSize, containerSize.width, containerSize.height);
 
         return (

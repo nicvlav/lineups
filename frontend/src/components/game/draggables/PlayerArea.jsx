@@ -1,7 +1,7 @@
 import PlayerContainer from "./PlayerContainer";
-import React, { useState } from "react";
+import React from "react";
 
-const PlayerArea = ({ team, players }) => {
+const PlayerArea = ({ team, teamPlayers }) => {
   return (
     <div
       className="relative bg-primary"
@@ -40,7 +40,7 @@ const PlayerArea = ({ team, players }) => {
           alignItems: "center",
         }}
       >
-        <PlayerContainer team = {team} players={players} />
+        <PlayerContainer team = {team} teamPlayers={teamPlayers} />
       </div>
     </div>
   );
