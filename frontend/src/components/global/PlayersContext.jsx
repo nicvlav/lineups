@@ -32,7 +32,6 @@ export const PlayersProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
     const [selectedFormation, setSelectedFormations] = useState([]);
     const [formations, setFormations] = useState([]);
-    const [loading, setLoading] = useState(false);
 
     // this is probably hacky? idk about this stale capture bs
     const playersRef = useRef(players);
@@ -85,7 +84,7 @@ export const PlayersProvider = ({ children }) => {
             return JSON.parse(decompressed);
         } catch (error) {
             console.error("Failed to decode state from URL:", error);
-            return { players: []}; // Fallback to empty state
+            return { players: [] }; // Fallback to empty state
         }
     };
 
@@ -108,7 +107,14 @@ export const PlayersProvider = ({ children }) => {
         if (!name.trim()) return;
         const newUID = Date.now().toString();
         setPlayers(() => {
-            const updated = [...playersRef.current, { id: newUID, name, guest: false}];
+            const updated = [...playersRef.current, {
+                id: newUID,
+                name,
+                guest: false,
+                attack: 5,
+                defense: 5,
+                athleticism: 5
+            }];
             return updated;
         });
     };
@@ -137,40 +143,40 @@ export const PlayersProvider = ({ children }) => {
         // setGame([]); // Assuming clearing the state
     };
 
-    // Switch game player
-    const switchGamePlayer = (placedTeam, gamePlayerUID, realPlayerUID) => {
-        // setGame((prev) => {
-        //     const updated = prev.map(player =>
-        //         player.uid === gamePlayerUID ? { ...player, base_player_uid: realPlayerUID } : player
-        //     );
-        //     return updated;
-        // });
+    const addNewRealPlayerToGame = async (placedTeam, name, dropX, dropY) => {
+        setPlayers(() => {
+            const newPlayer = {
+                id: Date.now().toString(),  // Or use a smarter way to generate a unique ID
+                team: placedTeam,
+                name: name,
+                guest: false,
+                attack: 5,
+                defense: 5,
+                athleticism: 5,
+                x: dropX,
+                y: dropY,
+            };
+            const updated = [...playersRef.current, newPlayer];
+            return updated;
+        });
     };
 
-    // Switch game player to a guest
-    const switchGamePlayerToGuest = (placedTeam, gamePlayerUID, newPlayerName) => {
-        // setGame((prev) => {
-        //     const updated = prev.map(player =>
-        //         player.uid === gamePlayerUID ? { ...player, name: newPlayerName } : player
-        //     );
-        //     return updated;
-        // });
-    };
-
-    // Add and switch a game player
-    const addAndSwitchGamePlayer = (placedTeam, gamePlayerUID, newPlayerName) => {
-        // if (!newPlayerName.trim()) return;
-        // setPlayers((prev) => {
-        //     const newPlayer = { uid: Date.now().toString(), name: newPlayerName };
-        //     const updatedPlayers = [...prev, newPlayer];
-        //     setGame((gamePrev) => {
-        //         const updatedGame = gamePrev.map(player =>
-        //             player.uid === gamePlayerUID ? { ...player, base_player_uid: newPlayer.uid } : player
-        //         );
-        //         return updatedGame;
-        //     });
-        //     return updatedPlayers;
-        // });
+    const addNewGuestPlayerToGame = async (placedTeam, name, dropX, dropY) => {
+        setPlayers(() => {
+            const newPlayer = {
+                id: Date.now().toString(),  // Or use a smarter way to generate a unique ID
+                team: placedTeam,
+                name: name,
+                guest: true,
+                attack: 5,
+                defense: 5,
+                athleticism: 5,
+                x: dropX,
+                y: dropY,
+            };
+            const updated = [...playersRef.current, newPlayer];
+            return updated;
+        });
     };
 
     // Add real player to game
@@ -191,48 +197,79 @@ export const PlayersProvider = ({ children }) => {
         });
     };
 
-    const addGamePlayerToGame = async (placedTeam, gamePlayerUID, dropX, dropY) => {
-        console.log("ytoooo", gamePlayerUID, playersRef.current)
-        const foundPlayer = playersRef.current.find((p) => p.id === gamePlayerUID);
-
-        if (foundPlayer) {
-            setPlayers(() => {
-                const updated = playersRef.current.map((player) =>
-                    player === foundPlayer
-                        ? { ...player, team: placedTeam, x: dropX, y: dropY }
-                        : player
-                );
-                return updated;
-            });
-
-        } else {
-            setPlayers(() => {
-                const newPlayer = {
-                    id: Date.now().toString(),  // Or use a smarter way to generate a unique ID
-                    team: placedTeam,
-                    name: "Guest",
-                    guest: true,
-                    x: dropX,
-                    y: dropY,
-                };
-                const updated = [...playersRef.current, newPlayer];
-                return updated;
-            });
+    const switchToRealPlayer = async (placedTeam, oldID, newID) => {
+        if (oldID === newID) {
+            return; // No need to switch if IDs are the same
         }
+
+        // Find the old player in the list (should exist)
+        const oldPlayer = playersRef.current.find((p) => p.id === oldID);
+        if (!oldPlayer) {
+            return; // If old player isn't found, exit early
+        }
+
+        // Find the new player in the list (must exist)
+        const newPlayer = playersRef.current.find((p) => p.id === newID);
+        if (!newPlayer) {
+            return; // If new player isn't found, exit early
+        }
+
+        // Store the old player's x and y positions
+        const { x, y } = oldPlayer;
+
+        // Create the updated player list
+        const updatedPlayers = playersRef.current.map((player) => {
+            if (player.id === oldID) {
+                // If old player was a guest, remove it; otherwise, set team to null
+                return oldPlayer.guest ? null : { ...player, team: null };
+            }
+            if (player.id === newID) {
+                // Update the new player's team and assign old player's x, y coordinates
+                return { ...player, team: placedTeam, x, y };
+            }
+            return player;
+        }).filter(Boolean); // Remove null entries if a guest was removed
+
+        setPlayers(updatedPlayers);
     };
 
-    // Update player position in game
-    const updateGamePlayer = (placedTeam, gamePlayer, dropX, dropY) => {
-        // setGame((prev) => {
-        //     const updated = prev.map(player =>
-        //         player.id === gamePlayer.id ? { ...player, x: dropX, y: dropY } : player
-        //     );
-        //     return updated;
-        // });
+    const switchToNewPlayer = async (placedTeam, oldID, guestName, guest = false) => {
+        if (!guestName) {
+            return;
+        }
+    
+        // Find the old player in the list (should exist)
+        const oldPlayer = playersRef.current.find((p) => p.id === oldID);
+        if (!oldPlayer) {
+            return; // Exit early if not found
+        }
+    
+        // Store the old player's x and y positions
+        const { x, y, guest: wasGuest } = oldPlayer;
+    
+        // Create a new guest player
+        const newGuest = {
+            id: Date.now().toString(), // Generate a unique ID
+            name: guestName,
+            team: placedTeam,
+            x,
+            y,
+            guest: guest,
+        };
+    
+        // Create the updated player list
+        const updatedPlayers = playersRef.current.map((player) =>
+            player.id === oldID
+                ? wasGuest
+                    ? null // Remove if the old player was a guest
+                    : { ...player, team: null } // Otherwise, just clear the team
+                : player
+        ).filter(Boolean); // Remove null entries only for guests
+    
+        updatedPlayers.push(newGuest); // Add the new guest player
+    
+        setPlayers(updatedPlayers);
     };
-
-
-    // Get players filtered by te
 
     // Fetch formations
     const fetchFormations = () => {
@@ -257,16 +294,14 @@ export const PlayersProvider = ({ children }) => {
             players,
             formations,
             selectedFormation,
-            loading,
             addPlayer,
             deletePlayer,
             updatePlayerAttributes,
             addRealPlayerToGame,
-            addGamePlayerToGame,
-            switchGamePlayer,
-            switchGamePlayerToGuest,
-            addAndSwitchGamePlayer,
-            updateGamePlayer,
+            addNewRealPlayerToGame,
+            addNewGuestPlayerToGame,
+            switchToRealPlayer,
+            switchToNewPlayer,
             applyFormation,
             clearGame,
             generateTeams

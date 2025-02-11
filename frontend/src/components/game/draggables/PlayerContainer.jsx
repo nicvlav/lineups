@@ -21,10 +21,10 @@ const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) 
   return { left, top };
 };
 
-const PlayerContainer = ({ team, teamPlayers}) => {
+const PlayerContainer = ({ team, teamPlayers }) => {
   const containerRef = useRef(null);
 
-  const { addGamePlayerToGame, addRealPlayerToGame, updateGamePlayer, switchGamePlayer, switchGamePlayerToGuest, addAndSwitchGamePlayer } = useContext(PlayersContext);
+  const { addRealPlayerToGame, switchToRealPlayer, switchToNewPlayer } = useContext(PlayersContext);
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [playerSize, setPlayerSize] = useState(80);
@@ -49,7 +49,7 @@ const PlayerContainer = ({ team, teamPlayers}) => {
     drop: (item, monitor) => {
       if (!containerRef.current) return;
 
-      console.log("drop:", {item});
+      console.log("drop:", { item });
 
       const halfSize = playerSize / 2;
       const rect = containerRef.current.getBoundingClientRect();
@@ -68,49 +68,28 @@ const PlayerContainer = ({ team, teamPlayers}) => {
   }));
 
   const handleMainPlayerDrop = (playerUID, dropX, dropY) => {
-      addRealPlayerToGame(team, playerUID, dropX, dropY);
+    addRealPlayerToGame(team, playerUID, dropX, dropY);
   };
 
   const handleGamePlayerDrop = (gamePlayerUID, dropX, dropY) => {
-    const gamePlayer = teamPlayers.find((p) => p.id === gamePlayerUID);
-    if (gamePlayer) {
-      updateGamePlayer(team, gamePlayer, dropX, dropY);
-      // setTeamPlayers((prevPlayers) => {
-      //   return prevPlayers.map((p) =>
-      //     p.id === gamePlayerUID
-      //       ? { ...p, x: dropX, y: dropY } // Update position
-      //       : p
-      //   );
-      // });
-    } else {
-      addGamePlayerToGame(team, gamePlayerUID, dropX, dropY);
-      // setPlayers(getTeamPlayers(team)); // Refresh player list
-    }
+    addRealPlayerToGame(team, gamePlayerUID, dropX, dropY);
+
   };
 
   const handleSwitchPlayer = (playerId, newPlayer) => {
-    switchGamePlayer(team, playerId, newPlayer.id);
-    // setPlayers(getTeamPlayers(team)); // Refresh player list
-    // setGamePlayers((prev) =>
-    //   prev.map((p) => (p.id === playerId ? { ...p, ...newPlayer } : p))
-    // );
+    switchToRealPlayer(team, playerId, newPlayer.id);
   };
 
-  const handleSwitchPlayerToGuest = (playerId, newPlayerName) => {
-    switchGamePlayerToGuest(team, playerId, newPlayerName);
-    // setPlayers(getTeamPlayers(team)); // Refresh player list
-    // setGamePlayers((prev) =>
-    //   prev.map((p) => (p.id === playerId ? { ...p, ...newPlayer } : p))
-    // );
+  const handleSwitchToNewPlayer = (playerId, newPlayerName) => {
+    switchToNewPlayer(team, playerId, newPlayerName, false);
+
   };
 
-  const handleAddAndSwitchPlayerToGuest = (playerId, newPlayerName) => {
-    addAndSwitchGamePlayer(team, playerId, newPlayerName);
-    // setPlayers(getTeamPlayers(team)); // Refresh player list
-    // setGamePlayers((prev) =>
-    //   prev.map((p) => (p.id === playerId ? { ...p, ...newPlayer } : p))
-    // );
+  const handleSwitchToNewGuest = (playerId, newPlayerName) => {
+    switchToNewPlayer(team, playerId, newPlayerName, true);
+
   };
+
 
   return (
     <div
@@ -134,8 +113,8 @@ const PlayerContainer = ({ team, teamPlayers}) => {
             initialTop={top}
 
             onSwitchPlayer={handleSwitchPlayer}
-            onSwitchToGuest={handleSwitchPlayerToGuest}
-            onAddAndSwitchToPlayer={handleAddAndSwitchPlayerToGuest}
+            onSwitchToGuest={handleSwitchToNewGuest}
+            onAddAndSwitchToPlayer={handleSwitchToNewPlayer}
           />
         );
       })}

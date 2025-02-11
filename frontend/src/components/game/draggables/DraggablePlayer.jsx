@@ -9,7 +9,7 @@ const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop, onSwitch
 
   const [, drag] = useDrag(() => ({
     type: "PLAYER",
-    item: { game_uid: player.id },
+    item: { game_uid: player.id, name: player.name},
   }));
 
   const handleOpenDialog = (event) => {

@@ -4,7 +4,7 @@ import React, { useContext } from "react";
 import { PlayersContext } from "../../global/PlayersContext.jsx";
 
 const CurrentGame = () => {
-    const { players, loading } = useContext(PlayersContext);
+    const { players } = useContext(PlayersContext);
 
     const getTeamPlayers = (team) => {
         if (!players || !Array.isArray(players)) {
@@ -13,10 +13,6 @@ const CurrentGame = () => {
         }
         return players.filter(player => player.team === team);
     };
-
-    if (loading) {
-        return <div>Loading game data...</div>;
-    }
 
     return (
         <div className="relative bg-secondary" style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", height: "100vh", width: "100vw", overflow: "auto", padding: "2px", gap: "2px" }}>

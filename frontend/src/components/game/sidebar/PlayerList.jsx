@@ -10,6 +10,8 @@ const PlayerList = () => {
 
     const inputRef = useRef(null);
 
+
+
     const handleAddPlayer = async () => {
         await addPlayer(newPlayerName);
         setNewPlayerName("");
@@ -34,8 +36,18 @@ const PlayerList = () => {
         setSortOrder(e.target.value); // Update the sort order based on the selection
     };
 
+    const getNonGuests = () => {
+        if (!players || !Array.isArray(players)) {
+            console.warn("Invalid players format:", players);
+            return [];
+        }
+        return players.filter(player => player.guest !== true);
+    };
+
+    const filteredPlayers = getNonGuests(players);
+
     // Sort players based on the selected sortOrder (ascending or descending)
-    const sortedPlayers = [...players].sort((a, b) => {
+    const sortedPlayers = [...filteredPlayers].sort((a, b) => {
         const nameA = a.name.toLowerCase();
         const nameB = b.name.toLowerCase();
 
@@ -52,6 +64,8 @@ const PlayerList = () => {
             inputRef.current.focus();
         }
     }, [isAdding]);
+
+   
 
     return (
         <div className="p-4shadow-lg rounded-lg">
