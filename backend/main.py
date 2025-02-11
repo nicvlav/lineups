@@ -366,7 +366,7 @@ class TeamRequest(BaseModel):
     attribute_weights: dict
 
 def generate_balanced_teams(players: List[Player], weights: dict[str, float]):
-    """Uses clustering and dynamic balancing to create fair, equally sized teams."""
+    """Creates balanced teams using clustering and a slight randomness factor."""
     if len(players) < 2:
         return [], []
 
@@ -390,13 +390,17 @@ def generate_balanced_teams(players: List[Player], weights: dict[str, float]):
         for p in players
     ]
 
-    # Sort players by score (highest first)
+    # **Introduce randomness for close scores**
     scored_players.sort(key=lambda p: p[1], reverse=True)
+    for i in range(len(scored_players) - 1):
+        if abs(scored_players[i][1] - scored_players[i + 1][1]) < 0.1 * scored_players[i][1]:  
+            if random.random() < 0.3:  # 30% chance to swap close-ranked players
+                scored_players[i], scored_players[i + 1] = scored_players[i + 1], scored_players[i]
 
     team_a, team_b = [], []
     sum_a, sum_b = 0, 0
 
-    # **Key change: Alternate player assignment based on team strength**
+    # **Alternate assignment with randomness for close cases**
     for player, score in scored_players:
         if len(team_a) < half_size and (sum_a <= sum_b or len(team_b) >= half_size):
             team_a.append(player)
@@ -408,38 +412,84 @@ def generate_balanced_teams(players: List[Player], weights: dict[str, float]):
     return team_a, team_b
 
 def generate_positions(team: List[Player]):
-    """Generates logical soccer positions dynamically while ensuring full team assignment."""
+    """Assigns soccer positions dynamically while enforcing full team assignment."""
     num_players = len(team)
     positions = []
-    
-    # Assign goalkeeper (least impactful player)
-    positions.append({"uid": team[0].uid, "name": team[0].name, "x": 0.5, "y": 1.0})
-    
-    # Determine formation zones
-    num_zones = 2 if num_players < 6 else 3
-    base_players_per_zone = (num_players - 1) // num_zones  # Minimum players per zone
-    extra_players = (num_players - 1) % num_zones  # Players left to distribute
-    
-    # Distribute players in zones
-    idx = 1  # Start after goalkeeper
+
+    # **Step 1: Identify the Goalkeeper (Worst Player or High Defense)**
+    goalkeeper = min(
+        team,
+        key=lambda p: (p.attack + p.defense + p.athleticism, -p.defense)  # Prefer lowest overall, but if tied, prefer defense
+    )
+    positions.append({"uid": goalkeeper.uid, "name": goalkeeper.name, "x": 0.5, "y": 1.0})
+
+    # Remove goalkeeper from further assignments
+    outfield_players = [p for p in team if p.uid != goalkeeper.uid]
+
+    # **Step 2: Determine Formation Structure**
+    num_zones = 2 if num_players < 6 else 3  # <6 players → No midfield
+    base_players_per_zone = (num_players - 1) // num_zones
+    extra_players = (num_players - 1) % num_zones  # Distribute extras evenly
+
+    # **Distribute players per zone (Ensuring Even Split)**
+    zone_limits = {0: base_players_per_zone, 1: base_players_per_zone, 2: base_players_per_zone}  # Defense, Mid, Attack
+    for i in range(extra_players):
+        zone_limits[i] += 1  # Distribute extra players evenly across zones
+
+    # **Step 3: Sort Players Based on Role Suitability**
+    sorted_outfield = sorted(outfield_players, key=lambda p: abs(p.attack - p.defense), reverse=True)  # Outliers first
+    midfield_priority = sorted(
+        outfield_players, key=lambda p: (p.athleticism + (p.attack + p.defense) / 2), reverse=True  # Strong overall players
+    )
+
+    # **Step 4: Assign Players to Zones (Fixing Drop Issues)**
+    zones = {0: [], 1: [], 2: []}  # Defense, Midfield, Attack
+    assigned_players = []  # Track assigned players using a list
+
+    # **Place Outliers First (Ensuring Limits)**
+    for player in sorted_outfield:
+        if abs(player.attack - player.defense) > 3 and player.uid not in assigned_players:
+            if player.attack > player.defense and len(zones[2]) < zone_limits[2]:  # Attack
+                zones[2].append(player)
+                assigned_players.append(player.uid)
+            elif player.defense > player.attack and len(zones[0]) < zone_limits[0]:  # Defense
+                zones[0].append(player)
+                assigned_players.append(player.uid)
+
+    # **Prioritize Balanced, Athletic Players for Midfield**
+    for player in midfield_priority:
+        if player.uid not in assigned_players and len(zones[1]) < zone_limits[1]:
+            zones[1].append(player)
+            assigned_players.append(player.uid)
+
+    # **Evenly Distribute Remaining Players**
+    remaining_players = [p for p in outfield_players if p.uid not in assigned_players]
     for zone in range(num_zones):
-        y = 1.0 - ((zone + 1) / num_zones)  # Defensive to attacking zones
-        
-        # Adjust for leftover players
-        num_players_in_zone = base_players_per_zone + (1 if zone < extra_players else 0)
-        x_spacing = 0.4 / max(num_players_in_zone - 1, 1)  # Spacing based on count
-        
-        for i in range(num_players_in_zone):
-            if idx >= num_players:
-                break
-            
-            # Center players around x = 0.5
+        while len(zones[zone]) < zone_limits[zone] and remaining_players:
+            player = remaining_players.pop(0)
+            zones[zone].append(player)
+            assigned_players.append(player.uid)
+
+    # **Failsafe: Ensure No Dropped Players**
+    for player in remaining_players:
+        for zone in range(num_zones):
+            if len(zones[zone]) < zone_limits[zone]:
+                zones[zone].append(player)
+                assigned_players.append(player.uid)
+                break  # Stop once assigned
+
+    # **Step 5: Assign Players to Field Positions (Ensuring Full Placement)**
+    for zone, players in zones.items():
+        y = 1.0 - ((zone + 1) /( num_zones + 1))  # Y Positioning
+        num_players_in_zone = len(players)
+        x_spacing = 0.4 / max(num_players_in_zone - 1, 1)  # Ensures proper spacing
+
+        for i, player in enumerate(players):
             x = 0.5 + (i - (num_players_in_zone - 1) / 2) * x_spacing
-            
-            positions.append({"uid": team[idx].uid, "name": team[idx].name, "x": round(x, 2), "y": round(y, 2)})
-            idx += 1
-    
+            positions.append({"uid": player.uid, "name": player.name, "x": round(x, 2), "y": round(y, 2)})
+
     return positions
+
 
 
 @app.post("/autocreate")
@@ -451,6 +501,9 @@ def auto_create_teams(request: TeamRequest):
     conn.execute("DELETE FROM game")
 
     team_a, team_b = generate_balanced_teams(request.players, request.attribute_weights)
+
+    print(team_a)
+    print(team_b)
     
     team_a_positions = generate_positions(team_a)
     team_b_positions = generate_positions(team_b)
