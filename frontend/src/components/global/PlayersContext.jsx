@@ -37,70 +37,57 @@ export const PlayersProvider = ({ children }) => {
     const playersRef = useRef(players);
 
     useEffect(() => {
-        const loadGameState = () => {
-            // 1. Read state from URL
-            const urlState = decodeStateFromURL2(window.location.search);
-            console.log("succeeded 123", urlState);
-            if (urlState) {
-                setPlayers(urlState.players || []);
-                // console.log("urlState:", { urlState });
+        const loadGameState = async () => {
+            const currentUrl = new URL(window.location);
+            const urlState = decodeStateFromURL(currentUrl.search);
+
+            if (urlState && urlState.players) {
+                setPlayers(urlState.players);
+                console.log("Loaded from URL:", urlState);
+
+                // Clear the URL so future reloads use IndexedDB
+                currentUrl.searchParams.delete("state");
+                window.history.replaceState({}, "", currentUrl.toString());
+
                 return;
             }
 
-            // 2. Load from IndexedDB
-            const savedState = getFromDB("latest");
+            // Load from IndexedDB
+            const savedState = await getFromDB("latest");
             if (savedState) {
                 try {
                     const parsedData = JSON.parse(savedState);
-                    setPlayers(urlState.players || []);
-                    console.log("parsedData:", { parsedData });
-                    return;
+                    setPlayers(parsedData.players || []);
+                    console.log("Loaded from IndexedDB:", parsedData);
                 } catch (error) {
                     console.error("Error loading from IndexedDB:", error);
                 }
+                return;
             }
-            console.log("over:");
-            // 3. Load default state
+
+            console.log("No saved state found, using default.");
             setPlayers([]);
         };
 
         loadGameState();
-
     }, []);
 
     useEffect(() => {
-        playersRef.current = players;
-        console.log("Updated players in context:", players);
-        saveState(players);
-    }, [players]);
-
-    const decodeStateFromURL2 = (search) => {
-        const params = new URLSearchParams(search);
-        const stateParam = params.get("state");
-        if (!stateParam) return { players: [] }; // Default empty state
-        console.log("succeeded 12")
-        try {
-            const decompressed = LZString.decompressFromEncodedURIComponent(stateParam);
-            return JSON.parse(decompressed);
-        } catch (error) {
-            console.error("Failed to decode state from URL:", error);
-            return { players: [] }; // Fallback to empty state
+        if (playersRef.current !== players) {
+            playersRef.current = players;
+            console.log("Updated players in context:", players);
+            saveState(players);
         }
-    };
+    }, [players]);
 
     const saveState = async (p) => {
         const stateObject = { players: p };
+        console.log("SAVED STATE OBJ:", stateObject);
 
-        console.log("SAVED STATE OBJ ", stateObject);
         const jsonString = JSON.stringify(stateObject);
-        const compressed = LZString.compressToEncodedURIComponent(jsonString);
 
-        // Save to IndexedDB
+        // Save to IndexedDB only, no URL update
         await saveToDB("latest", jsonString);
-
-        // Update URL with compressed state
-        const newUrl = `${window.location.pathname}?state=${compressed}`;
-        window.history.pushState({}, "", newUrl);
     };
 
     const addPlayer = async (name) => {
@@ -237,16 +224,16 @@ export const PlayersProvider = ({ children }) => {
         if (!guestName) {
             return;
         }
-    
+
         // Find the old player in the list (should exist)
         const oldPlayer = playersRef.current.find((p) => p.id === oldID);
         if (!oldPlayer) {
             return; // Exit early if not found
         }
-    
+
         // Store the old player's x and y positions
         const { x, y, guest: wasGuest } = oldPlayer;
-    
+
         // Create a new guest player
         const newGuest = {
             id: Date.now().toString(), // Generate a unique ID
@@ -256,7 +243,7 @@ export const PlayersProvider = ({ children }) => {
             y,
             guest: guest,
         };
-    
+
         // Create the updated player list
         const updatedPlayers = playersRef.current.map((player) =>
             player.id === oldID
@@ -265,9 +252,9 @@ export const PlayersProvider = ({ children }) => {
                     : { ...player, team: null } // Otherwise, just clear the team
                 : player
         ).filter(Boolean); // Remove null entries only for guests
-    
+
         updatedPlayers.push(newGuest); // Add the new guest player
-    
+
         setPlayers(updatedPlayers);
     };
 

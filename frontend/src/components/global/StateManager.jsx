@@ -1,7 +1,7 @@
 import LZString from "lz-string";
 
-export const decodeStateFromURL = () => {
-    const urlParams = new URLSearchParams(window.location.search);
+export const decodeStateFromURL = (search) => {
+    const urlParams = new URLSearchParams(search);
     const encodedState = urlParams.get("state");
     if (encodedState) {
         try {
