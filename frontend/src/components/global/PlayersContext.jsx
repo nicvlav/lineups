@@ -35,8 +35,11 @@ export const PlayersProvider = ({ children }) => {
 
     // this is probably hacky? idk about this stale capture bs
     const playersRef = useRef(players);
+    const tabKeyRef = useRef(sessionStorage.getItem("tabKey") || `tab-${crypto.randomUUID()}`);
 
     useEffect(() => {
+        sessionStorage.setItem("tabKey", tabKeyRef.current); // Ensure it persists in sessionStorage
+
         const loadGameState = async () => {
             const currentUrl = new URL(window.location);
             const urlState = decodeStateFromURL(currentUrl.search);
@@ -45,6 +48,9 @@ export const PlayersProvider = ({ children }) => {
                 setPlayers(urlState.players);
                 console.log("Loaded from URL:", urlState);
 
+                // Store in tab-specific IndexedDB key
+                await saveToDB(tabKeyRef.current, JSON.stringify(urlState));
+
                 // Clear the URL so future reloads use IndexedDB
                 currentUrl.searchParams.delete("state");
                 window.history.replaceState({}, "", currentUrl.toString());
@@ -52,8 +58,8 @@ export const PlayersProvider = ({ children }) => {
                 return;
             }
 
-            // Load from IndexedDB
-            const savedState = await getFromDB("latest");
+            // Load from tab-specific IndexedDB key
+            const savedState = await getFromDB(tabKeyRef.current);
             if (savedState) {
                 try {
                     const parsedData = JSON.parse(savedState);
@@ -80,14 +86,11 @@ export const PlayersProvider = ({ children }) => {
         }
     }, [players]);
 
+
     const saveState = async (p) => {
         const stateObject = { players: p };
         console.log("SAVED STATE OBJ:", stateObject);
-
-        const jsonString = JSON.stringify(stateObject);
-
-        // Save to IndexedDB only, no URL update
-        await saveToDB("latest", jsonString);
+        await saveToDB(tabKeyRef.current, JSON.stringify(stateObject));
     };
 
     const addPlayer = async (name) => {
