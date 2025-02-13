@@ -1,12 +1,14 @@
-import React, { useContext } from "react";
+import React, { useRef, useContext } from "react";
 import { PlayersContext } from "../../global/PlayersContext.jsx";
 import formations from "../../global/Formations"
 
 const FormationSelector = () => {
-    const { applyFormation, selectedFormation } = useContext(PlayersContext);
+    const selectRef = useRef(null);
+    const { applyFormation } = useContext(PlayersContext);
 
     const handleChange = (event) => {
         applyFormation(event.target.value);
+        selectRef.current.value = "";
     };
 
     // Group formations by num_players
@@ -20,9 +22,13 @@ const FormationSelector = () => {
 
     return (
         <div className="relative">
-            <label htmlFor="formation-select">Formation:</label>
-            <select className="relative bg-gray-800" id="formation-select" value={selectedFormation} onChange={handleChange}>
-                <option value="custom">Custom</option>
+            <select
+                className="relative bg-gray-800"
+                id="formation-select"
+                onChange={handleChange}
+                ref={selectRef} // Attach ref to select element
+            >
+                <option value="">Change Formation</option> {/* Option for no selection */}
                 {Object.keys(groupedFormations)
                     .sort((a, b) => a - b) // Ensure sorted order (e.g., 5, 7, 11 players)
                     .map((numPlayers) => (

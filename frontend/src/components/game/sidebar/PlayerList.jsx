@@ -10,8 +10,6 @@ const PlayerList = () => {
 
     const inputRef = useRef(null);
 
-
-
     const handleAddPlayer = async () => {
         await addPlayer(newPlayerName);
         setNewPlayerName("");

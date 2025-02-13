@@ -30,7 +30,6 @@ const saveToDB = async (key, value) => {
 
 export const PlayersProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
-    const [selectedFormation, setSelectedFormation] = useState([]);
 
     // this is probably hacky? idk about this stale capture bs
     const playersRef = useRef(players);
@@ -312,8 +311,12 @@ export const PlayersProvider = ({ children }) => {
 
     // Apply a formation to a team
     const applyFormation = async (formationId) => {
-        // deep copy to ensure state setting triggers a use effect
-        let currPlayers = playersRef.current.map(player => ({ ...player }));
+          // deep copy to ensure state setting triggers a use effect
+        let currPlayers = playersRef.current
+            .filter(player => player.temp_formation !== true)
+            .map(player => ({ ...player }));
+
+        players.filter(player => player.guest !== true);
 
         console.log("formationId: ", formationId, formations);
 
@@ -326,7 +329,6 @@ export const PlayersProvider = ({ children }) => {
         adjustTeamSize(currPlayers, "A", formation);
         adjustTeamSize(currPlayers, "B", formation);
 
-        setSelectedFormation(formationId);
         setPlayers(currPlayers);
     };
 
@@ -341,8 +343,6 @@ export const PlayersProvider = ({ children }) => {
     return (
         <PlayersContext.Provider value={{
             players,
-            formations,
-            selectedFormation,
             addPlayer,
             deletePlayer,
             updatePlayerAttributes,
