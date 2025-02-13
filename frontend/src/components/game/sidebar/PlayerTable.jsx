@@ -9,6 +9,16 @@ const PlayerTable = () => {
         updatePlayerAttributes(uid, { [field]: value });
     };
 
+    const getNonTemps = () => {
+        if (!players || !Array.isArray(players)) {
+            console.warn("Invalid players format:", players);
+            return [];
+        }
+        return players.filter(player => player.temp_formation !== true);
+    };
+
+    const nonTempPlayers = getNonTemps();
+
     const columns = [
         {
             title: "Player",
@@ -68,7 +78,7 @@ const PlayerTable = () => {
         <div className="p-6 bg-gray-900 rounded-xl shadow-xl">
             <h2 className="text-2xl font-semibold text-white text-center mb-4">Player Attributes</h2>
             <Table
-                dataSource={players}
+                dataSource={nonTempPlayers}
                 columns={columns}
                 rowKey="uid"
                 pagination={{ pageSize: 8 }}

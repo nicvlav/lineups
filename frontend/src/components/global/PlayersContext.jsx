@@ -249,6 +249,9 @@ export const PlayersProvider = ({ children }) => {
             team: placedTeam,
             x,
             y,
+            attack: 5,
+            defense: 5,
+            athleticism: 5,
             guest: guest,
         };
 
