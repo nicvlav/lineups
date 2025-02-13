@@ -1,9 +1,9 @@
 // CurrentGame Component
-import PlayerArea from "./PlayerArea";
+import PlayerArea from "./draggables/PlayerArea";
 import React, { useContext } from "react";
-import { PlayersContext } from "../../global/PlayersContext.jsx";
+import { PlayersContext } from "../global/PlayersContext.jsx";
 
-const CurrentGame = () => {
+const CurrentGame = ({className}) => {
     const { players } = useContext(PlayersContext);
 
     const getTeamPlayers = (team) => {
@@ -15,9 +15,9 @@ const CurrentGame = () => {
     };
 
     return (
-        <div className="relative bg-secondary" style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", height: "100vh", width: "100vw", overflow: "auto", padding: "2px", gap: "2px" }}>
+        <div className={`h-full flex gap-4 bg-gray-900 p-4 rounded-lg shadow-lg ${className}`}>
             <PlayerArea team="A" teamPlayers={getTeamPlayers("A")} />
-            <PlayerArea team="B" teamPlayers={getTeamPlayers("B")}/>
+            <PlayerArea team="B" teamPlayers={getTeamPlayers("B")}/> 
         </div>
     );
 };

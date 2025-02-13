@@ -74,6 +74,103 @@ button:focus-visible {
   height: calc(100vh - 55px);
 }
 
+/* Target the close button */
+.ant-drawer .ant-drawer-close {
+  color: #ff5733 !important;
+  /* Use !important to ensure it overrides default styles */
+  border: none !important;
+  /* Remove border */
+}
+
+/* Optionally, change hover styles */
+.ant-drawer .ant-drawer-close:hover {
+  background-color: #333 !important;
+  /* Change background color on hover */
+  color: #fff !important;
+  /* Change color on hover */
+}
+
+/* Style for the Ant Design Table */
+.ant-table {
+  background-color: #1e2939 !important;
+  /* Dark background for the whole table */
+  color: #ffffff !important;
+  /* White text color */
+}
+
+/* Header styles */
+.ant-table-thead>tr>th {
+  background-color: #1e2939 !important;
+  /* Dark background for header */
+  color: #ffffff !important;
+  /* White text for header */
+  font-weight: bold;
+}
+
+/* Body row styles */
+.ant-table-tbody>tr>td {
+  background-color: #1e2939 !important;
+  /* Dark background for rows */
+  color: #ffffff !important;
+  /* White text for rows */
+}
+
+/* Styling for InputNumber elements */
+.ant-input-number {
+  background-color: #2d3748 !important;
+  /* Dark input fields */
+  color: #ffffff !important;
+  /* White text inside input */
+  border-radius: 4px;
+}
+
+/* Add hover effect for rows */
+.ant-table-tbody>tr:hover {
+  background-color: #334155 !important;
+  /* Slightly lighter background on hover */
+}
+
+/* Styling for the pagination */
+.ant-pagination-item {
+  background-color: #2d3748 !important;
+  /* Dark background for pagination items */
+  border-color: #4b5563 !important;
+  /* Border color */
+}
+
+.ant-pagination-item:hover {
+  background-color: #4b5563 !important;
+  /* Hover color for pagination items */
+}
+
+/* Pagination disabled state */
+.ant-pagination-disabled {
+  color: #6b7280 !important;
+  /* Light gray for disabled items */
+  background-color: #1e2939 !important;
+  /* Keep background dark */
+}
+
+/* Ensure InputNumber text is white */
+.ant-input-number {
+  color: #ffffff !important; /* White text */
+}
+
+/* Style the input number background and other attributes */
+.ant-input-number-input {
+  background-color: #2d3748 !important; /* Dark background for inputs */
+  color: #ffffff !important;           /* White text inside input */
+  border-radius: 4px !important;
+}
+
+/* Remove border styling if you don't want borders on the input fields */
+.ant-input-number:focus,
+.ant-input-number-focused {
+  border-color: #4b5563 !important; /* Subtle border color when focused */
+  outline: none;
+}
+
+
 .soccer-pitch {
   position: relative;
   width: 100%;

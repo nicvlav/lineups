@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useRef } from "react";
 import { openDB } from "idb";
 import { decodeStateFromURL } from "./stateManager";
+import { autoCreateTeams } from "./AutoBalance";
 import formations from "./Formations"
 
 export const PlayersContext = createContext();
@@ -119,7 +120,7 @@ export const PlayersProvider = ({ children }) => {
             const updated = playersRef.current.map(player =>
                 player.id === id ? { ...player, ...updates } : player
             );
-            playersRef.current = updated; // Keep the ref updated
+
             return updated;
         });
     };
@@ -311,7 +312,7 @@ export const PlayersProvider = ({ children }) => {
 
     // Apply a formation to a team
     const applyFormation = async (formationId) => {
-          // deep copy to ensure state setting triggers a use effect
+        // deep copy to ensure state setting triggers a use effect
         let currPlayers = playersRef.current
             .filter(player => player.temp_formation !== true)
             .map(player => ({ ...player }));
@@ -333,12 +334,44 @@ export const PlayersProvider = ({ children }) => {
     };
 
     // Generate teams based on players and weighting
-    const generateTeams = (filteredPlayers, weighting) => {
-        // console.log(filteredPlayers);
-        // const generatedTeams = autoCreateTeams(filteredPlayers, weighting); // Assuming a function to auto-generate teams
-        // setGame(generatedTeams);
+    const generateTeams = async (filteredPlayers, weighting) => {
+        const balanced = autoCreateTeams(filteredPlayers, weighting);
+        console.log("full players", playersRef.current);
+        console.log("balanced two team arrays", balanced);
+
+        const [teamA, teamB] = balanced;
+
+        // Create lookup maps for quick access
+        const teamAMap = new Map(teamA.map(player => [player.id, player]));
+        const teamBMap = new Map(teamB.map(player => [player.id, player]));
+
+        // Create a new array with updated team assignments and positions
+        const updatedPlayers = playersRef.current
+            .map(player => {
+                if (teamAMap.has(player.id)) {
+                    const { x, y } = teamAMap.get(player.id);
+                    return { ...player, team: "A", x, y };
+                } else if (teamBMap.has(player.id)) {
+                    const { x, y } = teamBMap.get(player.id);
+                    return { ...player, team: "B", x, y };
+                } else {
+                    return { ...player, team: null };
+                }
+            })
+            .filter(player => !(player.team === null && player.guest === true)); // Remove guests with no team
+
+        // Ensure a new reference and trigger state update
+        playersRef.current = updatedPlayers;
+        setPlayers([...updatedPlayers]); // Spread into a new array to trigger useEffect
     };
 
+    const rebalanceCurrentGame = async (weighting) => {
+        // Filter players who have a non-null team
+        const filteredPlayers = playersRef.current.filter(player => player.team !== null);
+    
+        // Call generateTeams with the filtered players
+        await generateTeams(filteredPlayers, weighting);
+    };
 
     return (
         <PlayersContext.Provider value={{
@@ -353,7 +386,8 @@ export const PlayersProvider = ({ children }) => {
             switchToNewPlayer,
             applyFormation,
             clearGame,
-            generateTeams
+            generateTeams,
+            rebalanceCurrentGame
         }}>
             {children}
         </PlayersContext.Provider>

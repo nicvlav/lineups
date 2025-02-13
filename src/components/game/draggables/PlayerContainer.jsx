@@ -43,6 +43,20 @@ const PlayerContainer = ({ team, teamPlayers }) => {
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
+  // 🔥 New Effect: Also trigger size update when sidebar toggles
+  useEffect(() => {
+    const observer = new ResizeObserver(() => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setContainerSize({ width: rect.width, height: rect.height });
+      }
+    });
+
+    if (containerRef.current) observer.observe(containerRef.current);
+
+    return () => observer.disconnect();
+  }, [containerRef.current]);
+
   // useDrop hook to handle dropped players
   const [, drop] = useDrop(() => ({
     accept: 'PLAYER',
@@ -90,16 +104,11 @@ const PlayerContainer = ({ team, teamPlayers }) => {
 
   };
 
-
   return (
     <div
       ref={mergeRefs(drop, containerRef)} // Attach useDrop hook to container
       // className="relative bg-primary"
-      className="soccer-pitch"
-      style={{
-        width: '100%',
-        height: '100%',
-      }}
+      className="soccer-pitch p-4 bg-gray-900 rounded-lg shadow-lg flex  gap-4"
     >
       {teamPlayers.map((player) => {
         const { left, top } = getPlayerPosition(player, playerSize, containerSize.width, containerSize.height);

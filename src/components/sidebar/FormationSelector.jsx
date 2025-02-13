@@ -1,6 +1,6 @@
 import React, { useRef, useContext } from "react";
-import { PlayersContext } from "../../global/PlayersContext.jsx";
-import formations from "../../global/Formations"
+import { PlayersContext } from "../global/PlayersContext.jsx";
+import formations from "../global/Formations"
 
 const FormationSelector = () => {
     const selectRef = useRef(null);
@@ -23,7 +23,7 @@ const FormationSelector = () => {
     return (
         <div className="relative">
             <select
-                className="relative bg-gray-800"
+                className="relative bg-gray-900"
                 id="formation-select"
                 onChange={handleChange}
                 ref={selectRef} // Attach ref to select element

@@ -1,6 +1,6 @@
 import { Table, InputNumber } from "antd";
 import { useContext } from "react";
-import { PlayersContext } from "../../global/PlayersContext";
+import { PlayersContext } from "./global/PlayersContext";
 
 const PlayerTable = () => {
     const { players, updatePlayerAttributes } = useContext(PlayersContext);
@@ -26,7 +26,7 @@ const PlayerTable = () => {
             key: "name",
             render: (text, record) => (
                 <div className="flex items-center space-x-3">
-                    <span className="font-medium text-black">{text}</span>
+                    <span className="font-medium text-white">{text}</span>
                 </div>
             ),
         },
@@ -54,7 +54,7 @@ const PlayerTable = () => {
                     max={10}
                     value={record.defense}
                     onChange={(value) => handleAttributeChange(record.id, "defense", value)}
-                    className="w-16 border-none bg-gray-700 text-black text-center rounded"
+                    className="w-16 border-none bg-gray-700 text-white text-center rounded"
                 />
             ),
         },
@@ -68,7 +68,7 @@ const PlayerTable = () => {
                     max={10}
                     value={record.athleticism}
                     onChange={(value) => handleAttributeChange(record.id, "athleticism", value)}
-                    className="w-16 border-none bg-gray-700 text-black text-center rounded"
+                    className="w-16 border-none bg-gray-700 text-white text-center rounded"
                 />
             ),
         },
