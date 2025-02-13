@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useRef } from "react";
 import { openDB } from "idb";
-import LZString from "lz-string";
 import { decodeStateFromURL } from "./stateManager";
+import formations from "./Formations"
 
 export const PlayersContext = createContext();
 
@@ -30,8 +30,7 @@ const saveToDB = async (key, value) => {
 
 export const PlayersProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
-    const [selectedFormation, setSelectedFormations] = useState([]);
-    const [formations, setFormations] = useState([]);
+    const [selectedFormation, setSelectedFormation] = useState([]);
 
     // this is probably hacky? idk about this stale capture bs
     const playersRef = useRef(players);
@@ -89,7 +88,6 @@ export const PlayersProvider = ({ children }) => {
 
     const saveState = async (p) => {
         const stateObject = { players: p };
-        console.log("SAVED STATE OBJ:", stateObject);
         await saveToDB(tabKeyRef.current, JSON.stringify(stateObject));
     };
 
@@ -130,14 +128,12 @@ export const PlayersProvider = ({ children }) => {
     // Clear game data
     const clearGame = async () => {
         const updatedPlayers = playersRef.current.map((player) => {
-            if (player.guest) {
+            if (player.guest || player.temp_formation) {
                 // If old player was a guest, remove it; otherwise, set team to null
                 return null;
             }
             return { ...player, team: null };;
         }).filter(Boolean); // Remove null entries if a guest was removed
-
-        console.log(updatedPlayers);
 
         setPlayers(updatedPlayers);
     };
@@ -270,14 +266,65 @@ export const PlayersProvider = ({ children }) => {
         setPlayers(updatedPlayers);
     };
 
-    // Fetch formations
-    const fetchFormations = () => {
-        setFormations(loadFormationsState()); // Assuming a function to load formations state
+    const adjustTeamSize = (currentPlayers, team, formation) => {
+        let teamPlayers = currentPlayers.filter((p) => p.team === team);
+        const numPlayersNeeded = formation.num_players;
+        console.log("numPlayersNeeded: ", numPlayersNeeded);
+
+        // // Handle surplus players by setting team to null
+        if (teamPlayers.length > numPlayersNeeded) {
+            teamPlayers.slice(numPlayersNeeded).forEach((p) => (p.team = null));
+            teamPlayers = teamPlayers.slice(0, numPlayersNeeded);
+        }
+
+        // // Handle missing players by adding new guest players
+        if (teamPlayers.length < numPlayersNeeded) {
+            const missingPlayers = formation.positions
+                .slice(teamPlayers.length, numPlayersNeeded)
+                .map((pos, index) => ({
+                    id: Date.now().toString() + currentPlayers.length.toString() + index, // Unique ID
+                    name: pos.name, // Use position's name
+                    team,
+                    guest: true,
+                    temp_formation: true,
+                    attack: 5,
+                    defense: 5,
+                    athleticism: 5,
+                    x: pos.x,
+                    y: pos.y
+                }));
+            currentPlayers.push(...missingPlayers);
+            teamPlayers = currentPlayers.filter((p) => p.team === team);
+        }
+
+        console.log("teamPlayers: ", teamPlayers);
+        console.log("currentPlayers: ", currentPlayers);
+
+        // // double confirm that all positions have correct players
+        teamPlayers.forEach((player, index) => {
+            player.x = formation.positions[index].x;
+            player.y = formation.positions[index].y;
+        });
     };
 
     // Apply a formation to a team
-    const applyFormation = (formationId, team) => {
+    const applyFormation = async (formationId) => {
+        // deep copy to ensure state setting triggers a use effect
+        let currPlayers = playersRef.current.map(player => ({ ...player }));
+
+        console.log("formationId: ", formationId, formations);
+
+        const formation = formations.find((f) => f.id === Number(formationId));
+
+        if (!formation) {
+            return;
+        }
+
+        adjustTeamSize(currPlayers, "A", formation);
+        adjustTeamSize(currPlayers, "B", formation);
+
         setSelectedFormation(formationId);
+        setPlayers(currPlayers);
     };
 
     // Generate teams based on players and weighting

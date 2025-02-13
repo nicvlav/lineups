@@ -15,8 +15,6 @@ export const decodeStateFromURL = (search) => {
 
 export const encodeStateToURL = (players) => {
     const stateObject = { players};
-
-    console.log("SAVED BUTTON STATE OBJ ", stateObject);
     const jsonString = JSON.stringify(stateObject);
     const compressed = LZString.compressToEncodedURIComponent(jsonString);
 

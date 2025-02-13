@@ -6,9 +6,9 @@ const AutoTeamSelector = () => {
   const [selectedPlayers, setSelectedPlayers] = useState(new Set()); // Use Set for better state management
   const [weights, setWeights] = useState({ attack: 1, defense: 1, athleticism: 1 });
 
-  useEffect(() => {
-    console.log("Selected Players:", Array.from(selectedPlayers));
-  }, [selectedPlayers]);
+  // useEffect(() => {
+  //   console.log("Selected Players:", Array.from(selectedPlayers));
+  // }, [selectedPlayers]);
 
   const togglePlayerSelection = (id) => {
     setSelectedPlayers((prevSelected) => {

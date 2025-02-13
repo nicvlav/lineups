@@ -16,9 +16,19 @@ const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPl
             inputRef.current.focus();
         }
     }, []); // Empty dependency array means it runs once after the initial render
+
+    const getNonTemps = () => {
+        if (!players || !Array.isArray(players)) {
+            console.warn("Invalid players format:", players);
+            return [];
+        }
+        return players.filter(player => player.temp_formation !== true);
+    };
+
+    const nonTempPlayers = getNonTemps();
     
     // Filter players based on search term
-    const filteredPlayers = players.map((p) => {
+    const filteredPlayers = nonTempPlayers.map((p) => {
         const team = p.team || null;
         return {
             ...p,

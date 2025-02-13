@@ -1,25 +1,26 @@
 import React, { useContext } from "react";
 import { PlayersContext } from "../../global/PlayersContext.jsx";
+import formations from "../../global/Formations"
 
 const FormationSelector = () => {
-    // const { formations, selectedFormation, applyFormation } = useContext(PlayersContext);
+    const { applyFormation, selectedFormation } = useContext(PlayersContext);
 
-    // const handleChange = (event) => {
-    //     applyFormation(event.target.value);
-    // };
+    const handleChange = (event) => {
+        applyFormation(event.target.value);
+    };
 
-    // // Group formations by num_players
-    // const groupedFormations = formations.reduce((groups, formation) => {
-    //     if (!groups[formation.num_players]) {
-    //         groups[formation.num_players] = [];
-    //     }
-    //     groups[formation.num_players].push(formation);
-    //     return groups;
-    // }, {});
+    // Group formations by num_players
+    const groupedFormations = formations.reduce((groups, formation) => {
+        if (!groups[formation.num_players]) {
+            groups[formation.num_players] = [];
+        }
+        groups[formation.num_players].push(formation);
+        return groups;
+    }, {});
 
     return (
         <div className="relative">
-            {/* <label htmlFor="formation-select">Formation:</label>
+            <label htmlFor="formation-select">Formation:</label>
             <select className="relative bg-gray-800" id="formation-select" value={selectedFormation} onChange={handleChange}>
                 <option value="custom">Custom</option>
                 {Object.keys(groupedFormations)
@@ -33,7 +34,7 @@ const FormationSelector = () => {
                             ))}
                         </optgroup>
                     ))}
-            </select> */}
+            </select>
         </div>
     );
 };
