@@ -116,7 +116,6 @@ export const PlayersProvider = ({ children }) => {
         });
     };
 
-
     // Update player attributes
     const updatePlayerAttributes = async (id, updates) => {
         setPlayers(() => {
@@ -130,7 +129,17 @@ export const PlayersProvider = ({ children }) => {
 
     // Clear game data
     const clearGame = async () => {
-        // setGame([]); // Assuming clearing the state
+        const updatedPlayers = playersRef.current.map((player) => {
+            if (player.guest) {
+                // If old player was a guest, remove it; otherwise, set team to null
+                return null;
+            }
+            return { ...player, team: null };;
+        }).filter(Boolean); // Remove null entries if a guest was removed
+
+        console.log(updatedPlayers);
+
+        setPlayers(updatedPlayers);
     };
 
     const addNewRealPlayerToGame = async (placedTeam, name, dropX, dropY) => {
