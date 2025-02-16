@@ -1,6 +1,6 @@
 import React from "react";
 import PlayerList from "./PlayerList";
-import FormationSelector from "./FormationSelector";
+import FormationSelector from "../global/FormationSelector";
 
 const Sidebar = ({ className }) => {
 

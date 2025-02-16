@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Sidebar from "./sidebar/Sidebar";
+import Sidebar from "./Sidebar.jsx";
 import HeaderBar from "./HeaderBar.jsx";
 import CurrentGame from "./CurrentGame"; // Render directly
 

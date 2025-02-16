@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from "react";
-import PlayerTable from "../PlayerTable";
-import AutoTeamSelector from "../AutoTeamSelector";
-import ShareButton from "../ShareButton";
-import Modal from "../Modal"; // Import the new Modal component
+import PlayerTable from "../global/PlayerTable.jsx";
+import AutoTeamSelector from "../global/AutoTeamSelector.jsx";
+import ShareButton from "../global/ShareButton.jsx";
+import Modal from "../global/Modal.jsx"; // Import the new Modal component
 import { PlayersContext } from "../../utility/PlayersContext.jsx";
 
 const MobileSidebar = ({ className }) => {

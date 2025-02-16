@@ -1,6 +1,6 @@
 import { Table, InputNumber } from "antd";
 import { useContext } from "react";
-import { PlayersContext } from "../utility/PlayersContext";
+import { PlayersContext } from "../../utility/PlayersContext";
 
 const PlayerTable = () => {
     const { players, updatePlayerAttributes } = useContext(PlayersContext);

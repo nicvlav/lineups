@@ -1,4 +1,4 @@
-import { Dialog, Transition } from "@headlessui/react";
+import { Dialog, DialogPanel, DialogTitle, TransitionChild, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { X } from "lucide-react";
 
@@ -7,11 +7,11 @@ const Modal = ({ isOpen, onClose, title, children }) => {
         <Transition appear show={isOpen} as={Fragment}>
             <Dialog as="div" className="relative z-50" onClose={onClose}>
                 {/* Background Overlay */}
-                <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" />
+                <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm" />
 
                 {/* Modal Container */}
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <Transition.Child
+                    <TransitionChild
                         as={Fragment}
                         enter="ease-out duration-300"
                         enterFrom="opacity-0 scale-95"
@@ -21,12 +21,12 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                         leaveTo="opacity-0 scale-95"
                     >
                         {/* Modal Panel */}
-                        <Dialog.Panel className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl bg-gray-900 rounded-2xl p-6 text-white shadow-xl 
+                        <DialogPanel className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl bg-gray-900 rounded-2xl p-6 text-white shadow-xl 
                             max-h-[90vh] overflow-hidden flex flex-col">
                             
                             {/* Header */}
                             <div className="flex justify-between items-center">
-                                <Dialog.Title className="text-xl font-bold">{title}</Dialog.Title>
+                                <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
                                 <button onClick={onClose} className="text-gray-400 hover:text-white">
                                     <X size={24} />
                                 </button>
@@ -36,8 +36,8 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                             <div className="mt-4 flex-1 overflow-y-auto p-2">
                                 {children}
                             </div>
-                        </Dialog.Panel>
-                    </Transition.Child>
+                        </DialogPanel>
+                    </TransitionChild>
                 </div>
             </Dialog>
         </Transition>

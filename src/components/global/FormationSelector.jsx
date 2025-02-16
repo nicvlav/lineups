@@ -1,6 +1,6 @@
 import React, { useRef, useContext } from "react";
 import { PlayersContext } from "../../utility/PlayersContext.jsx";
-import formations from "../../utility/Formations"
+import formations from "../../utility/Formations.jsx"
 
 const FormationSelector = () => {
     const selectRef = useRef(null);

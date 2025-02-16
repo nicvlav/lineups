@@ -1,6 +1,6 @@
-import PlayerArea from "./pitch/PlayerArea";
+import PlayerArea from "../pitch/PlayerArea.jsx";
 import React, { useContext } from "react";
-import { PlayersContext } from "../utility/PlayersContext.jsx";
+import { PlayersContext } from "../../utility/PlayersContext.jsx";
 
 const CurrentGame = ({className}) => {
     const { players } = useContext(PlayersContext);

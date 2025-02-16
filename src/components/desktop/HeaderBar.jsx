@@ -1,10 +1,10 @@
 import React, { useState, useContext, useEffect } from "react";
 import { Menu } from "lucide-react";
-import { PlayersContext } from "../utility/PlayersContext.jsx";
-import PlayerTable from "./PlayerTable";
-import AutoTeamSelector from "./AutoTeamSelector";
-import ShareButton from "./ShareButton";
-import Modal from "./Modal"; // Import the new Modal component
+import { PlayersContext } from "../../utility/PlayersContext.jsx";
+import PlayerTable from "../global/PlayerTable.jsx";
+import AutoTeamSelector from "../global/AutoTeamSelector.jsx";
+import ShareButton from "../global/ShareButton.jsx";
+import Modal from "../global/Modal.jsx"; // Import the new Modal component
 
 const HeaderBar = ({ toggleSidebar }) => {
     const { clearGame, players } = useContext(PlayersContext);

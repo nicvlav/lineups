@@ -1,7 +1,7 @@
 import React, { useContext } from "react";
 import { Menu } from "lucide-react";
 import { PlayersContext } from "../../utility/PlayersContext.jsx";
-import FormationSelector from "../sidebar/FormationSelector";
+import FormationSelector from "../global/FormationSelector.jsx";
 
 const MobileHeaderBar = ({ toggleSidebar }) => {
     const { clearGame } = useContext(PlayersContext);

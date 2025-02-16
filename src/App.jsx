@@ -4,7 +4,7 @@ import { TouchBackend } from 'react-dnd-touch-backend';
 import { isMobile } from 'react-device-detect'; // Use this to detect touch devices
 import { PlayersProvider } from "./utility/PlayersContext.jsx";
 
-import Layout from "./components/Layout.jsx";
+import Layout from "./components/desktop/Layout.jsx";
 import MobileLayout from "./components/mobile/MobileLayout.jsx";
 import React from "react";
 
