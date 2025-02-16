@@ -1,13 +1,12 @@
-import React, { useState, useContext, useEffect } from "react";
-import { Menu } from "lucide-react";
-import { PlayersContext } from "../utility/PlayersContext.jsx";
-import PlayerTable from "./PlayerTable";
-import AutoTeamSelector from "./AutoTeamSelector";
-import ShareButton from "./ShareButton";
-import Modal from "./Modal"; // Import the new Modal component
+import React, { useState, useEffect, useContext } from "react";
+import PlayerTable from "../PlayerTable";
+import AutoTeamSelector from "../AutoTeamSelector";
+import ShareButton from "../ShareButton";
+import Modal from "../Modal"; // Import the new Modal component
+import { PlayersContext } from "../../utility/PlayersContext.jsx";
 
-const HeaderBar = ({ toggleSidebar }) => {
-    const { clearGame, players } = useContext(PlayersContext);
+const MobileSidebar = ({ className }) => {
+    const { players } = useContext(PlayersContext);
     const [isPlayerModalOpen, setPlayerModalOpen] = useState(false);
     const [isAutoTeamModalOpen, setAutoTeamModalOpen] = useState(false);
 
@@ -16,15 +15,10 @@ const HeaderBar = ({ toggleSidebar }) => {
     }, [players]);
 
     return (
-        <header className="w-full bg-gray-800 text-white p-4 flex items-center justify-between shadow-md">
-            <div className="flex items-center space-x-3">
-                <button onClick={toggleSidebar} className="text-white p-2">
-                    <Menu size={28} />
-                </button>
-                <h1 className="font-bold" style={{ fontSize: "1.75rem" }}>Lineup Manager</h1>
-            </div>
+        <div className={`h-full flex flex-col gap-4 bg-gray-900 p-4 rounded-lg shadow-lg ${className}`}>
+            {/* Content here */}
 
-            <div className="flex space-x-4">
+            <div className="flex flex-col gap-8 ">
                 <button className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg shadow-md"
                     onClick={() => setPlayerModalOpen(true)}>
                     Players
@@ -32,10 +26,6 @@ const HeaderBar = ({ toggleSidebar }) => {
                 <button className="bg-green-600 hover:bg-green-500 text-white p-3 rounded-lg shadow-md"
                     onClick={() => setAutoTeamModalOpen(true)}>
                     Generate
-                </button>
-                <button className="bg-red-600 hover:bg-red-500 text-white p-3 rounded-lg shadow-md"
-                    onClick={clearGame}>
-                    Clear Game
                 </button>
                 <ShareButton className="bg-yellow-600 hover:bg-yellow-500 text-white p-3 rounded-lg shadow-md" />
             </div>
@@ -49,8 +39,10 @@ const HeaderBar = ({ toggleSidebar }) => {
             <Modal title="Team Generator" isOpen={isAutoTeamModalOpen} onClose={() => setAutoTeamModalOpen(false)}>
                 <AutoTeamSelector />
             </Modal>
-        </header>
+
+        </div>
     );
 };
 
-export default HeaderBar;
+
+export default MobileSidebar;

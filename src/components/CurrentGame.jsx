@@ -1,4 +1,3 @@
-// CurrentGame Component
 import PlayerArea from "./pitch/PlayerArea";
 import React, { useContext } from "react";
 import { PlayersContext } from "../utility/PlayersContext.jsx";

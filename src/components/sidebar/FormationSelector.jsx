@@ -23,12 +23,12 @@ const FormationSelector = () => {
     return (
         <div className="relative">
             <select
-                className="relative bg-gray-900"
+                className="relative bg-gray-800"
                 id="formation-select"
                 onChange={handleChange}
                 ref={selectRef} // Attach ref to select element
             >
-                <option value="">Change Formation</option> {/* Option for no selection */}
+                <option value="">Formation</option> {/* Option for no selection */}
                 {Object.keys(groupedFormations)
                     .sort((a, b) => a - b) // Ensure sorted order (e.g., 5, 7, 11 players)
                     .map((numPlayers) => (

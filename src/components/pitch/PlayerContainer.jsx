@@ -21,13 +21,11 @@ const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) 
   return { left, top };
 };
 
-const PlayerContainer = ({ team, teamPlayers }) => {
+const PlayerContainer = ({ team, teamPlayers, playerSize = 80 }) => {
   const containerRef = useRef(null);
 
   const { addRealPlayerToGame, switchToRealPlayer, switchToNewPlayer } = useContext(PlayersContext);
-
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  const [playerSize, setPlayerSize] = useState(80);
 
   useEffect(() => {
     const updateSize = () => {
@@ -105,7 +103,6 @@ const PlayerContainer = ({ team, teamPlayers }) => {
   };
 
 
-
   return (
     <div
       ref={mergeRefs(drop, containerRef)} // Attach useDrop hook to container
@@ -119,7 +116,7 @@ const PlayerContainer = ({ team, teamPlayers }) => {
           <DraggablePlayer
             key={player.id}
             player={player}
-            playerSize={80}
+            playerSize={playerSize}
             initialLeft={left}
             initialTop={top}
 

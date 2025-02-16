@@ -4,19 +4,24 @@ import { TouchBackend } from 'react-dnd-touch-backend';
 import { isMobile } from 'react-device-detect'; // Use this to detect touch devices
 import { PlayersProvider } from "./utility/PlayersContext.jsx";
 
-import CurrentGame from "./components/CurrentGame.jsx";
 import Layout from "./components/Layout.jsx";
+import MobileLayout from "./components/mobile/MobileLayout.jsx";
 import React from "react";
 
 const App = () => {
+  const isMobile = window.innerWidth < 768; // Adjust for responsiveness
   const backend = isMobile ? TouchBackend : HTML5Backend;
 
   return (
     <DndProvider backend={backend}>
       <PlayersProvider>
-        <Layout>
-          <CurrentGame className="flex-1" />
-        </Layout>
+        {isMobile ? (
+          <MobileLayout>
+          </MobileLayout>
+        ) : (
+          <Layout>
+          </Layout>
+        )}
       </PlayersProvider>
     </DndProvider>
   );
