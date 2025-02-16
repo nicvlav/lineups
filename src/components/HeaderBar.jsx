@@ -22,7 +22,7 @@ const HeaderBar = ({ toggleSidebar }) => {
                 <button onClick={toggleSidebar} className="text-white p-2">
                     <Menu size={28} />
                 </button>
-                <h1 className="font-bold" style={{ fontSize: "1.75rem" }}>Game Manager</h1>
+                <h1 className="font-bold" style={{ fontSize: "1.75rem" }}>Lineup Manager</h1>
             </div>
 
             {/* Right: Controls */}

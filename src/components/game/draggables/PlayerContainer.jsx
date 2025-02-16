@@ -104,11 +104,13 @@ const PlayerContainer = ({ team, teamPlayers }) => {
 
   };
 
+
+
   return (
     <div
       ref={mergeRefs(drop, containerRef)} // Attach useDrop hook to container
       // className="relative bg-primary"
-      className="soccer-pitch p-4 bg-gray-900 rounded-lg shadow-lg flex  gap-4"
+      className={`soccer-pitch-${team} p-4 bg-gray-900 rounded-lg shadow-lg flex gap-4`}
     >
       {teamPlayers.map((player) => {
         const { left, top } = getPlayerPosition(player, playerSize, containerSize.width, containerSize.height);

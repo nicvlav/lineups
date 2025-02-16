@@ -14,12 +14,14 @@ export const decodeStateFromURL = (search) => {
 };
 
 export const encodeStateToURL = (players) => {
-    const stateObject = { players};
+    const stateObject = { players };
     const jsonString = JSON.stringify(stateObject);
     const compressed = LZString.compressToEncodedURIComponent(jsonString);
-
-    // Update URL with compressed state
-    return `${window.location.origin}?state=${compressed}`;
-
-};
-
+  
+    // IMPORTANT: This is to work specifically with github pages
+    // not sure how this would work with a different service
+    const baseUrl = `${window.location.origin}/lineups/`;
+  
+    // Return the final URL with the compressed state
+    return `${baseUrl}?state=${compressed}`;
+  };
