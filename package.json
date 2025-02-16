@@ -5,7 +5,6 @@
   "homepage": "https://nicvlav.github.io/lineups",
   "type": "module",
   "scripts": {
-
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
@@ -28,8 +27,10 @@
     "lz-string": "^1.5.0",
     "postcss": "^8.5.1",
     "react": "^18.3.1",
+    "react-device-detect": "^2.2.3",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
+    "react-dnd-touch-backend": "^16.0.1",
     "react-dom": "^18.3.1",
     "react-draggable": "^4.4.6",
     "react-router-dom": "^7.1.5",
