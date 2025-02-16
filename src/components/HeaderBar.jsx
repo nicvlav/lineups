@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import { Menu } from "lucide-react"; // Icon library for the burger menu
-import { PlayersContext } from "./global/PlayersContext.jsx";
+import { PlayersContext } from "../utility/PlayersContext.jsx";
 import { Drawer } from "antd";
 import PlayerTable from "./PlayerTable";
 import AutoTeamSelector from "./AutoTeamSelector"; // The AI-based team generation drawer

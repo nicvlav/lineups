@@ -2,9 +2,9 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import { isMobile } from 'react-device-detect'; // Use this to detect touch devices
-import { PlayersProvider } from "./components/global/PlayersContext.jsx";
+import { PlayersProvider } from "./utility/PlayersContext.jsx";
 
-import CurrentGame from "./components/game/CurrentGame.jsx";
+import CurrentGame from "./components/CurrentGame.jsx";
 import Layout from "./components/Layout.jsx";
 import React from "react";
 

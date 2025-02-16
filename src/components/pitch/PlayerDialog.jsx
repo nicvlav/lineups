@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { PlayersContext } from "../../global/PlayersContext";
+import { PlayersContext } from "../../utility/PlayersContext";
 
 const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPlayer, onAddAndSelectNewPlayer }) => {
     const { players } = useContext(PlayersContext);

@@ -1,5 +1,5 @@
 import { useState, useContext } from "react";
-import { PlayersContext } from "./global/PlayersContext.jsx";
+import { PlayersContext } from "../utility/PlayersContext.jsx";
 
 const PlayerSelectionList = ({ players, selectedPlayers, togglePlayerSelection }) => {
   const [searchTerm, setSearchTerm] = useState("");

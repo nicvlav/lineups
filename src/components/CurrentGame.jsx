@@ -1,7 +1,7 @@
 // CurrentGame Component
-import PlayerArea from "./draggables/PlayerArea";
+import PlayerArea from "./pitch/PlayerArea";
 import React, { useContext } from "react";
-import { PlayersContext } from "../global/PlayersContext.jsx";
+import { PlayersContext } from "../utility/PlayersContext.jsx";
 
 const CurrentGame = ({className}) => {
     const { players } = useContext(PlayersContext);

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Sidebar from "./sidebar/Sidebar";
 import HeaderBar from "./HeaderBar.jsx";
-import CurrentGame from "./game/CurrentGame"; // Render directly
+import CurrentGame from "./CurrentGame"; // Render directly
 
 const Layout = () => {
     const [isSidebarOpen, setSidebarOpen] = useState(false);

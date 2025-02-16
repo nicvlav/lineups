@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useDrop } from 'react-dnd';
 import DraggablePlayer from './DraggablePlayer';
-import { PlayersContext } from "../../global/PlayersContext.jsx";
+import { PlayersContext } from "../../utility/PlayersContext.jsx";
 
 const mergeRefs = (...refs) => (el) => {
   refs.forEach((ref) => {
