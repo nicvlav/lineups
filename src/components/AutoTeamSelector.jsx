@@ -40,7 +40,7 @@ const WeightingSelector = ({ weights, setWeights }) => {
   };
 
   return (
-    <div className="mb-4 p-3 bg-gray-800 rounded-lg">
+    <div className="mb-4 p-3 bg-gray-800 rounded-lg ">
       <h3 className="text-white text-sm font-semibold mb-2">Weighting Preferences</h3>
       {["attack", "defense", "athleticism"].map(attr => (
         <div key={attr} className="flex justify-between items-center mb-2">
@@ -95,7 +95,7 @@ const AutoTeamSelector = () => {
 
 
   return (
-    <div className="p-4 bg-gray-900 shadow-md rounded-lg text-white">
+    <div className="p-4 bg-gray-900 shadow-md rounded-lg text-white max-h-[65vh] overflow-y-auto">
       <h2 className="text-lg font-bold mb-3">Auto Team Selection</h2>
 
       {/* Toggle for "Use Current Game" */}

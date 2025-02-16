@@ -75,13 +75,13 @@ const PlayerTable = () => {
     ];
 
     return (
-        <div className="p-6 bg-gray-900 rounded-xl shadow-xl">
+        <div className="p-6 bg-gray-900 rounded-xl shadow-xl  max-h-[65vh] overflow-y-auto">
             <h2 className="text-2xl font-semibold text-white text-center mb-4">Player Attributes</h2>
             <Table
                 dataSource={nonTempPlayers}
                 columns={columns}
                 rowKey="uid"
-                pagination={{ pageSize: 8 }}
+                pagination={{ pageSize: 5 }}
                 className="bg-gray-800 rounded-lg"
             />
         </div>

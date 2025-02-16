@@ -286,7 +286,7 @@ export const PlayersProvider = ({ children }) => {
                 .slice(teamPlayers.length, numPlayersNeeded)
                 .map((pos, index) => ({
                     id: Date.now().toString() + currentPlayers.length.toString() + index, // Unique ID
-                    name: pos.name, // Use position's name
+                    name: "[Player]", //pos.name", 
                     team,
                     guest: true,
                     temp_formation: true,

@@ -1,72 +1,55 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Menu } from "lucide-react"; // Icon library for the burger menu
+import { Menu } from "lucide-react";
 import { PlayersContext } from "../utility/PlayersContext.jsx";
-import { Drawer } from "antd";
 import PlayerTable from "./PlayerTable";
-import AutoTeamSelector from "./AutoTeamSelector"; // The AI-based team generation drawer
-import ShareButton from "./ShareButton"; // The AI-based team generation drawer
+import AutoTeamSelector from "./AutoTeamSelector";
+import ShareButton from "./ShareButton";
+import Modal from "./Modal"; // Import the new Modal component
 
 const HeaderBar = ({ toggleSidebar }) => {
     const { clearGame, players } = useContext(PlayersContext);
-    const [isPlayerDrawerOpen, setPlayerDrawerOpen] = useState(false);
-    const [isAutoTeamDrawerOpen, setAutoTeamDrawerOpen] = useState(false);
+    const [isPlayerModalOpen, setPlayerModalOpen] = useState(false);
+    const [isAutoTeamModalOpen, setAutoTeamModalOpen] = useState(false);
 
     useEffect(() => {
-        if (isAutoTeamDrawerOpen) { setAutoTeamDrawerOpen(false); }
+        if (isAutoTeamModalOpen) { setAutoTeamModalOpen(false); }
     }, [players]);
 
     return (
         <header className="w-full bg-gray-800 text-white p-4 flex items-center justify-between shadow-md">
-            {/* Left: Menu Icon & Title */}
             <div className="flex items-center space-x-3">
                 <button onClick={toggleSidebar} className="text-white p-2">
                     <Menu size={28} />
                 </button>
-                <h1 className="font-bold" style={{ fontSize: "1.75rem" }}>Lineup Manager</h1>
+                <h1 className="font-bold text-2xl">Lineup Manager</h1>
             </div>
 
-            {/* Right: Controls */}
             <div className="flex space-x-4">
-                <button className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg shadow-md flex-shrink-0 min-h-[40px]"
-                    onClick={() => setPlayerDrawerOpen(true)}>
+                <button className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg shadow-md"
+                    onClick={() => setPlayerModalOpen(true)}>
                     Players
                 </button>
-                <button className="bg-green-600 hover:bg-green-500 text-white p-3 rounded-lg shadow-md flex-shrink-0 min-h-[40px]"
-                    onClick={() => setAutoTeamDrawerOpen(true)}>
+                <button className="bg-green-600 hover:bg-green-500 text-white p-3 rounded-lg shadow-md"
+                    onClick={() => setAutoTeamModalOpen(true)}>
                     Generate
                 </button>
-                <button className="bg-green-600 hover:bg-green-500 text-white p-3 rounded-lg shadow-md flex-shrink-0 min-h-[40px]"
-                    onClick={() => clearGame()}>
+                <button className="bg-red-600 hover:bg-red-500 text-white p-3 rounded-lg shadow-md"
+                    onClick={clearGame}>
                     Clear Game
                 </button>
-                <ShareButton className="bg-green-600 hover:bg-green-500 text-white p-3 rounded-lg shadow-md flex-shrink-0 min-h-[40px]" />
+                <ShareButton className="bg-yellow-600 hover:bg-yellow-500 text-white p-3 rounded-lg shadow-md" />
             </div>
 
-            <CustomDrawer title="Player Attributes" isOpen={isPlayerDrawerOpen} onClose={() => setPlayerDrawerOpen(false)}>
+            {/* Player Attributes Modal */}
+            <Modal title="Player Attributes" isOpen={isPlayerModalOpen} onClose={() => setPlayerModalOpen(false)}>
                 <PlayerTable />
-            </CustomDrawer>
+            </Modal>
 
-            <CustomDrawer title="Team Generator" isOpen={isAutoTeamDrawerOpen} onClose={() => setAutoTeamDrawerOpen(false)}>
+            {/* Team Generator Modal */}
+            <Modal title="Team Generator" isOpen={isAutoTeamModalOpen} onClose={() => setAutoTeamModalOpen(false)}>
                 <AutoTeamSelector />
-            </CustomDrawer>
+            </Modal>
         </header>
-    );
-};
-
-// Reusable Drawer Component
-const CustomDrawer = ({ title, isOpen, onClose, children }) => {
-    return (
-        <Drawer
-            title={<span className="text-lg font-semibold">{title}</span>}
-            placement="bottom"
-            closable
-            onClose={onClose}
-            open={isOpen}
-            height={'80vh'}
-            styles={{ background: "#000", color: "white", close: { color: "#ff5733", border: "none" } }}
-        >
-            <div className="p-6">{children}</div>
-        </Drawer>
     );
 };
 
