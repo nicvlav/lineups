@@ -5,14 +5,15 @@ import ShareButton from "../global/ShareButton.jsx";
 import Modal from "../global/Modal.jsx"; // Import the new Modal component
 import { PlayersContext } from "../../utility/PlayersContext.jsx";
 
-const MobileSidebar = ({ className }) => {
+const MobileSidebar = ({ className, toggleSidebarVisibility }) => {
     const { players } = useContext(PlayersContext);
     const [isPlayerModalOpen, setPlayerModalOpen] = useState(false);
     const [isAutoTeamModalOpen, setAutoTeamModalOpen] = useState(false);
 
     useEffect(() => {
-        if (isAutoTeamModalOpen) { setAutoTeamModalOpen(false); }
+        if (isAutoTeamModalOpen) { setAutoTeamModalOpen(false); toggleSidebarVisibility(false); }
     }, [players]);
+
 
     return (
         <div className={`h-full flex flex-col gap-4 bg-gray-900 p-4 rounded-lg shadow-lg ${className}`}>

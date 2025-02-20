@@ -19,7 +19,7 @@ const MobileLayout = () => {
                         ${isSidebarOpen ? "w-full" : "w-0"}
                     `}
                 >
-                    {isSidebarOpen && <MobileSidebar />}
+                    {isSidebarOpen && <MobileSidebar toggleSidebarVisibility={setSidebarOpen}/>}
                 </div>
 
                 {/* Main Content - Forces its own scrolling */}
