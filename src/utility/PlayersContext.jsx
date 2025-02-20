@@ -192,6 +192,19 @@ export const PlayersProvider = ({ children }) => {
         });
     };
 
+    const removeFromGame = async (uid) => {
+        const updatedPlayers = playersRef.current.map((player) => {
+            if (player.id === uid) {
+                return player.guest ? null : { ...player, team: null };
+            }
+            return player;
+        }).filter(Boolean);
+
+        console.log("updatedPlayers", updatedPlayers);
+
+        setPlayers(updatedPlayers);
+    };
+
     const switchToRealPlayer = async (placedTeam, oldID, newID) => {
         if (oldID === newID) {
             return; // No need to switch if IDs are the same
@@ -268,6 +281,7 @@ export const PlayersProvider = ({ children }) => {
 
         setPlayers(updatedPlayers);
     };
+
 
     const adjustTeamSize = (currentPlayers, team, formation) => {
         let teamPlayers = currentPlayers.filter((p) => p.team === team);
@@ -371,8 +385,14 @@ export const PlayersProvider = ({ children }) => {
     };
 
     const rebalanceCurrentGame = async (weighting) => {
+        // Remove all players with temp_formation === true from the full list
+        playersRef.current = playersRef.current.filter(player => !player.temp_formation);
+    
         // Filter players who have a non-null team
         const filteredPlayers = playersRef.current.filter(player => player.team !== null);
+    
+        // Update state to reflect the removal
+        setPlayers([...playersRef.current]); 
     
         // Call generateTeams with the filtered players
         await generateTeams(filteredPlayers, weighting);
@@ -385,6 +405,7 @@ export const PlayersProvider = ({ children }) => {
             deletePlayer,
             updatePlayerAttributes,
             addRealPlayerToGame,
+            removeFromGame,
             addNewRealPlayerToGame,
             addNewGuestPlayerToGame,
             switchToRealPlayer,

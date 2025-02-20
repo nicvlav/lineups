@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { PlayersContext } from "../../utility/PlayersContext";
 
 const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPlayer, onAddAndSelectNewPlayer }) => {
-    const { players } = useContext(PlayersContext);
+    const { players, removeFromGame } = useContext(PlayersContext);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedPlayer, setSelectedPlayer] = useState(null);
 
@@ -15,7 +15,7 @@ const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPl
         if (inputRef.current) {
             inputRef.current.focus();
         }
-    }, []); // Empty dependency array means it runs once after the initial render
+    }, []);
 
     const getNonTemps = () => {
         if (!players || !Array.isArray(players)) {
@@ -42,7 +42,7 @@ const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPl
     // Handle Player Selection with Warning
     const handlePlayerSelection = (selected) => {
         if (selected.team) {
-            setSelectedPlayer(selected); // Show confirmation before switching
+            setSelectedPlayer(selected);
         } else {
             onSelectExistingPlayer(player.id, selected);
             onClose();
@@ -63,7 +63,7 @@ const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPl
 
                 {/* Search Input */}
                 <input
-                    ref={inputRef} // Attach the ref to the input element
+                    ref={inputRef}
                     type="text"
                     className="w-full p-2 border border-gray-300 rounded mb-2"
                     placeholder="Search or enter new player..."
@@ -119,6 +119,17 @@ const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPl
                         </button>
                     </>
                 )}
+
+                {/* Remove from Game Button */}
+                <button
+                    className="mt-2 w-full bg-gray-700 text-white p-2 rounded"
+                    onClick={() => {
+                        removeFromGame(player.id);
+                        onClose();
+                    }}
+                >
+                    Remove from Game
+                </button>
 
                 {/* Cancel Button */}
                 <button className="mt-2 w-full bg-red-500 text-white p-2 rounded" onClick={onClose}>
