@@ -32,34 +32,12 @@ const generateBalancedTeams = (players, weights) => {
     return [teamA, teamB];
 };
 
-const generatePositions = (team) => {
-    if (team.length === 0) return [];
+function getIdealDistribution(numPlayers) {
+    const baseSize = Math.floor((numPlayers - 1) / 3);
+    const remainder = (numPlayers - 1) % 3;
 
-    if (team.length === 0) return [];
-
-    const numPlayers = team.length;
-    let positions = [];
-
-    // First set the worst player to goalkeeper
-    let goalkeeper = team.reduce((worst, p) =>
-        (p.attack + p.defense + p.athleticism < worst.attack + worst.defense + worst.athleticism) ||
-            (p.attack + p.defense + p.athleticism === worst.attack + worst.defense + worst.athleticism && p.defense > worst.defense) ? p : worst
-        , team[0]);
-
-    positions.push({ id: goalkeeper.id, name: goalkeeper.name, x: 0.5, y: 1.0 });
-
-    // Sort players by overall skill (ascending: attack + defense + athleticism)
-    const sortedPlayers = team.filter(p => p.id !== goalkeeper.id)
-        .sort((a, b) => (a.attack + a.defense + a.athleticism) - (b.attack + b.defense + b.athleticism));
-
-
-    const numOutfieldPlayers = sortedPlayers.length;
-    const baseSize = Math.floor((numOutfieldPlayers - 1) / 3);
-    const remainder = (numOutfieldPlayers - 1) % 3;
-
-    // Divide the sorted players into three zones: 0 = Defense, 1 = Midfield, 2 = Attack
+    // Initial 1-2-1 pattern
     let idealDistribution = { 0: baseSize, 1: baseSize + 1, 2: baseSize };
-    let zones = { 0: [], 1: [], 2: [] };
 
     if (remainder === 1) {
         // 1 extra player, push to defense
@@ -69,129 +47,120 @@ const generatePositions = (team) => {
         idealDistribution[0] += 1;
         idealDistribution[1] += 1;
     }
+    return idealDistribution;
+}
 
-    const numFirst = Math.max(0, numOutfieldPlayers - 3);
+const generatePositions = (players) => {
+    if (players.length === 0) return [];
 
-    if (numFirst !== 0) {
-        const firstPart = sortedPlayers.slice(0, numFirst).reverse();
+    let positions = [];
 
-        // Create the map for players with attack/defense difference >= 3
-        const highDifferencePlayers = firstPart.filter(player => Math.abs(player.attack - player.defense) >= 3);
+    // Assign the worst goalkeeper first
+    let goalkeeper = players.reduce((worst, p) => {
+        let worstScore = worst.attack + worst.defense + worst.athleticism;
+        let currentScore = p.attack + p.defense + p.athleticism;
 
-        // Create the map for players with attack/defense difference < 3
-        const lowDifferencePlayers = firstPart.filter(player => Math.abs(player.attack - player.defense) < 3);
+        return (currentScore < worstScore) ||
+            (currentScore === worstScore && p.defense > worst.defense) ? p : worst;
+    }, players[0]);
 
-        highDifferencePlayers.forEach(player => {
-            const { attack, defense } = player;
+    positions.push({ id: goalkeeper.id, name: goalkeeper.name, x: 0.5, y: 1.0 });
 
-            const allowDefense = (zones[0].length + 1) < idealDistribution[0];
-            const allowMidfield = (zones[1].length + 1) < idealDistribution[1];
-            const allowAttack = (zones[2].length + 1) < idealDistribution[2];
+    // Sort players by total attribute sum (ascending)
+    let sortedPlayers = [...players].sort((a, b) =>
+        (a.attack + a.defense + a.athleticism) - (b.attack + b.defense + b.athleticism)
+    );
 
-            if (allowAttack && (attack > defense)) {
-                // Assign to attack if not exceeding limit
-                zones[2].push(player);
-            } else if (allowDefense) {
-                // Assign to defense if not exceeding limit
-                zones[0].push(player);
-            } else if (allowMidfield) {
-                // Balanced, assign to midfield if not exceeding limit
-                zones[0].push(player);
-            } else {
-                zones[2].push(player);
-            }
+    sortedPlayers = sortedPlayers.filter(p => p.id !== goalkeeper.id);
+    const numPlayers = sortedPlayers.length;
 
+    console.log("sortedPlayers", sortedPlayers);
+
+    const numTopPlayers = 4;
+    let worstCount = Math.max(numPlayers - numTopPlayers, 0);
+    let topPlayers = sortedPlayers.slice(worstCount); // Always the top 4
+    let zones = { 0: [], 1: [], 2: [] };
+
+
+    if (worstCount) {
+        let worstPlayers = sortedPlayers.slice(0, worstCount);
+
+        // Define weights for each zone
+        const zoneWeights = {
+            0: { attack: 0.1, defense: 0.6, athleticism: 0.3 }, // Defense
+            1: { attack: 0.33, defense: 0.33, athleticism: 0.33 }, // Midfield
+            2: { attack: 0.6, defense: 0.1, athleticism: 0.3 } // Attack
+        };
+
+        // Assign scores to the worst players based on zone fit
+        worstPlayers.forEach(player => {
+            player.zoneScores = Object.entries(zoneWeights).map(([zone, weights]) => ({
+                zone: parseInt(zone),
+                score: (player.attack * weights.attack) + (player.defense * weights.defense) + (player.athleticism * weights.athleticism)
+            }));
         });
 
-        // Distribute players in firstPart to zones, respecting idealDistribution limits
-        lowDifferencePlayers.forEach(player => {
-            const { attack, defense, athleticism } = player;
+        // Sort worst players by best zone fit
+        worstPlayers.sort((a, b) => Math.max(...b.zoneScores.map(z => z.score)) - Math.max(...a.zoneScores.map(z => z.score)));
 
-            const allowDefense = (zones[0].length + 1) < idealDistribution[0];
-            const allowMidfield = (zones[1].length + 1) < idealDistribution[1];
-            const allowAttack = (zones[2].length + 1) < idealDistribution[2];
+        // Calculate new ideal distribution (based on full player count)
+        let idealDistribution = getIdealDistribution(numPlayers)
 
-            const preZoneSize = zones[0].length + zones[1].length + zones[2].length;
+        console.log("ideal dist pre", idealDistribution);
 
-            // Assign players to the appropriate zone based on their skill
-            if (athleticism < 4) {
-                // Low athleticism — prioritize defense or attack based on other stats
-                if (allowAttack && attack > defense) {
-                    zones[2].push(player);
-                } else if (allowDefense) {
-                    zones[0].push(player);
-                } else {
-                    zones[1].push(player);
-                }
-            } else {
-                // High athleticism — generally prefer midfield, but check attack vs defense
-                if (allowMidfield && attack > 4 && defense > 4 && Math.abs(attack - defense) < 2) {
-                    // Assign to attack if not exceeding limit
-                    zones[1].push(player);
-                } else if (allowAttack && attack > defense) {
-                    // Assign to defense if not exceeding limit
-                    zones[2].push(player);
-                } else if (allowDefense) {
-                    // Balanced, assign to midfield if not exceeding limit
-                    zones[0].push(player);
+        if (idealDistribution[0] > 0) idealDistribution[0] -= 1; // Remove 1 defender
+        if (idealDistribution[1] > 1) idealDistribution[1] -= 2; // Remove 2 midfielders
+        if (idealDistribution[2] > 0) idealDistribution[2] -= 1; // Remove 1 attacker
+
+        console.log("ideal dist", idealDistribution);
+        console.log("worstPlayers", worstPlayers);
+
+        // Assign worst players greedily while keeping zone balance
+        worstPlayers.forEach(player => {
+            player.zoneScores.sort((a, b) => b.score - a.score);
+            for (let { zone } of player.zoneScores) {
+                if (zones[zone].length < idealDistribution[zone]) {
+                    zones[zone].push(player);
+                    break;
                 }
             }
-
-            if ((zones[0].length + zones[1].length + zones[2].length) === preZoneSize) {
-                if (allowMidfield) {
-                    // Assign to attack if not exceeding limit
-                    zones[1].push(player);
-                } else if (allowAttack) {
-                    // Assign to defense if not exceeding limit
-                    zones[2].push(player);
-                } else {
-                    // Balanced, assign to midfield if not exceeding limit
-                    zones[0].push(player);
-                }
-            }
-
         });
 
-        console.log("ZONES AFTER DISTRIBUTION: ", zones);
-
+        console.log("Added so far after worst", zones);
     }
 
-    // deal with the top 3 players
-    const lastPart = numFirst ? sortedPlayers.slice(numFirst) : sortedPlayers;
 
-    console.log("LAST: ", lastPart);
+    console.log("topPlayers", topPlayers);
 
-    // Distribute players in firstPart to zones, respecting idealDistribution limits
-    lastPart.forEach(player => {
-        const { attack, defense, athleticism } = player;
+    // Determine the best attacker with a tiebreaker on lower defense
+    let bestAttacker = topPlayers.reduce((best, p) => {
+        if (p.attack > best.attack) return p;
+        if (p.attack === best.attack && (p.defense < best.defense || p.athleticism > best.athleticism)) return p;
+        return best;
+    }, topPlayers[0]);
 
-        const allowDefense = (zones[0].length) < idealDistribution[0];
-        const allowMidfield = (zones[1].length) < idealDistribution[1];
-        const allowAttack = (zones[2].length) < idealDistribution[2];
+    topPlayers = topPlayers.filter(p => p.id !== bestAttacker.id);
 
-        const preZoneSize = zones[0].length + zones[1].length + zones[2].length;
+    // Determine the best defender with a tiebreaker on athleticism
+    let bestDefender = topPlayers.reduce((best, p) => {
+        if (p.defense > best.defense) return p;
+        if (p.defense === best.defense && (p.defense - p.attack) > (best.defense - best.attack)) return p;
+        return best;
+    }, topPlayers[0]);
 
-        // initial ideal choices
-        if (allowMidfield && athleticism > 8) {
-            zones[1].push(player);
-        } else if (allowDefense && defense > 8) {
-            zones[0].push(player);
-        } else if (allowAttack && attack > 8) {
-            zones[2].push(player);
-        }
+    // Remove the chosen best defender and attacker from topPlayers
+    topPlayers = topPlayers.filter(p => p.id !== bestDefender.id);
 
-        // fallback assignments
-        else if (allowMidfield) {
-            zones[1].push(player);
-        } else if (allowAttack) {
-            zones[2].push(player);
-        } else {
-            zones[0].push(player);
-        }
+    // Assign the best defender and attacker
+    zones[0].push(bestDefender); // Defense
+    zones[2].push(bestAttacker); // Attack
 
-    });
+    // Assign the remaining two to midfield
+    topPlayers.forEach(player => zones[1].push(player)); // Both go to midfield
 
-    // Generate positions for each player in the assigned zones
+    console.log("final zones", zones);
+
+    // Position players within each zone
     Object.entries(zones).forEach(([zone, players]) => {
         let numPlayersInZone = players.length;
         let xSpacing = 0.4 / Math.max(numPlayersInZone - 1, 1);
@@ -202,7 +171,6 @@ const generatePositions = (team) => {
             positions.push({ id: player.id, name: player.name, x: parseFloat(x.toFixed(2)), y: parseFloat(y.toFixed(2)) });
         });
     });
-
 
     return positions;
 };
