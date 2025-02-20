@@ -16,16 +16,18 @@ const MobileCurrentGame = ({ className }) => {
     return (
         <div className="flex flex-col h-[200%]">
             {/* Team A */}
-            <div className="flex-1 flex items-center justify-center bg-gray-800">
+            <div className="flex-[1] flex items-center justify-center bg-gray-800">
                 <PlayerArea team="A" teamPlayers={getTeamPlayers("A")} playerSize={50} />
             </div>
-
-            {/* Team B */}
-            <div className="flex-1 flex items-center justify-center bg-gray-700">
+    
+            {/* Team B with extra padding at the bottom */}
+            <div className="flex-[1] flex items-center justify-center bg-gray-700 pt-[5px] pb-[20px]">
                 <PlayerArea team="B" teamPlayers={getTeamPlayers("B")} playerSize={50} />
-             </div>
+            </div>
         </div>
     );
+    
+    
 };
 
 export default MobileCurrentGame;
