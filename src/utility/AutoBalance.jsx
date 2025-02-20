@@ -51,7 +51,9 @@ function getIdealDistribution(numPlayers) {
 }
 
 const generatePositions = (players) => {
-    if (players.length === 0) return [];
+    const numTopPlayers = 4;
+
+    if (players.length < numTopPlayers) return [];
 
     let positions = [];
 
@@ -76,7 +78,7 @@ const generatePositions = (players) => {
 
     console.log("sortedPlayers", sortedPlayers);
 
-    const numTopPlayers = 4;
+  
     let worstCount = Math.max(numPlayers - numTopPlayers, 0);
     let topPlayers = sortedPlayers.slice(worstCount); // Always the top 4
     let zones = { 0: [], 1: [], 2: [] };
@@ -88,8 +90,8 @@ const generatePositions = (players) => {
         // Define weights for each zone
         const zoneWeights = {
             0: { attack: 0.1, defense: 0.6, athleticism: 0.3 }, // Defense
-            1: { attack: 0.33, defense: 0.33, athleticism: 0.33 }, // Midfield
-            2: { attack: 0.6, defense: 0.1, athleticism: 0.3 } // Attack
+            1: { attack: 0.3, defense: 0.25, athleticism: 0.45 }, // Midfield
+            2: { attack: 0.65, defense: 0.05, athleticism: 0.3 } // Attack
         };
 
         // Assign scores to the worst players based on zone fit
@@ -132,7 +134,7 @@ const generatePositions = (players) => {
 
     console.log("topPlayers", topPlayers);
 
-    // Determine the best attacker with a tiebreaker on lower defense
+    // Determine the best attacker tiebreaker on athleticism
     let bestAttacker = topPlayers.reduce((best, p) => {
         if (p.attack > best.attack) return p;
         if (p.attack === best.attack && (p.defense < best.defense || p.athleticism > best.athleticism)) return p;
@@ -141,7 +143,7 @@ const generatePositions = (players) => {
 
     topPlayers = topPlayers.filter(p => p.id !== bestAttacker.id);
 
-    // Determine the best defender with a tiebreaker on athleticism
+    // Determine the best defender with a with a tiebreaker on lower defense 
     let bestDefender = topPlayers.reduce((best, p) => {
         if (p.defense > best.defense) return p;
         if (p.defense === best.defense && (p.defense - p.attack) > (best.defense - best.attack)) return p;
@@ -177,8 +179,8 @@ const generatePositions = (players) => {
 
 
 export const autoCreateTeams = (players, attributeWeights) => {
-    if (players.length < 2) throw new Error("Not enough players to form teams");
+    if (players.length < 8) throw new Error("Not enough players to form teams");
     const [teamA, teamB] = generateBalancedTeams(players, attributeWeights);
 
-    return [generatePositions(teamA), generatePositions(teamB)];
+    return { a: generatePositions(teamA), b: generatePositions(teamB)};
 };

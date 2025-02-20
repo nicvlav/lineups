@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useRef } from "react";
 import { openDB } from "idb";
-import { decodeStateFromURL } from "./stateManager";
+import { decodeStateFromURL } from "./StateManager";
 import { autoCreateTeams } from "./AutoBalance";
 import formations from "./Formations"
 
@@ -335,11 +335,16 @@ export const PlayersProvider = ({ children }) => {
 
     // Generate teams based on players and weighting
     const generateTeams = async (filteredPlayers, weighting) => {
-        const balanced = autoCreateTeams(filteredPlayers, weighting);
-        console.log("full players", playersRef.current);
-        console.log("balanced two team arrays", balanced);
+        let teamA = [];
+        let teamB = [];
 
-        const [teamA, teamB] = balanced;
+        try {
+            const balanced = autoCreateTeams(filteredPlayers, weighting);
+            teamA = balanced.a;
+            teamB = balanced.b;
+        } catch (error) {
+            return;
+        }
 
         // Create lookup maps for quick access
         const teamAMap = new Map(teamA.map(player => [player.id, player]));

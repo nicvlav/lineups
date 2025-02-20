@@ -62,9 +62,12 @@ const WeightingSelector = ({ weights, setWeights }) => {
 
 const AutoTeamSelector = () => {
   const { players, generateTeams, rebalanceCurrentGame } = useContext(PlayersContext);
-  const [selectedPlayers, setSelectedPlayers] = useState(new Set());
   const [weights, setWeights] = useState({ attack: 10, defense: 10, athleticism: 10 });
   const [useCurrentGame, setUseCurrentGame] = useState(true);
+
+  const [selectedPlayers, setSelectedPlayers] = useState(
+    new Set(players.filter(player => player.team).map(player => player.id))
+  );
 
   const togglePlayerSelection = (id) => {
     setSelectedPlayers(prevSelected => {
