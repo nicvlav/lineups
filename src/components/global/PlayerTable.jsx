@@ -8,6 +8,8 @@ const PlayerTable = () => {
     const [newPlayerName, setNewPlayerName] = useState("");
     const [editingPlayer, setEditingPlayer] = useState(null);
     const [editedName, setEditedName] = useState("");
+    const [sortingMode, setSortingMode] = useState("alphabetical");
+    const [searchQuery, setSearchQuery] = useState("");
 
     const handleAttributeChange = (uid, field, value) => {
         updatePlayerAttributes(uid, { [field]: value });
@@ -42,14 +44,34 @@ const PlayerTable = () => {
 
     const nonTempPlayers = getNonTemps();
 
+    // Filter players based on the search query
+    const filteredPlayers = nonTempPlayers.filter(player =>
+        player.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Sort players based on the selected sorting mode.
+    const sortedPlayers = [...filteredPlayers].sort((a, b) => {
+        switch (sortingMode) {
+            case "alphabetical":
+                return a.name.localeCompare(b.name);
+            case "attack":
+                return b.attack - a.attack;
+            case "defense":
+                return b.defense - a.defense;
+            case "athleticism":
+                return b.athleticism - a.athleticism;
+            default:
+                return 0;
+        }
+    });
+
     const columns = [
         {
             title: "Player",
             dataIndex: "name",
             key: "name",
             render: (text, record) => (
-
-                <div className="flex  gap-2">
+                <div className="flex gap-2">
                     <button
                         onClick={() => deletePlayer(record.id)}
                         className="text-red-500 hover:text-red-700 flex items-center mt-2"
@@ -77,7 +99,6 @@ const PlayerTable = () => {
                             </span>
                         )}
                     </div>
-
                 </div>
             ),
         },
@@ -124,28 +145,50 @@ const PlayerTable = () => {
 
     return (
         <div className="p-2 bg-gray-900 rounded-xl shadow-xl max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center mb-4 space-x-2">
-                <input
-                    type="text"
-                    value={newPlayerName}
-                    onChange={(e) => setNewPlayerName(e.target.value)}
-                    placeholder="Enter player name"
-                    className="p-2 text-white bg-gray-800 rounded w-full focus:outline-none"
+            <div className="flex flex-col space-y-4">
+                <div className="flex items-center mb-4 space-x-2">
+                    <input
+                        type="text"
+                        value={newPlayerName}
+                        onChange={(e) => setNewPlayerName(e.target.value)}
+                        placeholder="Enter player name"
+                        className="p-2 text-white bg-gray-800 rounded w-full focus:outline-none"
+                    />
+                    <button
+                        onClick={handleAddPlayer}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                        Add
+                    </button>
+                </div>
+                <div className="flex items-center mb-4 space-x-2 w-full">
+                    <input
+                        type="text"
+                        placeholder="Search players..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="p-2 flex-[1] min-w-0 bg-gray-800 text-white rounded focus:outline-none"
+                    />
+                    <select
+                        value={sortingMode}
+                        onChange={(e) => setSortingMode(e.target.value)}
+                        className="p-2 flex-[1] min-w-0 bg-gray-800 text-white rounded focus:outline-none max-w-[100px]"
+                    >
+                        <option value="alphabetical">(A-Z)</option>
+                        <option value="attack">Attack</option>
+                        <option value="defense">Defense</option>
+                        <option value="athleticism">Athleticism</option>
+                    </select>
+                </div>
+
+                <Table
+                    dataSource={sortedPlayers}
+                    columns={columns}
+                    rowKey="id"
+                    pagination={{ pageSize: 5 }}
+                    className="bg-gray-800 rounded-lg"
                 />
-                <button
-                    onClick={handleAddPlayer}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                    Add
-                </button>
             </div>
-            <Table
-                dataSource={nonTempPlayers}
-                columns={columns}
-                rowKey="id"
-                pagination={{ pageSize: 5 }}
-                className="bg-gray-800 rounded-lg"
-            />
         </div>
     );
 };

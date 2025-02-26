@@ -6,22 +6,38 @@ import { PlayersProvider } from "./utility/PlayersContext.jsx";
 
 import Layout from "./components/desktop/Layout.jsx";
 import MobileLayout from "./components/mobile/MobileLayout.jsx";
-import React from "react";
+import React, { useState, useEffect } from "react";
+
 
 const App = () => {
-  const isMobile = window.innerWidth < 768; // Adjust for responsiveness
+  const [mobile, setMobile] = useState(window.innerWidth < 480);
+
+    useEffect(() => {
+      const handleResize = () => {
+        setMobile(window.innerWidth < 480);
+      };
+
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }, []);
+  
+
   const backend = isMobile ? TouchBackend : HTML5Backend;
+  const options = mobile
+  ? {
+      enableMouseEvents: false, // Prevents conflicts
+      enableTouchEvents: true,
+      // delayTouchStart: 10, // Adds a small delay before drag starts
+      ignoreContextMenu: true, // Prevents issues with right-click
+      usePointerEvents: true,
+      preview: true,
+    }
+  : {}; // No extra options for desktop
 
   return (
-    <DndProvider backend={backend}>
+    <DndProvider backend={backend} options={options}>
       <PlayersProvider>
-        {isMobile ? (
-          <MobileLayout>
-          </MobileLayout>
-        ) : (
-          <Layout>
-          </Layout>
-        )}
+        {mobile ? <MobileLayout /> : <Layout />}
       </PlayersProvider>
     </DndProvider>
   );

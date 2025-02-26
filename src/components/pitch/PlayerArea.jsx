@@ -1,7 +1,7 @@
 import PlayerContainer from "./PlayerContainer";
 import React from "react";
 
-const PlayerArea = ({ team, teamPlayers, playerSize = 80 }) => {
+const PlayerArea = ({ team, teamPlayers, playerSize = 60 }) => {
 
   return (
     <div className="w-full h-full flex flex-col gap-2"> {/* Ensure column flex layout */}

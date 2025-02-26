@@ -349,6 +349,10 @@ export const PlayersProvider = ({ children }) => {
 
     // Generate teams based on players and weighting
     const generateTeams = async (filteredPlayers, weighting) => {
+        // Remove all players with temp_formation === true from the full list
+        playersRef.current = playersRef.current.filter(player => !player.temp_formation);
+        filteredPlayers = filteredPlayers.filter(player => !player.temp_formation);
+
         let teamA = [];
         let teamB = [];
 
@@ -385,15 +389,12 @@ export const PlayersProvider = ({ children }) => {
     };
 
     const rebalanceCurrentGame = async (weighting) => {
-        // Remove all players with temp_formation === true from the full list
-        playersRef.current = playersRef.current.filter(player => !player.temp_formation);
-    
         // Filter players who have a non-null team
         const filteredPlayers = playersRef.current.filter(player => player.team !== null);
-    
+
         // Update state to reflect the removal
-        setPlayers([...playersRef.current]); 
-    
+        setPlayers([...playersRef.current]);
+
         // Call generateTeams with the filtered players
         await generateTeams(filteredPlayers, weighting);
     };

@@ -1,15 +1,16 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { useDrag } from "react-dnd";
 import PlayerIcon from "../../assets/shirt.svg";
+import PlayerDialog from "./PlayerDialog";
 
-import PlayerDialog from "./PlayerDialog"; // New component for search dialog
+import { isMobile } from "react-device-detect"; // Detect touch devices
 
 const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop, onSwitchPlayer, onSwitchToGuest, onAddAndSwitchToPlayer }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const [, drag] = useDrag(() => ({
     type: "PLAYER",
-    item: { game_uid: player.id, name: player.name},
+    item: { game_uid: player.id, name: player.name },
   }));
 
   const handleOpenDialog = (event) => {
@@ -32,6 +33,7 @@ const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop, onSwitch
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          touchAction: "none", // Prevent unintended gestures
         }}
         onContextMenu={handleOpenDialog} // Right-click to open dialog
         onDoubleClick={handleOpenDialog} // Double-click to open dialog
@@ -55,10 +57,13 @@ const DraggablePlayer = ({ player, playerSize, initialLeft, initialTop, onSwitch
         <img
           src={PlayerIcon}
           alt={player.name}
+          draggable="false" // Prevent browser-native drag
           style={{
             width: "100%",
             height: "100%",
             borderRadius: "50%",
+            pointerEvents: isMobile ? "none" : "auto", // Fix for desktop drag
+            userSelect: "none",
           }}
         />
       </div>

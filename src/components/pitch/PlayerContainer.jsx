@@ -21,7 +21,7 @@ const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) 
   return { left, top };
 };
 
-const PlayerContainer = ({ team, teamPlayers, playerSize = 80 }) => {
+const PlayerContainer = ({ team, teamPlayers, playerSize = 60 }) => {
   const containerRef = useRef(null);
 
   const { addRealPlayerToGame, switchToRealPlayer, switchToNewPlayer } = useContext(PlayersContext);
