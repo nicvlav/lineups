@@ -18,7 +18,7 @@ const MobileHeaderBar = ({ toggleSidebar }) => {
 
             {/* Right Side: Actions */}
             <div className="flex">
-                <div className="flex-grow p-3 text-center">
+                <div className="flex-grow p-3 bg-gray-800 text-white">
                     <FormationSelector />
                 </div>
 

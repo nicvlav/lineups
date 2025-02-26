@@ -10,7 +10,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                 <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm" />
 
                 {/* Modal Container */}
-                <div className="fixed inset-0 flex items-center justify-center p-4">
+                <div className="fixed inset-0 flex items-center justify-center">
                     <TransitionChild
                         as={Fragment}
                         enter="ease-out duration-300"
@@ -21,11 +21,11 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                         leaveTo="opacity-0 scale-95"
                     >
                         {/* Modal Panel */}
-                        <DialogPanel className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl bg-gray-900 rounded-2xl p-6 text-white shadow-xl 
+                        <DialogPanel className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl bg-gray-900 rounded-2xl text-white shadow-xl 
                             max-h-[90vh] overflow-hidden flex flex-col">
                             
                             {/* Header */}
-                            <div className="flex justify-between items-center">
+                            <div className="flex justify-between items-center p-2">
                                 <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
                                 <button onClick={onClose} className="text-gray-400 hover:text-white">
                                     <X size={24} />
@@ -33,7 +33,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                             </div>
 
                             {/* Content Area (Scrollable) */}
-                            <div className="mt-4 flex-1 overflow-y-auto p-2">
+                            <div className="flex-1 overflow-y-auto ">
                                 {children}
                             </div>
                         </DialogPanel>

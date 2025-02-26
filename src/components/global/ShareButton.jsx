@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { PlayersContext } from "../../utility/PlayersContext.jsx";
-import { encodeStateToURL } from "../../utility/stateManager.jsx";
+import { encodeStateToURL } from "../../utility/StateManager.jsx";
 
 const ShareButton = () => {
     const { players } =  useContext(PlayersContext);

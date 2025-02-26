@@ -47,87 +47,83 @@ const PlayerTable = () => {
             title: "Player",
             dataIndex: "name",
             key: "name",
-            width: 200,
             render: (text, record) => (
-                <div className="flex items-center space-x-3">
-                    {editingPlayer === record.id ? (
-                        <input
-                            type="text"
-                            value={editedName}
-                            onChange={(e) => setEditedName(e.target.value)}
-                            onBlur={() => handleSaveName(record.id)}
-                            onKeyDown={(e) => e.key === "Enter" && handleSaveName(record.id)}
-                            className="p-1 text-white bg-gray-800 rounded w-full focus:outline-none"
-                            autoFocus
-                        />
-                    ) : (
-                        <span
-                            className="font-medium text-white truncate max-w-[180px] cursor-pointer"
-                            onClick={() => handleEditName(record.id, text)}
-                            title={text}
-                        >
-                            {text}
-                        </span>
-                    )}
+
+                <div className="flex  gap-2">
+                    <button
+                        onClick={() => deletePlayer(record.id)}
+                        className="text-red-500 hover:text-red-700 flex items-center mt-2"
+                    >
+                        <FaTimes size={16} />
+                    </button>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3">
+                        {editingPlayer === record.id ? (
+                            <input
+                                type="text"
+                                value={editedName}
+                                onChange={(e) => setEditedName(e.target.value)}
+                                onBlur={() => handleSaveName(record.id)}
+                                onKeyDown={(e) => e.key === "Enter" && handleSaveName(record.id)}
+                                className="p-1 text-white bg-gray-800 rounded w-full focus:outline-none"
+                                autoFocus
+                            />
+                        ) : (
+                            <span
+                                className="font-medium text-white truncate cursor-pointer max-w-[150px]"
+                                onClick={() => handleEditName(record.id, text)}
+                                title={text}
+                            >
+                                {text}
+                            </span>
+                        )}
+                    </div>
+
                 </div>
             ),
         },
         {
-            title: "Attack",
-            dataIndex: "attack",
-            key: "attack",
-            render: (text, record) => (
-                <InputNumber
-                    min={1}
-                    max={10}
-                    value={record.attack}
-                    onChange={(value) => handleAttributeChange(record.id, "attack", value)}
-                    className="w-16 border-none bg-gray-700 text-white text-center rounded"
-                />
-            ),
-        },
-        {
-            title: "Defense",
-            dataIndex: "defense",
-            key: "defense",
-            render: (text, record) => (
-                <InputNumber
-                    min={1}
-                    max={10}
-                    value={record.defense}
-                    onChange={(value) => handleAttributeChange(record.id, "defense", value)}
-                    className="w-16 border-none bg-gray-700 text-white text-center rounded"
-                />
-            ),
-        },
-        {
-            title: "Athleticism",
-            dataIndex: "athleticism",
-            key: "athleticism",
-            render: (text, record) => (
-                <InputNumber
-                    min={1}
-                    max={10}
-                    value={record.athleticism}
-                    onChange={(value) => handleAttributeChange(record.id, "athleticism", value)}
-                    className="w-16 border-none bg-gray-700 text-white text-center rounded"
-                />
-            ),
-        },
-        {
-            title: "Remove",
-            key: "remove",
+            title: "Attributes",
+            key: "attributes",
+            width: "40%",
             render: (_, record) => (
-                <button onClick={() => deletePlayer(record.id)} className="text-red-500 hover:text-red-700">
-                    <FaTimes size={16} />
-                </button>
+                <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col items-center">
+                        <span className="text-xs text-gray-400">Attack</span>
+                        <InputNumber
+                            min={1}
+                            max={10}
+                            value={record.attack}
+                            onChange={(value) => handleAttributeChange(record.id, "attack", value)}
+                            className="w-10 border-none bg-gray-700 text-white text-center rounded"
+                        />
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <span className="text-xs text-gray-400">Defense</span>
+                        <InputNumber
+                            min={1}
+                            max={10}
+                            value={record.defense}
+                            onChange={(value) => handleAttributeChange(record.id, "defense", value)}
+                            className="w-10 border-none bg-gray-700 text-white text-center rounded"
+                        />
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <span className="text-xs text-gray-400">Athleticism</span>
+                        <InputNumber
+                            min={1}
+                            max={10}
+                            value={record.athleticism}
+                            onChange={(value) => handleAttributeChange(record.id, "athleticism", value)}
+                            className="w-10 border-none bg-gray-700 text-white text-center rounded"
+                        />
+                    </div>
+                </div>
             ),
         },
     ];
 
     return (
-        <div className="p-6 bg-gray-900 rounded-xl shadow-xl max-h-[65vh] overflow-y-auto">
-            <h2 className="text-2xl font-semibold text-white text-center mb-4">Player Attributes</h2>
+        <div className="p-2 bg-gray-900 rounded-xl shadow-xl max-h-[80vh] overflow-y-auto">
             <div className="flex items-center mb-4 space-x-2">
                 <input
                     type="text"

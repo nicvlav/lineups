@@ -98,8 +98,7 @@ const AutoTeamSelector = () => {
 
 
   return (
-    <div className="p-4 bg-gray-900 shadow-md rounded-lg text-white max-h-[65vh] overflow-y-auto">
-      <h2 className="text-lg font-bold mb-3">Auto Team Selection</h2>
+    <div className="p-2 bg-gray-900 shadow-md rounded-lg text-white max-h-[80vh] overflow-y-auto">
 
       {/* Toggle for "Use Current Game" */}
       <button

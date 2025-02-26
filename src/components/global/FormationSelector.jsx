@@ -21,11 +21,12 @@ const FormationSelector = () => {
     }, {});
 
     return (
-        <div className="relative">
+        <div className="relative bg-inherit text-inherit">
             <select
-                className="relative bg-gray-800"
+                className="relative bg-inherit text-inherit"
                 id="formation-select"
                 onChange={handleChange}
+                
                 ref={selectRef} // Attach ref to select element
             >
                 <option value="">Formation</option> {/* Option for no selection */}
