@@ -58,7 +58,7 @@ const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPl
 
     return createPortal(
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-brown p-4 rounded shadow-lg w-80">
+            <div className="bg-brown p-4 rounded shadow-lg w-80  text-white">
                 <h2 className="text-lg font-bold mb-2">Switch Player: {player.name}</h2>
 
                 {/* Search Input */}

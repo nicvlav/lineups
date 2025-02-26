@@ -6,7 +6,7 @@ const PlayerArea = ({ team, teamPlayers, playerSize = 80 }) => {
   return (
     <div className="w-full h-full flex flex-col gap-2"> {/* Ensure column flex layout */}
       {/* Team Title Bar */}
-      <div className="flex-none h-[40px] bg-gray-900 rounded-lg shadow-lg flex items-center p-2">
+      <div className="flex-none h-[40px] bg-gray-900  text-white rounded-lg shadow-lg flex items-center p-2">
         Team {team}
       </div>
 
