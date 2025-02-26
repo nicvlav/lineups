@@ -16,7 +16,7 @@ const MobileCurrentGame = ({ className }) => {
     return (
         <div className="flex flex-col h-[200%]">
             {/* Team A */}
-            <div className="flex-[1] flex items-center justify-center bg-gray-800">
+            <div className="flex-[1] flex items-center justify-center bg-gray-800 pt-[5px] pb-[5px] ">
                 <PlayerArea team="A" teamPlayers={getTeamPlayers("A")} playerSize={50} />
             </div>
     

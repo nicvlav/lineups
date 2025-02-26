@@ -10,11 +10,11 @@ import React, { useState, useEffect } from "react";
 
 
 const App = () => {
-  const [mobile, setMobile] = useState(window.innerWidth < 480);
+  const [mobile, setMobile] = useState(window.innerWidth < 560);
 
     useEffect(() => {
       const handleResize = () => {
-        setMobile(window.innerWidth < 480);
+        setMobile(window.innerWidth < 560);
       };
 
       window.addEventListener("resize", handleResize);

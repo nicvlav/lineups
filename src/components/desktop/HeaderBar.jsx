@@ -16,28 +16,30 @@ const HeaderBar = ({ toggleSidebar }) => {
     }, [players]);
 
     return (
-        <header className="w-full bg-gray-800 text-white p-4 flex items-center justify-between shadow-md">
-            <div className="flex items-center space-x-3">
-                <button onClick={toggleSidebar} className="text-white p-2">
+        <header className="w-full bg-gray-800 text-white p-4 flex items-center justify-between shadow-md h-[60px] min-h-[60px] max-h-[60px] overflow-hidden">
+            {/* Sidebar button and title */}
+            <div className="flex items-center space-x-3 flex-shrink-0 min-w-[50px]">
+                <button onClick={toggleSidebar} className="text-white p-2 flex-shrink-0">
                     <Menu size={28} />
                 </button>
-                <h1 className="font-bold" style={{ fontSize: "1.75rem" }}>Lineups</h1>
+                <h1 className="font-bold text-lg truncate" style={{ fontSize: "1.25rem" }}>LM</h1>
             </div>
 
-            <div className="flex space-x-4">
-                <button className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg shadow-md"
+            {/* Buttons container (ensures shrink behavior) */}
+            <div className="flex flex-1 justify-end space-x-2 min-w-0 overflow-hidden ml-2">
+                <button className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg shadow-md flex-shrink text-xs sm:text-sm md:text-base truncate"
                     onClick={() => setPlayerModalOpen(true)}>
                     Players
                 </button>
-                <button className="bg-green-600 hover:bg-green-500 text-white p-3 rounded-lg shadow-md"
+                <button className="bg-green-600 hover:bg-green-500 text-white p-2 rounded-lg shadow-md flex-shrink text-xs sm:text-sm md:text-base truncate"
                     onClick={() => setAutoTeamModalOpen(true)}>
                     Generate
                 </button>
-                <button className="bg-red-600 hover:bg-red-500 text-white p-3 rounded-lg shadow-md"
+                <ShareButton className="bg-yellow-600 hover:bg-yellow-500 text-white p-2 rounded-lg shadow-md flex-shrink text-xs sm:text-sm md:text-base truncate" />
+                <button className="bg-red-600 hover:bg-red-500 text-white p-2 rounded-lg shadow-md flex-shrink text-xs sm:text-sm md:text-base truncate"
                     onClick={clearGame}>
-                    Clear Game
+                    Clear
                 </button>
-                <ShareButton className="bg-yellow-600 hover:bg-yellow-500 text-white p-3 rounded-lg shadow-md" />
             </div>
 
             {/* Player Attributes Modal */}
@@ -54,3 +56,4 @@ const HeaderBar = ({ toggleSidebar }) => {
 };
 
 export default HeaderBar;
+

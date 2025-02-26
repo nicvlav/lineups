@@ -286,7 +286,6 @@ export const PlayersProvider = ({ children }) => {
     const adjustTeamSize = (currentPlayers, team, formation) => {
         let teamPlayers = currentPlayers.filter((p) => p.team === team);
         const numPlayersNeeded = formation.num_players;
-        console.log("numPlayersNeeded: ", numPlayersNeeded);
 
         // // Handle surplus players by setting team to null
         if (teamPlayers.length > numPlayersNeeded) {
@@ -314,9 +313,6 @@ export const PlayersProvider = ({ children }) => {
             teamPlayers = currentPlayers.filter((p) => p.team === team);
         }
 
-        console.log("teamPlayers: ", teamPlayers);
-        console.log("currentPlayers: ", currentPlayers);
-
         // // double confirm that all positions have correct players
         teamPlayers.forEach((player, index) => {
             player.x = formation.positions[index].x;
@@ -333,7 +329,6 @@ export const PlayersProvider = ({ children }) => {
 
         players.filter(player => player.guest !== true);
 
-        console.log("formationId: ", formationId, formations);
 
         const formation = formations.find((f) => f.id === Number(formationId));
 

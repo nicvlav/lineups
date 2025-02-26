@@ -29,6 +29,9 @@ const generateBalancedTeams = (players, weights) => {
         }
     });
 
+    console.log("Team A Weighted Score:", sumA);
+    console.log("Team B Weighted Score:", sumB);
+
     return [teamA, teamB];
 };
 
@@ -76,9 +79,7 @@ const generatePositions = (players) => {
     sortedPlayers = sortedPlayers.filter(p => p.id !== goalkeeper.id);
     const numPlayers = sortedPlayers.length;
 
-    console.log("sortedPlayers", sortedPlayers);
 
-  
     let worstCount = Math.max(numPlayers - numTopPlayers, 0);
     let topPlayers = sortedPlayers.slice(worstCount); // Always the top 4
     let zones = { 0: [], 1: [], 2: [] };
@@ -108,14 +109,9 @@ const generatePositions = (players) => {
         // Calculate new ideal distribution (based on full player count)
         let idealDistribution = getIdealDistribution(numPlayers)
 
-        console.log("ideal dist pre", idealDistribution);
-
         if (idealDistribution[0] > 0) idealDistribution[0] -= 1; // Remove 1 defender
         if (idealDistribution[1] > 1) idealDistribution[1] -= 2; // Remove 2 midfielders
         if (idealDistribution[2] > 0) idealDistribution[2] -= 1; // Remove 1 attacker
-
-        console.log("ideal dist", idealDistribution);
-        console.log("worstPlayers", worstPlayers);
 
         // Assign worst players greedily while keeping zone balance
         worstPlayers.forEach(player => {
@@ -127,12 +123,8 @@ const generatePositions = (players) => {
                 }
             }
         });
-
-        console.log("Added so far after worst", zones);
     }
 
-
-    console.log("topPlayers", topPlayers);
 
     // Determine the best attacker tiebreaker on athleticism
     let bestAttacker = topPlayers.reduce((best, p) => {
@@ -159,8 +151,6 @@ const generatePositions = (players) => {
 
     // Assign the remaining two to midfield
     topPlayers.forEach(player => zones[1].push(player)); // Both go to midfield
-
-    console.log("final zones", zones);
 
     // Position players within each zone
     Object.entries(zones).forEach(([zone, players]) => {
