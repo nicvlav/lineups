@@ -18,6 +18,25 @@ The **Sports Team Lineup Generator** is a web-based application designed to help
 The app is hosted and available at:
 🔗 [https://nicvlav.github.io/lineups/](https://nicvlav.github.io/lineups/)
 
+## Installation & Setup
+0. Ensure you have the following installed:
+- **Node.js 16+** (for the frontend)
+- **npm** (comes with Node.js)
+
+1. Navigate to the the location of this repostitory on your local drive:
+   ```sh
+   cd .\your_directory\lineups
+   ```
+2. Install dependencies:
+   ```sh
+   npm install
+   ```
+3. Start the development server:
+   ```sh
+   npm run dev
+   ```
+   The frontend will now be running at the URL provided in the terminal (usually `http://localhost:5173/`).
+
 ## How It Works
 1. **Add Players**: Create a list of players that can be assigned to formations.
 2. **Drag & Drop Players**: Move players from the sidebar into the field to set up a formation.
