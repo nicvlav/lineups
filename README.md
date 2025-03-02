@@ -9,51 +9,26 @@ The **Sports Team Lineup Generator** is a web-based application designed to help
 - **Interactive Field**: Drag players onto the field to assign positions.
 - **Dynamic Role Switching**: Double-click players on the field to toggle between main and guest roles.
 - **Position Adjustments**: Drag player icons within the field to rearrange positions easily.
+- **Generate Balanced Teams**: Automatically generate balanced teams based on adjustable zone weights.
+- **Session Persistence**: Uses IndexedDB to cache tabs for session continuity.
+- **Sharable Links**: Packs all game data into the URL for easy sharing without external storage.
+- **Privacy-Conscious**: No data is stored on a server; all data remains local to the user.
 
-## Installation & Setup
+## Deployment
+The app is hosted and available at:
+🔗 [https://nicvlav.github.io/lineups/](https://nicvlav.github.io/lineups/)
 
-### Prerequisites
-Ensure you have the following installed:
-- **Python 3.8+** (for the backend)
-- **Node.js 16+** (for the frontend)
-- **npm** (comes with Node.js)
-
-### Backend Setup (FastAPI)
-1. Navigate to the `backend` directory:
-   ```sh
-   cd backend
-   ```
-2. Install required Python packages:
-   ```sh
-   pip install fastapi uvicorn pydantic sqlite3
-   ```
-3. Start the FastAPI server with Uvicorn:
-   ```sh
-   uvicorn main:app --reload
-   ```
-   The API will now be running at `http://127.0.0.1:8000/`.
-
-### Frontend Setup (React + Vite)
-1. Navigate to the `frontend` directory:
-   ```sh
-   cd frontend
-   ```
-2. Install dependencies:
-   ```sh
-   npm install
-   ```
-3. Start the development server:
-   ```sh
-   npm run dev
-   ```
-   The frontend will now be running at the URL provided in the terminal (usually `http://localhost:5173/`).
-
-## Usage
+## How It Works
 1. **Add Players**: Create a list of players that can be assigned to formations.
 2. **Drag & Drop Players**: Move players from the sidebar into the field to set up a formation.
 3. **Adjust Player Positions**: Click and drag players within the field to reposition them.
 4. **Switch Player Roles**: Double-click a player to toggle between main and guest status.
 5. **Modify Formations**: Experiment with different setups to optimize your team’s strategy.
+6. **Generate Balanced Teams**: Assign players automatically using weighted attributes (attack, defense, athleticism) that add up to 1.
+7. **Session Caching**: IndexedDB ensures tabs retain session data locally, even after refreshes.
+8. **Share Your Setup**: The entire game state is encoded into the URL, making it easy to share formations with others.
+    - No URL shortener is used by default to ensure transparency and data control.
+    - Since no external storage is used, there is no persistent data collection.
 
 ## Contributing
 Contributions are welcome! If you’d like to improve the project, please submit a pull request or open an issue.
