@@ -1,15 +1,33 @@
-const getIdealDistribution = (numPlayers) => {
-    const baseSize = Math.floor((numPlayers - 1) / 3);
-    const remainder = (numPlayers - 1) % 3;
+const getIdealDistribution = (numPlayers, isDamond = true) => {
+    let baseSize = 0;
+    let remainder = 0;
+    let idealDistribution = { attack: 0, midfield: 0, defense: 0 };
 
-    let idealDistribution = { attack: baseSize, midfield: baseSize + 1, defense: baseSize };
+    if (isDamond) {
+        baseSize = Math.floor((numPlayers - 1) / 3);
+        idealDistribution = { attack: baseSize, midfield: baseSize + 1, defense: baseSize };
+        remainder = (numPlayers - 1) % 3;
 
-    if (remainder === 1) {
-        idealDistribution.defense += 1;  // Extra player to defense
-    } else if (remainder === 2) {
-        idealDistribution.defense += 1;
-        idealDistribution.midfield += 1;  // Extra players to defense and midfield
+        if (remainder === 1) {
+            idealDistribution.defense += 1;
+        } else if (remainder === 2) {
+            idealDistribution.defense += 1;
+            idealDistribution.midfield += 1;
+        }
+    } else {
+        baseSize = Math.floor((numPlayers) / 3);
+        idealDistribution = { attack: baseSize, midfield: baseSize, defense: baseSize };
+        remainder = (numPlayers) % 3;
+
+        if (remainder === 1) {
+            idealDistribution.midfield += 1;
+        } else if (remainder === 2) {
+            idealDistribution.defense += 1;
+            idealDistribution.midfield += 1;
+        }
     }
+
+
     return idealDistribution;
 }
 
@@ -86,61 +104,62 @@ const assignStarsToTeams = (stars, teamA, teamB, ideal) => {
     let loadIntoAFirst = Math.random() < 0.5;
 
     // // Assign players to each zone using `ideal` structure
-    assignPlayersToZone(0, 0, ideal.defense, true, loadIntoAFirst); // Defense
-    assignPlayersToZone(2, 2, ideal.attack, true, !loadIntoAFirst); // Attack
-    assignPlayersToZone(1, 1, ideal.midfield, false, true); // Midfield
+    if (ideal.defense > 0) assignPlayersToZone(0, 0, ideal.defense, true, loadIntoAFirst); // Defense
+    if (ideal.attack > 0) assignPlayersToZone(2, 2, ideal.attack, true, !loadIntoAFirst); // Attack
+    if (ideal.midfield > 0) assignPlayersToZone(1, 1, ideal.midfield, false, true); // Midfield
 
     return { teamA, teamB };
 };
 
-const assignPlayersToTeams = (specialistsAttack, specialistsDefense, generalists, teamA, teamB) => {
-    const ATTACK_DEFENSE_WEIGHT = 2.0; // Emphasizing attack-defense balance
-
-    // Initialize zone scores for each team
-    const populateZoneScores = (team, teamZoneScores) => {
-        for (let zone = 0; zone <= 2; zone++) {
-            if (team[zone]) {
-                team[zone].forEach(player => {
-                    if (player.zoneScores && typeof player.zoneScores[zone] === "number") {
-                        teamZoneScores[zone] += player.zoneScores[zone];
-                    }
-                });
-            }
+const populateZoneScores = (team, teamZoneScores) => {
+    for (let zone = 0; zone <= 2; zone++) {
+        if (team[zone]) {
+            team[zone].forEach(player => {
+                if (player.zoneScores && typeof player.zoneScores[zone] === "number") {
+                    teamZoneScores[zone] += player.zoneScores[zone];
+                }
+            });
         }
-    };
+    }
+};
 
+const assignPlayersToTeams = (specialistsAttack, specialistsDefense, generalists, teamA, teamB) => {
     let teamAZoneScores = [0, 0, 0];
     let teamBZoneScores = [0, 0, 0];
 
     populateZoneScores(teamA, teamAZoneScores);
     populateZoneScores(teamB, teamBZoneScores);
 
+    // Calculate total scores for both teams
+    let teamATotalScore = teamAZoneScores.reduce((sum, value) => sum + value, 0);
+    let teamBTotalScore = teamBZoneScores.reduce((sum, value) => sum + value, 0);
+
     // Assign players based on zone balance
     const assignPlayersToZone = (players, zone) => {
         players.sort((a, b) => b.zoneScores[zone] - a.zoneScores[zone]);
 
+        applyRandom(players, zone);
+
         for (let player of players) {
-            if (teamAZoneScores[zone] <= teamBZoneScores[zone]) {
+            if (teamAZoneScores[zone] <= teamBZoneScores[zone] && teamATotalScore <= teamBTotalScore) {
                 teamA[zone].push(player);
                 teamAZoneScores[zone] += player.zoneScores[zone];
+                teamATotalScore += player.zoneScores[zone];
             } else {
                 teamB[zone].push(player);
                 teamBZoneScores[zone] += player.zoneScores[zone];
+                teamBTotalScore += player.zoneScores[zone];
             }
         }
     };
-
-    applyRandom(specialistsDefense, 0);
-    applyRandom(specialistsAttack, 2);
-    applyRandom(generalists, 1);
 
     // Assign players by zone
     assignPlayersToZone(specialistsDefense, 0);
     assignPlayersToZone(specialistsAttack, 2);
     assignPlayersToZone(generalists, 1);
 
-    console.log("===== Team A Average Scores (Defense, Midfield, Attack) ======", teamAZoneScores);
-    console.log("===== Team B Average Scores (Defense, Midfield, Attack) ======", teamBZoneScores);
+    // console.log("===== Team A Average Scores (Defense, Midfield, Attack) ======", teamAZoneScores);
+    // console.log("===== Team B Average Scores (Defense, Midfield, Attack) ======", teamBZoneScores);
 
     return { teamA, teamB };
 };
@@ -164,7 +183,13 @@ const assignPositions = (team) => {
 
         let positionsForZone = [];
 
-        if (numPlayersInZone <= 2) {
+        if (numPlayersInZone <= 0) {
+            return;
+        }
+
+        if (numPlayersInZone <= 1) {
+            positionsForZone.push({ id: players[0].id, name: players[0].id.name, x: 0.5, y });
+        } else if (numPlayersInZone == 2) {
             // Standard symmetry for 2 or fewer players
             let xPositions = [];
             let halfCount = Math.ceil(numPlayersInZone / 2);
@@ -216,12 +241,101 @@ const assignPositions = (team) => {
     return positions;
 };
 
+const adjustSpecialists = (specialists, generalists, totalRequired, primaryZone, secondaryZone) => {
+    if (specialists.length < totalRequired) {
+        let needed = totalRequired - specialists.length;
+
+        // Sort generalists by best fit for the primary zone
+        // generalists.sort((a, b) => b.zoneScores[primaryZone] - a.zoneScores[primaryZone]);
+
+        generalists.sort((a, b) => b.zoneScores[primaryZone] - a.zoneScores[primaryZone]);
+        applyRandom(generalists, primaryZone);
+
+        while (needed > 0 && generalists.length > 0) {
+            specialists.push(generalists.shift());
+            needed--;
+        }
+    } else if (specialists.length > totalRequired) {
+        let toMove = specialists.length - totalRequired;
+
+        // Sort specialists by best fit for the secondary zone
+        specialists.sort((a, b) => b.zoneScores[secondaryZone] - a.zoneScores[secondaryZone]);
+        applyRandom(specialists, secondaryZone);
+
+        while (toMove > 0 && specialists.length > 0) {
+            generalists.push(specialists.pop());
+            toMove--;
+        }
+    }
+};
+
+const monteCarloTeamAssignment = (generalists, specialistsAttack, specialistsDefense, totalRequiredAttackers, totalRequiredDefenders, stars, star_distribution, numSimulations = 100) => {
+    let bestAssignment = { a: null, b: null };
+    let bestScoreDiff = Infinity;
+    let bestScores = { a: 0, b: 0 };
+
+
+    for (let i = 0; i < numSimulations; i++) {
+        let midfielders = structuredClone(generalists);
+        let starsCopy = structuredClone(stars);
+        let attackers = structuredClone(specialistsAttack);
+        let defenders = structuredClone(specialistsDefense);
+        let teamA = { 0: [], 1: [], 2: [] };
+        let teamB = { 0: [], 1: [], 2: [] };
+
+        adjustSpecialists(defenders, midfielders, totalRequiredDefenders, 0, 1);
+        adjustSpecialists(attackers, midfielders, totalRequiredAttackers, 2, 1);
+
+        assignStarsToTeams(starsCopy, teamA, teamB, star_distribution);
+
+        // Modify tempTeamA and tempTeamB in place by calling assignPlayersToTeams
+        assignPlayersToTeams(
+            attackers,
+            defenders,
+            midfielders,
+            teamA,
+            teamB
+        );
+
+        let teamAZoneScores = [0, 0, 0];
+        let teamBZoneScores = [0, 0, 0];
+
+        populateZoneScores(teamA, teamAZoneScores);
+        populateZoneScores(teamB, teamBZoneScores);
+
+        // Calculate total scores for both teams
+        let teamATotalScore = teamAZoneScores.reduce((sum, value) => sum + value, 0);
+        let teamBTotalScore = teamBZoneScores.reduce((sum, value) => sum + value, 0);
+
+        let scoreDiff = Math.abs(teamATotalScore - teamBTotalScore);
+        let totalScore = teamATotalScore + teamBTotalScore;
+        let bestTotalScore = bestScores.a + bestScores.b;
+
+        // Define a leeway factor: If totalScore is much better, allow a slightly worse balance
+        let totalImprovementFactor = totalScore / (bestTotalScore || 1); // Avoid division by zero
+        let dynamicLeeway = bestScoreDiff * (1 + 0.1 * totalImprovementFactor); // More total score allows for a slightly higher diff
+
+        // Decision logic: Favor higher total scores while keeping reasonable balance
+        if (totalScore > bestTotalScore || (scoreDiff <= dynamicLeeway && totalScore >= bestTotalScore)) {
+            bestAssignment = { a: teamA, b: teamB };
+            bestScores = { a: teamATotalScore, b: teamBTotalScore };
+            bestScoreDiff = scoreDiff;
+        }
+
+    }
+
+    console.log("===== Total Scores For Teams ======", bestScores);
+    console.log("===== Score Difference ======", bestScoreDiff);
+
+    return bestAssignment;
+};
+
 const getZones = (scoredPlayers) => {
-    let stars = [], specialistsAttack = [], specialistsDefense = [], generalists = [];
+    let stars = [], generalists = [], specialistsAttack = [], specialistsDefense = [];
 
     // Categorize players
     scoredPlayers.forEach(p => {
-        if ((p.attack >= 8 || p.defense >= 8) && p.athleticism >= 7) {
+        if ((p.attack >= 9 || p.defense >= 9)) { // && p.athleticism >= 7) {
             stars.push(p);
         } else if (p.attack - p.defense >= 2) {
             specialistsAttack.push(p);
@@ -252,57 +366,19 @@ const getZones = (scoredPlayers) => {
     const numTeamPlayers = Math.floor(scoredPlayers.length / 2);
 
     // Get ideal distributions for all players
-    let idealDistribution = getIdealDistribution(numTeamPlayers);
+    let idealDistribution = getIdealDistribution(numTeamPlayers, true);
 
     // Get ideal distributions for stars
     let numStars = Math.floor(stars.length / 2);
-    let star_distribution = getIdealDistribution(numStars);
+    let star_distribution = getIdealDistribution(numStars, false);
 
     const totalRequiredAttackers = (idealDistribution.attack + idealDistribution.attack) - (star_distribution.attack * 2);
     const totalRequiredDefenders = (idealDistribution.defense + idealDistribution.defense) - (star_distribution.defense * 2);
 
-    const adjustSpecialists = (specialists, generalists, totalRequired, primaryZone, secondaryZone) => {
-        if (specialists.length < totalRequired) {
-            let needed = totalRequired - specialists.length;
+    console.log("===== stars ======", generalists);
+    console.log("===== stars ======", stars);
 
-            // Sort generalists by best fit for the primary zone
-            generalists.sort((a, b) => b.zoneScores[primaryZone] - a.zoneScores[primaryZone]);
-            applyRandom(generalists, primaryZone);
-
-            while (needed > 0 && generalists.length > 0) {
-                specialists.push(generalists.shift());
-                needed--;
-            }
-        } else if (specialists.length > totalRequired) {
-            let toMove = specialists.length - totalRequired;
-
-            // Sort specialists by best fit for the secondary zone
-            specialists.sort((a, b) => b.zoneScores[secondaryZone] - a.zoneScores[secondaryZone]);
-            applyRandom(specialists, secondaryZone);
-
-            while (toMove > 0 && specialists.length > 0) {
-                generalists.push(specialists.pop());
-                toMove--;
-            }
-        }
-    };
-
-    // Adjust specialists
-    if (specialistsAttack.length > specialistsDefense.length) {
-        adjustSpecialists(specialistsAttack, generalists, totalRequiredAttackers, 2, 1);
-        adjustSpecialists(specialistsDefense, generalists, totalRequiredDefenders, 0, 1);
-    } else {
-        adjustSpecialists(specialistsDefense, generalists, totalRequiredDefenders, 0, 1);
-        adjustSpecialists(specialistsAttack, generalists, totalRequiredAttackers, 2, 1);
-    }
-
-    let teamA = { 0: [], 1: [], 2: [] };
-    let teamB = { 0: [], 1: [], 2: [] };
-
-    assignStarsToTeams(stars, teamA, teamB, star_distribution);
-    assignPlayersToTeams(specialistsAttack, specialistsDefense, generalists, teamA, teamB)
-
-    return { teamA, teamB };
+    return monteCarloTeamAssignment(generalists, specialistsAttack, specialistsDefense, totalRequiredAttackers, totalRequiredDefenders, stars, star_distribution)
 };
 
 const normalizeWeights = (weights) => {
@@ -341,8 +417,8 @@ const generateBalancedTeams = (players, attributeWeights) => {
     const teams = getZones(scoredPlayers, gkA.score, gkB.score);
 
     // Assign positions for both teams
-    const positionsA = assignPositions(teams.teamA);
-    const positionsB = assignPositions(teams.teamB);
+    const positionsA = assignPositions(teams.a);
+    const positionsB = assignPositions(teams.b);
 
     positionsA.push({ id: gkA.id, name: gkA.name, x: 0.5, y: 1.0 });
     positionsB.push({ id: gkB.id, name: gkB.name, x: 0.5, y: 1.0 });
