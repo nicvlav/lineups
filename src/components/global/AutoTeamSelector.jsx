@@ -18,7 +18,7 @@ const PlayerSelectionList = ({ players, selectedPlayers, togglePlayerSelection, 
   };
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col h-full w-full">
       <input
         type="text"
         placeholder="Search players..."
@@ -37,7 +37,7 @@ const PlayerSelectionList = ({ players, selectedPlayers, togglePlayerSelection, 
           Select All
         </label>
       )}
-      <div className="max-h-48 overflow-y-auto border rounded-md p-2 w-full">
+      <div className="max-h-48 flex-col overflow-y-auto border rounded-md p-2 w-full">
         {filteredPlayers.map((player) => (
           <label key={player.id} className="flex items-center gap-2 cursor-pointer w-full">
             <input
@@ -66,7 +66,9 @@ const PlayerSelectionList = ({ players, selectedPlayers, togglePlayerSelection, 
   );
 };
 
-const ZoneWeightConfigurator = ({ zoneWeights, setZoneWeights }) => {
+const ZoneWeightConfigurator = ({ zoneWeights, setZoneWeights, resetZoneWeightsToDefault }) => {
+  const [resetTriggered, setResetTriggered] = useState(false); // Track reset trigger
+
   const handleWeightChange = (zone, attribute, value) => {
     setZoneWeights(prev => ({
       ...prev,
@@ -74,14 +76,30 @@ const ZoneWeightConfigurator = ({ zoneWeights, setZoneWeights }) => {
     }));
   };
 
+
+  const handleResetClick = () => {
+    resetZoneWeightsToDefault();  // Reset the zone weights
+    setResetTriggered(prev => !prev);  // Trigger a re-render after reset
+  };
+
   return (
-    <div className="flex flex-col w-full">
-      <h3 className="text-white text-sm font-semibold mb-2">Zone Weight Configuration</h3>
+    <div className="flex flex-col w-full flex-grow overflow-y-auto">
+      <div className="flex justify-between items-center">
+        <h3 className="text-white text-sm font-semibold mb-2">Zone Weight Configuration</h3>
+        <button
+          onClick={handleResetClick}
+          className="mr-1 px-3 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded-md"
+        >
+          Reset
+        </button>
+      </div>
       {Object.entries(zoneWeights).map(([zone, attributes]) => (
-        <div key={zone} className="mb-4 p-2 bg-gray-700 rounded-md">
-          <h4 className="text-white text-sm font-semibold">
-            {zone === "0" ? "Defense" : zone === "1" ? "Midfield" : "Attack"}
-          </h4>
+        <div key={zone} className="mb-3 p-2 bg-gray-700 rounded-md">
+          <div className="flex justify-between items-center">
+            <h4 className="text-white text-sm font-semibold">
+              {zone === "0" ? "Defense" : zone === "1" ? "Midfield" : "Attack"}
+            </h4>
+          </div>
           {["attack", "defense", "athleticism"].map(attr => (
             <div key={attr} className="flex justify-between items-center mb-2 w-full">
               <label className="text-white">{attr.charAt(0).toUpperCase() + attr.slice(1)}</label>
@@ -91,7 +109,7 @@ const ZoneWeightConfigurator = ({ zoneWeights, setZoneWeights }) => {
                 max="100"
                 value={attributes[attr]}
                 onChange={(e) => handleWeightChange(zone, attr, Number(e.target.value))}
-                className="w-32"
+                className="w-28"
               />
               <span className="text-white w-8 text-right">{attributes[attr]}</span>
             </div>
@@ -102,13 +120,10 @@ const ZoneWeightConfigurator = ({ zoneWeights, setZoneWeights }) => {
   );
 };
 
+
+
 const AutoTeamSelector = () => {
-  const { players, generateTeams, rebalanceCurrentGame } = useContext(PlayersContext);
-  const [zoneWeights, setZoneWeights] = useState({
-    0: { attack: 10, defense: 100, athleticism: 30 },
-    1: { attack: 60, defense: 30, athleticism: 50 },
-    2: { attack: 100, defense: 0, athleticism: 40 }
-  });
+  const { players, generateTeams, zoneWeights, setZoneWeights, resetToDefaultWeights } = useContext(PlayersContext);
 
   const [selectedPlayers, setSelectedPlayers] = useState(
     new Set(players.filter(player => player.team).map(player => player.id))
@@ -126,7 +141,7 @@ const AutoTeamSelector = () => {
 
   const handleGenerateTeams = () => {
     const filteredPlayers = players.filter(p => selectedPlayers.has(p.id));
-    generateTeams(filteredPlayers, zoneWeights);
+    generateTeams(filteredPlayers);
   };
 
   const getNonTemps = () => {
@@ -140,13 +155,13 @@ const AutoTeamSelector = () => {
   const nonTempPlayers = getNonTemps();
 
   return (
-    <div className="p-2 bg-gray-900 shadow-md rounded-lg text-white w-full max-h-[80vh] flex flex-col">
+    <div className="p-2 bg-gray-900 shadow-md rounded-lg text-white w-full flex flex-col">
 
       {/* Tab Selector */}
       <div className="flex w-full border-b border-gray-700 mb-3">
         <button
           className={`flex-1 py-2 text-center font-semibold transition-all rounded-t-lg 
-      ${activeTab === "players"
+          ${activeTab === "players"
               ? "bg-gradient-to-r from-bg-gray-400 to-bg-gray-800 text-white shadow-md shadow-blue-500/50"
               : "bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700"
             }`}
@@ -157,7 +172,7 @@ const AutoTeamSelector = () => {
 
         <button
           className={`flex-1 py-2 text-center font-semibold transition-all rounded-t-lg 
-      ${activeTab === "weighting"
+          ${activeTab === "weighting"
               ? "bg-gradient-to-r from-bg-gray-400 to-bg-gray-800 text-white shadow-md shadow-blue-500/50"
               : "bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700"
             }`}
@@ -168,7 +183,7 @@ const AutoTeamSelector = () => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-grow w-full overflow-y-auto">
+      <div className="flex">
         {activeTab === "players" ? (
           <PlayerSelectionList
             players={nonTempPlayers}
@@ -177,7 +192,7 @@ const AutoTeamSelector = () => {
             setSelectedPlayers={setSelectedPlayers}
           />
         ) : (
-          <ZoneWeightConfigurator zoneWeights={zoneWeights} setZoneWeights={setZoneWeights} />
+          <ZoneWeightConfigurator zoneWeights={zoneWeights} setZoneWeights={setZoneWeights} resetZoneWeightsToDefault={resetToDefaultWeights} />
         )}
       </div>
 

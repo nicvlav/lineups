@@ -31,6 +31,11 @@ const saveToDB = async (key, value) => {
 
 export const PlayersProvider = ({ children }) => {
     const [players, setPlayers] = useState([]);
+    const [zoneWeights, setZoneWeights] = useState({
+        0: { attack: 0, defense: 100, athleticism: 30 },
+        1: { attack: 80, defense: 30, athleticism: 60 },
+        2: { attack: 100, defense: 0, athleticism: 40 }
+    });
 
     // this is probably hacky? idk about this stale capture bs
     const playersRef = useRef(players);
@@ -342,8 +347,16 @@ export const PlayersProvider = ({ children }) => {
         setPlayers(currPlayers);
     };
 
-    // Generate teams based on players and weighting
-    const generateTeams = async (filteredPlayers, weighting) => {
+    const resetToDefaultWeights = async () => {
+        setZoneWeights({
+            0: { attack: 0, defense: 100, athleticism: 30 },
+            1: { attack: 80, defense: 30, athleticism: 60 },
+            2: { attack: 100, defense: 0, athleticism: 40 }
+        });
+    };
+
+    // Generate teams based on players and zoneWeights
+    const generateTeams = async (filteredPlayers) => {
         // Remove all players with temp_formation === true from the full list
         playersRef.current = playersRef.current.filter(player => !player.temp_formation);
         filteredPlayers = filteredPlayers.filter(player => !player.temp_formation);
@@ -352,7 +365,7 @@ export const PlayersProvider = ({ children }) => {
         let teamB = [];
 
         try {
-            const balanced = autoCreateTeams(filteredPlayers, weighting);
+            const balanced = autoCreateTeams(filteredPlayers, zoneWeights);
             teamA = balanced.a;
             teamB = balanced.b;
         } catch (error) {
@@ -383,7 +396,7 @@ export const PlayersProvider = ({ children }) => {
         setPlayers([...updatedPlayers]); // Spread into a new array to trigger useEffect
     };
 
-    const rebalanceCurrentGame = async (weighting) => {
+    const rebalanceCurrentGame = async () => {
         // Filter players who have a non-null team
         const filteredPlayers = playersRef.current.filter(player => player.team !== null);
 
@@ -391,7 +404,7 @@ export const PlayersProvider = ({ children }) => {
         setPlayers([...playersRef.current]);
 
         // Call generateTeams with the filtered players
-        await generateTeams(filteredPlayers, weighting);
+        await generateTeams(filteredPlayers);
     };
 
     return (
@@ -408,8 +421,11 @@ export const PlayersProvider = ({ children }) => {
             switchToNewPlayer,
             applyFormation,
             clearGame,
+            zoneWeights,
+            resetToDefaultWeights,
+            setZoneWeights,
             generateTeams,
-            rebalanceCurrentGame
+            rebalanceCurrentGame,
         }}>
             {children}
         </PlayersContext.Provider>
