@@ -33,8 +33,8 @@ const getIdealDistribution = (numPlayers, isDamond = true) => {
 
 const applyRandom = (players, zone) => {
     for (let i = 0; i < players.length - 1; i++) {
-        if (Math.abs(players[i].zoneScores[zone] - players[i + 1].zoneScores[zone]) < 0.1 * players[i].zoneScores[zone]) {
-            if (Math.random() < 0.3) {
+        if (Math.abs(players[i].zoneScores[zone] - players[i + 1].zoneScores[zone]) < 0.2 * players[i].zoneScores[zone]) {
+            if (Math.random() < 0.5) {
                 [players[i], players[i + 1]] = [players[i + 1], players[i]];
             }
         }
@@ -60,33 +60,12 @@ const assignPlayersToTeams = (players, teamA, teamB) => {
     let teamAZoneScores = [0, 0, 0];
     let teamBZoneScores = [0, 0, 0];
 
-    // Sort players by best attribute score (descending)
-    players.sort((a, b) =>
-        Math.max(b.zoneScores[0], b.zoneScores[1], b.zoneScores[2]) -
-        Math.max(a.zoneScores[0], a.zoneScores[1], a.zoneScores[2])
-    );
-
-    // Total number of players for each team
-    // if total players is odd, the extra player will always go to midfield
-    const numTeamPlayers = Math.floor(players.length / 2);
-    const numTeamTopPlayers = Math.floor(numTeamPlayers / 2);
-    const numTopPlayers = numTeamTopPlayers * 2;
-
-
-
-    const idealDistribution = getIdealDistribution(numTeamPlayers, true);
-    const topDistribution = getIdealDistribution(numTeamTopPlayers, false);
-
-    // Split into top and bottom halves
-    const topPlayers = players.slice(0, numTopPlayers);
-    const bottomPlayers = players.slice(numTopPlayers);
-
-    // console.log(structuredClone(topPlayers));
-
     // Dynamic weighting ratio
-    let ratio = Math.random() * 0.3 + 0.7;
+    const rand = Math.random();
+    let specializationRatios = [rand * 0.3 + 0.5, rand * 0.2 + 0.0, rand * 0.5 + 0.2];
 
     const assignPlayersToZone = (playerPool, zone, count) => {
+        const ratio = specializationRatios[zone];
         // Sort player pool by specialization in the zone
         playerPool.sort((a, b) => {
             const aAvgOther = Object.values(a.zoneScores).reduce((sum, val, idx) => idx !== zone ? sum + val : sum, 0) / 2;
@@ -119,22 +98,30 @@ const assignPlayersToTeams = (players, teamA, teamB) => {
         }
     };
 
+    // Total number of players for each team
+    // if total players is odd, the extra player will always go to midfield
+    const numTeamPlayers = Math.floor(players.length / 2);
+    const numTeamTopPlayers = Math.floor(numTeamPlayers / 2);
+
+    const idealDistribution = getIdealDistribution(numTeamPlayers, true);
+    const topDistribution = getIdealDistribution(numTeamTopPlayers, true);
+
     const topAttackers = topDistribution.attack * 2;
     const topDefenders = topDistribution.defense * 2;
     const topMidfielders = topDistribution.midfield * 2;
 
     // Assign top players in a staggered way
-    if (topDefenders > 0) assignPlayersToZone(topPlayers, 0, topDefenders);
-    if (topMidfielders > 0) assignPlayersToZone(topPlayers, 1, topMidfielders);
-    if (topAttackers > 0) assignPlayersToZone(topPlayers, 2, topAttackers);
+    if (topDefenders > 0) assignPlayersToZone(players, 0, topDefenders);
+    if (topAttackers > 0) assignPlayersToZone(players, 2, topAttackers);
+    if (topMidfielders > 0) assignPlayersToZone(players, 1, topMidfielders);
 
     const remainingAttackers = (idealDistribution.attack * 2) - topAttackers;
     const remainingDefenders = (idealDistribution.defense * 2) - topDefenders;
-    const remainingMidfielders = players.length - remainingAttackers - topAttackers - remainingDefenders - topDefenders - topMidfielders;
+    const remainingMidfielders = players.length - remainingAttackers - remainingDefenders;
 
-    if (remainingAttackers > 0) assignPlayersToZone(bottomPlayers, 2, remainingAttackers);
-    if (remainingMidfielders > 0) assignPlayersToZone(bottomPlayers, 1, remainingMidfielders);
-    if (remainingDefenders > 0) assignPlayersToZone(bottomPlayers, 0, remainingDefenders);
+    if (remainingDefenders > 0) assignPlayersToZone(players, 0, remainingDefenders);
+    if (remainingAttackers > 0) assignPlayersToZone(players, 2, remainingAttackers);
+    if (remainingMidfielders > 0) assignPlayersToZone(players, 1, remainingMidfielders);
 
     return { teamA, teamB };
 };
@@ -240,9 +227,9 @@ const getZones = (players, numSimulations = 200) => {
 
     // Adjustable weights
     const W_total = 5.0;    // Maximize
-    const W_balance = 75.0;  // Minimize
-    const W_variance = 50.0; // Minimize
-    const EPSILON = 1e-6;  
+    const W_balance = 100.0;  // Minimize
+    const W_variance = 100.0; // Minimize
+    const EPSILON = 1e-6;
 
     for (let i = 0; i < numSimulations; i++) {
         let playersCopy = structuredClone(players);
@@ -295,18 +282,16 @@ const getZones = (players, numSimulations = 200) => {
     populateZoneScores(bestAssignment.b, teamBZoneScores);
 
     console.log("===== Final Optimized Teams =====");
-    console.log(`Team A Zones (Defense, Midfield, Attack): ${teamAZoneScores}`);
-    console.log(`Team B Zones (Defense, Midfield, Attack): ${teamBZoneScores}`);
+    console.log("Team A Zones (Defense, Midfield, Attack):", teamAZoneScores);
+    console.log("Team B Zones (Defense, Midfield, Attack):", teamBZoneScores);
     console.log("==================================");
-    console.log(`Total Scores → Team A: ${bestTotalScores.a}, Team B: ${bestTotalScores.b}`);
-    console.log(`Score Difference (Lower is better) → ${bestScoreDiff}`);
-    console.log(`Zonal Variance (Lower is better) → ${bestVariance}`);
+    console.log("Total Scores→ Team A: ", bestTotalScores);
+    console.log("Score Difference (Lower is better) ", bestScoreDiff);
+    console.log("Zonal Variance (Lower is better) → ", bestVariance / 3);
     console.log("==================================");
 
     return bestAssignment;
 };
-
-
 
 const normalizeWeights = (weights) => {
     const normalizedWeights = {};
@@ -327,10 +312,33 @@ const generateBalancedTeams = (players, attributeWeights) => {
 
     let scoredPlayers = calculateScores(players, normalizeWeights(attributeWeights));
 
-    scoredPlayers.sort((a, b) =>
-        Math.max(b.zoneScores[0], b.zoneScores[1], b.zoneScores[2]) -
-        Math.max(a.zoneScores[0], a.zoneScores[1], a.zoneScores[2])
-    );
+    // this is just for logging purposes
+    // kinda interesting to see the full sorted list
+    // remove when this gets optimized
+    scoredPlayers.sort((a, b) => {
+        // Sort the zoneScores for both players in descending order
+        const sortedA = [a.zoneScores[0], a.zoneScores[1], a.zoneScores[2]].sort((x, y) => y - x);
+        const sortedB = [b.zoneScores[0], b.zoneScores[1], b.zoneScores[2]].sort((x, y) => y - x);
+    
+        // First check: Compare the highest score (first element in the sorted array)
+        if (sortedA[0] !== sortedB[0]) {
+            return sortedB[0] - sortedA[0]; // Higher max score comes first
+        }
+    
+        // Second check: Compare the sum of the top two highest scores (first two elements)
+        const topTwoA = sortedA[0] + sortedA[1];
+        const topTwoB = sortedB[0] + sortedB[1];
+    
+        if (topTwoA !== topTwoB) {
+            return topTwoB - topTwoA; // Higher sum of the top two scores comes first
+        }
+    
+        // Third check: Compare the total sum of all three scores
+        const totalA = sortedA.reduce((sum, score) => sum + score, 0);
+        const totalB = sortedB.reduce((sum, score) => sum + score, 0);
+    
+        return totalB - totalA; // Higher total score comes first
+    });   
 
     console.log("===== Ranked Players With Zone Ratings (Best to Worst) =====", scoredPlayers);
 
