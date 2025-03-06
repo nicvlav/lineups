@@ -148,13 +148,9 @@ const assignPositions = (team) => {
         let y = 1.0 - ((parseInt(zone) + 1) / 4);
 
         // Sort players based on zone priority (Best → Worst)
-        if (zone == 0) {
-            players.sort((a, b) => ((b.attack * 0.3) + (b.athleticism * 0.4) + b.defense) - ((a.attack * 0.3) + (a.athleticism * 0.4) + a.defense)); // Defense priority
-        } else if (zone == 2) {
-            players.sort((a, b) => (b.attack - a.attack)); // Attack priority
-        } else {
-            players.sort((a, b) => ((b.attack * 0.6) + (b.athleticism * 0.4) + (b.defense * 0.6)) - ((a.attack * 0.6) + (a.athleticism * 0.4) + (a.defense * 0.6))); // Midfield balance
-        }
+        players.sort((a, b) => {
+            return b.zoneScores[0] - a.zoneScores[0];
+        });
 
         let positionsForZone = [];
 
@@ -319,26 +315,26 @@ const generateBalancedTeams = (players, attributeWeights) => {
         // Sort the zoneScores for both players in descending order
         const sortedA = [a.zoneScores[0], a.zoneScores[1], a.zoneScores[2]].sort((x, y) => y - x);
         const sortedB = [b.zoneScores[0], b.zoneScores[1], b.zoneScores[2]].sort((x, y) => y - x);
-    
+
         // First check: Compare the highest score (first element in the sorted array)
         if (sortedA[0] !== sortedB[0]) {
             return sortedB[0] - sortedA[0]; // Higher max score comes first
         }
-    
+
         // Second check: Compare the sum of the top two highest scores (first two elements)
         const topTwoA = sortedA[0] + sortedA[1];
         const topTwoB = sortedB[0] + sortedB[1];
-    
+
         if (topTwoA !== topTwoB) {
             return topTwoB - topTwoA; // Higher sum of the top two scores comes first
         }
-    
+
         // Third check: Compare the total sum of all three scores
         const totalA = sortedA.reduce((sum, score) => sum + score, 0);
         const totalB = sortedB.reduce((sum, score) => sum + score, 0);
-    
+
         return totalB - totalA; // Higher total score comes first
-    });   
+    });
 
     console.log("===== Ranked Players With Zone Ratings (Best to Worst) =====", scoredPlayers);
 
