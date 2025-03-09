@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import MobileSidebar from "./MobileSidebar";
 import MobileHeaderBar from "./MobileHeaderBar.jsx";
 import MobileCurrentGame from "./MobileCurrentGame"; // Render directly
 

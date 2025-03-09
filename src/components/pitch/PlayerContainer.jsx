@@ -21,71 +21,78 @@ const getPlayerPosition = (player, playerSize, containerWidth, containerHeight) 
   return { left, top };
 };
 
-const PlayerContainer = ({ team, teamPlayers, playerSize = 60 }) => {
+const PlayerContainer = ({ team, teamPlayers, playerSize = 55 }) => {
   const containerRef = useRef(null);
-
-  const { addRealPlayerToGame, switchToRealPlayer, switchToNewPlayer } = useContext(PlayersContext);
+  const { addRealPlayerToGame, switchToRealPlayer, switchToNewPlayer, updatePlayerPosition, switchTeam } = useContext(PlayersContext);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
+  // Update container size on mount, resize, and whenever the container might change
+  const updateContainerSize = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setContainerSize({ width: rect.width, height: rect.height });
+    }
+  };
+
   useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setContainerSize({ width: rect.width, height: rect.height });
-      }
-    };
+    // Initial size calculation
+    updateContainerSize();
 
-    window.addEventListener('resize', updateSize);
-    updateSize(); // Initial size calculation
+    // Listen for window resize events
+    window.addEventListener('resize', updateContainerSize);
 
-    return () => window.removeEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateContainerSize);
   }, []);
 
-  // 🔥 New Effect: Also trigger size update when sidebar toggles
+  // Observe container size changes (for sidebar toggle, etc.)
   useEffect(() => {
-    const observer = new ResizeObserver(() => {
+    const observer = new ResizeObserver(updateContainerSize);
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
       if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setContainerSize({ width: rect.width, height: rect.height });
+        observer.unobserve(containerRef.current);
       }
-    });
+      observer.disconnect();
+    };
+  }, []);
 
-    if (containerRef.current) observer.observe(containerRef.current);
+  // Handle movement of existing player within the container
+  const handlePlayerMove = (playerId, newX, newY) => {
+    if (updatePlayerPosition) {
+      updatePlayerPosition(playerId, newX, newY);
+    }
+  };
 
-    return () => observer.disconnect();
-  }, [containerRef.current]);
-
-  // useDrop hook to handle dropped players
-  const [, drop] = useDrop(() => ({
+  // Handle drop interactions
+  const [, drop] = useDrop({
     accept: 'PLAYER',
     drop: (item, monitor) => {
-      if (!containerRef.current) return;
+      const dropOffset = monitor.getClientOffset();
+      if (!containerRef.current || !dropOffset) return;
 
-      console.log("drop:", { item });
+      const containerRect = containerRef.current.getBoundingClientRect();
 
-      const halfSize = playerSize / 2;
-      const rect = containerRef.current.getBoundingClientRect();
-      const { x, y } = monitor.getSourceClientOffset(); // Get the drop coordinates
-      const dropX = (x - rect.left + halfSize) / rect.width;
-      const dropY = (y - rect.top + halfSize) / rect.height;
+      // Calculate drop position relative to container
+      const dropX = (dropOffset.x - containerRect.left) / containerRect.width;
+      const dropY = (dropOffset.y - containerRect.top) / containerRect.height;
 
-      if ("player_uid" in item) {
-        handleMainPlayerDrop(item.player_uid, dropX, dropY);
-      } else if ("game_uid" in item) {
-        handleGamePlayerDrop(item.game_uid, dropX, dropY);
+      if ("uid" in item) {
+        handleMainPlayerDrop(item.uid, dropX, dropY);
       } else {
         console.warn("Dropped item does not have a valid UID:", item);
       }
+
+      // Return drop result to let the drag source know the drop was successful
+      return { team };
     },
-  }));
+  });
 
   const handleMainPlayerDrop = (playerUID, dropX, dropY) => {
     addRealPlayerToGame(team, playerUID, dropX, dropY);
-  };
-
-  const handleGamePlayerDrop = (gamePlayerUID, dropX, dropY) => {
-    addRealPlayerToGame(team, gamePlayerUID, dropX, dropY);
-
   };
 
   const handleSwitchPlayer = (playerId, newPlayer) => {
@@ -102,15 +109,35 @@ const PlayerContainer = ({ team, teamPlayers, playerSize = 60 }) => {
 
   };
 
+  // Combine refs for both drag and drop
+  const combinedRef = mergeRefs(containerRef, drop);
+
+  // Define base pitch styles
+  const pitchColor = team === 'A'
+    ? 'radial-gradient(ellipse at center, #3161a1, #1e3c61)'
+    : 'radial-gradient(ellipse at center, #89db46, #4d7a27)';
 
   return (
     <div
-      ref={mergeRefs(drop, containerRef)} // Attach useDrop hook to container
-      // className="relative bg-primary"
-      className={`soccer-pitch-${team} p-4 bg-gray-900 rounded-lg shadow-lg flex gap-4`}
+      ref={combinedRef}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        background: pitchColor,
+        boxShadow: 'inset 0 0 25px rgba(0, 0, 0, 0.5)'
+      }}
     >
+      {/* Render players */}
       {teamPlayers.map((player) => {
-        const { left, top } = getPlayerPosition(player, playerSize, containerSize.width, containerSize.height);
+        const { left, top } = getPlayerPosition(
+          player,
+          playerSize,
+          containerSize.width,
+          containerSize.height
+        );
 
         return (
           <DraggablePlayer
@@ -119,7 +146,9 @@ const PlayerContainer = ({ team, teamPlayers, playerSize = 60 }) => {
             playerSize={playerSize}
             initialLeft={left}
             initialTop={top}
-
+            containerWidth={containerSize.width}
+            containerHeight={containerSize.height}
+            onPositionChange={handlePlayerMove}
             onSwitchPlayer={handleSwitchPlayer}
             onSwitchToGuest={handleSwitchToNewGuest}
             onAddAndSwitchToPlayer={handleSwitchToNewPlayer}

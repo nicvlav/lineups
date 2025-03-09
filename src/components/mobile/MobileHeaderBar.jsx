@@ -28,8 +28,8 @@ const MobileHeaderBar = ({ toggleSidebar }) => {
             </div>
 
             {/* Buttons container (ensures shrink behavior) */}
-            <div className="flex flex-1 justify-end space-x-2 min-w-0 overflow-hidden items-center ml-2">
-                <button className="bg-blue-600 items-center hover:bg-blue-500 text-white p-2 rounded-lg shadow-md flex-shrink align-middle text-xs sm:text-sm md:text-base truncate flex items-center py-2 px-3 border border-gray-300 cursor-pointer"
+            <div className="flex flex-1 justify-end space-x-2 min-w-0 overflow-hidden ml-2">
+                <button className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg shadow-md flex-shrink align-middle text-xs sm:text-sm md:text-base truncate flex items-center py-2 px-3 border border-gray-300 cursor-pointer"
                     onClick={() => setPlayerModalOpen(true)}>
                     <Users size={13} style={{ marginRight: '4px' }} />
                 </button>

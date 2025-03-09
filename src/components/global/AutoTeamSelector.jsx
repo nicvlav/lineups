@@ -6,6 +6,8 @@ import { Users, Dumbbell, Wand2, Check, RotateCcw, Search, ChevronDown, ChevronU
 const AutoTeamSelector = () => {
   const [activeTab, setActiveTab] = useState("generation");
   const [selectedPlayers, setSelectedPlayers] = useState([]);
+
+
   const { 
     players, 
     generateTeams, 
@@ -18,16 +20,14 @@ const AutoTeamSelector = () => {
   useEffect(() => {
     if (players && Array.isArray(players)) {
       const nonTemps = players.filter(player => !player.temp_formation);
-      if (nonTemps.length > 0 && selectedPlayers.length === 0) {
-        setSelectedPlayers(nonTemps.map(p => p.id));
-      }
+      setSelectedPlayers(nonTemps.filter(player => player.team !== null && player.team !== "").map(player => player.id));
     }
   }, [players]);
 
   // Generate teams with selected players and weights
   const handleGenerateTeams = async () => {
     if (selectedPlayers.length < 2) {
-      console.warn("Need at least 2 players to form teams");
+      console.warn("Need at least 8 players to form teams");
       return;
     }
 
@@ -557,11 +557,11 @@ const WeightingTab = ({ zoneWeights, setZoneWeights, resetZoneWeights }) => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '28px',
+    // width: '28px',
     height: '28px',
     borderRadius: '4px',
     backgroundColor: disabled ? 'rgba(243, 244, 246, 0.7)' : 'rgba(229, 231, 235, 0.7)',
-    color: disabled ? '#9ca3af' : '#4b5563',
+    color: disabled ? '#555555' : '#0b5563',
     border: 'none',
     cursor: disabled ? 'not-allowed' : 'pointer'
   });
@@ -613,7 +613,7 @@ const WeightingTab = ({ zoneWeights, setZoneWeights, resetZoneWeights }) => {
               {Object.keys(attributeLabels).map(attribute => (
                 <div key={`${zone}-${attribute}`} style={attributeRowStyle}>
                   {/* Attribute label */}
-                  <div style={{ flex: '0 0 120px', fontWeight: 500, color: '#1f2937' }}>
+                  <div style={{ flex: '0 0 120px', fontWeight: 500, color: '#ffffff' }}>
                     {attributeLabels[attribute]}
                   </div>
                   

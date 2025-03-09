@@ -54,6 +54,8 @@ const calculateScores = (players, zoneWeights) => {
 };
 
 const assignPlayersToTeams = (players, teamA, teamB) => {
+    if (players.length <= 0) return { teamA, teamB };
+
     let teamATotalScore = 0;
     let teamBTotalScore = 0;
 
@@ -98,22 +100,31 @@ const assignPlayersToTeams = (players, teamA, teamB) => {
         }
     };
 
+
+
     // Total number of players for each team
     // if total players is odd, the extra player will always go to midfield
     const numTeamPlayers = Math.floor(players.length / 2);
     const numTeamTopPlayers = Math.floor(numTeamPlayers / 2);
 
     const idealDistribution = getIdealDistribution(numTeamPlayers, true);
-    const topDistribution = getIdealDistribution(numTeamTopPlayers, true);
 
-    const topAttackers = topDistribution.attack * 2;
-    const topDefenders = topDistribution.defense * 2;
-    const topMidfielders = topDistribution.midfield * 2;
+    let topAttackers = 0;
+    let topDefenders = 0;
+ 
+    if (numTeamTopPlayers > 0) {
 
-    // Assign top players in a staggered way
-    if (topDefenders > 0) assignPlayersToZone(players, 0, topDefenders);
-    if (topAttackers > 0) assignPlayersToZone(players, 2, topAttackers);
-    if (topMidfielders > 0) assignPlayersToZone(players, 1, topMidfielders);
+        const topDistribution = getIdealDistribution(numTeamTopPlayers, true);
+
+        topAttackers = topDistribution.attack * 2;
+        topDefenders = topDistribution.defense * 2;
+        const topMidfielders = topDistribution.midfield * 2;
+
+        // Assign top players in a staggered way
+        if (topDefenders > 0) assignPlayersToZone(players, 0, topDefenders);
+        if (topAttackers > 0) assignPlayersToZone(players, 2, topAttackers);
+        if (topMidfielders > 0) assignPlayersToZone(players, 1, topMidfielders);
+    }
 
     const remainingAttackers = (idealDistribution.attack * 2) - topAttackers;
     const remainingDefenders = (idealDistribution.defense * 2) - topDefenders;
@@ -122,6 +133,8 @@ const assignPlayersToTeams = (players, teamA, teamB) => {
     if (remainingDefenders > 0) assignPlayersToZone(players, 0, remainingDefenders);
     if (remainingAttackers > 0) assignPlayersToZone(players, 2, remainingAttackers);
     if (remainingMidfielders > 0) assignPlayersToZone(players, 1, remainingMidfielders);
+
+
 
     return { teamA, teamB };
 };
@@ -212,7 +225,9 @@ const assignPositions = (team) => {
     return positions;
 };
 
-const getZones = (players, numSimulations = 200) => {
+const getZones = (players, numSimulations = 250) => {
+    if (players.length <= 0) return null;
+
     let bestAssignment = { a: null, b: null };
     let bestWeightedScore = -Infinity;
 
@@ -345,12 +360,15 @@ const generateBalancedTeams = (players, attributeWeights) => {
 
     scoredPlayers = scoredPlayers.slice(0, numPlayers - 2);
 
+    console.log(scoredPlayers);
+
     const teams = getZones(scoredPlayers);
 
     // Assign positions for both teams
-    const positionsA = assignPositions(teams.a);
-    const positionsB = assignPositions(teams.b);
-
+    const positionsA = teams ? assignPositions(teams.a) : [];
+    const positionsB = teams ? assignPositions(teams.b) : [];
+    
+    
     positionsA.push({ id: gkA.id, name: gkA.name, x: 0.5, y: 1.0 });
     positionsB.push({ id: gkB.id, name: gkB.name, x: 0.5, y: 1.0 });
 
@@ -358,6 +376,6 @@ const generateBalancedTeams = (players, attributeWeights) => {
 };
 
 export const autoCreateTeams = (players, attributeWeights) => {
-    if (players.length < 8) throw new Error("Not enough players to form teams");
+    if (players.length < 2) throw new Error("Not enough players to form teams");
     return generateBalancedTeams(players, attributeWeights);
 };
