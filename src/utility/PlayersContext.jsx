@@ -214,37 +214,29 @@ export const PlayersProvider = ({ children }) => {
         if (oldID === newID) {
             return; // No need to switch if IDs are the same
         }
-
-        // Find the old player in the list (should exist)
+    
+        // Find the players
         const oldPlayer = playersRef.current.find((p) => p.id === oldID);
-        if (!oldPlayer) {
-            return; // If old player isn't found, exit early
-        }
-
-        // Find the new player in the list (must exist)
         const newPlayer = playersRef.current.find((p) => p.id === newID);
-        if (!newPlayer) {
-            return; // If new player isn't found, exit early
+    
+        if (!oldPlayer || !newPlayer) {
+            return; // Ensure both players exist before proceeding
         }
-
-        // Store the old player's x and y positions
-        const { x, y } = oldPlayer;
-
-        // Create the updated player list
+    
+        // Swap x, y, and team values
         const updatedPlayers = playersRef.current.map((player) => {
             if (player.id === oldID) {
-                // If old player was a guest, remove it; otherwise, set team to null
-                return oldPlayer.guest ? null : { ...player, team: null };
+                return { ...player, x: newPlayer.x, y: newPlayer.y, team: newPlayer.team };
             }
             if (player.id === newID) {
-                // Update the new player's team and assign old player's x, y coordinates
-                return { ...player, team: placedTeam, x, y };
+                return { ...player, x: oldPlayer.x, y: oldPlayer.y, team: oldPlayer.team };
             }
             return player;
-        }).filter(Boolean); // Remove null entries if a guest was removed
-
+        });
+    
         setPlayers(updatedPlayers);
     };
+    
 
     const switchToNewPlayer = async (placedTeam, oldID, guestName, guest = false) => {
         if (!guestName) {
