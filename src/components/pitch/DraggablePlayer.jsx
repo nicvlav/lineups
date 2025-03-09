@@ -2,28 +2,29 @@ import React, { useState } from "react";
 import { useDrag } from "react-dnd";
 import { User } from "lucide-react";
 import PlayerDialog from "./PlayerDialog";
+import Modal from "../global/Modal.jsx"; // Import the new Modal component
 
 import { isMobile } from "react-device-detect"; // Detect touch devices
 
-const DraggablePlayer = ({ 
-  player, 
-  playerSize, 
-  initialLeft, 
-  initialTop, 
+const DraggablePlayer = ({
+  player,
+  playerSize,
+  initialLeft,
+  initialTop,
   containerWidth,
   containerHeight,
   onPositionChange,
-  onSwitchPlayer, 
-  onSwitchToGuest, 
-  onAddAndSwitchToPlayer 
+  onSwitchPlayer,
+  onSwitchToGuest,
+  onAddAndSwitchToPlayer
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
+
   // Set up drag functionality with drag position tracking
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "PLAYER",
-    item: { 
-      uid: player.id, 
+    item: {
+      uid: player.id,
       name: player.name,
       team: player.team // Include team information
     },
@@ -34,26 +35,26 @@ const DraggablePlayer = ({
       // Handle the end of drag - update player position
       const dropResult = monitor.getDropResult();
       const didDrop = monitor.didDrop();
-      
+
       // If dropped somewhere valid
       if (didDrop && dropResult) {
         return; // The drop handler in the container will handle it
       }
-      
+
       // If dragged within the same container but not handled by the drop handler
       if (!didDrop && monitor.getItemType() === 'PLAYER') {
         const initialOffset = monitor.getInitialClientOffset();
         const currentOffset = monitor.getClientOffset();
-        
+
         if (initialOffset && currentOffset && containerWidth && containerHeight) {
           // Calculate the new position
           const deltaX = currentOffset.x - initialOffset.x;
           const deltaY = currentOffset.y - initialOffset.y;
-          
+
           // Calculate the new relative position
           const newX = Math.max(0, Math.min(1, (initialLeft + deltaX) / containerWidth));
           const newY = Math.max(0, Math.min(1, (initialTop + deltaY) / containerHeight));
-          
+
           // Update the player position in the context
           if (onPositionChange) {
             onPositionChange(player.id, newX, newY);
@@ -77,12 +78,13 @@ const DraggablePlayer = ({
     left: `${initialLeft}px`,
     top: `${initialTop}px`,
     transform: 'translate(-50%, -50%)',
+    overflow: 'visible', 
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     opacity: isDragging ? 0.5 : 1,
     cursor: 'grab',
-    zIndex: 10,
+    zIndex: 1000,
     // Add transition for smooth movement if position changes, but not during drag
     transition: isDragging ? 'none' : 'left 0.3s ease, top 0.3s ease',
     // Ensure touch devices work correctly
@@ -122,7 +124,7 @@ const DraggablePlayer = ({
     whiteSpace: 'nowrap',
     pointerEvents: 'none',
     textAlign: 'center',
-    zIndex: 10,
+    zIndex: 1000,
   };
 
   return (
@@ -140,8 +142,9 @@ const DraggablePlayer = ({
           {player.number || <User size={Math.max(circleSize * 0.4, 20)} />}
         </div>
       </div>
-
-      {isDialogOpen && (
+ 
+      {/* Player Attributes Modal */}
+      <Modal title="Player Attributes" isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
         <PlayerDialog
           player={player}
           onClose={() => setIsDialogOpen(false)}
@@ -149,7 +152,7 @@ const DraggablePlayer = ({
           onSelectGuestPlayer={onSwitchToGuest}
           onAddAndSelectNewPlayer={onAddAndSwitchToPlayer}
         />
-      )}
+      </Modal>
     </>
   );
 };

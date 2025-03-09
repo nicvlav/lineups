@@ -125,9 +125,9 @@ const PlayerContainer = ({ team, teamPlayers, playerSize = 55 }) => {
         width: '100%',
         height: '100%',
         borderRadius: '8px',
-        overflow: 'hidden',
         background: pitchColor,
-        boxShadow: 'inset 0 0 25px rgba(0, 0, 0, 0.5)'
+        boxShadow: 'inset 0 0 25px rgba(0, 0, 0, 0.5)',
+        overflow: 'visible', 
       }}
     >
       {/* Render players */}

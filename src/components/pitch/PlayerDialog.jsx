@@ -1,5 +1,4 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import { PlayersContext } from "../../utility/PlayersContext";
 
 const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPlayer, onAddAndSelectNewPlayer }) => {
@@ -26,7 +25,7 @@ const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPl
     };
 
     const nonTempPlayers = getNonTemps();
-    
+
     // Filter players based on search term
     const filteredPlayers = nonTempPlayers.map((p) => {
         const team = p.team || null;
@@ -56,9 +55,9 @@ const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPl
         onClose();
     };
 
-    return createPortal(
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-brown p-4 rounded shadow-lg w-80  text-white">
+    return (
+        <div className="flex items-center justify-centerz-50">
+            <div className="bg-brown p-4 rounded shadow-lg w-full  text-white">
                 <h2 className="text-lg font-bold mb-2">Switch Player: {player.name}</h2>
 
                 {/* Search Input */}
@@ -152,8 +151,7 @@ const PlayerDialog = ({ player, onClose, onSelectExistingPlayer, onSelectGuestPl
                     </div>
                 )}
             </div>
-        </div>,
-        document.body
+        </div>
     );
 };
 
