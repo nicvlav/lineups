@@ -1,208 +1,684 @@
-import { useState, useContext } from "react";
-import { PlayersContext } from "../../utility/PlayersContext.jsx";
+import React, { useState, useContext, useEffect } from "react";
+import { PlayersContext } from "../../utility/PlayersContext";
+import { Users, Dumbbell, Wand2, Check, RotateCcw, Search, ChevronDown, ChevronUp } from "lucide-react";
 
-const PlayerSelectionList = ({ players, selectedPlayers, togglePlayerSelection, setSelectedPlayers }) => {
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const sortedPlayers = [...players].sort((a, b) => a.name.localeCompare(b.name));
-  const filteredPlayers = sortedPlayers.filter(player => player.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
-  const allSelected = filteredPlayers.length > 0 && filteredPlayers.every(player => selectedPlayers.has(player.id));
-
-  const toggleAll = () => {
-    if (allSelected) {
-      setSelectedPlayers(new Set());
-    } else {
-      setSelectedPlayers(new Set(filteredPlayers.map(player => player.id)));
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-full w-full">
-      <input
-        type="text"
-        placeholder="Search players..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="mb-2 w-full p-2 border rounded-md bg-gray-900 text-white"
-      />
-      {filteredPlayers.length > 0 && (
-        <label className="flex items-center gap-2 cursor-pointer w-full mb-2">
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={toggleAll}
-            className="cursor-pointer"
-          />
-          Select All
-        </label>
-      )}
-      <div className="max-h-48 flex-col overflow-y-auto border rounded-md p-2 w-full">
-        {filteredPlayers.map((player) => (
-          <label key={player.id} className="flex items-center gap-2 cursor-pointer w-full">
-            <input
-              type="checkbox"
-              checked={selectedPlayers.has(player.id)}
-              onChange={() => togglePlayerSelection(player.id)}
-              className="cursor-pointer"
-            />
-            {player.name}
-          </label>
-        ))}
-      </div>
-      {/* "Use Current Game" as a button */}
-      <button
-        onClick={() => {
-          const newSelected = new Set(
-            sortedPlayers.filter(player => player.team !== null && player.team !== "").map(player => player.id)
-          );
-          setSelectedPlayers(newSelected);
-        }}
-        className="w-full bg-gray-700 text-white py-2 rounded-md hover:bg-gray-600 transition-all mt-2"
-      >
-        Set To Current Game
-      </button>
-    </div>
-  );
-};
-
-const ZoneWeightConfigurator = ({ zoneWeights, setZoneWeights, resetZoneWeightsToDefault }) => {
-  const [resetTriggered, setResetTriggered] = useState(false); // Track reset trigger
-
-  const handleWeightChange = (zone, attribute, value) => {
-    setZoneWeights(prev => ({
-      ...prev,
-      [zone]: { ...prev[zone], [attribute]: value }
-    }));
-  };
-
-
-  const handleResetClick = () => {
-    resetZoneWeightsToDefault();  // Reset the zone weights
-    setResetTriggered(prev => !prev);  // Trigger a re-render after reset
-  };
-
-  return (
-    <div className="flex flex-col w-full flex-grow overflow-y-auto">
-      <div className="flex justify-between items-center">
-        <h3 className="text-white text-sm font-semibold mb-2">Zone Weight Configuration</h3>
-        <button
-          onClick={handleResetClick}
-          className="mr-1 px-3 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded-md"
-        >
-          Reset
-        </button>
-      </div>
-      {Object.entries(zoneWeights).map(([zone, attributes]) => (
-        <div key={zone} className="mb-3 p-2 bg-gray-700 rounded-md">
-          <div className="flex justify-between items-center">
-            <h4 className="text-white text-sm font-semibold">
-              {zone === "0" ? "Defense" : zone === "1" ? "Midfield" : "Attack"}
-            </h4>
-          </div>
-          {["attack", "defense", "athleticism"].map(attr => (
-            <div key={attr} className="flex justify-between items-center mb-2 w-full">
-              <label className="text-white">{attr.charAt(0).toUpperCase() + attr.slice(1)}</label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={attributes[attr]}
-                onChange={(e) => handleWeightChange(zone, attr, Number(e.target.value))}
-                className="w-28"
-              />
-              <span className="text-white w-8 text-right">{attributes[attr]}</span>
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-
-
+// Main component with tabs
 const AutoTeamSelector = () => {
-  const { players, generateTeams, zoneWeights, setZoneWeights, resetToDefaultWeights } = useContext(PlayersContext);
-
-  const [selectedPlayers, setSelectedPlayers] = useState(
-    new Set(players.filter(player => player.team).map(player => player.id))
-  );
-
-  const [activeTab, setActiveTab] = useState("players"); // "players" or "weighting"
-
-  const togglePlayerSelection = (id) => {
-    setSelectedPlayers(prevSelected => {
-      const newSet = new Set(prevSelected);
-      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
-      return newSet;
-    });
-  };
-
-  const handleGenerateTeams = () => {
-    const filteredPlayers = players.filter(p => selectedPlayers.has(p.id));
-    generateTeams(filteredPlayers);
-  };
-
-  const getNonTemps = () => {
-    if (!players || !Array.isArray(players)) {
-      console.warn("Invalid players format:", players);
-      return [];
+  const [activeTab, setActiveTab] = useState("generation");
+  const [selectedPlayers, setSelectedPlayers] = useState([]);
+  const { 
+    players, 
+    generateTeams, 
+    zoneWeights, 
+    setZoneWeights, 
+    resetToDefaultWeights 
+  } = useContext(PlayersContext);
+  
+  // Get non-temporary players and initialize selected players
+  useEffect(() => {
+    if (players && Array.isArray(players)) {
+      const nonTemps = players.filter(player => !player.temp_formation);
+      if (nonTemps.length > 0 && selectedPlayers.length === 0) {
+        setSelectedPlayers(nonTemps.map(p => p.id));
+      }
     }
-    return players.filter(player => player.temp_formation !== true);
+  }, [players]);
+
+  // Generate teams with selected players and weights
+  const handleGenerateTeams = async () => {
+    if (selectedPlayers.length < 2) {
+      console.warn("Need at least 2 players to form teams");
+      return;
+    }
+
+    const selectedPlayerObjects = players.filter(
+      player => selectedPlayers.includes(player.id)
+    );
+
+    // Pass both selectedPlayerObjects and zoneWeights
+    await generateTeams(selectedPlayerObjects);
   };
 
-  const nonTempPlayers = getNonTemps();
+  // Tab button style with header bar-like appearance
+  const tabButtonStyle = (isActive) => ({
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '8px 16px',
+    border: '1px solid #e0e0e0',
+    borderRadius: '6px',
+    background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+    color: isActive ? '#3b82f6' : '#ffffff',
+    flex: 1,
+    cursor: 'pointer',
+    margin: '0 4px',
+    fontWeight: 500,
+    transition: 'all 0.2s ease',
+    boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+  });
+
+  // Main component container style - fixed height
+  const containerStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '70vh',
+    maxHeight: '70vh',
+    minHeight: '70vh',
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    color: '#1f2937'
+  };
+
+  // Top tabs area style - fixed at top
+  const tabsAreaStyle = {
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+    backgroundColor: 'transparent',
+    padding: '8px',
+    marginBottom: '8px'
+  };
+
+  // Content area style - flexible height
+  const contentAreaStyle = {
+    flex: '1 1 auto',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: 'transparent',
+    borderRadius: '8px',
+    border: '1px solid rgba(229, 231, 235, 0.5)'
+  };
+
+  // Generate button area style - fixed at bottom
+  const generateButtonAreaStyle = {
+    position: 'sticky',
+    bottom: 0,
+    zIndex: 10,
+    backgroundColor: 'transparent',
+    paddingTop: '12px'
+  };
 
   return (
-    <div className="p-2 bg-gray-900 shadow-md rounded-lg text-white w-full flex flex-col">
-
-      {/* Tab Selector */}
-      <div className="flex w-full border-b border-gray-700 mb-3">
-        <button
-          className={`flex-1 py-2 text-center font-semibold transition-all rounded-t-lg 
-          ${activeTab === "players"
-              ? "bg-gradient-to-r from-bg-gray-400 to-bg-gray-800 text-white shadow-md shadow-blue-500/50"
-              : "bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700"
-            }`}
-          onClick={() => setActiveTab("players")}
-        >
-          Players
-        </button>
-
-        <button
-          className={`flex-1 py-2 text-center font-semibold transition-all rounded-t-lg 
-          ${activeTab === "weighting"
-              ? "bg-gradient-to-r from-bg-gray-400 to-bg-gray-800 text-white shadow-md shadow-blue-500/50"
-              : "bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700"
-            }`}
-          onClick={() => setActiveTab("weighting")}
-        >
-          Weighting
-        </button>
+    <div style={containerStyle}>
+      {/* Tab Navigation with buttons in a row */}
+      <div style={tabsAreaStyle}>
+        <div style={{ display: 'flex', flexDirection: 'row', width: '100%', gap: '8px' }}>
+          <button
+            style={tabButtonStyle(activeTab === "generation")}
+            onClick={() => setActiveTab("generation")}
+          >
+            <Users size={16} style={{ marginRight: '8px' }} />
+            <span>Teams</span>
+          </button>
+          <button
+            style={tabButtonStyle(activeTab === "weighting")}
+            onClick={() => setActiveTab("weighting")}
+          >
+            <Dumbbell size={16} style={{ marginRight: '8px' }} />
+            <span>Weights</span>
+          </button>
+        </div>
       </div>
 
-      {/* Content Area */}
-      <div className="flex">
-        {activeTab === "players" ? (
-          <PlayerSelectionList
-            players={nonTempPlayers}
+      {/* Main Content Area - Flexbox Container */}
+      <div style={contentAreaStyle}>
+        {activeTab === "generation" ? (
+          <TeamGenerationTab
+            players={players}
             selectedPlayers={selectedPlayers}
-            togglePlayerSelection={togglePlayerSelection}
             setSelectedPlayers={setSelectedPlayers}
           />
         ) : (
-          <ZoneWeightConfigurator zoneWeights={zoneWeights} setZoneWeights={setZoneWeights} resetZoneWeightsToDefault={resetToDefaultWeights} />
+          <WeightingTab
+            zoneWeights={zoneWeights}
+            setZoneWeights={setZoneWeights}
+            resetZoneWeights={resetToDefaultWeights}
+          />
         )}
       </div>
+      
+      {/* Generate Button - Fixed at Bottom */}
+      <div style={generateButtonAreaStyle}>
+        <button
+          onClick={handleGenerateTeams}
+          disabled={selectedPlayers.length < 2}
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '12px',
+            width: '100%',
+            backgroundColor: selectedPlayers.length < 2 ? 'rgba(209, 213, 219, 0.8)' : '#059669',
+            color: selectedPlayers.length < 2 ? '#4b5563' : 'white',
+            borderRadius: '6px',
+            fontWeight: 500,
+            cursor: selectedPlayers.length < 2 ? 'not-allowed' : 'pointer',
+          }}
+        >
+          <Wand2 size={18} style={{ marginRight: '8px' }} />
+          <span>Generate Two Teams</span>
+        </button>
+      </div>
+    </div>
+  );
+};
 
-      {/* Generate Teams Button - Always at the Bottom */}
-      <button
-        onClick={handleGenerateTeams}
-        className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-all mt-3"
-      >
-        Auto Create Teams
-      </button>
+// Team Generation Tab
+const TeamGenerationTab = ({ players, selectedPlayers, setSelectedPlayers }) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // Filter non-temporary players
+  const getNonTemps = () => {
+    if (!players || !Array.isArray(players)) {
+      return [];
+    }
+    return players.filter(player => !player.temp_formation);
+  };
+
+  const nonTempPlayers = getNonTemps();
+  
+  // Filter players based on search
+  const filteredPlayers = nonTempPlayers.filter(player => 
+    player.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Toggle all players selection
+  const toggleAll = () => {
+    if (selectedPlayers.length === nonTempPlayers.length) {
+      setSelectedPlayers([]);
+    } else {
+      setSelectedPlayers(nonTempPlayers.map(p => p.id));
+    }
+  };
+
+  // Toggle individual player selection
+  const togglePlayer = (playerId) => {
+    if (selectedPlayers.includes(playerId)) {
+      setSelectedPlayers(selectedPlayers.filter(id => id !== playerId));
+    } else {
+      setSelectedPlayers([...selectedPlayers, playerId]);
+    }
+  };
+
+  // Container style for the team generation tab
+  const containerStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    gap: '12px'
+  };
+
+  // Search area style - fixed at top
+  const searchAreaStyle = {
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+    backgroundColor: 'transparent',
+    padding: '12px',
+    borderBottom: '1px solid rgba(229, 231, 235, 0.5)',
+    backdropFilter: 'blur(8px)'
+  };
+
+  // Info area style with modern design
+  const infoAreaStyle = {
+    padding: '0 12px',
+    fontSize: '14px',
+    color: '#ffffff',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  };
+
+  // Player list container style
+  const playerListContainerStyle = {
+    flex: '1 1 auto',
+    overflow: 'auto',
+    padding: '0 12px 12px 12px',
+    color: '#ffffff'
+  };
+
+  // Player card style
+  const playerCardStyle = (isSelected) => ({
+    display: 'flex',
+    alignItems: 'center',
+    padding: '12px',
+    marginBottom: '8px',
+    backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.15)',
+    borderRadius: '8px',
+    border: '1px solid rgba(229, 231, 235, 0.5)',
+    transition: 'all 0.2s ease',
+    cursor: 'pointer',
+    gap: '12px'
+  });
+
+  // Stat badge style
+  const statBadgeStyle = (color, bgColor) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '4px 8px',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: 600,
+    color: color,
+    backgroundColor: bgColor,
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+  });
+
+  return (
+    <div style={containerStyle}>
+      {/* Search and Toggle Controls */}
+      <div style={searchAreaStyle}>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          gap: '12px',
+          width: '100%'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            flex: 1,
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            border: '1px solid rgba(229, 231, 235, 0.5)',
+            transition: 'all 0.2s ease'
+          }}>
+            <Search size={18} style={{ color: '#9ca3af', marginRight: '12px' }} />
+            <input
+              type="text"
+              placeholder="Search players..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                border: 'none',
+                outline: 'none',
+                width: '100%',
+                backgroundColor: 'transparent',
+                color: '#ffffff',
+                fontSize: '14px'
+              }}
+            />
+          </div>
+          
+          <button
+            onClick={toggleAll}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 16px',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(229, 231, 235, 0.5)',
+              borderRadius: '8px',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {selectedPlayers.length === nonTempPlayers.length ? "Deselect All" : "Select All"}
+          </button>
+        </div>
+      </div>
+
+      {/* Selected count info with icon */}
+      <div style={infoAreaStyle}>
+        <Users size={16} style={{ color: '#ffffff' }} />
+        <span>
+          Selected {selectedPlayers.length} of {nonTempPlayers.length} players
+          {selectedPlayers.length < 2 && (
+            <span style={{ 
+              color: '#ef4444',
+              marginLeft: '4px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              • Need at least 2 players
+            </span>
+          )}
+        </span>
+      </div>
+
+      {/* Player List - Modern Cards */}
+      <div style={playerListContainerStyle}>
+        {filteredPlayers.length > 0 ? (
+          filteredPlayers.map(player => (
+            <div
+              key={player.id}
+              style={playerCardStyle(selectedPlayers.includes(player.id))}
+              onClick={() => togglePlayer(player.id)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = selectedPlayers.includes(player.id) 
+                  ? 'rgba(255, 255, 255, 0.3)' 
+                  : 'rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = selectedPlayers.includes(player.id)
+                  ? 'rgba(255, 255, 255, 0.25)'
+                  : 'rgba(255, 255, 255, 0.15)';
+                e.currentTarget.style.transform = 'none';
+              }}
+            >
+              {/* Checkbox */}
+              <div style={{ 
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={selectedPlayers.includes(player.id)}
+                  onChange={() => togglePlayer(player.id)}
+                  style={{ 
+                    width: '16px',
+                    height: '16px',
+                    cursor: 'pointer',
+                    accentColor: '#3b82f6'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+
+              {/* Player Name */}
+              <div style={{ 
+                flex: 1,
+                fontWeight: 500,
+                fontSize: '14px',
+                color: '#ffffff'
+              }}>
+                {player.name}
+              </div>
+
+              {/* Stats */}
+              <div style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={statBadgeStyle('#b91c1c', 'rgba(254, 226, 226, 0.8)')}>
+                  A:{player.attack || 0}
+                </span>
+                <span style={statBadgeStyle('#1e40af', 'rgba(219, 234, 254, 0.8)')}>
+                  D:{player.defense || 0}
+                </span>
+                <span style={statBadgeStyle('#92400e', 'rgba(254, 243, 199, 0.8)')}>
+                  P:{player.athleticism || 0}
+                </span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div style={{
+            padding: '24px',
+            textAlign: 'center',
+            color: '#6b7280',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '8px',
+            border: '1px solid rgba(229, 231, 235, 0.5)',
+            marginTop: '12px'
+          }}>
+            No players match your search
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Weighting Tab
+const WeightingTab = ({ zoneWeights, setZoneWeights, resetZoneWeights }) => {
+  // Function to update a specific weight
+  const updateZoneWeight = (zone, attribute, value) => {
+    // Clamp value between 0 and 100
+    const newValue = Math.max(0, Math.min(100, value));
+    
+    setZoneWeights(prev => ({
+      ...prev,
+      [zone]: {
+        ...prev[zone],
+        [attribute]: newValue
+      }
+    }));
+  };
+
+  // Helper to adjust weight by a given amount
+  const adjustWeight = (zone, attribute, adjustment) => {
+    const currentValue = zoneWeights[zone][attribute];
+    updateZoneWeight(zone, attribute, currentValue + adjustment);
+  };
+
+  // Zone titles and attribute labels
+  const zoneLabels = {
+    0: "Defense Zone",
+    1: "Midfield Zone",
+    2: "Attack Zone"
+  };
+  
+  const attributeLabels = {
+    attack: "Attack",
+    defense: "Defense",
+    athleticism: "Athletic"
+  };
+
+  const attributeColors = {
+    attack: "#ef4444",    // Red
+    defense: "#3b82f6",   // Blue
+    athleticism: "#f59e0b" // Yellow/Amber
+  };
+
+  // Container style for the weighting tab
+  const containerStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    overflow: 'hidden',
+    backgroundColor: 'transparent'
+  };
+
+  // Header area style - fixed at top
+  const headerAreaStyle = {
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+    backgroundColor: 'transparent',
+    padding: '8px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  };
+
+  // Description area style
+  const descriptionAreaStyle = {
+    padding: '8px 12px',
+    fontSize: '14px',
+    color: '#ffffff'
+  };
+
+  // Weightings area style - flexible height
+  const weightingsAreaStyle = {
+    flex: '1 1 auto',
+    overflow: 'auto',
+    padding: '8px'
+  };
+
+  // Zone container style
+  const zoneContainerStyle = {
+    marginBottom: '16px',
+    padding: '16px',
+    borderRadius: '8px',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    border: '1px solid rgba(229, 231, 235, 0.7)'
+  };
+
+  // Attributes grid style
+  const attributesGridStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    marginTop: '12px'
+  };
+
+  // Single attribute row style
+  const attributeRowStyle = {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: '12px',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: '8px',
+    border: '1px solid rgba(229, 231, 235, 0.7)',
+    color: '#1f2937'
+  };
+
+  // Bottom info area style
+  const infoAreaStyle = {
+    margin: '16px 8px',
+    padding: '16px',
+    borderRadius: '8px',
+    backgroundColor: 'rgba(239, 246, 255, 0.7)',
+    border: '1px solid rgba(191, 219, 254, 0.7)',
+    color: '#1e40af'
+  };
+
+  // Arrow button style
+  const arrowButtonStyle = (disabled) => ({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '28px',
+    height: '28px',
+    borderRadius: '4px',
+    backgroundColor: disabled ? 'rgba(243, 244, 246, 0.7)' : 'rgba(229, 231, 235, 0.7)',
+    color: disabled ? '#9ca3af' : '#4b5563',
+    border: 'none',
+    cursor: disabled ? 'not-allowed' : 'pointer'
+  });
+
+  // Order of zones to display
+  const zoneOrder = [0, 1, 2]; // Defense, Midfield, Attack
+
+  return (
+    <div style={containerStyle}>
+      {/* Header with Reset Button */}
+      <div style={headerAreaStyle}>
+        <h3 style={{ fontSize: '18px', fontWeight: 500, margin: 0, color: '#ffffff' }}>
+          Zone Weightings
+        </h3>
+        <button
+          onClick={resetZoneWeights}
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: '8px 12px',
+            border: '1px solid rgba(224, 224, 224, 0.8)',
+            borderRadius: '6px',
+            background: 'rgba(255, 255, 255, 0.15)',
+            cursor: 'pointer',
+            color: '#ffffff'
+          }}
+        >
+          <RotateCcw size={16} style={{ marginRight: '8px' }} />
+          <span>Reset to Default</span>
+        </button>
+      </div>
+      
+      {/* Description */}
+      <div style={descriptionAreaStyle}>
+        Adjust how much each player attribute contributes to team balancing in different zones.
+        Higher values (0-100) give more importance to that attribute in that zone.
+      </div>
+      
+      {/* Zone Weightings - Scrollable Area */}
+      <div style={weightingsAreaStyle}>
+        {/* Render each zone's weights in the specified order */}
+        {zoneOrder.map(zone => (
+          <div key={zone} style={zoneContainerStyle}>
+            <h4 style={{ fontSize: '16px', fontWeight: 500, margin: 0, color: '#ffffff' }}>{zoneLabels[zone]}</h4>
+            
+            <div style={attributesGridStyle}>
+              {/* Render controls for each attribute in this zone in rows */}
+              {Object.keys(attributeLabels).map(attribute => (
+                <div key={`${zone}-${attribute}`} style={attributeRowStyle}>
+                  {/* Attribute label */}
+                  <div style={{ flex: '0 0 120px', fontWeight: 500, color: '#1f2937' }}>
+                    {attributeLabels[attribute]}
+                  </div>
+                  
+                  {/* Weight value and progress bar */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Progress bar */}
+                    <div style={{ height: '8px', backgroundColor: 'rgba(229, 231, 235, 0.7)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div 
+                        style={{ 
+                          height: '100%', 
+                          width: `${zoneWeights[zone][attribute]}%`,
+                          backgroundColor: attributeColors[attribute]
+                        }} 
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Controls */}
+                  <div style={{ flex: '0 0 120px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                    <button
+                      onClick={() => adjustWeight(zone, attribute, -5)}
+                      style={arrowButtonStyle(zoneWeights[zone][attribute] <= 0)}
+                      disabled={zoneWeights[zone][attribute] <= 0}
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                    <div style={{ 
+                      width: '40px', 
+                      textAlign: 'center',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      backgroundColor: 'rgba(243, 244, 246, 0.7)',
+                      fontWeight: 'bold',
+                      fontSize: '14px',
+                      color: '#1f2937'
+                    }}>
+                      {zoneWeights[zone][attribute]}
+                    </div>
+                    <button
+                      onClick={() => adjustWeight(zone, attribute, 5)}
+                      style={arrowButtonStyle(zoneWeights[zone][attribute] >= 100)}
+                      disabled={zoneWeights[zone][attribute] >= 100}
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      
+        {/* Info Box */}
+        <div style={infoAreaStyle}>
+          <h4 style={{ margin: 0, marginBottom: '8px', fontWeight: 500, color: '#1e40af', display: 'flex', alignItems: 'center' }}>
+            <Check size={16} style={{ marginRight: '8px' }} />
+            <span>How Zone Weightings Work</span>
+          </h4>
+          <p style={{ margin: 0, fontSize: '14px', color: '#1e40af' }}>
+            These weights determine how important each player attribute is when balancing teams across different zones.
+            For example, a high Attack Skill value in the Attack Zone means players with high attack ratings will be 
+            evenly distributed between teams for balanced offensive capabilities.
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useContext, useRef, useEffect } from "react";
 import { PlayersContext } from "../../utility/PlayersContext.jsx";
 import { useDrag } from "react-dnd";
+import { Trash2, UserPlus, ChevronDown, ChevronUp } from "lucide-react";
 
 const PlayerList = () => {
     const { players, addPlayer, deletePlayer } = useContext(PlayersContext);
@@ -11,9 +12,11 @@ const PlayerList = () => {
     const inputRef = useRef(null);
 
     const handleAddPlayer = async () => {
-        await addPlayer(newPlayerName);
-        setNewPlayerName("");
-        setIsAdding(false);
+        if (newPlayerName.trim()) {
+            await addPlayer(newPlayerName);
+            setNewPlayerName("");
+            setIsAdding(false);
+        }
     };
 
     const handleShowAddField = () => setIsAdding(true);
@@ -49,9 +52,39 @@ const PlayerList = () => {
     }, [isAdding]);
 
     return (
-        <div className="flex flex-col w-full h-full">
-            {/* Sort Options */}
+        <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            width: '100%', 
+            height: '100%' 
+        }}>
+            {/* Sort Controls */}
             <SortControls sortOrder={sortOrder} handleSortChange={handleSortChange} />
+
+            {/* Player List */}
+            <div style={{ 
+                flex: 1, 
+                overflowY: 'auto',
+                marginBottom: '12px'
+            }}>
+                {sortedPlayers.map((player) => (
+                    <PlayerRow 
+                        key={player.id} 
+                        player={player} 
+                        onDelete={() => handleDeletePlayer(player.id)} 
+                    />
+                ))}
+                
+                {sortedPlayers.length === 0 && (
+                    <div style={{ 
+                        padding: '12px', 
+                        textAlign: 'center', 
+                        color: '#999' 
+                    }}>
+                        No players added yet
+                    </div>
+                )}
+            </div>
 
             {/* Add Player Section */}
             <AddPlayerSection
@@ -63,69 +96,101 @@ const PlayerList = () => {
                 handleShowAddField={handleShowAddField}
                 inputRef={inputRef}
             />
-
-            {/* Scrollable List Component */}
-            <ScrollablePlayerList
-                players={sortedPlayers}
-                handleDeletePlayer={handleDeletePlayer}
-            />
-
         </div>
     );
 };
 
 const SortControls = ({ sortOrder, handleSortChange }) => (
-    <div className="mb-4 bg-gray-900 p-2 rounded-lg">
-        <label className="mr-2 text-white">Sort by name:</label>
-        <select
-            value={sortOrder}
-            onChange={handleSortChange}
-            className="p-2 border rounded bg-gray-800 text-white shadow"
-        >
-            <option value="desc">Descending</option>
-            <option value="asc">Ascending</option>
-        </select>
-    </div>
-);
-
-const ScrollablePlayerList = ({ players, handleDeletePlayer }) => (
-    <div className="flex-grow overflow-y-auto space-y-2 min-h-0">
-        {players.map((player) => (
-            <div
-                key={player.id}
-                className="p-2 border-b flex items-center justify-between shadow-md w-full min-w-0"
+    <div style={{ 
+        marginBottom: '12px', 
+        display: 'flex',
+        alignItems: 'center'
+    }}>
+        <label style={{ marginRight: '8px' }}>Sort:</label>
+        <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            border: '1px solid #e0e0e0',
+            borderRadius: '4px',
+            overflow: 'hidden' 
+        }}>
+            <select
+                value={sortOrder}
+                onChange={handleSortChange}
+                style={{ 
+                    padding: '4px 8px', 
+                    border: 'none',
+                    outline: 'none',
+                    background: 'transparent'
+                }}
             >
-                <DraggablePlayer player={player} />
-                <button
-                    onClick={() => handleDeletePlayer(player.id)}
-                    className="text-red-500 ml-2 shrink-0"
-                >
-                    X
-                </button>
-            </div>
-        ))}
+                <option value="desc">A-Z</option>
+                <option value="asc">Z-A</option>
+            </select>
+            {sortOrder === "desc" ? 
+                <ChevronDown size={16} style={{ marginRight: '4px' }} /> : 
+                <ChevronUp size={16} style={{ marginRight: '4px' }} />
+            }
+        </div>
     </div>
 );
 
-const DraggablePlayer = ({ player }) => {
-    const [, drag] = useDrag(() => ({
+const PlayerRow = ({ player, onDelete }) => {
+    // Set up drag functionality
+    const [{ isDragging }, drag] = useDrag(() => ({
         type: "PLAYER",
-        item: { player_uid: player.id, name: player.name },
+        item: { uid: player.id, name: player.name },
+        collect: (monitor) => ({
+            isDragging: !!monitor.isDragging(),
+        }),
     }));
 
     return (
-        <div
-            ref={drag}
-            className="flex-grow overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-white"
+        <div 
             style={{
-                cursor: "move", // Set the cursor to 'move' when not dragging
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                marginBottom: '4px',
+                borderBottom: '1px solid #eee',
+                opacity: isDragging ? 0.5 : 1,
+                cursor: 'grab'
             }}
         >
-            {player.name}
+            {/* Player name - draggable */}
+            <div 
+                ref={drag}
+                style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    flex: 1
+                }}
+            >
+                {player.name}
+            </div>
+            
+            {/* Delete button */}
+            <button
+                onClick={onDelete}
+                style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#f44336',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    marginLeft: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}
+            >
+                <Trash2 size={16} />
+            </button>
         </div>
     );
 };
-
 
 const AddPlayerSection = ({
     isAdding,
@@ -136,21 +201,37 @@ const AddPlayerSection = ({
     handleShowAddField,
     inputRef
 }) => (
-    <div className="bg-gray-900 p-2 border-t border-gray-700 rounded-lg">
+    <div style={{ 
+        borderTop: '1px solid #eee',
+        padding: '12px 0' 
+    }}>
         {isAdding ? (
-            <div className="flex">
+            <div style={{ display: 'flex' }}>
                 <input
                     ref={inputRef}
                     type="text"
                     value={newPlayerName}
                     onChange={(e) => setNewPlayerName(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className="p-2 border rounded w-full bg-gray-800 text-white"
+                    style={{ 
+                        flex: 1,
+                        padding: '8px 12px',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '4px',
+                        marginRight: '8px'
+                    }}
                     placeholder="Enter player name"
                 />
                 <button
                     onClick={handleAddPlayer}
-                    className="ml-2 px-4 py-2 bg-blue-500 text-white rounded"
+                    style={{ 
+                        padding: '8px 12px',
+                        background: '#4CAF50',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                    }}
                 >
                     Add
                 </button>
@@ -158,9 +239,21 @@ const AddPlayerSection = ({
         ) : (
             <button
                 onClick={handleShowAddField}
-                className="w-full bg-green-500 text-white p-2 rounded"
+                style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    padding: '8px 0',
+                    background: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                }}
             >
-                + Add Player
+                <UserPlus size={16} style={{ marginRight: '8px' }} />
+                Add Player
             </button>
         )}
     </div>

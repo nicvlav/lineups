@@ -10,7 +10,7 @@ import React, { useState, useEffect } from "react";
 
 
 const App = () => {
-  const [mobile, setMobile] = useState(window.innerWidth < 560);
+  const [mobile, setMobile] = useState(window.innerWidth < 620);
 
     useEffect(() => {
       const handleResize = () => {

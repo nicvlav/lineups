@@ -1,15 +1,20 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Menu } from "lucide-react";
 import { PlayersContext } from "../../utility/PlayersContext.jsx";
 import PlayerTable from "../global/PlayerTable.jsx";
 import AutoTeamSelector from "../global/AutoTeamSelector.jsx";
-import ShareButton from "../global/ShareButton.jsx";
 import Modal from "../global/Modal.jsx"; // Import the new Modal component
+import { encodeStateToURL } from "../../utility/StateManager.jsx";
+import { Menu, Users, Wand2, Trash2, Share } from "lucide-react";
 
 const HeaderBar = ({ toggleSidebar }) => {
     const { clearGame, players } = useContext(PlayersContext);
     const [isPlayerModalOpen, setPlayerModalOpen] = useState(false);
     const [isAutoTeamModalOpen, setAutoTeamModalOpen] = useState(false);
+
+    const handleShare = () => {
+        const shareUrl = encodeStateToURL(players);
+        navigator.clipboard.writeText(shareUrl).then(() => alert("Shareable link copied!"));
+    };
 
     useEffect(() => {
         if (isAutoTeamModalOpen) { setAutoTeamModalOpen(false); }
@@ -27,18 +32,27 @@ const HeaderBar = ({ toggleSidebar }) => {
 
             {/* Buttons container (ensures shrink behavior) */}
             <div className="flex flex-1 justify-end space-x-2 min-w-0 overflow-hidden ml-2">
-                <button className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg shadow-md flex-shrink text-xs sm:text-sm md:text-base truncate"
+                <button className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg shadow-md flex-shrink align-middle text-xs sm:text-sm md:text-base truncate flex items-center py-2 px-3 border border-gray-300 cursor-pointer"
                     onClick={() => setPlayerModalOpen(true)}>
-                    Players
+                    <Users size={16} style={{ marginRight: '4px' }} />
+                    <span>Players</span>
                 </button>
-                <button className="bg-green-600 hover:bg-green-500 text-white p-2 rounded-lg shadow-md flex-shrink text-xs sm:text-sm md:text-base truncate"
+                <button className="bg-green-600 hover:bg-green-500 text-white p-2 rounded-lg shadow-md flex-shrink text-xs sm:text-sm md:text-base truncate flex items-center py-2 px-3 border border-gray-300 cursor-pointer"
                     onClick={() => setAutoTeamModalOpen(true)}>
-                    Generate
+                    <Wand2 size={16} style={{ marginRight: '4px' }} />
+                    <span>Generate</span>
                 </button>
-                <ShareButton className="bg-yellow-600 hover:bg-yellow-500 text-white p-2 rounded-lg shadow-md flex-shrink text-xs sm:text-sm md:text-base truncate" />
-                <button className="bg-red-600 hover:bg-red-500 text-white p-2 rounded-lg shadow-md flex-shrink text-xs sm:text-sm md:text-base truncate"
-                    onClick={clearGame}>
-                    Clear
+
+                <button className="bg-red-500 text-white hover:text-red-500 p-2 rounded-lg shadow-md flex-shrink text-xs sm:text-sm md:text-base truncate flex items-center py-2 px-3 border border-gray-300 cursor-pointer"
+                    onClick={handleShare}>
+                    <Share size={16} style={{ marginRight: '4px' }} />
+                    <span>Share</span>
+                </button>
+
+                <button className="bg-red-500 text-white hover:text-red-500 p-2 rounded-lg shadow-md flex-shrink text-xs sm:text-sm md:text-base truncate flex items-center py-2 px-3 border border-gray-300 cursor-pointer"
+                    style={{ color: 'red' }} onClick={clearGame}>
+                    <Trash2 size={16} style={{ marginRight: '4px' }} />
+                    <span>Clear</span>
                 </button>
             </div>
 
