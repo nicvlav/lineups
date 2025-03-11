@@ -1,293 +1,127 @@
 @import "tailwindcss";
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #000000; /* Black background */
-  color: #ffffff; /* White text */
-  cursor: pointer;
-  transition: border-color 0.25s;
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  --pitch-a: 'radial-gradient(ellipse at center, #3161a1, #1e3c61)'
+  --pitch-b: 'radial-gradient(ellipse at center, #89db46, #4d7a27)'
 }
 
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
 }
 
-a:hover {
-  color: #535bf2;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #000000; /* Black background */
-  color: #ffffff; /* White text */
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-
-button:hover {
-  border-color: #646cff;
-}
-
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-.ant-drawer-header {
-  background-color: #1e2939;
-  border-radius: 0;
-}
-
-.ant-drawer-title {
-  color: #fff;
-}
-
-.ant-drawer-body {
-  background-color: #1e2939;
-  color: #fff;
-  height: calc(100vh - 55px);
-}
-
-/* Target the close button */
-.ant-drawer .ant-drawer-close {
-  color: #ff5733 !important;
-  /* Use !important to ensure it overrides default styles */
-  border: none !important;
-  /* Remove border */
-}
-
-/* Optionally, change hover styles */
-.ant-drawer .ant-drawer-close:hover {
-  background-color: #333 !important;
-  /* Change background color on hover */
-  color: #fff !important;
-  /* Change color on hover */
-}
-
-/* Style for the Ant Design Table */
-.ant-table {
-  background-color: #1e2939 !important;
-  /* Dark background for the whole table */
-  color: #ffffff !important;
-  /* White text color */
-}
-
-/* Header styles */
-.ant-table-thead>tr>th {
-  background-color: #1e2939 !important;
-  /* Dark background for header */
-  color: #ffffff !important;
-  /* White text for header */
-  font-weight: bold;
-}
-
-/* Body row styles */
-.ant-table-tbody>tr>td {
-  background-color: #1e2939 !important;
-  /* Dark background for rows */
-  color: #ffffff !important;
-  /* White text for rows */
-}
-
-/* Styling for InputNumber elements */
-.ant-input-number {
-  background-color: #2d3748 !important;
-  /* Dark input fields */
-  color: #ffffff !important;
-  /* White text inside input */
-  border-radius: 4px;
-}
-
-/* Add hover effect for rows */
-.ant-table-tbody>tr:hover {
-  background-color: #334155 !important;
-  /* Slightly lighter background on hover */
-}
-
-/* Styling for the pagination */
-.ant-pagination-item {
-  background-color: #2d3748 !important;
-  /* Dark background for pagination items */
-  border-color: #4b5563 !important;
-  /* Border color */
-}
-
-.ant-pagination-item:hover {
-  background-color: #4b5563 !important;
-  /* Hover color for pagination items */
-}
-
-/* Pagination disabled state */
-.ant-pagination-disabled {
-  color: #6b7280 !important;
-  /* Light gray for disabled items */
-  background-color: #1e2939 !important;
-  /* Keep background dark */
-}
-
-/* Ensure InputNumber text is white */
-.ant-input-number {
-  color: #ffffff !important; /* White text */
-}
-
-/* Style the input number background and other attributes */
-.ant-input-number-input {
-  background-color: #2d3748 !important; /* Dark background for inputs */
-  color: #ffffff !important;           /* White text inside input */
-  border-radius: 4px !important;
-}
-
-/* Remove border styling if you don't want borders on the input fields */
-.ant-input-number:focus,
-.ant-input-number-focused {
-  border-color: #4b5563 !important; /* Subtle border color when focused */
-  outline: none;
-}
-
-
-.soccer-pitch-A {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle, #3161a1, rgb(41, 105, 148));
-
-  /* Deep green gradient */
-  border-radius: 12px;
-  /* Smooth edges */
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
-  /* Adds depth */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.soccer-pitch-B {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle, #89db46, #c0e752);
-
-  /* Deep green gradient */
-  border-radius: 12px;
-  /* Smooth edges */
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
-  /* Adds depth */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.soccer-pitch::before {
-  content: "";
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 10%, transparent 70%);
-  opacity: 0.3;
-  pointer-events: none;
-  /* So it doesn’t interfere */
-}
-
-.pitch-lines {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border: 2px solid white;
-  box-sizing: border-box;
-}
-
-.pitch-lines::before,
-.pitch-lines::after {
-  content: "";
-  position: absolute;
-  background: white;
-}
-
-.pitch-lines::before {
-  /* Center Circle */
-  width: 15%;
-  height: 15%;
-  border-radius: 50%;
-  border: 2px solid white;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.pitch-lines::after {
-  /* Half-line */
-  width: 100%;
-  height: 2px;
-  top: 50%;
-  left: 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #ffffff;
-    background-color: #000000;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-
-  a:hover {
-    color: #747bff;
+  body {
+    @apply bg-background text-foreground;
   }
-
-  button {
-    background-color: #000000;
-  }
-}
-
-@theme {
-  --font-display: "Satoshi", "sans-serif";
-
-  --breakpoint-3xl: 1920px;
-
-  --color-avocado-100: oklch(0.99 0 0);
-
-  --color-avocado-200: oklch(0.98 0.04 113.22);
-  --color-avocado-300: oklch(0.94 0.11 115.03);
-  --color-avocado-400: oklch(0.92 0.19 114.08);
-  --color-avocado-500: oklch(0.84 0.18 117.33);
-  --color-avocado-600: oklch(0.53 0.12 118.34);
-
-  --color-cust-1: oklch(79.78% 0.1588 146.79);
-  --color-cust-2: oklch(79.78% 0.1588 146.79);
-  --color-cust-3: oklch(79.78% 0.1588 146.79);
-  --color-cust-4: oklch(79.78% 0.1588 146.79);
-
-  --color-primary: oklch(62.88% 0.0669 139.29);
-  --color-secondary: oklch(86.07% 0.0676 122.51);
-  --color-tertiary: oklch(67.71% 0.0604 177.6);
-  --color-quaternary: oklch(50.01% 0.0277 8.45);
-
-  --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
-  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
-
-  /* ... */
 }

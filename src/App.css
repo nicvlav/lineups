@@ -5,61 +5,23 @@
   text-align: center;
 }
 
-.App {
-  display: flex;
-  justify-content: space-between;
-  height: 100vh;
-}
-
-.flex-container {
-  display: flex;
-  justify-content: flex-start;
-  align-items: stretch;
-  width: 100%;
-}
-
-.player-container {
-  background-color: #70D87E;
-  padding: 20px;
-  border-left: 2px solid #ddd;
-}
-
-.player-panel {
-  width: 250px; /* Adjust size of the player panel */
-  background-color: #70D87E;
-  padding: 20px;
-  border-left: 2px solid #ddd;
-}
-
-.player-list-item {
-  cursor: pointer;
-  padding: 10px;
-  margin: 5px 0;
-  border-radius: 4px;
-}
-
 .logo {
   height: 6em;
   padding: 1.5em;
   will-change: filter;
   transition: filter 300ms;
 }
-
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
-
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
-
-
 
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
   }
-
   to {
     transform: rotate(360deg);
   }
