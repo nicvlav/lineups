@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import Modal from "@/components/dialogs/modal";
 import AutoAlertDialog from "@/components/dialogs/auto-alert-dialog";
 
+
 interface PlayerDialogProps {
     player: Player;
     isOpen: boolean;
@@ -95,11 +96,13 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
 
     return (
         <Modal title="Player Attributes" isOpen={isOpen} onClose={onClose}>
+            <div className="flex flex-col h-[80vh] min-w-[200px]">
 
-            <div className="flex items-center justify-center z-50">
-                <div className=" rounded shadow-lg w-full">
-                    <h2 className="text-lg font-bold mb-2">Switch Player: {player.name}</h2>
+                {/* Player List - Modern Cards */}
 
+
+                <div className="sticky top-0 bg-card p-2">
+                    <span>Switch Player:</span>
                     {/* Search Input */}
                     <input
                         ref={inputRef}
@@ -109,13 +112,14 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
-
+                </div>
+                <div className="flex-col h-full  overflow-y-auto p-2">
                     {/* Player List */}
-                    <ul className="max-h-40 overflow-y-auto">
+                    <ul className="">
                         {filteredPlayers.map((p) => (
                             <li
                                 key={p.id}
-                                className={`p-2 cursor-pointer flex justify-between  hover:bg-accent items-center ${p.team ? "text-red-500" : ""
+                                className={`p-2 cursor-pointer flex justify-between  hover:bg-accent items-center break-words whitespace-normal w-full ${p.team ? "text-red-500" : ""
                                     }`}
                                 onClick={() => handlePlayerSelection(p)}
                             >
@@ -124,7 +128,10 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                             </li>
                         ))}
                     </ul>
+                </div>
 
+
+                <div className="flex-col w-full sticky bottom-0 bg-card ">
                     {/* Select Existing Player Button */}
                     {exactMatch && (
                         <Button
@@ -133,14 +140,14 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                         >
                             Select {exactMatch.name}
                         </Button>
-                        
+
                     )}
 
                     {/* Add and Select New Player Button */}
                     {!exactMatch && searchTerm && (
                         <>
                             <Button
-                                className="mt-2 w-full bg-blue-500 p-2 rounded"
+                                className="mt-2 w-full bg-chart-1 p-2 rounded"
                                 onClick={() => {
                                     handleSwitchToNewPlayer(searchTerm);
                                     onClose();
@@ -150,7 +157,7 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                             </Button>
 
                             <Button
-                                className="mt-2 w-full bg-yellow-500 p-2 rounded"
+                                className="mt-2 w-full bg-chart-2 p-2 rounded"
                                 onClick={() => {
                                     handleSwitchToNewGuest(searchTerm);
                                     onClose();
@@ -163,7 +170,7 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
 
                     {/* Remove from Game Button */}
                     <Button
-                        className="mt-2 w-full bg-gray-600 p-2 rounded"
+                        className="mt-2 w-full bg-chart-3 p-2 rounded"
                         onClick={() => {
                             removeFromGame(player.id);
                             onClose();
@@ -176,17 +183,17 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                     <Button className="mt-2 w-full bg-red-500 p-2 rounded" onClick={onClose}>
                         Cancel
                     </Button>
-
-                    <AutoAlertDialog
-                        triggerLabel=""
-                        messageText={`${player.name} Is already on another team. Are you sure?`}
-                        isOpen={isConfirmOpen}
-                        setIsOpen={setConfirmOpen}
-                        onCancel={() => setSelectedPlayer(null)}
-                        onSuccess={confirmSelection}
-                    />
-
                 </div>
+                <AutoAlertDialog
+                    triggerLabel=""
+                    messageText={selectedPlayer ? `${selectedPlayer.name} is already on another team. Swap them with the selected player?` : 'Swap the players?'}
+
+                    isOpen={isConfirmOpen}
+                    setIsOpen={setConfirmOpen}
+                    onCancel={() => setSelectedPlayer(null)}
+                    onSuccess={confirmSelection}
+                />
+
             </div>
         </Modal>
     );

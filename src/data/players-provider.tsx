@@ -24,7 +24,7 @@ interface PlayersContextType {
     // adjustTeamSize: (currentPlayers: Player[], team: string, formation: Formation) => void;
     applyFormation: (formationId: string) => void;
 
-    setZoneWeights: (newWiegting: Weighting) => void;
+    setZoneWeights: (newWeighting: Weighting) => void;
     resetToDefaultWeights: () => void;
 
     generateTeams: (filteredPlayers: Player[]) => void;
@@ -237,29 +237,24 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     };
 
     const switchToRealPlayer = async (placedTeam: string, oldID: string, newID: string) => {
-        if (oldID === newID) {
-            return; // No need to switch if IDs are the same
-        }
+        if (oldID === newID) return; // No need to switch if IDs are the same
 
         const oldPlayer = playersRef.current.find((p) => p.id === oldID);
-        if (!oldPlayer) return;
-
         const newPlayer = playersRef.current.find((p) => p.id === newID);
-        if (!newPlayer) return;
+        if (!oldPlayer || !newPlayer) return;
 
-        const oldPosition = oldPlayer.position; // Ensure we use the `Point | null` type
+        // Ensure old player is on the placed team
+        if (oldPlayer.team !== placedTeam) return; // Prevent switching if old player is not on the placed team
 
-        const updatedPlayers: Player[] = playersRef.current
-            .map((player) => {
-                if (player.id === oldID) {
-                    return oldPlayer.guest ? null : { ...player, team: null };
-                }
-                if (player.id === newID) {
-                    return { ...player, team: placedTeam, position: oldPosition };
-                }
-                return player;
-            })
-            .filter((player): player is Player => player !== null);
+        const updatedPlayers: Player[] = playersRef.current.map((player) => {
+            if (player.id === oldID) {
+                return { ...player, team: newPlayer.team, position: newPlayer.position };
+            }
+            if (player.id === newID) {
+                return { ...player, team: oldPlayer.team, position: oldPlayer.position };
+            }
+            return player;
+        });
 
         setPlayers(updatedPlayers);
     };

@@ -32,12 +32,12 @@ const FormationSelector = () => {
     return (
         <Select onValueChange={handleChange}>
             {/* Trigger button for the select */}
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
                 <SelectValue placeholder="Set Formation">Set Formation</SelectValue>
             </SelectTrigger>
 
             {/* Dropdown content with dynamically grouped formations */}
-            <SelectContent>
+            <SelectContent className="w-full">
                 {Object.keys(groupedFormations)
                     .sort((a, b) => parseInt(a) - parseInt(b)) // Sort formations by number of players
                     .map((numPlayers) => (

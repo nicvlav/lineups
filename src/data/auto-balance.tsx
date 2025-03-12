@@ -55,7 +55,6 @@ const applyRandom = (players: ScoredPlayer[], zone: number) => {
 };
 
 const calculateScores = (players: Player[], zoneWeights: Weighting): ScoredPlayer[] => {
-    console.log(zoneWeights);
     return players.map(player => {
         // Calculate the zone scores as an array (not an object)
         const zoneScores: ZoneScores = [
@@ -146,8 +145,6 @@ const assignPlayersToTeams = (players: ScoredPlayer[], teamA: TeamZones, teamB: 
     if (remainingDefenders > 0) assignPlayersToZone(players, 0, remainingDefenders);
     if (remainingAttackers > 0) assignPlayersToZone(players, 2, remainingAttackers);
     if (remainingMidfielders > 0) assignPlayersToZone(players, 1, remainingMidfielders);
-
-    console.log(teamA);
 
     return { teamA, teamB };
 };
@@ -386,21 +383,14 @@ const getZones = (players: ScoredPlayer[], numSimulations: number = 250) => {
 };
 
 const normalizeWeights = (weights: Weighting): Weighting => {
-    // Iterate through each zone in the weights array (index 0 for defense, 1 for attack, 2 for athleticism)
-    weights.forEach((zone, index) => {
-        const total = zone.reduce((sum, val) => sum + val, 0); // Calculate the total score of the zone
-
-        // Normalize each value in the zone by dividing by the total
-        weights[index] = [
-            Math.fround(zone[0] / total),
-            Math.fround(zone[1] / total),
-            Math.fround(zone[2] / total)
-        ];
-    });
-
-    // Return the modified weights (optional)
-    return weights;
+    return weights.map(zone => {
+        const total = zone.reduce((sum, val) => sum + val, 0);
+        return total > 0
+            ? zone.map(val => Math.fround(val / total)) // Normalize values
+            : zone.slice(); // Return a copy if total is 0 (to avoid division by zero)
+    }) as Weighting;
 };
+
 const generateBalancedTeams = (players: Player[], attributeWeights: Weighting) => {
     let teams: { teamA: TeamZones; teamB: TeamZones } = {
         teamA: [[], [], []],

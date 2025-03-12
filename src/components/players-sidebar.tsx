@@ -23,9 +23,9 @@ function PlayersSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <div className={`h-full flex flex-col gap-4 p-4 rounded-lg shadow-lg`}>
           {/* Content here */}
 
-          <div className="p-2rounded-lg shadow-md flex-shrink-0">
-            <FormationSelector />
-          </div>
+    
+          <FormationSelector />
+    
 
           {/* Player List - This will expand to fill remaining space */}
           <div className="p-0rounded-lg shadow-md flex-grow overflow-y-auto">
@@ -38,5 +38,6 @@ function PlayersSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
+
 
 export default PlayersSidebar;
