@@ -19,23 +19,35 @@ The app is hosted and available at:
 🔗 [https://nicvlav.github.io/lineups/](https://nicvlav.github.io/lineups/)
 
 ## Installation & Setup
-0. Ensure you have the following installed:
-- **Node.js 16+** (for the frontend)
-- **npm** (comes with Node.js)
+### Prerequisites
+You can use Bun or npm to install and run the project.
+- **[Bun](https://bun.sh/)** (Recommended)
+- **[Node.js 16+](https://nodejs.org/)** 
 
-1. Navigate to the the location of this repostitory on your local drive:
-   ```sh
-   cd .\your_directory\lineups
-   ```
-2. Install dependencies:
-   ```sh
-   npm install
-   ```
-3. Start the development server:
-   ```sh
-   npm run dev
-   ```
-   The frontend will now be running at the URL provided in the terminal (usually `http://localhost:5173/`).
+
+### Install Dependencies
+Using Bun:
+```sh
+bun install
+```
+
+Using npm:
+```sh
+npm install
+```
+
+### Start Development Server
+Using Bun:
+```sh
+bun dev
+```
+
+Using npm:
+```sh
+npm run dev
+```
+
+The frontend will now be running at the URL provided in the terminal (usually `http://localhost:5173/`).
 
 ## How It Works
 1. **Add Players**: Create a list of players that can be assigned to formations.
@@ -48,6 +60,18 @@ The app is hosted and available at:
 8. **Share Your Setup**: The entire game state is encoded into the URL, making it easy to share formations with others.
     - No URL shortener is used by default to ensure transparency and data control.
     - Since no external storage is used, there is no persistent data collection.
+
+## Methods to Add Players to the Session
+1. **Sidebar Add Button**: Click the sidebar, then click "Add Player," enter a name, and click "Add."
+2. **Header Players Button**: Click the "Players" header icon button (or just the icon on mobile), type a player name, and click "Add Player."
+3. **In-Game Quick Add**: When opening the player actions menu (double-click on desktop, click and hold on mobile), type a new player’s name to add them to the game instantly.
+
+## Methods to Add Players to Teams
+1. **Sidebar Context Menu**: Open the sidebar and right-click (desktop) or click and hold (mobile) on a player to send them to a team.
+2. **Drag & Drop (Wide Mode Only)**: Click and drag a player onto the desired team. This feature is unavailable on smaller screen widths.
+3. **Formation Auto-Fill**: Click "Formations" in the sidebar to fill teams with existing players. Missing players are replaced with temporary ones. Then, open player actions (double-click on desktop, click and hold on mobile) to swap or add players.
+4. **Generate Balanced Teams**: Click the "Generate" header icon button, select players using the checkbox list, and hit "Generate Two Teams." This automatically forms optimally balanced teams based on player stats.
+    - Each time you generate, it introduces slight randomization for variety.
 
 ## Contributing
 Contributions are welcome! If you’d like to improve the project, please submit a pull request or open an issue.
