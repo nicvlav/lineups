@@ -1,13 +1,9 @@
 import { useState } from "react";
 import { usePlayers } from "@/data/players-provider";
-import { Player, ZoneScores } from "@/data/types";
-import { X, Plus, Minus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
+import { List, ChartPie } from "lucide-react";
+import CompactPlayerTable from "@/components/dialogs/compact-player-table";
+import PlayerCharts from "@/components/dialogs/player-charts";
 import Modal from "@/components/dialogs/modal";
-
 interface PlayerTableProps {
     isOpen: boolean;
     onClose: () => void;
@@ -15,172 +11,49 @@ interface PlayerTableProps {
 
 const PlayerTable: React.FC<PlayerTableProps> = ({ isOpen, onClose }) => {
     const { players, updatePlayerAttributes, addPlayer, deletePlayer } = usePlayers();
-    const [newPlayerName, setNewPlayerName] = useState<string>("");
-    const [searchQuery, setSearchQuery] = useState<string>("");
-    const [sortingMode, setSortingMode] = useState<string>("alphabetical");
+    const [activeTab, setActiveTab] = useState("chart");
 
-    const STAT_LABELS: ["Defense", "Attack", "Athleticism"] = ["Defense", "Attack", "Athleticism"];
-
-    const handleAttributeChange = (uid: string, statIndex: number, change: number) => {
-        const player = players.find((p: Player) => p.id === uid);
-        if (!player) return;
-
-        const newStats: ZoneScores = [...player.stats];
-        newStats[statIndex] = Math.max(1, Math.min(10, newStats[statIndex] + change));
-
-        updatePlayerAttributes(uid, { stats: newStats });
-    };
-
-    const handleAddPlayer = () => {
-        if (newPlayerName.trim() !== "") {
-            addPlayer(newPlayerName.trim());
-            setNewPlayerName("");
-        }
-    };
-
-    const getNonTemps = (): Player[] => players?.filter((player: Player) => !player.temp_formation) || [];
-
-    const filteredPlayers = getNonTemps().filter((player: Player) =>
-        player.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const sortedPlayers = [...filteredPlayers].sort((a, b) => {
-        switch (sortingMode) {
-            case "Alphabetical":
-                return a.name.localeCompare(b.name);
-            case "Attack":
-                return b.stats[1] - a.stats[1];
-            case "Defense":
-                return b.stats[0] - a.stats[0];
-            case "Athleticism":
-                return b.stats[2] - a.stats[2];
-            default:
-                return 0;
-        }
-    });
+    const [selectedPlayer1, setSelectedPlayer1] = useState<string | null>(null);
+    const [selectedPlayer2, setSelectedPlayer2] = useState<string | null>(null);
 
     return (
         <Modal title="Player Attributes" isOpen={isOpen} onClose={onClose}>
-            <div className="rounded-xl shadow-xl h-[80vh] min-w-[300px] ">
-                <div className="flex-col space-y-4">
-                    <div className="bg-background z-10 sticky top-0">
-                        {/* Player Input */}
-                        <div className="flex-1 items-center space-x-2">
-                            <Input
-                                type="text"
-                                value={newPlayerName}
-                                onChange={(e) => setNewPlayerName(e.target.value)}
-                                placeholder="Enter player name"
-                            />
+            <div className="flex gap-2 w-full max-h-[40px]">
+                <button
+                    className={`flex-1 flex items-center justify-center p-2 rounded-lg border border-gray-200 transition-all duration-200 ${activeTab === "chart" ? "bg-blue-100 text-blue-600 shadow-sm" : ""}`}
+                    onClick={() => setActiveTab("chart")}
+                >
+                    <ChartPie size={16} className="mr-2" />
+                    <span>Charts</span>
+                </button>
+                <button
+                    className={`flex-1 flex items-center justify-center p-2 rounded-lg border border-gray-200 transition-all duration-200 ${activeTab === "compact" ? "bg-blue-100 text-blue-600 shadow-sm" : ""}`}
+                    onClick={() => setActiveTab("compact")}
+                >
+                    <List size={16} className="mr-2" />
+                    <span>Data</span>
+                </button>
+            </div>
 
-                        </div>
-
-                        {/* Search and Sorting */}
-                        <div className="flex w-full items-center mb-4 space-x-2">
-                            <Button onClick={handleAddPlayer} className=" bg-blue-600 text-white hover:bg-blue-700  w-full">
-                                Add Player
-                            </Button>
-                        </div>
-
-                        {/* Search and Sorting */}
-                        <div className="flex items-center mb-4 space-x-2">
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search players..."
-                                className="p-2 rounded w-full"
-                            />
-
-                            <Select onValueChange={setSortingMode}>
-                                {/* Trigger button for the select */}
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Sort">Sort</SelectValue>
-                                </SelectTrigger>
-
-                                {/* Dropdown content with dynamically grouped formations */}
-                                <SelectContent>
-                                    <SelectItem key={"Alphabetical"} value={"Alphabetical"}>
-                                        {"Alphabetical"}
-                                    </SelectItem>
-                                    <SelectItem key={"Attack"} value={"Attack"}>
-                                        {"Attack"}
-                                    </SelectItem>
-                                    <SelectItem key={"Defense"} value={"Defense"}>
-                                        {"Defense"}
-                                    </SelectItem>
-                                    <SelectItem key={"Athleticism"} value={"Athleticism"}>
-                                        {"Athleticism"}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="flex">
-                        {/* Table */}
-                        <Table className="rounded-lg">
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[80%]">Name</TableHead>
-                                    <TableHead className="w-[20%]">Attributes</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody className="rounded-lg overflow-x-auto overflow-y-auto">
-                                {sortedPlayers.map((player) => (
-                                    <TableRow key={player.id} className="text-xs">
-                                        {/* Name Column */}
-                                        <TableCell className="w-[80%] flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => deletePlayer(player.id)}
-                                                    className="text-red-500 hover:text-red-700"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                                <span
-                                                    className="break-words whitespace-normal w-[75%] min-w-[40px] max-w-[220px] truncate text-ellipsis overflow-hidden"
-                                                    title={player.name}
-                                                >
-                                                    {player.name}
-                                                </span>
-                                            </div>
-                                        </TableCell>
-
-                                        {/* Attributes Column */}
-                                        <TableCell className="w-[20%]">
-                                            <div className="flex flex-wrap gap-2 justify-between">
-                                                {STAT_LABELS.map((label, index) => (
-                                                    <div key={label} className="flex flex-col items-center w-[60%]">
-                                                        <span className="text-xs text-gray-400">{label}</span>
-                                                        <div className="flex items-center gap-1">
-                                                            <Button
-                                                                variant="outline"
-                                                                onClick={() => handleAttributeChange(player.id, index, -1)}
-                                                                size="sm"
-                                                                className="p-1"
-                                                            >
-                                                                <Minus size={10} />
-                                                            </Button>
-                                                            <span className="text-xs">{player.stats[index]}</span>
-                                                            <Button
-                                                                variant="outline"
-                                                                onClick={() => handleAttributeChange(player.id, index, 1)}
-                                                                size="sm"
-                                                                className="p-1"
-                                                            >
-                                                                <Plus size={10} />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </div>
+            {/* Main Content Area - Flexbox Container */}
+            <div className="flex-1 flex flex-col  ">
+                {activeTab === "chart" ? (
+                    <PlayerCharts
+                        players={players}
+                        selectedPlayer1={selectedPlayer1}
+                        setSelectedPlayer1={setSelectedPlayer1}
+                        selectedPlayer2={selectedPlayer2}
+                        setSelectedPlayer2={setSelectedPlayer2}
+                        updatePlayerAttributes={updatePlayerAttributes}
+                    />
+                ) : (
+                    <CompactPlayerTable
+                        players={players}
+                        updatePlayerAttributes={updatePlayerAttributes}
+                        addPlayer={addPlayer}
+                        deletePlayer={deletePlayer}
+                    />
+                )}
             </div>
         </Modal>
     );

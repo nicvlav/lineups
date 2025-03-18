@@ -75,7 +75,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isOpen, onClose }) => {
 
 
                 {/* Main Content Area - Flexbox Container */}
-                <div className="flex-1 flex flex-col bg-transparent rounded-xl border border-gray-200">
+                <div className="flex-1 flex flex-col bg-transparent">
                     {activeTab === "generation" ? (
                         <TeamGenerationTab
                             players={players}
@@ -157,10 +157,10 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
     return (
         <div className="flex flex-col h-full">
             {/* Search and Toggle Controls */}
-            <div className="sticky top-0 z-10 p-3 border-b bg-accent border-gray-200 backdrop-blur-md">
-                <div className="items-center gap-3 ">
+            <div className="sticky top-0 z-10 p-3 border-b bg-accent backdrop-blur-md">
+                <div className="flex items-center gap-3 ">
                     {/* Search Input */}
-                    <div className="flex  items-center flex-1 border border-gray-200 rounded-xl p-2 transition-all">
+                    <div className="flex  items-center flex-1 borderrounded-xl p-2 transition-all">
                         <Search size={18} className=" mr-3" />
                         <input
                             type="text"
@@ -174,7 +174,7 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
                     {/* Select/Deselect All Button */}
                     <button
                         onClick={toggleAll}
-                        className="flex items-center px-4 py-2 border-gray-200 rounded-xl text-sm font-medium cursor-pointer transition-all whitespace-nowrap"
+                        className="bg-background flex items-center px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all whitespace-nowrap"
                     >
                         {selectedPlayers.length === nonTempPlayers.length ? "Deselect All" : "Select All"}
                     </button>
@@ -208,22 +208,11 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
                             sortedPlayers.map(player => (
                                 <div
                                     key={player.id}
-                                    className={`flex items-center break-words truncate whitespace-normal border-gray-200 rounded-xl transition-all cursor-pointer gap-3 
-                    ${selectedPlayers.includes(player.id) ? 'bg-white/25' : ''}`}
+                                    className={`flex items-center break-words truncate whitespace-normal rounded-xl transition-transform duration-200 cursor-pointer gap-3 
+        ${selectedPlayers.includes(player.id) ? 'bg-white/25' : ''} hover:scale-105`}
                                     onClick={() => togglePlayer(player.id)}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = selectedPlayers.includes(player.id)
-                                            ? 'rgba(255, 255, 255, 0.3)'
-                                            : 'rgba(255, 255, 255, 0.2)';
-                                        e.currentTarget.style.transform = 'translateY(-1px)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = selectedPlayers.includes(player.id)
-                                            ? 'rgba(255, 255, 255, 0.25)'
-                                            : 'rgba(255, 255, 255, 0.15)';
-                                        e.currentTarget.style.transform = 'none';
-                                    }}
                                 >
+
                                     {/* Checkbox */}
                                     <div className="w-6 h-6 flex items-center justify-center">
                                         <input
@@ -245,21 +234,21 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
 
                                     {/* Stats */}
                                     {/* <div className="flex items-center gap-2">
-                                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-blue-800 bg-blue-100 text-xs font-semibold">
+                                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-blue-800 bg-blue-100 text-sm font-semibold">
                                             D:{player.stats[0] || 0}
                                         </span>
-                                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-red-800 bg-red-100 text-xs font-semibold">
+                                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-red-800 bg-red-100 text-sm font-semibold">
                                             A:{player.stats[1] || 0}
                                         </span>
 
-                                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-orange-800 bg-orange-100 text-xs font-semibold">
+                                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-orange-800 bg-orange-100 text-sm font-semibold">
                                             P:{player.stats[2] || 0}
                                         </span>
                                     </div> */}
                                 </div>
                             ))
                         ) : (
-                            <div className="p-6 text-center border-gray-200 rounded-xl mt-3">
+                            <div className="p-6 text-center rounded-xl mt-3">
                                 No players match your search
                             </div>
                         )}
@@ -374,7 +363,7 @@ const WeightingTab: React.FC<WeightingTabProps> = ({ zoneWeights, setZoneWeights
                                         <div className="w-32 flex items-center justify-end gap-2">
                                             <button
                                                 onClick={() => adjustWeight(Number(zone), attr, -5)}  // Adjust weight based on attribute number
-                                                className={`w-7 h-7 flex items-center justify-center rounded hover:bg-gray-500 ${zoneWeights[Number(zone)][attr] <= 0 && "opacity-50 cursor-not-allowed"
+                                                className={`w-7 h-7 flex items-center justify-center rounded ${zoneWeights[Number(zone)][attr] <= 0 && "opacity-50 cursor-not-allowed"
                                                     }`}
                                                 disabled={zoneWeights[Number(zone)][attr] <= 0}
                                             >
@@ -387,7 +376,7 @@ const WeightingTab: React.FC<WeightingTabProps> = ({ zoneWeights, setZoneWeights
 
                                             <button
                                                 onClick={() => adjustWeight(Number(zone), attr, 5)}  // Adjust weight based on attribute number
-                                                className={`w-7 h-7 flex items-center justify-center rounded hover:bg-gray-500 ${zoneWeights[Number(zone)][attr] >= 100 && "opacity-50 cursor-not-allowed"
+                                                className={`w-7 h-7 flex items-center justify-center rounded ${zoneWeights[Number(zone)][attr] >= 100 && "opacity-50 cursor-not-allowed"
                                                     }`}
                                                 disabled={zoneWeights[Number(zone)][attr] >= 100}
                                             >
