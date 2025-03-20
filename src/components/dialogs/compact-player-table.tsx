@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Player, ZoneScores, PlayerUpdate } from "@/data/types";
+import { Player, AttributeScores, attributeShortLabels, PlayerUpdate } from "@/data/types";
 import { X, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,14 +18,12 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [sortingMode, setSortingMode] = useState<string>("alphabetical");
 
-    const STAT_LABELS: ["Defense", "Attack", "Athleticism"] = ["Defense", "Attack", "Athleticism"];
-
     const handleAttributeChange = (uid: string, statIndex: number, change: number) => {
         const player = players.find((p: Player) => p.id === uid);
         if (!player) return;
 
-        const newStats: ZoneScores = [...player.stats];
-        newStats[statIndex] = Math.max(1, Math.min(10, newStats[statIndex] + change));
+        const newStats: AttributeScores = [...player.stats];
+        newStats[statIndex] = Math.max(1, Math.min(100, newStats[statIndex] + change));
 
         updatePlayerAttributes(uid, { stats: newStats });
     };
@@ -57,6 +55,8 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                 return 0;
         }
     });
+
+    const halfAttributesLength = Math.ceil(attributeShortLabels.length / 2);
 
     return (
         <div className="p-4 h-[80vh] min-w-[300px] text-sm">
@@ -119,15 +119,16 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                     <Table className="rounded-lg">
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[80%]">Name</TableHead>
-                                <TableHead className="w-[20%]">Attributes</TableHead>
+                                <TableHead className="w-[90%]">Name</TableHead>
+                                <TableHead className="w-[5%]">Attributes</TableHead>
+                                <TableHead className="w-[5%]"></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody className="rounded-lg overflow-x-auto overflow-y-auto">
                             {sortedPlayers.map((player) => (
                                 <TableRow key={player.id}>
                                     {/* Name Column */}
-                                    <TableCell className="w-[80%] flex-1">
+                                    <TableCell className="w-[90%] flex-1">
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => deletePlayer(player.id)}
@@ -144,30 +145,63 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                                         </div>
                                     </TableCell>
 
-                                    {/* Attributes Column */}
-                                    <TableCell className="w-[20%]">
+                                    {/* Attributes Column First Half*/}
+                                    <TableCell className="w-[5%]">
                                         <div className="flex flex-wrap gap-2 justify-between">
-                                            {STAT_LABELS.map((label, index) => (
+                                            {attributeShortLabels.slice(0, halfAttributesLength).map((label, index) => (
                                                 <div key={label} className="flex flex-col items-center w-[60%]">
                                                     <span className="">{label}</span>
-                                                    <div className="flex items-center gap-1">
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={() => handleAttributeChange(player.id, index, -1)}
-                                                            size="sm"
-                                                            className="p-1"
-                                                        >
-                                                            <Minus size={10} />
-                                                        </Button>
+                                                    <div className="flex items-center gap-1 rounded-md bg-accent">
                                                         <span>{player.stats[index]}</span>
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={() => handleAttributeChange(player.id, index, 1)}
-                                                            size="sm"
-                                                            className="p-1"
-                                                        >
-                                                            <Plus size={10} />
-                                                        </Button>
+                                                        <div className="flex flex-col rounded-lg">
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() => handleAttributeChange(player.id, index, 5)}
+                                                                size="sm"
+                                                                className="w-6 h-4 p-0 flex justify-center items-center rounded-t-md"
+                                                            >
+                                                                <Plus size={8} />
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() => handleAttributeChange(player.id, index, -5)}
+                                                                size="sm"
+                                                                className="w-6 h-4 p-0 flex justify-center items-center rounded-b-md"
+                                                            >
+                                                                <Minus size={8} />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </TableCell>
+                                    {/* Attributes Column Second Hal*/}
+                                    <TableCell className="w-[5%]">
+                                        <div className="flex flex-wrap gap-1 justify-between">
+                                            {attributeShortLabels.slice(halfAttributesLength).map((label, index) => (
+                                                <div key={label} className="flex flex-col items-center w-[60%]">
+                                                    <span className="">{label}</span>
+                                                    <div className="flex items-center gap-1 rounded-md bg-accent">
+                                                        <span>{player.stats[halfAttributesLength + index]}</span>
+                                                        <div className="flex flex-col rounded-lg">
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() => handleAttributeChange(player.id, halfAttributesLength + index, 5)}
+                                                                size="sm"
+                                                                className="w-6 h-4 p-0 flex justify-center items-center rounded-t-md"
+                                                            >
+                                                                <Plus size={8} />
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() => handleAttributeChange(player.id, halfAttributesLength + index, -5)}
+                                                                size="sm"
+                                                                className="w-6 h-4 p-0 flex justify-center items-center rounded-b-md"
+                                                            >
+                                                                <Minus size={8} />
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}

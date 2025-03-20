@@ -1,6 +1,6 @@
 import React, { ReactNode, createContext, useContext, useState, useEffect, useRef } from "react";
 import { openDB } from "idb";
-import { Player, Point, Formation, ZoneScores, PlayerUpdate, Weighting } from "@/data/types";
+import { Player, Point, Formation, AttributeScores, PlayerUpdate, defaultZoneWeights, Weighting, defaultAttributes } from "@/data/types";
 import { decodeStateFromURL } from "@/data/state-manager";
 import { autoCreateTeams } from "./auto-balance";
 import formations from "@/data/formations"
@@ -60,13 +60,24 @@ interface PlayersProviderProps {
     children: ReactNode;
 }
 
+const normalizePlayerStats = (players: Player[]): Player[] => {
+    return players.map(player => {
+        const normalizedStats: AttributeScores = [
+            (player.stats[0] ?? 50) * (player.stats[0] && player.stats[0] <= 10 ? 10 : 1),
+            (player.stats[1] ?? 50) * (player.stats[1] && player.stats[1] <= 10 ? 10 : 1),
+            (player.stats[2] ?? 50) * (player.stats[2] && player.stats[2] <= 10 ? 10 : 1),
+            (player.stats[3] ?? 50) * (player.stats[3] && player.stats[3] <= 10 ? 10 : 1),
+            (player.stats[4] ?? 50) * (player.stats[4] && player.stats[4] <= 10 ? 10 : 1),
+            (player.stats[5] ?? 50) * (player.stats[5] && player.stats[5] <= 10 ? 10 : 1)
+        ];
+        return { ...player, stats: normalizedStats };
+    });
+};
+
+
 export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) => {
     const [players, setPlayers] = useState<Player[]>([]);
-    const [zoneWeights, setZoneWeights] = useState<Weighting>([
-        [100, 0, 30],  // Defense scores
-        [30, 80, 60],  // Attack scores
-        [0, 100, 40],  // Athleticism scores
-    ]);
+    const [zoneWeights, setZoneWeights] = useState<Weighting>(defaultZoneWeights);
 
     // this is probably hacky? idk about this stale capture bs
     const playersRef = useRef(players);
@@ -80,7 +91,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             const urlState = decodeStateFromURL(currentUrl.search);
 
             if (urlState && urlState.players) {
-                setPlayers(urlState.players);
+                setPlayers(normalizePlayerStats(urlState.players));
                 console.log("Loaded from URL:", urlState);
 
                 // Store in tab-specific IndexedDB key
@@ -137,9 +148,10 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 guest: false,
                 temp_formation: null,
                 team: null,
-                stats: [5, 5, 5] as ZoneScores,
+                stats: defaultAttributes,
                 position: null,
-            }];
+            }
+            ];
 
             return updated;
         });
@@ -180,7 +192,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 name: name,
                 guest: false,
                 temp_formation: null,
-                stats: [5, 5, 5] as ZoneScores,
+                stats: defaultAttributes,
                 position: { x: dropX, y: dropY } as Point,
             };
             const updated = [...playersRef.current, newPlayer];
@@ -196,7 +208,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 name: name,
                 guest: true,
                 temp_formation: null,
-                stats: [5, 5, 5] as ZoneScores,
+                stats: defaultAttributes,
                 position: { x: dropX, y: dropY } as Point,
             };
             const updated = [...playersRef.current, newPlayer];
@@ -275,7 +287,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             team: placedTeam,
             guest: guest,
             temp_formation: null,
-            stats: [5, 5, 5], // Default balanced stats
+            stats: defaultAttributes, // Default balanced stats
             position: oldPosition, // Keeps the same position as oldPlayer
         };
 
@@ -318,7 +330,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                     team,
                     guest: true,
                     temp_formation: true,
-                    stats: [5, 5, 5], // Default stats
+                    stats: defaultAttributes, // Default stats
                     position: pos, // Assign correct position type
                 }));
 
@@ -353,11 +365,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     };
 
     const resetToDefaultWeights = async () => {
-        setZoneWeights([
-            [100, 0, 30],  // Defense scores
-            [30, 80, 60],  // Attack scores
-            [0, 100, 40],  // Athleticism scores
-        ]);
+        setZoneWeights(defaultZoneWeights);
     };
 
     const generateTeams = async (filteredPlayers: Player[]) => {

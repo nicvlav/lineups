@@ -56,23 +56,37 @@ const applyRandom = (players: ScoredPlayer[], zone: number) => {
 
 const calculateScores = (players: Player[], zoneWeights: Weighting): ScoredPlayer[] => {
     return players.map(player => {
-        // Calculate the zone scores as an array (not an object)
-        const zoneScores: ZoneScores = [
-            player.stats[1] * zoneWeights[0][1] + player.stats[0] * zoneWeights[0][0] + player.stats[2] * zoneWeights[0][2], // Defense
-            player.stats[1] * zoneWeights[1][1] + player.stats[0] * zoneWeights[1][0] + player.stats[2] * zoneWeights[1][2], // Attack
-            player.stats[1] * zoneWeights[2][1] + player.stats[0] * zoneWeights[2][0] + player.stats[2] * zoneWeights[2][2]  // Athleticism
-        ];
+        // get scores for each zone - should make this dynamically grow for number of attributes...
+        const defenseScore =
+            player.stats[0] * zoneWeights[0][0] +
+            player.stats[1] * zoneWeights[0][1] +
+            player.stats[2] * zoneWeights[0][2] +
+            player.stats[3] * zoneWeights[0][3] +
+            player.stats[4] * zoneWeights[0][4] +
+            player.stats[5] * zoneWeights[0][5];
 
-        // Create the ScoredPlayer object by extending Player
-        const scoredPlayer: ScoredPlayer = {
-            ...player,         // Spread the player properties
-            zoneFit: zoneScores // Add the zoneFit property (which is a ZoneScores array)
+        const attackScore =
+            player.stats[0] * zoneWeights[1][0] +
+            player.stats[1] * zoneWeights[1][1] +
+            player.stats[2] * zoneWeights[1][2] +
+            player.stats[3] * zoneWeights[1][3] +
+            player.stats[4] * zoneWeights[1][4] +
+            player.stats[5] * zoneWeights[1][5];
+
+        const midfieldScore =
+            player.stats[0] * zoneWeights[2][0] +
+            player.stats[1] * zoneWeights[2][1] +
+            player.stats[2] * zoneWeights[2][2] +
+            player.stats[3] * zoneWeights[2][3] +
+            player.stats[4] * zoneWeights[2][4] +
+            player.stats[5] * zoneWeights[2][5];
+
+        return {
+            ...player,
+            zoneFit: [defenseScore, attackScore, midfieldScore]
         };
-
-        return scoredPlayer;
     });
 };
-
 
 const assignPlayersToTeams = (players: ScoredPlayer[], teamA: TeamZones, teamB: TeamZones) => {
     let teamATotalScore = 0;
@@ -83,7 +97,13 @@ const assignPlayersToTeams = (players: ScoredPlayer[], teamA: TeamZones, teamB: 
 
     // Dynamic weighting ratio
     const rand = Math.random();
-    let specializationRatios = [rand * 0.3 + 0.5, rand * 0.2 + 0.0, rand * 0.5 + 0.2];
+
+    // this determines how important "specialization" is to a zone
+    // specialization means the impact of this zone vs other zones
+    // for example an attack player with low defense and midfield stats
+    // makes them highly specialized in the attack zone
+    // higher specialization ratios mean more specialization weighting
+    const specializationRatios = [rand * 0.4 + 0.5, rand * 0.4 + 0.0, rand * 0.4 + 0.4];
 
     const assignPlayersToZone = (playerPool: ScoredPlayer[], zone: number, count: number) => {
         const ratio = specializationRatios[zone];
@@ -287,86 +307,100 @@ const assignPositions = (team: TeamZones) => {
     return positions;
 };
 
-const getZones = (players: ScoredPlayer[], numSimulations: number = 250) => {
+const getZones = (players: ScoredPlayer[], numSimulations: number = 500) => {
     let bestAssignment: TeamResults = {
-        teamA: [
-            [],  // Defense (index 0)
-            [],  // Attack (index 1)
-            []   // Athleticism (index 2)
-        ],
-        teamB: [
-            [],  // Defense (index 0)
-            [],  // Attack (index 1)
-            []   // Athleticism (index 2)
-        ]
+        teamA: [[], [], []],
+        teamB: [[], [], []]
     };
     let bestWeightedScore = -Infinity;
 
-    // Tracking best values for clean output
+    // Tracking best values for output clarity
     let bestTotalScores = { a: 0, b: 0 };
-    let bestScoreDiff = Infinity;
-    let bestVariance = Infinity;
+    let bestBalanceDiff = Infinity;
+    let bestZoneScore = 0;
 
-    // Adjustable weights
-    const W_total = 5.0;    // Maximize
-    const W_balance = 100.0;  // Minimize
-    const W_variance = 100.0; // Minimize
+    // Adjustable weights (total sums to 1)
+    const W_quality = 0.4; // Normalize overall player quality
+    const W_balance = 0.4; // Normalize team balance
+    const W_zonal = 0.2;   // Normalize zonal variance
 
     for (let i = 0; i < numSimulations; i++) {
         let playersCopy = structuredClone(players);
-        let teamA: TeamZones = [
-            [],  // Defense (index 0)
-            [],  // Attack (index 1)
-            []   // Athleticism (index 2)
-        ];
-        let teamB: TeamZones = [
-            [],  // Defense (index 0)
-            [],  // Attack (index 1)
-            []   // Athleticism (index 2)
-        ];
+        let teamA: TeamZones = [[], [], []];
+        let teamB: TeamZones = [[], [], []];
 
+        // Use the provided assignment function
         assignPlayersToTeams(playersCopy, teamA, teamB);
 
+        // Calculate zone scores for both teams
         let teamAZoneScores: ZoneScores = [0, 0, 0];
-        let teamBZoneScores: ZoneScores = [0, 0, 0];;
-
+        let teamBZoneScores: ZoneScores = [0, 0, 0];
         populateZoneScores(teamA, teamAZoneScores);
         populateZoneScores(teamB, teamBZoneScores);
 
-        let teamATotalScore = teamAZoneScores.reduce((sum, value) => sum + value, 0);
-        let teamBTotalScore = teamBZoneScores.reduce((sum, value) => sum + value, 0);
+        // Count players per team overall
+        let teamAPlayers = teamA.flat().length;
+        let teamBPlayers = teamB.flat().length;
+        // let totalPlayers = teamAPlayers + teamBPlayers;
 
+        // Maximum possible scores (each player can score 100)
+        let maxTeamAScore = teamAPlayers * 100;
+        let maxTeamBScore = teamBPlayers * 100;
+        let maxTotalScore = maxTeamAScore + maxTeamBScore;
+
+        // Overall team total scores
+        let teamATotalScore = teamAZoneScores.reduce((sum, val) => sum + val, 0);
+        let teamBTotalScore = teamBZoneScores.reduce((sum, val) => sum + val, 0);
         let totalScore = teamATotalScore + teamBTotalScore;
-        let scoreDiff = Math.abs(teamATotalScore - teamBTotalScore);
-        let totalVariance = teamAZoneScores.reduce((sum, zoneScoreA, index) =>
-            sum + Math.abs(zoneScoreA - teamBZoneScores[index]), 0
-        );
 
-        // **Apply meaningful scaling**
-        let scaledTotalScore = Math.log1p(totalScore); // Log-scale to prevent dominance
-        let scaledScoreDiff = 1 / (scoreDiff + 1); // Inverse scaling (lower diff = better)
-        let scaledVariance = 1 / (totalVariance + 1); // Inverse scaling (lower variance = better)
+        // 1. Normalize overall quality (average player quality)
+        let normalizedQuality = totalScore / maxTotalScore; // 1 means every player scored 100
 
-        // Compute weighted score
+        // 2. Normalize team balance
+        let diff = Math.abs(teamATotalScore - teamBTotalScore);
+        // Maximum possible difference is if the larger team scores max and the smaller scores 0.
+        let maxPossibleDiff = Math.max(teamAPlayers, teamBPlayers) * 100;
+        let normalizedBalance = 1 - (diff / maxPossibleDiff); // 1 is perfect balance
+
+        // 3. Normalize zonal variance
+        // For each zone, assume worst-case acceptable variance = (players_in_zone * 50)
+        let zoneScoresNormalized: number[] = [];
+        for (let zone = 0; zone < 3; zone++) {
+            let zonePlayers = teamA[zone].length + teamB[zone].length;
+            // If there are no players in a zone, treat it as perfectly balanced
+            if (zonePlayers === 0) {
+                zoneScoresNormalized.push(1);
+                continue;
+            }
+            let zoneDiff = Math.abs(teamAZoneScores[zone] - teamBZoneScores[zone]);
+            let worstAcceptable = zonePlayers * 50;
+            let normZone = 1 - (zoneDiff / worstAcceptable);
+            // Clamp the value between 0 and 1
+            normZone = Math.max(0, Math.min(1, normZone));
+            zoneScoresNormalized.push(normZone);
+        }
+        // Overall zonal score is the average of the three zones
+        let normalizedZonal = zoneScoresNormalized.reduce((a, b) => a + b, 0) / 3;
+
+        // Compute weighted overall score
         let weightedScore =
-            W_total * scaledTotalScore +
-            W_balance * scaledScoreDiff +
-            W_variance * scaledVariance;
+            W_quality * normalizedQuality +
+            W_balance * normalizedBalance +
+            W_zonal * normalizedZonal;
 
-        // Pick best assignment based on weighted score
+        // Choose best assignment based on weighted score
         if (weightedScore > bestWeightedScore) {
             bestWeightedScore = weightedScore;
-            bestAssignment = { teamA: teamA, teamB: teamB };
+            bestAssignment = { teamA, teamB };
             bestTotalScores = { a: teamATotalScore, b: teamBTotalScore };
-            bestScoreDiff = scoreDiff;
-            bestVariance = totalVariance;
+            bestBalanceDiff = diff;
+            bestZoneScore = normalizedZonal;
         }
     }
 
-    // Log clean output
+    // Log final optimized team metrics
     let teamAZoneScores: ZoneScores = [0, 0, 0];
-    let teamBZoneScores: ZoneScores = [0, 0, 0];;
-
+    let teamBZoneScores: ZoneScores = [0, 0, 0];
     populateZoneScores(bestAssignment.teamA, teamAZoneScores);
     populateZoneScores(bestAssignment.teamB, teamBZoneScores);
 
@@ -374,13 +408,15 @@ const getZones = (players: ScoredPlayer[], numSimulations: number = 250) => {
     console.log("Team A Zones (Defense, Midfield, Attack):", teamAZoneScores);
     console.log("Team B Zones (Defense, Midfield, Attack):", teamBZoneScores);
     console.log("==================================");
-    console.log("Total Scores→ Team A: ", bestTotalScores);
-    console.log("Score Difference (Lower is better) ", bestScoreDiff);
-    console.log("Zonal Variance (Lower is better) → ", bestVariance / 3);
+    console.log("Total Scores → Team A:", bestTotalScores.a, "Team B:", bestTotalScores.b);
+    console.log("Team Balance Difference (Lower is better):", bestBalanceDiff);
+    console.log("Overall Zonal Score (0 to 1, 1 is best balance):", bestZoneScore);
+    console.log("Weighted Score (0 to 1):", bestWeightedScore);
     console.log("==================================");
 
     return bestAssignment;
 };
+
 
 const normalizeWeights = (weights: Weighting): Weighting => {
     return weights.map(zone => {

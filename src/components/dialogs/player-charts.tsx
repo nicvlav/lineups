@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTheme } from "@/data/theme-provider";
-import { Player, PlayerUpdate, ZoneScores } from "@/data/types";
+import { Player, PlayerUpdate, AttributeScores, attributeShortLabels, attributeLabels } from "@/data/types";
 import { Minus, Plus } from "lucide-react";
 import { } from "lucide-react";
 import { Radar } from "react-chartjs-2";
@@ -182,42 +182,82 @@ interface PlayerStatEditorProps {
 
 const PlayerStatEditor: React.FC<PlayerStatEditorProps> = ({ player, updatePlayerAttributes }) => {
     if (!player) return <p className="text-center">Select a player to edit stats.</p>;
-    const labels = ["Defense", "Attack", "Athleticism"];
 
     const handleAttributeChange = (uid: string, statIndex: number, change: number) => {
-        const newStats: ZoneScores = [...player.stats];
-        newStats[statIndex] = Math.max(1, Math.min(10, newStats[statIndex] + change));
+        const newStats: AttributeScores = [...player.stats];
+        newStats[statIndex] = Math.max(1, Math.min(100, newStats[statIndex] + change));
 
         updatePlayerAttributes(uid, { stats: newStats });
     };
 
+    const halfAttributesLength = Math.ceil(attributeLabels.length / 2);
+
     return (
         <div className="p-1 border rounded-lg shadow-md text-sm">
-            <div className="flex flex-col gap-2">
-                {labels.map((label, index) => (
-                    <div key={label} className="flex items-center justify-between">
-                        <span>{label}</span>
-                        <div className="flex items-center gap-2 w-1/3">
-                            <Button
-                                variant="outline"
-                                onClick={() => handleAttributeChange(player.id, index, -1)}
-                                size="sm"
-                                className="p-1"
-                            >
-                                <Minus size={9} />
-                            </Button>
-                            <span className="w-4 text-center">{player.stats[index]}</span>
-                            <Button
-                                variant="outline"
-                                onClick={() => handleAttributeChange(player.id, index, 1)}
-                                size="sm"
-                                className="p-1"
-                            >
-                                <Plus size={9} />
-                            </Button>
+            <div className="flex gap-2">
+                {/* Attributes Column First Half*/}
+
+                <div className="w-[50%] mr-2">
+                    {attributeLabels.slice(0, halfAttributesLength).map((label, index) => (
+                        <div className="p-0.5 flex justify-between items-center">
+                            <span className="">{label}</span>
+
+                            <div className="flex items-center gap-1 rounded-md bg-accent ml-auto">
+                                <span>{player.stats[index]}</span>
+                                <div className="flex flex-col rounded-lg">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => handleAttributeChange(player.id, index, 5)}
+                                        size="sm"
+                                        className="w-6 h-4 p-0 flex justify-center items-center rounded-t-md"
+                                    >
+                                        <Plus size={8} />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => handleAttributeChange(player.id, index, -5)}
+                                        size="sm"
+                                        className="w-6 h-4 p-0 flex justify-center items-center rounded-b-md"
+                                    >
+                                        <Minus size={8} />
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                ))}
+
+                    ))}
+                </div>
+
+                {/* Attributes Column Second Hal*/}
+                <div className="w-[50%] mr-2">
+                    {attributeLabels.slice(halfAttributesLength).map((label, index) => (
+                        <div className="p-0.5 flex justify-between items-center">
+                            <span className="">{label}</span>
+                            <div className="flex items-center gap-1 rounded-md bg-accent">
+                                <span>{player.stats[halfAttributesLength + index]}</span>
+                                <div className="flex flex-col rounded-lg">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => handleAttributeChange(player.id, halfAttributesLength + index, 5)}
+                                        size="sm"
+                                        className="w-6 h-4 p-0 flex justify-center items-center rounded-t-md"
+                                    >
+                                        <Plus size={8} />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => handleAttributeChange(player.id, halfAttributesLength + index, -5)}
+                                        size="sm"
+                                        className="w-6 h-4 p-0 flex justify-center items-center rounded-b-md"
+                                    >
+                                        <Minus size={8} />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
             </div>
         </div>
     );
@@ -239,7 +279,7 @@ const PlayerRadarChart: React.FC<PlayerRadarChartProps> = ({ player1, player2 })
             : `rgba(0, 0, 0, ${alpha})`; // Adjust light mode color if needed
     };
 
-    const labels = ["Defense", "Attack", "Athleticism"];
+    const labels = [...attributeShortLabels];
     const datasets = [];
 
     if (player1) {
@@ -282,7 +322,7 @@ const PlayerRadarChart: React.FC<PlayerRadarChartProps> = ({ player1, player2 })
                     color: getForegroundColor(0.6), // Adjusts tick color
                 },
                 suggestedMin: 0,
-                suggestedMax: 10,
+                suggestedMax: 100,
             },
         },
         plugins: {

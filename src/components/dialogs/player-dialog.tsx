@@ -99,8 +99,6 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
             <div className="flex flex-col h-[80vh] min-w-[200px]">
 
                 {/* Player List - Modern Cards */}
-
-
                 <div className="sticky top-0 bg-card p-2">
                     <span>Switch Player:</span>
                     {/* Search Input */}

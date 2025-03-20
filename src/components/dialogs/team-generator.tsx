@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { usePlayers } from "@/data/players-provider";
-import { Player, ZoneScores, Weighting } from "@/data/types";
+import { Player, zoneScoreLabels, attributeLabels, attributeColors, AttributeScores, Weighting } from "@/data/types";
 import { Users, Dumbbell, Wand2, Check, RotateCcw, Search, ChevronDown, ChevronUp } from "lucide-react";
 import Modal from "@/components/dialogs/modal";
 import {
@@ -48,7 +48,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isOpen, onClose }) => {
         );
 
         // Pass both selectedPlayerObjects and zoneWeights
-        await generateTeams(selectedPlayerObjects);
+        generateTeams(selectedPlayerObjects);
     };
 
     return (
@@ -157,7 +157,7 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
     return (
         <div className="flex flex-col h-full">
             {/* Search and Toggle Controls */}
-            <div className="sticky top-0 z-10 p-3 border-b bg-accent backdrop-blur-md">
+            <div className="sticky top-0 z-10 p-3 border-b bg-accent">
                 <div className="flex items-center gap-3 ">
                     {/* Search Input */}
                     <div className="flex  items-center flex-1 borderrounded-xl p-2 transition-all">
@@ -278,7 +278,7 @@ const WeightingTab: React.FC<WeightingTabProps> = ({ zoneWeights, setZoneWeights
         const updatedWeights: Weighting = [...zoneWeights] as Weighting;
 
         // Clone the specific ZoneScores array before modifying
-        const updatedZone: ZoneScores = [...updatedWeights[zone]] as ZoneScores;
+        const updatedZone: AttributeScores = [...updatedWeights[zone]] as AttributeScores;
         updatedZone[attribute] = newValue;
 
         // Rebuild the tuple while maintaining its structure
@@ -295,24 +295,6 @@ const WeightingTab: React.FC<WeightingTabProps> = ({ zoneWeights, setZoneWeights
     const adjustWeight = (zone: number, attribute: number, adjustment: number) => {
         const currentValue = zoneWeights[zone][attribute];
         updateZoneWeight(zone, attribute, currentValue + adjustment);
-    };
-
-    const zoneLabels: Record<number, string> = {
-        0: "Defense Zone",
-        1: "Midfield Zone",
-        2: "Attack Zone"
-    };
-
-    const attributeLabels: Record<number, string> = {
-        0: "Defense",
-        1: "Attack",
-        2: "Athletic"
-    };
-
-    const attributeColors: Record<number, string> = {
-        0: "bg-blue-500",
-        1: "bg-red-500",
-        2: "bg-amber-500"
     };
 
     return (
@@ -336,18 +318,17 @@ const WeightingTab: React.FC<WeightingTabProps> = ({ zoneWeights, setZoneWeights
                     Adjust how much each player attribute contributes to team balancing in different zones.
                     Higher values (0-100) give more importance to that attribute in that zone.
                 </div>
-                {Object.entries(zoneLabels).map(([zone, label]) => (
+                {zoneScoreLabels.map((zoneName, zone) => (
                     <div key={zone} className="mb-6 p-4 rounded-lg border-gray-700 shadow-md">
-                        <h4 className=" text-md font-medium">{label}</h4>
+                        <h4 className=" text-md font-medium">{zoneName}</h4>
 
                         <div className="flex flex-col gap-4 mt-3">
-                            {Object.entries(attributeLabels).map(([attrIndex, label]) => {
+                            {attributeLabels.map((attrLabel, attrIndex) => {
                                 const attr = Number(attrIndex); // Convert index to number for correct reference
-
                                 return (
                                     <div key={`${zone}-${attr}`} className="flex items-center p-3 rounded-lgborde">
                                         {/* Attribute Name */}
-                                        <div className="w-32 font-medium">{label}</div>
+                                        <div className="w-32 font-medium">{attrLabel}</div>
 
                                         {/* Progress Bar */}
                                         <div className="flex-1 flex flex-col gap-2">
