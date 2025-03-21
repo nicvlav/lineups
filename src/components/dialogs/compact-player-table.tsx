@@ -16,7 +16,7 @@ interface CompactPlayerTableProps {
 const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPlayer, deletePlayer, updatePlayerAttributes }) => {
     const [newPlayerName, setNewPlayerName] = useState<string>("");
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [sortingMode, setSortingMode] = useState<string>("alphabetical");
+    const [sortingMode, setSortingMode] = useState<string>("Alphabetical");
 
     const handleAttributeChange = (uid: string, statIndex: number, change: number) => {
         const player = players.find((p: Player) => p.id === uid);

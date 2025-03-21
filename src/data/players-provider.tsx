@@ -1,6 +1,6 @@
 import React, { ReactNode, createContext, useContext, useState, useEffect, useRef } from "react";
 import { openDB } from "idb";
-import { Player, Point, Formation, AttributeScores, PlayerUpdate, defaultZoneWeights, Weighting, defaultAttributes } from "@/data/types";
+import { Player, Point, Formation, PlayerUpdate, defaultZoneWeights, Weighting, defaultAttributes } from "@/data/types";
 import { decodeStateFromURL } from "@/data/state-manager";
 import { autoCreateTeams } from "./auto-balance";
 import formations from "@/data/formations"
@@ -60,20 +60,6 @@ interface PlayersProviderProps {
     children: ReactNode;
 }
 
-const normalizePlayerStats = (players: Player[]): Player[] => {
-    return players.map(player => {
-        const normalizedStats: AttributeScores = [
-            (player.stats[0] ?? 50) * (player.stats[0] && player.stats[0] <= 10 ? 10 : 1),
-            (player.stats[1] ?? 50) * (player.stats[1] && player.stats[1] <= 10 ? 10 : 1),
-            (player.stats[2] ?? 50) * (player.stats[2] && player.stats[2] <= 10 ? 10 : 1),
-            (player.stats[3] ?? 50) * (player.stats[3] && player.stats[3] <= 10 ? 10 : 1),
-            (player.stats[4] ?? 50) * (player.stats[4] && player.stats[4] <= 10 ? 10 : 1),
-            (player.stats[5] ?? 50) * (player.stats[5] && player.stats[5] <= 10 ? 10 : 1)
-        ];
-        return { ...player, stats: normalizedStats };
-    });
-};
-
 
 export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) => {
     const [players, setPlayers] = useState<Player[]>([]);
@@ -91,7 +77,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             const urlState = decodeStateFromURL(currentUrl.search);
 
             if (urlState && urlState.players) {
-                setPlayers(normalizePlayerStats(urlState.players));
+                setPlayers(urlState.players);
                 console.log("Loaded from URL:", urlState);
 
                 // Store in tab-specific IndexedDB key

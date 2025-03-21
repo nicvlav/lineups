@@ -14,7 +14,7 @@ import {
 
 function PlayersSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar {...props}>
+    <Sidebar {...props} >
       {/* <SidebarHeader>
         Players
       </SidebarHeader> */}
