@@ -2,16 +2,17 @@ import { useState, useRef, useEffect } from "react";
 import { Player, DnDPlayerItem } from "@/data/player-types";
 import { usePlayers } from "@/data/players-provider";
 import { useDrag } from "react-dnd";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2, UserPlus, EllipsisVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
 import {
-    ContextMenu,
-    ContextMenuContent,
-    ContextMenuItem,
-    ContextMenuTrigger,
-} from "@/components/ui/context-menu"
-
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 const PlayerList = () => {
     const { players, addPlayer, deletePlayer, addRealPlayerToGame } = usePlayers();
     const [newPlayerName, setNewPlayerName] = useState("");
@@ -100,26 +101,33 @@ const PlayerRow = ({ player, onDelete, handleAddPlayerToGame }: { player: Player
     const divRef = useRef<HTMLDivElement>(null);
 
     return (
-        <div ref={(node) => {
-            drag(node);
-            divRef.current = node; // Store the reference if needed elsewhere
-        }}
-            className={`${isDragging ? 'opacity-50' : ''}`}>
-            <ContextMenu>
-                <ContextMenuTrigger>
-                    <div className="flex items-center justify-between p-2 border-b border-gray-200">
-                        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{player.name}
-                        </span>
-                        <Button onClick={onDelete} className="bg-transparent text-red-500 p-1">
-                            <Trash2 size={16} />
-                        </Button>
-                    </div>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                    <ContextMenuItem onClick={() => handleAddPlayerToGame(player.id, "A")}>Add {player.name} to Team A</ContextMenuItem>
-                    <ContextMenuItem onClick={() => handleAddPlayerToGame(player.id, "B")}>Add {player.name}  to Team B</ContextMenuItem>
-                </ContextMenuContent>
-            </ContextMenu>
+        <div className={`${isDragging ? 'opacity-50' : ''}`}>
+            <div className="flex items-center justify-between p-2 border-b border-gray-200">
+                <DropdownMenu>
+                    <DropdownMenuTrigger>
+                        <EllipsisVertical />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuLabel>Player Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleAddPlayerToGame(player.id, "A")}>Add {player.name} to Team A</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAddPlayerToGame(player.id, "B")}>Add {player.name}  to Team B</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div ref={(node) => {
+                    drag(node);
+                    divRef.current = node; // Store the reference if needed elsewhere
+                }} className="ml-2 cursor-pointer flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+
+                    {player.name}
+
+                </div>
+
+                <Button onClick={onDelete} className="bg-transparent text-red-500 p-1">
+                    <Trash2 size={16} />
+                </Button>
+            </div>
         </div >
     );
 };

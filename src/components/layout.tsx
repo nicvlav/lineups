@@ -11,7 +11,6 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar"
 
-
 function Layout() {
     const { players } = usePlayers();
 
@@ -26,11 +25,12 @@ function Layout() {
     const useWindowSize = () => {
         const [windowSize, setWindowSize] = useState({
             width: window.innerWidth,
+            height: window.innerHeight,
         });
 
         useEffect(() => {
             const handleResize = () => {
-                setWindowSize({ width: window.innerWidth });
+                setWindowSize({ width: window.innerWidth, height: window.innerHeight });
             };
 
             window.addEventListener("resize", handleResize);
@@ -45,9 +45,10 @@ function Layout() {
         return windowSize;
     };
 
-    const { width } = useWindowSize();
+    const { width, height } = useWindowSize();
 
     const isSmallScreen = width < 768; // You can customize this to match your breakpoint
+    const playerSize = (isSmallScreen ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 12;
 
     return (
         // wrap our sidebar and content inside a provider, the core content layout is inside the inset
@@ -64,10 +65,10 @@ function Layout() {
                 {isSmallScreen && (
                     <div className="flex flex-col pl-2 pr-2 gap-2 h-[180vh] w-full max-w-[100%] mx-auto">
                         {/* First Div */}
-                        <TeamArea team="A" teamPlayers={getTeamPlayers("A")} playerSize={55} />
+                        <TeamArea team="A" teamPlayers={getTeamPlayers("A")} playerSize={playerSize} />
 
                         {/* Second Div */}
-                        <TeamArea team="B" teamPlayers={getTeamPlayers("B")} playerSize={55} />
+                        <TeamArea team="B" teamPlayers={getTeamPlayers("B")} playerSize={playerSize} />
                     </div>
                 )}
 
@@ -75,10 +76,10 @@ function Layout() {
                 {!isSmallScreen && (
                     <div className="flex flex-1 pl-2 pr-2 gap-2">
                         {/* First Div */}
-                        <TeamArea team="A" teamPlayers={getTeamPlayers("A")} playerSize={55} />
+                        <TeamArea team="A" teamPlayers={getTeamPlayers("A")} playerSize={playerSize} />
 
                         {/* Second Div */}
-                        <TeamArea team="B" teamPlayers={getTeamPlayers("B")} playerSize={55} />
+                        <TeamArea team="B" teamPlayers={getTeamPlayers("B")} playerSize={playerSize} />
                     </div>
                 )}
 

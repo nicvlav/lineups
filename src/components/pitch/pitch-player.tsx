@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useDrag } from "react-dnd";
 import { User } from "lucide-react";
 import { Player, DnDPlayerItem } from "@/data/player-types";
@@ -103,13 +103,10 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
     zIndex: 1000,
   };
 
-  const divRef = useRef<HTMLDivElement>(null);
-
   return (
     <>
       <div ref={(node) => {
-        drag(node);
-        divRef.current = node; // Store the reference if needed elsewhere
+        if (node) drag(node);
       }}
         style={playerStyle}
         onContextMenu={handleOpenDialog}
@@ -117,11 +114,11 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
         <div style={nameStyle}>{player.name}</div>
         <div style={circleStyle}>{<User size={Math.max(circleSize * 0.4, 20)} />}</div>
       </div>
-        <PlayerDialog
-          player={player}
-          isOpen={isDialogOpen}
-          onClose={() => setIsDialogOpen(false)}
-        />
+      <PlayerDialog
+        player={player}
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+      />
     </>
   );
 };
