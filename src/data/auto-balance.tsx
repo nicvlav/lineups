@@ -231,8 +231,8 @@ const getZones = (players: ScoredPlayer[], recursive: boolean, numSimulations: n
         // let totalPlayers = teamAPlayers + teamBPlayers;
 
         // Maximum possible scores (each player can score 100)
-        let maxTeamAScore = (teamAPlayers-1) * 100;
-        let maxTeamBScore = (teamBPlayers-1) * 100;
+        let maxTeamAScore = (teamAPlayers - 1) * 100;
+        let maxTeamBScore = (teamBPlayers - 1) * 100;
         let maxTotalScore = maxTeamAScore + maxTeamBScore;
 
         // Overall team total scores
@@ -273,10 +273,10 @@ const getZones = (players: ScoredPlayer[], recursive: boolean, numSimulations: n
         let normalizedLocalZonal = (1 - ((zoneDev) / maxPossibleDiff));// zoneScoresNormalized.reduce((a, b) => a + b, 0) / 3;
 
         // Compute weighted overall score
-        let weightedScore = 
+        let weightedScore =
 
             W_quality * normalizedQuality +
-            W_balance * normalizedBalance + 
+            W_balance * normalizedBalance +
             W_zonal * normalizedZonal +
             W_local_zonal * normalizedLocalZonal;
 
@@ -290,13 +290,13 @@ const getZones = (players: ScoredPlayer[], recursive: boolean, numSimulations: n
     }
 
     if (!recursive) {
-        console.log("Internal Run : Total Scores → Team A:", bestAssignment.a.score, "Team B:", bestAssignment.b.score);
+        // console.log("Internal Run Team Totals: A:", bestAssignment.a.score, "B:", bestAssignment.b.score);
         return bestAssignment;
     }
 
-    console.log("===== Final Optimized Teams =====");
-    console.log("Team A Zones (Defense, Midfield, Attack):", bestAssignment.a.totals);
-    console.log("Team B Zones (Defense, Midfield, Attack):", bestAssignment.b.totals);
+    console.log("===== Final Optimized Team Zone Scores =====");
+    console.log("Team A Zones (GK, Defense, Midfield, Attack):", bestAssignment.a.totals);
+    console.log("Team B Zones (GK, Defense, Midfield, Attack):", bestAssignment.b.totals);
     console.log("==================================");
     console.log("Total Scores → Team A:", bestAssignment.a.score, "Team B:", bestAssignment.b.score);
     console.log("Team Balance Difference (Lower is better):", bestBalanceDiff);
@@ -343,24 +343,48 @@ const logPlayerStats = (players: ScoredPlayer[]) => {
         let bestPosition = 0;
         let bestScore = -Infinity;
 
+        let secondBestZone = 0;
+        let secondBestPosition = 0;
+        let secondBestScore = -Infinity;
+
         Object.entries(zoneFit).forEach(([zone, positions], zoneIdx) => {
             Object.entries(positions).forEach(([position, score], positionIdx) => {
                 if (zoneIdx === 0 && positionIdx === 0) return; // Skip the first position (0 index) within the first zone
 
                 if (score > bestScore) {
+                    secondBestZone = bestZone;
+                    secondBestPosition = bestPosition;
+                    secondBestScore = bestScore;
+
                     bestZone = parseInt(zone);
                     bestPosition = parseInt(position);
                     bestScore = score;
+                } else if (score > secondBestScore) {
+                    secondBestZone = parseInt(zone);
+                    secondBestPosition = parseInt(position);
+                    secondBestScore = score;
                 }
             });
         });
 
-        return { bestPos: weightingShortLabels[bestZone].positions[bestPosition], score: bestScore };
+        return {
+            best: {
+                pos: weightingShortLabels[bestZone].positions[bestPosition],
+                score: bestScore,
+            },
+            secondBest: {
+                pos: weightingShortLabels[secondBestZone].positions[secondBestPosition],
+                score: secondBestScore,
+            },
+        };
     };
 
+    console.log("===== Ranked Players With Zone Ratings (Best to Worst) =====", players);
+
     players.forEach(player => {
-        const bestPosition = getBestPosition(player.zoneFit);
-        console.log(`${player.name}`, bestPosition);
+        const scores = getBestPosition(player.zoneFit);
+        console.log(`${player.name} Best Scores: `);
+        console.log(scores.best, scores.secondBest);
     });
 };
 
@@ -417,8 +441,6 @@ const generateBalancedTeams = (players: Player[], attributeWeights: Weighting) =
     if (players.length < 2) return { a: [], b: [] };
 
     let scoredPlayers = calculateScores(players, normalizeWeights(attributeWeights));
-
-    console.log("===== Ranked Players With Zone Ratings (Best to Worst) =====", players);
 
     logPlayerStats(scoredPlayers);
 

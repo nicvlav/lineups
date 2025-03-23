@@ -61,7 +61,6 @@ interface PlayersProviderProps {
     children: ReactNode;
 }
 
-
 export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) => {
     const [players, setPlayers] = useState<Player[]>([]);
     const [zoneWeights, setZoneWeights] = useState<Weighting>(defaultZoneWeights);
@@ -371,8 +370,6 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         } catch (error) {
             return;
         }
-
-        console.log("=== NEW TEAMS ===", teamA, teamB);
 
         // Create lookup maps for quick access
         const teamAMap = new Map<string, Player>(teamA.map((player) => [player.id, player]));
