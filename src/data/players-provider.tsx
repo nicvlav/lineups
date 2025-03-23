@@ -1,6 +1,7 @@
 import React, { ReactNode, createContext, useContext, useState, useEffect, useRef } from "react";
 import { openDB } from "idb";
-import { Player, Point, Formation, PlayerUpdate, defaultZoneWeights, Weighting, defaultAttributes } from "@/data/types";
+import { Player, Point, Formation, PlayerUpdate, defaultAttributes } from "@/data/player-types";
+import {  defaultZoneWeights, Weighting } from "@/data/balance-types";
 import { decodeStateFromURL } from "@/data/state-manager";
 import { autoCreateTeams } from "./auto-balance";
 import formations from "@/data/formations"
@@ -74,6 +75,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         const loadGameState = async () => {
             const currentUrl = new URL(window.location.href);
+            
             const urlState = decodeStateFromURL(currentUrl.search);
 
             if (urlState && urlState.players) {
@@ -369,6 +371,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         } catch (error) {
             return;
         }
+
+        console.log("=== NEW TEAMS ===", teamA, teamB);
 
         // Create lookup maps for quick access
         const teamAMap = new Map<string, Player>(teamA.map((player) => [player.id, player]));

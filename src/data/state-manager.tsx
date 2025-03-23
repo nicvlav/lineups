@@ -1,5 +1,5 @@
 import LZString from "lz-string";
-import { Player } from "@/data/types"; 
+import { Player } from "@/data/player-types"; 
 
 export const decodeStateFromURL = (search : string) => {
     const urlParams = new URLSearchParams(search);

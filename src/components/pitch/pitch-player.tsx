@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useDrag } from "react-dnd";
 import { User } from "lucide-react";
-import { Player, DnDPlayerItem } from "@/data/types";
+import { Player, DnDPlayerItem } from "@/data/player-types";
 import PlayerDialog from "@/components/dialogs/player-dialog";
 
 interface PitchPlayerProps {

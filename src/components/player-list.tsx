@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Player, DnDPlayerItem } from "@/data/types";
+import { Player, DnDPlayerItem } from "@/data/player-types";
 import { usePlayers } from "@/data/players-provider";
 import { useDrag } from "react-dnd";
 import { Trash2, UserPlus } from "lucide-react";

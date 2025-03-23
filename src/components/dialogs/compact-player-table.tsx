@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Player, AttributeScores, attributeShortLabels, PlayerUpdate } from "@/data/types";
+import { Player, AttributeScores, attributeShortLabels, PlayerUpdate } from "@/data/player-types";
 import { X, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

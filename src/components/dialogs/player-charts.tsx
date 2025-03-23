@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTheme } from "@/data/theme-provider";
-import { Player, PlayerUpdate, AttributeScores, attributeShortLabels, attributeLabels } from "@/data/types";
+import { Player, PlayerUpdate, AttributeScores, attributeShortLabels, attributeLabels } from "@/data/player-types";
 import { Minus, Plus } from "lucide-react";
 import { } from "lucide-react";
 import { Radar } from "react-chartjs-2";

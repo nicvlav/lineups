@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { usePlayers } from "@/data/players-provider";
-import { Player } from "@/data/types";
+import { Player } from "@/data/player-types";
 import { Button } from "@/components/ui/button"
 import Modal from "@/components/dialogs/modal";
 import AutoAlertDialog from "@/components/dialogs/auto-alert-dialog";
