@@ -63,7 +63,7 @@ function Layout() {
 
                 {/* Layout for small screens (stacked and tall) */}
                 {isSmallScreen && (
-                    <div className="flex flex-col pl-2 pr-2 gap-2 h-[180vh] w-full max-w-[100%] mx-auto">
+                    <div className="flex flex-col pl-2 pr-2 pb-5 gap-5 h-[180vh] w-full max-w-[100%] mx-auto">
                         {/* First Div */}
                         <TeamArea team="A" teamPlayers={getTeamPlayers("A")} playerSize={playerSize} />
 

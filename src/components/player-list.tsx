@@ -98,7 +98,6 @@ const PlayerRow = ({ player, onDelete, handleAddPlayerToGame }: { player: Player
         collect: (monitor) => ({ isDragging: !!monitor.isDragging() }),
     }));
 
-    const divRef = useRef<HTMLDivElement>(null);
 
     return (
         <div className={`${isDragging ? 'opacity-50' : ''}`}>
@@ -116,8 +115,9 @@ const PlayerRow = ({ player, onDelete, handleAddPlayerToGame }: { player: Player
                 </DropdownMenu>
 
                 <div ref={(node) => {
-                    drag(node);
-                    divRef.current = node; // Store the reference if needed elsewhere
+                    if (navigator.maxTouchPoints === 0) {
+                        drag(node); // Enable dragging only if no touch capability
+                    }
                 }} className="ml-2 cursor-pointer flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
 
                     {player.name}
