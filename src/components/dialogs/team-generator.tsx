@@ -23,6 +23,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isOpen, onClose }) => {
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
     const {
         players,
+        gamePlayers,
         generateTeams,
         zoneWeights,
         setZoneWeights,
@@ -32,8 +33,9 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isOpen, onClose }) => {
     // Get non-temporary players and initialize selected players
     useEffect(() => {
         if (players && Array.isArray(players)) {
-            const nonTemps = players.filter((player) => !player.temp_formation);
-            setSelectedPlayers(nonTemps.filter((player) => player.team !== null && player.team !== "").map((player) => player.id));
+            setSelectedPlayers(players.filter(realPlayer =>
+                gamePlayers.some(gamePlayer => gamePlayer.id === realPlayer.id)
+            ).map((player) => player.id));
         }
     }, [players]);
 
@@ -118,18 +120,8 @@ interface TeamGenerationTabProps {
 const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selectedPlayers, setSelectedPlayers }) => {
     const [searchTerm, setSearchTerm] = useState<string>("");
 
-    // Filter non-temporary players
-    const getNonTemps = () => {
-        if (!players || !Array.isArray(players)) {
-            return [];
-        }
-        return players.filter(player => !player.temp_formation);
-    };
-
-    const nonTempPlayers = getNonTemps();
-
     // Filter players based on search
-    const filteredPlayers = nonTempPlayers.filter(player =>
+    const filteredPlayers = players.filter(player =>
         player.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -139,10 +131,10 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
 
     // Toggle all players selection
     const toggleAll = () => {
-        if (selectedPlayers.length === nonTempPlayers.length) {
+        if (selectedPlayers.length === players.length) {
             setSelectedPlayers([]);
         } else {
-            setSelectedPlayers(nonTempPlayers.map(p => p.id));
+            setSelectedPlayers(players.map(p => p.id));
         }
     };
 
@@ -177,7 +169,7 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
                         onClick={toggleAll}
                         className="bg-background flex items-center px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all whitespace-nowrap"
                     >
-                        {selectedPlayers.length === nonTempPlayers.length ? "Deselect All" : "Select All"}
+                        {selectedPlayers.length === players.length ? "Deselect All" : "Select All"}
                     </button>
                 </div>
             </div>
@@ -193,7 +185,7 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
                         <div className="flex items-center gap-2text-sm">
                             <Users size={16} className="text-white" />
                             <span>
-                                Selected {selectedPlayers.length} of {nonTempPlayers.length} players
+                                Selected {selectedPlayers.length} of {players.length} players
                                 {selectedPlayers.length < 2 && (
                                     <span className="text-red-500 ml-1 flex items-center gap-1">
                                         • Need at least 2 players

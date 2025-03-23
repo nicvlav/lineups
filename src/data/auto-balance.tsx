@@ -1,11 +1,12 @@
-import { Player } from "@/data/player-types";
+
 import {
+    FilledGamePlayer,
     Weighting,
     ZoneScores,
     emptyZoneScores,
     defaultZoneWeights,
     formationTemplates,
-    ScoredPlayer,
+    ScoredGamePlayer,
     TeamZones,
     emptyTeamZones,
     PositionWeighting,
@@ -24,7 +25,7 @@ const getIdealDistribution = (numPlayers: number) => {
     return structuredClone(formations[index]);
 }
 
-const calculateScores = (players: Player[], zoneWeights: Weighting): ScoredPlayer[] => {
+const calculateScores = (players: FilledGamePlayer[], zoneWeights: Weighting): ScoredGamePlayer[] => {
     return players.map(player => {
 
         const zoneFit: ZoneScores = structuredClone(emptyZoneScores);
@@ -55,7 +56,7 @@ const getBestAndSecondBestStats = (zoneFit: ZoneScores) => {
     return { best, secondBest };
 };
 
-const sortBest = (players: ScoredPlayer[], zone: number, position: number, randomSeed: number) => {
+const sortBest = (players: ScoredGamePlayer[], zone: number, position: number, randomSeed: number) => {
     // const specializationRatios = [randomSeed * 0.4 + 0.5, randomSeed * 0.4 + 0.0, randomSeed * 0.4 + 0.4];
 
     // Pick the best available player from this zone
@@ -85,7 +86,7 @@ const sortBest = (players: ScoredPlayer[], zone: number, position: number, rando
     });
 };
 
-const sortWorst = (players: ScoredPlayer[], _: number, __: number, ___: number) => {
+const sortWorst = (players: ScoredGamePlayer[], _: number, __: number, ___: number) => {
     // Sort player pool by specialization in the zone
     players.sort((a, b) => {
         const aStats = getBestAndSecondBestStats(a.zoneFit);
@@ -95,7 +96,7 @@ const sortWorst = (players: ScoredPlayer[], _: number, __: number, ___: number) 
     });
 };
 
-const assignPlayersToTeams = (players: ScoredPlayer[]) => {
+const assignPlayersToTeams = (players: ScoredGamePlayer[]) => {
     let teamA: TeamZones = structuredClone(emptyTeamZones);
     let teamB: TeamZones = structuredClone(emptyTeamZones);
 
@@ -108,7 +109,7 @@ const assignPlayersToTeams = (players: ScoredPlayer[]) => {
     // // Dynamic weighting ratio
     const rand = Math.random();
 
-    const addPlayerAtPos = (dist: ZoneScores, zone: number, position: number, isTeamA: boolean, sortType: (players: ScoredPlayer[], zone: number, position: number, rand: number) => void) => {
+    const addPlayerAtPos = (dist: ZoneScores, zone: number, position: number, isTeamA: boolean, sortType: (players: ScoredGamePlayer[], zone: number, position: number, rand: number) => void) => {
         if (dist[zone][position] <= 0) return false;
 
         sortType(players, zone, position, rand);
@@ -198,7 +199,7 @@ const assignPlayersToTeams = (players: ScoredPlayer[]) => {
 
 };
 
-const getZones = (players: ScoredPlayer[], recursive: boolean, numSimulations: number) => {
+const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulations: number) => {
     let bestAssignment: TeamResults = {
         a: { team: structuredClone(emptyTeamZones), score: 0, totals: [0, 0, 0] },
         b: { team: structuredClone(emptyTeamZones), score: 0, totals: [0, 0, 0] }
@@ -317,7 +318,7 @@ const normalizeWeights = (zoneWeights: Weighting): Weighting => {
     ) as Weighting;
 };
 
-const logPlayerStats = (players: ScoredPlayer[]) => {
+const logPlayerStats = (players: ScoredGamePlayer[]) => {
     // this is just for logging purposes
     // kinda interesting to see the full sorted list
     // remove when this gets optimized
@@ -383,7 +384,7 @@ const logPlayerStats = (players: ScoredPlayer[]) => {
 
     players.forEach(player => {
         const scores = getBestPosition(player.zoneFit);
-        console.log(`${player.name} Best Scores: `);
+        console.log(`${player.real_name} Best Scores: `);
         console.log(scores.best, scores.secondBest);
     });
 };
@@ -413,7 +414,7 @@ const getXForPlayerPosition = (position: PositionWeighting, positionIndex: numbe
 };
 
 const assignPositions = (zones: TeamZones, team: string) => {
-    let finalPlayers: Player[] = [];
+    let finalPlayers: FilledGamePlayer[] = [];
 
     const numZones = zones.length;
     const zoneYShift = 0.1;
@@ -428,7 +429,7 @@ const assignPositions = (zones: TeamZones, team: string) => {
             players.forEach((player, pidx) => {
                 const x = getXForPlayerPosition(player.generatedPositionInfo, pidx, numPositionPlayers);
                 const y = player.generatedPositionInfo.relativeYPosition * (yEnd - yStart) + yStart;
-                finalPlayers.push({ ...player, team, position: { x, y } } as Player);
+                finalPlayers.push({ ...player, team, position: { x, y } } as FilledGamePlayer);
             });
         });
 
@@ -437,23 +438,23 @@ const assignPositions = (zones: TeamZones, team: string) => {
     return finalPlayers;
 }
 
-const generateBalancedTeams = (players: Player[], attributeWeights: Weighting) => {
+const generateBalancedTeams = (players: FilledGamePlayer[], attributeWeights: Weighting) => {
     if (players.length < 2) return { a: [], b: [] };
 
-    let scoredPlayers = calculateScores(players, normalizeWeights(attributeWeights));
+    let ScoredGamePlayers = calculateScores(players, normalizeWeights(attributeWeights));
 
-    logPlayerStats(scoredPlayers);
+    logPlayerStats(ScoredGamePlayers);
 
-    const teams = getZones(scoredPlayers, true, 30);
+    const teams = getZones(ScoredGamePlayers, true, 30);
 
     // Assign positions for both teams
-    const positionsA = assignPositions(teams.a.team, "a");
-    const positionsB = assignPositions(teams.b.team, "b");
+    const positionsA = assignPositions(teams.a.team, "A");
+    const positionsB = assignPositions(teams.b.team, "B");
 
     return { a: positionsA, b: positionsB };
 };
 
-export const autoCreateTeams = (players: Player[], attributeWeights: Weighting) => {
+export const autoCreateTeams = (players: FilledGamePlayer[], attributeWeights: Weighting) => {
     if (players.length < 10) throw new Error("Not enough players to form teams");
     if (players.length > 24) throw new Error("Too many players to form teams");
     return generateBalancedTeams(players, attributeWeights);

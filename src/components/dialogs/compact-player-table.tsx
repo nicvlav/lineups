@@ -35,9 +35,7 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
         }
     };
 
-    const getNonTemps = (): Player[] => players?.filter((player: Player) => !player.temp_formation) || [];
-
-    const filteredPlayers = getNonTemps().filter((player: Player) =>
+    const filteredPlayers = players.filter((player: Player) =>
         player.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 

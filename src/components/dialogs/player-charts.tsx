@@ -42,9 +42,7 @@ const PlayerCharts: React.FC<PlayerChartsProps> = ({
     setSelectedPlayer2,
     updatePlayerAttributes }) => {
 
-    const getNonTemps = (): Player[] => players?.filter((player: Player) => !player.temp_formation) || [];
-
-    const sortedPlayers = getNonTemps().sort((a, b) => {
+    const sortedPlayers = players.sort((a, b) => {
         return a.name.localeCompare(b.name);
     });
 

@@ -12,14 +12,14 @@ import {
 } from "@/components/ui/sidebar"
 
 function Layout() {
-    const { players } = usePlayers();
+    const { gamePlayers } = usePlayers();
 
     const getTeamPlayers = (team: string) => {
-        if (!players || !Array.isArray(players)) {
-            console.warn("Invalid players format:", players);
+        if (!gamePlayers || !Array.isArray(gamePlayers)) {
+            console.warn("Invalid players format:", gamePlayers);
             return [];
         }
-        return players.filter(player => player.team === team);
+        return gamePlayers.filter(player => player.team === team);
     };
 
     const useWindowSize = () => {

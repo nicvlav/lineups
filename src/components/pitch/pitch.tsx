@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useDrop, DropTargetMonitor } from 'react-dnd';
 import { usePlayers } from "@/data/players-provider"
-import { Player, DnDPlayerItem } from "@/data/player-types";
+import { GamePlayer } from "@/data/player-types";
 
 import DraggablePlayer from '@/components/pitch/pitch-player'
 
@@ -14,11 +14,11 @@ const mergeRefs = (...refs: (React.Ref<any> | null)[]) => (el: any) => {
 
 interface PlayerContainerProps {
   team: string;
-  teamPlayers: Player[];
+  teamPlayers: GamePlayer[];
   playerSize: number;
 }
 
-const getPlayerPosition = (player: Player, playerSize: number, containerWidth: number, containerHeight: number) => {
+const getPlayerPosition = (player: GamePlayer, playerSize: number, containerWidth: number, containerHeight: number) => {
   const halfSize = playerSize / 2;
   const maxWidth = containerWidth - halfSize;
   const maxHeight = containerHeight - halfSize;
@@ -36,7 +36,7 @@ const getPlayerPosition = (player: Player, playerSize: number, containerWidth: n
 
 const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, playerSize = 55 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { addRealPlayerToGame, updatePlayerAttributes } = usePlayers();
+  const { players, addExisitingPlayerToGame, updateGamePlayerAttributes } = usePlayers();
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   // Update container size on mount, resize, and whenever the container might change
@@ -74,14 +74,14 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
   }, []);
 
   // Handle movement of existing player within the container
-  const handlePlayerMove = (playerId: string, newX: number, newY: number) => {
-    updatePlayerAttributes(playerId, { position: { x: newX, y: newY } });
+  const handlePlayerMove = (player: GamePlayer, newX: number, newY: number) => {
+    updateGamePlayerAttributes(player, { position: { x: newX, y: newY } });
   };
 
   // Handle drop interactions
   const [, drop] = useDrop({
     accept: 'PLAYER',
-    drop: (item: DnDPlayerItem, monitor: DropTargetMonitor) => {
+    drop: (item: GamePlayer, monitor: DropTargetMonitor) => {
       const dropOffset = monitor.getClientOffset();
       if (!containerRef.current || !dropOffset) return;
 
@@ -91,17 +91,26 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
       const dropX = (dropOffset.x - containerRect.left) / containerRect.width;
       const dropY = (dropOffset.y - containerRect.top) / containerRect.height;
 
-      handleMainPlayerDrop(item.id, dropX, dropY);
+      handleMainPlayerDrop(item, dropX, dropY);
 
       // Return drop result to let the drag source know the drop was successful
       return { team };
     },
   });
 
-  const handleMainPlayerDrop = (playerUID: string, dropX: number, dropY: number) => {
-    addRealPlayerToGame(team, playerUID, dropX, dropY);
+  const handleMainPlayerDrop = (player: GamePlayer, dropX: number, dropY: number) => {
+    addExisitingPlayerToGame(player, team, dropX, dropY);
   };
 
+  const findPlayerName = (player: GamePlayer) => {
+    if (player.guest_name !== null) {
+      return player.guest_name;
+    } else {
+      const realPlayer = players.find(searchPlayer => searchPlayer.id === player.id);
+      if (realPlayer != null) return realPlayer.name;
+    }
+    return "[Player]"
+  };
 
   // Combine refs for both drag and drop
   const combinedRef = mergeRefs(containerRef, drop as unknown as React.Ref<any>);
@@ -136,8 +145,9 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
 
         return (
           <DraggablePlayer
-            key={player.id}
+            key={player.id || -1}
             player={player}
+            name={findPlayerName(player)}
             playerSize={playerSize}
             initialLeft={left}
             initialTop={top}

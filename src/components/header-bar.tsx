@@ -14,12 +14,12 @@ interface HeaderBarProps {
 }
 
 const HeaderBar: React.FC<HeaderBarProps> = ({ iconSize, showIconText }) => {
-    const { clearGame, players } = usePlayers();
+    const { clearGame, players, gamePlayers } = usePlayers();
     const [isPlayerModalOpen, setPlayerModalOpen] = useState(false);
     const [isAutoTeamModalOpen, setAutoTeamModalOpen] = useState(false);
 
     const handleShare = () => {
-        const shareUrl = encodeStateToURL(players);
+        const shareUrl = encodeStateToURL(players, gamePlayers);
         navigator.clipboard.writeText(shareUrl).then(() => alert("Shareable link copied!"));
     };
 

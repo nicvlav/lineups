@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Player, DnDPlayerItem } from "@/data/player-types";
+import { Player, GamePlayer, Point } from "@/data/player-types";
 import { usePlayers } from "@/data/players-provider";
 import { useDrag } from "react-dnd";
 import { Trash2, UserPlus, EllipsisVertical } from "lucide-react";
@@ -13,8 +13,9 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
 const PlayerList = () => {
-    const { players, addPlayer, deletePlayer, addRealPlayerToGame } = usePlayers();
+    const { players, addPlayer, deletePlayer, addExisitingPlayerToGame } = usePlayers();
     const [newPlayerName, setNewPlayerName] = useState("");
     const [isAdding, setIsAdding] = useState(false);
     const [sortOrder, setSortOrder] = useState("desc");
@@ -36,15 +37,14 @@ const PlayerList = () => {
 
     const handleDeletePlayer = async (id: string) => await deletePlayer(id);
 
-    const handleAddPlayerToGame = (playerUID: string, team: string) => {
-        addRealPlayerToGame(team, playerUID, Math.random() * 0.9 + 0.05, Math.random() * 0.9 + 0.05);
+    const handleAddPlayerToGame = (player: GamePlayer, team: string) => {
+        addExisitingPlayerToGame(player, team, Math.random() * 0.9 + 0.05, Math.random() * 0.9 + 0.05);
     };
 
 
     const handleSortChange = (mode: string) => setSortOrder(mode);
 
-    const filteredPlayers = players?.filter(player => !player.guest) || [];
-    const sortedPlayers = [...filteredPlayers].sort((a, b) =>
+    const sortedPlayers = [...players].sort((a, b) =>
         sortOrder === "desc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
     );
 
@@ -91,10 +91,11 @@ const SortControls = ({ handleSortChange }: { handleSortChange: (mode: string) =
     </div>
 );
 
-const PlayerRow = ({ player, onDelete, handleAddPlayerToGame }: { player: Player, onDelete: () => void, handleAddPlayerToGame: (playerUID: string, team: string) => void }) => {
+const PlayerRow = ({ player, onDelete, handleAddPlayerToGame }: { player: Player, onDelete: () => void, handleAddPlayerToGame: (player: GamePlayer, team: string) => void }) => {
+    const gamePlayer: GamePlayer = {id: player.id, team: "", guest_name: null, position: {x : 0.5, y: 0.5} as Point};
     const [{ isDragging }, drag] = useDrag(() => ({
         type: "PLAYER",
-        item: { id: player.id, name: player.name, team: player.team } as DnDPlayerItem,
+        item:  gamePlayer,
         collect: (monitor) => ({ isDragging: !!monitor.isDragging() }),
     }));
 
@@ -109,8 +110,8 @@ const PlayerRow = ({ player, onDelete, handleAddPlayerToGame }: { player: Player
                     <DropdownMenuContent>
                         <DropdownMenuLabel>Player Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleAddPlayerToGame(player.id, "A")}>Add {player.name} to Team A</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAddPlayerToGame(player.id, "B")}>Add {player.name}  to Team B</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAddPlayerToGame(gamePlayer, "A")}>Add {player.name} to Team A</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAddPlayerToGame(gamePlayer, "B")}>Add {player.name}  to Team B</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
 

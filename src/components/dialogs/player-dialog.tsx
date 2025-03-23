@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { usePlayers } from "@/data/players-provider";
-import { Player } from "@/data/player-types";
+import { Player, GamePlayer } from "@/data/player-types";
 import { Button } from "@/components/ui/button"
 import Modal from "@/components/dialogs/modal";
 import AutoAlertDialog from "@/components/dialogs/auto-alert-dialog";
 
 
 interface PlayerDialogProps {
-    player: Player;
+    player: GamePlayer;
     isOpen: boolean;
     onClose: () => void;
 }
@@ -17,13 +17,18 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
     isOpen,
     onClose,
 }) => {
-    const { players, removeFromGame, switchToRealPlayer, switchToNewPlayer } = usePlayers();
+    const { players, gamePlayers, removeFromGame, switchToRealPlayer, switchToNewPlayer } = usePlayers();
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
     const [isConfirmOpen, setConfirmOpen] = useState(false);
 
     // Create a ref to the input element
     const inputRef = useRef<HTMLInputElement | null>(null);
+
+    const playerIsInGame = (searchPlayer: Player) => {
+        return gamePlayers.some(gamePlayer => gamePlayer.id === searchPlayer.id);
+    };
+
 
     // Focus the input when the component mounts
     useEffect(() => {
@@ -33,26 +38,11 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
     }, []);
 
     useEffect(() => {
-        setConfirmOpen(selectedPlayer != null && selectedPlayer.team != null);
+        setConfirmOpen(selectedPlayer != null && playerIsInGame(selectedPlayer));
     }, [selectedPlayer]);
 
-    const getNonTemps = (): Player[] => {
-        if (!Array.isArray(players)) {
-            console.warn("Invalid players format:", players);
-            return [];
-        }
-        return players.filter((p) => p.temp_formation !== true);
-    };
-
-    const nonTempPlayers = getNonTemps();
-
     // Filter players based on search term
-    const filteredPlayers = nonTempPlayers
-        .map((p) => ({
-            ...p,
-            team: p.team || null,
-        }))
-        .filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredPlayers = players.filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     // Find if there's an exact match
     const exactMatch = filteredPlayers.find(
@@ -63,34 +53,35 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
     const handlePlayerSelection = (selected: Player) => {
         // this brings up a confirmation box that requires an ok click
         // look into alter boxes
-        if (!selected || selected.team) {
+        if (!selected || playerIsInGame(selected)) {
             setSelectedPlayer(selected);
         } else {
-            handleSwitchPlayer(selected.id);
+            handleSwitchPlayer(selected);
             onClose();
         }
     };
+
 
     // Confirm team removal and switch player
     const confirmSelection = () => {
         if (selectedPlayer) {
-            handleSwitchPlayer(selectedPlayer.id);
+            handleSwitchPlayer(selectedPlayer);
             setSelectedPlayer(null);
             onClose();
         }
     };
-    const handleSwitchPlayer = (newPlayerid: string) => {
+    const handleSwitchPlayer = (newPlayer: Player) => {
         if (!player.team) return;
-        switchToRealPlayer(player.team, player.id, newPlayerid);
+        switchToRealPlayer(player, newPlayer.id);
     };
 
     const handleSwitchToNewPlayer = (newPlayerName: string) => {
         if (!player.team) return;
-        switchToNewPlayer(player.team, player.id, newPlayerName, false);
+        switchToNewPlayer(player, newPlayerName, false);
     };
 
     const handleSwitchToNewGuest = (newPlayerName: string) => {
-        switchToNewPlayer(player.team, player.id, newPlayerName, true);
+        switchToNewPlayer(player, newPlayerName, true);
 
     };
 
@@ -117,12 +108,11 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                         {filteredPlayers.map((p) => (
                             <li
                                 key={p.id}
-                                className={`p-2 cursor-pointer flex justify-between  hover:bg-accent items-center break-words whitespace-normal w-full ${p.team ? "text-red-500" : ""
+                                className={`p-2 cursor-pointer flex justify-between  hover:bg-accent items-center break-words whitespace-normal w-full ${playerIsInGame(p) ? "text-red-500" : ""
                                     }`}
                                 onClick={() => handlePlayerSelection(p)}
                             >
                                 {p.name}
-                                {p.team && <span className="text-sm font-semibold">({p.team})</span>}
                             </li>
                         ))}
                     </ul>
@@ -170,7 +160,7 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                     <Button
                         className="mt-2 w-full bg-chart-3 p-2 rounded"
                         onClick={() => {
-                            removeFromGame(player.id);
+                            removeFromGame(player);
                             onClose();
                         }}
                     >

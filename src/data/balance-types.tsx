@@ -1,4 +1,4 @@
-import { Player, AttributeScores } from "@/data/player-types"; // Importing from shared file
+import { GamePlayer, AttributeScores } from "@/data/player-types"; // Importing from shared file
 
 export type PositionWeighting = {
     positionName: string,
@@ -174,9 +174,8 @@ export const defaultZoneWeights: Weighting = [
 
 export const formationTemplates: Record<number, ZoneScores[]> = {
     5: [
-        [[1], [3, 0], [0, 0, 0], [1, 0]], // 2-2-1
-        // [[1], [2, 0], [2, 0, 0], [1, 0]], // 2-2-1
-        // [[1], [1, 0], [2, 0, 0], [1, 0]], // 1-2-1
+        [[1], [2, 0], [2, 0, 0], [1, 0]], // 2-2-1
+        [[1], [1, 0], [2, 0, 0], [1, 0]], // 1-2-1
     ],
     6: [
         [[1], [2, 0], [1, 0, 0], [2, 0]], // 2-1-2
@@ -209,21 +208,23 @@ export const formationTemplates: Record<number, ZoneScores[]> = {
         [[1], [2, 2], [2, 2, 1], [2, 0]], // 4-5-2
     ],
 } as const;
-
-
-export interface ScoredPlayer extends Player {
+export interface FilledGamePlayer extends GamePlayer {
+    real_name: string,
+    stats: AttributeScores,
+}
+export interface ScoredGamePlayer extends FilledGamePlayer {
     zoneFit: ZoneScores;
 }
 
-export interface PositionedPlayer extends ScoredPlayer {
+export interface PositionedGamePlayer extends ScoredGamePlayer {
     generatedPositionInfo: PositionWeighting;
 }
 
 export type TeamZones = [
-    [PositionedPlayer[]], // gk
-    [PositionedPlayer[], PositionedPlayer[]], // defense
-    [PositionedPlayer[], PositionedPlayer[], PositionedPlayer[], PositionedPlayer[]],// midfield
-    [PositionedPlayer[], PositionedPlayer[]]// attack
+    [PositionedGamePlayer[]], // gk
+    [PositionedGamePlayer[], PositionedGamePlayer[]], // defense
+    [PositionedGamePlayer[], PositionedGamePlayer[], PositionedGamePlayer[], PositionedGamePlayer[]],// midfield
+    [PositionedGamePlayer[], PositionedGamePlayer[]]// attack
 ];
 
 export const emptyTeamZones: TeamZones = [

@@ -46,23 +46,23 @@ export type Point = { x: number, y: number, };
 
 export const defaultAttributes: AttributeScores = [50, 50, 50, 50, 50, 50, 50, 50,] as AttributeScores;
 
+// Core Player data from Supabase
 export interface Player {
     id: string;
     name: string;
-    team: string | null,
-    guest: boolean | null,
-    temp_formation: boolean | null,
-    stats: AttributeScores,
-    position: Point | null,
+    stats: AttributeScores; // Stored and synced
+}
+
+// Local-only game-specific attributes
+export interface GamePlayer {
+    id: string; // null if a temporary guest player
+    guest_name: string | null; // non null if a temporary guest player
+    team: string;
+    position: Point;
 }
 
 export type PlayerUpdate = Partial<Player>;
-
-export interface DnDPlayerItem {
-    id: string;
-    name: string;
-    team: string;
-}
+export type GamePlayerUpdate = Partial<GamePlayer>;
 
 export type Formation = {
     id: number;

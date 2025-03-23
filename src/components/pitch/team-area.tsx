@@ -1,9 +1,9 @@
 import Pitch from '@/components/pitch/pitch'
-import { Player } from "@/data/player-types";
+import { GamePlayer } from "@/data/player-types";
 
 interface TeamAreaProps {
   team: string;
-  teamPlayers: Player[];
+  teamPlayers: GamePlayer[];
   playerSize: number;
 }
 

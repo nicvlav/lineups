@@ -1,21 +1,23 @@
 import { useState } from "react";
 import { useDrag } from "react-dnd";
 import { User } from "lucide-react";
-import { Player, DnDPlayerItem } from "@/data/player-types";
+import { GamePlayer } from "@/data/player-types";
 import PlayerDialog from "@/components/dialogs/player-dialog";
 
 interface PitchPlayerProps {
-  player: Player;
+  player: GamePlayer;
+  name: string,
   playerSize: number;
   initialLeft: number;
   initialTop: number;
   containerWidth: number;
   containerHeight: number;
-  onPositionChange?: (playerId: string, newX: number, newY: number) => void;
+  onPositionChange?: (player: GamePlayer, newX: number, newY: number) => void;
 }
 
 const PitchPlayer: React.FC<PitchPlayerProps> = ({
   player,
+  name,
   playerSize,
   initialLeft,
   initialTop,
@@ -27,7 +29,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "PLAYER",
-    item: { id: player.id, name: player.name, team: player.team } as DnDPlayerItem,
+    item: player ,
     collect: (monitor) => ({ isDragging: !!monitor.isDragging() }),
     end: (_, monitor) => {
       const dropResult = monitor.getDropResult();
@@ -46,7 +48,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
           const newX = Math.max(0, Math.min(1, (initialLeft + deltaX) / containerWidth));
           const newY = Math.max(0, Math.min(1, (initialTop + deltaY) / containerHeight));
 
-          onPositionChange?.(player.id, newX, newY);
+          onPositionChange?.(player, newX, newY);
         }
       }
     },
@@ -103,6 +105,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
     zIndex: 1000,
   };
 
+
   return (
     <>
       <div ref={(node) => {
@@ -111,7 +114,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
         style={playerStyle}
         onContextMenu={handleOpenDialog}
         onDoubleClick={handleOpenDialog}>
-        <div style={nameStyle}>{player.name}</div>
+        <div style={nameStyle}>{name}</div>
         <div style={circleStyle}>{<User size={Math.max(circleSize * 0.4, 20)} />}</div>
       </div>
       <PlayerDialog
