@@ -16,7 +16,7 @@ The **Sports Team Lineup Generator** is a web-based application designed to help
 
 ## Deployment
 The app is hosted and available at:
-🔗 [https://nicvlav.github.io/lineups/](https://nicvlav.github.io/lineups/)
+🔗 [https://lineups.nicolasvlavianos.workers.dev](https://lineups.nicolasvlavianos.workers.dev)
 
 ## Installation & Setup
 ### Prerequisites

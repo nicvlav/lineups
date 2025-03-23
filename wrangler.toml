@@ -1,0 +1,6 @@
+name = "lineups"
+compatibility_date = "2025-3-23"
+assets = { directory = "dist" }
+
+
+
