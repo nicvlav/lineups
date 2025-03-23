@@ -1,0 +1,46 @@
+name: Deploy to Cloudflare
+
+on:
+  push:
+    branches:
+      - main # Trigger deployment on pushing to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: deploy  # This links to the 'deploy' environment you created
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      # Cache dependencies to speed up subsequent builds
+    #   - name: Cache Bun dependencies
+    #     uses: actions/cache@v3
+    #     with:
+    #       path: ~/.bun/cache
+    #       key: ${{ runner.os }}-bun-dependencies-${{ hashFiles('**/bun.lockb') }}
+    #       restore-keys: |
+    #         ${{ runner.os }}-bun-dependencies- 
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 'latest'  # Optional: Specify a version, or use 'latest'
+
+      - name: Install dependencies using Bun
+        run: bun install
+
+      - name: Build the app using Bun
+        run: bun run build  # Replace with your custom build script if needed
+
+      - name: Deploy using Wrangler
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: bun run deploy:worker  # Assuming you have this script in package.json
+
+      - name: Clean up build files (optional)
+        run: rm -rf dist  # Clean up build artifacts if necessary
