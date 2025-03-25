@@ -348,11 +348,12 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         // Handle missing players by adding new guest players
         else if (teamPlayers.length < numPlayersNeeded) {
             const newID = Date.now().toString();
+            const addInc = team === "A" ? 0 : 100;
 
             const missingPlayers: GamePlayer[] = formation.positions
                 .slice(teamPlayers.length, numPlayersNeeded)
-                .map((pos) => ({
-                    id: newID,
+                .map((pos, idx) => ({
+                    id: newID + idx + addInc,
                     guest_name: "[Player]", // Default placeholder name
                     team,
                     position: pos, // Assign correct position type
