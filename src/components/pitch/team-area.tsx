@@ -17,7 +17,7 @@ const TeamArea: React.FC<TeamAreaProps> = ({ team, teamPlayers, playerSize}) => 
       </div>
 
       {/* Player Container (fills remaining space) */}
-      <div className="flex-1 p-3 rounded-lg shadow-lg">
+      <div className="flex-1 p-3 rounded-lg shadow-lg overflow-x-clip">
         <Pitch team={team} teamPlayers={teamPlayers} playerSize={playerSize} />
       </div>
     </div>

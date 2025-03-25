@@ -74,7 +74,7 @@ function Layout() {
 
                 {/* Layout for large screens (side by side) */}
                 {!isSmallScreen && (
-                    <div className="flex flex-1 pl-2 pr-2 gap-2">
+                    <div className="flex flex-1 h-full pl-2 pr-2 gap-2">
                         {/* First Div */}
                         <TeamArea team="A" teamPlayers={getTeamPlayers("A")} playerSize={playerSize} />
 

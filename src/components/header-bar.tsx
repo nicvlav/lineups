@@ -25,7 +25,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ iconSize, showIconText }) => {
 
     useEffect(() => {
         if (isAutoTeamModalOpen) { setAutoTeamModalOpen(false); }
-    }, [players]);
+    }, [gamePlayers]);
 
     return (
         <div className="w-full flex items-center justify-between h-[60px] min-h-[60px] max-h-[60px] overflow-hidden">
