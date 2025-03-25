@@ -1,31 +1,31 @@
 import { useState } from "react";
-import { supabase } from "@/lib/supabase"; // Adjust your import
-import { useNavigate } from "react-router-dom";
+// import { supabase } from "@/lib/worker"; // Adjust your import
+// import { useNavigate } from "react-router-dom";
 
 const ResetPasswordPage = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  // const [message, setMessage] = useState<string | null>(null);
+  // const [error, setError] = useState<string | null>(null);
+  // const navigate = useNavigate();
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) {
-        setError("Failed to send password reset email.");
-      } else {
-        setMessage("Check your email for the password reset link.");
-        setTimeout(() => navigate("/signin"), 3000); // Redirect to sign-in after message
-      }
-    } catch (err) {
-      setError("An unexpected error occurred.");
-    } finally {
-      setLoading(false);
-    }
+    // setError(null);
+    // try {
+    //   const { error } = await supabase.auth.resetPasswordForEmail(email);
+    //   if (error) {
+    //     setError("Failed to send password reset email.");
+    //   } else {
+    //     setMessage("Check your email for the password reset link.");
+    //     setTimeout(() => navigate("/signin"), 3000); // Redirect to sign-in after message
+    //   }
+    // } catch (err) {
+    //   setError("An unexpected error occurred.");
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   return (
@@ -48,9 +48,9 @@ const ResetPasswordPage = () => {
               required
             />
           </div>
-
+{/* 
           {error && <div className="text-red-500">{error}</div>}
-          {message && <div className="text-green-500">{message}</div>}
+          {message && <div className="text-green-500">{message}</div>} */}
 
           <button
             type="submit"

@@ -130,3 +130,4 @@ dist
 .pnp.*
 /backend/__pycache__
 bun.lock
+*.toml

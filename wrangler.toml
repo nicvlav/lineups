@@ -1,6 +1,4 @@
 name = "lineups"
-compatibility_date = "2025-3-23"
+compatibility_date = "2025-03-23"
 assets = { directory = "dist" }
-
-
-
+main = "./src/lib/worker.ts"  
