@@ -34,6 +34,15 @@ jobs:
       - name: Install dependencies using Bun
         run: bun install
 
+              # Load environment variables from .env file
+      - name: Set environment variables from GitHub context
+        run: |
+          echo "VITE_SUPABASE_URL=${{ vars.VITE_SUPABASE_URL }}" >> .env
+          echo "VITE_SUPABASE_ANON_KEY=${{ vars.VITE_SUPABASE_ANON_KEY }}" >> .env
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+
       - name: Build the app using Bun
         run: bun run build  # Replace with your custom build script if needed
 
