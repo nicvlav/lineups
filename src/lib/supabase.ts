@@ -1,7 +1,6 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Env } from '@/lib/worker';
+import { createClient } from "@supabase/supabase-js";
 
-// Factory function to create Supabase client using environment variables
-export default function getSupabase(env: Env): SupabaseClient {
-    return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-}
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

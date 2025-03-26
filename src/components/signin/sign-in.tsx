@@ -1,9 +1,9 @@
 import { useState } from "react";
-// import { useAuth } from "@/data/auth-context"; 
+import { useAuth } from "@/data/auth-context"; 
 import { useNavigate } from "react-router-dom";
 
 const SignInPage = () => {
-  // const { signInWithEmail, signUpWithEmail, /*signOut*/ } = useAuth();
+  const { signInWithEmail, signUpWithEmail, /*signOut*/ } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,13 +18,13 @@ const SignInPage = () => {
     setLoading(true);
     setError(null);
     try {
-      // if (isSignUp) {
-      //   // For sign-up, you can add sign-up logic here (if different from sign-in)
-      //   await signUpWithEmail(email, password);
-      // } else {
-      //   await signInWithEmail(email, password);
-      // }
-      navigate("/"); // Navigate to a protected page after successful login
+      if (isSignUp) {
+        // For sign-up, you can add sign-up logic here (if different from sign-in)
+        await signUpWithEmail(email, password);
+      } else {
+        await signInWithEmail(email, password);
+      }
+      navigate("/dashboard"); // Navigate to a protected page after successful login
     } catch (err) {
       setError("Invalid email or password.");
       console.error(err);

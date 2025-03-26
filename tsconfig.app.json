@@ -6,8 +6,7 @@
     "lib": [
       "ES2020",
       "DOM",
-      "DOM.Iterable",
-      "WebWorker"
+      "DOM.Iterable"
     ],
     "module": "ESNext",
     "skipLibCheck": true,
@@ -32,7 +31,6 @@
     }
   },
   "include": [
-    "src",
-    "global.d.ts" 
+    "src"
   ]
 }

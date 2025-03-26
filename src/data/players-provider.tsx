@@ -1,5 +1,5 @@
 import React, { ReactNode, createContext, useContext, useState, useEffect, useRef } from "react";
-// import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4, } from 'uuid';
 
 import { openDB } from "idb";
@@ -78,70 +78,70 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const tabKeyRef = useRef(sessionStorage.getItem("tabKey") || `tab-${crypto.randomUUID()}`);
 
     // Real-time updates for players
-    // useEffect(() => {
+    useEffect(() => {
         // Create a channel for realtime subscriptions
-    //     const playerChannel = supabase
-    //         .channel('players')
-    //         .on(
-    //             'postgres_changes',
-    //             {
-    //                 event: 'INSERT',
-    //                 schema: 'public',
-    //             },
-    //             (payload) => {
-    //                 if (loadingState.current) return;
-    //                 console.log("New player inserted:", payload.new);
-    //                 setPlayers((prevPlayers) => [...prevPlayers, payload.new as Player]);
-    //             }
-    //         )
-    //         .on(
-    //             'postgres_changes',
-    //             {
-    //                 event: 'UPDATE',
-    //                 schema: 'public',
-    //             },
-    //             (payload) => {
-    //                 if (loadingState.current) return;
-    //                 console.log("Player updated:", payload);
-    //                 const updatedPlayer = payload.new as PlayerUpdate; // Type assertion to ensure it is a Player
-    //                 // const localPlayer = playersRef.current.find((p) => p.id === updatedPlayer.id);
+        const playerChannel = supabase
+            .channel('players')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                },
+                (payload) => {
+                    if (loadingState.current) return;
+                    console.log("New player inserted:", payload.new);
+                    setPlayers((prevPlayers) => [...prevPlayers, payload.new as Player]);
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                },
+                (payload) => {
+                    if (loadingState.current) return;
+                    console.log("Player updated:", payload);
+                    const updatedPlayer = payload.new as PlayerUpdate; // Type assertion to ensure it is a Player
+                    // const localPlayer = playersRef.current.find((p) => p.id === updatedPlayer.id);
 
-    //                 // if (!localPlayer || JSON.stringify(localPlayer.stats) === JSON.stringify(updatedPlayer.stats)) return;
+                    // if (!localPlayer || JSON.stringify(localPlayer.stats) === JSON.stringify(updatedPlayer.stats)) return;
 
-    //                 // console.log("NOT EQUAL", localPlayer.stats, updatedPlayer.stats);
+                    // console.log("NOT EQUAL", localPlayer.stats, updatedPlayer.stats);
 
-    //                 setPlayers(() => {
-    //                     return playersRef.current.map((player) =>
-    //                         player.id === updatedPlayer.id ? { ...player, ...updatedPlayer } : player
-    //                     );
-    //                 });
-    //             }
-    //         )
-    //         .on(
-    //             'postgres_changes',
-    //             {
-    //                 event: 'DELETE',
-    //                 schema: 'public',
-    //             },
-    //             (payload) => {
-    //                 if (loadingState.current) return;
-    //                 console.log("Player deleted:", payload);
-    //                 setPlayers(() => {
-    //                     return playersRef.current.filter((player) => player.id !== payload.old.id);
-    //                 });
-    //                 setGamePlayers(() => {
-    //                     return gamePlayersRef.current.filter((player) => player.id !== payload.old.id);
-    //                 });
+                    setPlayers(() => {
+                        return playersRef.current.map((player) =>
+                            player.id === updatedPlayer.id ? { ...player, ...updatedPlayer } : player
+                        );
+                    });
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'DELETE',
+                    schema: 'public',
+                },
+                (payload) => {
+                    if (loadingState.current) return;
+                    console.log("Player deleted:", payload);
+                    setPlayers(() => {
+                        return playersRef.current.filter((player) => player.id !== payload.old.id);
+                    });
+                    setGamePlayers(() => {
+                        return gamePlayersRef.current.filter((player) => player.id !== payload.old.id);
+                    });
 
-    //             }
-    //         )
-    //         .subscribe();
+                }
+            )
+            .subscribe();
 
-    //     // Cleanup the subscription when the component unmounts
-    //     return () => {
-    //         supabase.removeChannel(playerChannel);
-    //     };
-    // }, []);
+        // Cleanup the subscription when the component unmounts
+        return () => {
+            supabase.removeChannel(playerChannel);
+        };
+    }, []);
 
     useEffect(() => {
         sessionStorage.setItem("tabKey", tabKeyRef.current);
@@ -197,17 +197,17 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
 
     const fetchPlayers = async () => {
-        // const { data, error } = await supabase
-        //     .from("players")
-        //     .select("*")
-        //     .order("name", { ascending: false });
+        const { data, error } = await supabase
+            .from("players")
+            .select("*")
+            .order("name", { ascending: false });
 
-        // if (error) {
-        //     console.error("Error fetching players:", error);
-        // } else {
-        //     setPlayers(data || []);
-        //     console.log("Fetched players from Supabase:", data);
-        // }
+        if (error) {
+            console.error("Error fetching players:", error);
+        } else {
+            setPlayers(data || []);
+            console.log("Fetched players from Supabase:", data);
+        }
     };
 
     useEffect(() => {
@@ -234,47 +234,47 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const addPlayer = async (name: string) => {
         if (!name.trim()) return;
 
-        // const newUID = uuidv4();
-        // const newPlayer: Player = {
-        //     id: newUID,
-        //     name,
-        //     stats: defaultAttributes,
-        // };
+        const newUID = uuidv4();
+        const newPlayer: Player = {
+            id: newUID,
+            name,
+            stats: defaultAttributes,
+        };
 
         // Insert the new player into Supabase
-        // const { data, error } = await supabase
-        //     .from('players')
-        //     .insert([newPlayer]);
+        const { data, error } = await supabase
+            .from('players')
+            .insert([newPlayer]);
 
-        // if (error) {
-        //     // Rollback local state if there's an error
-        //     console.error('Error adding player:', error.message);
-        //     // setPlayers((prevPlayers) => prevPlayers.filter(player => player.id !== newUID));
-        // } else {
-        //     console.log('Adding player:', data);
-        //     // console.log('Player added successfully:', data);
-        // }
+        if (error) {
+            // Rollback local state if there's an error
+            console.error('Error adding player:', error.message);
+            // setPlayers((prevPlayers) => prevPlayers.filter(player => player.id !== newUID));
+        } else {
+            console.log('Adding player:', data);
+            // console.log('Player added successfully:', data);
+        }
     };
 
 
-    const deletePlayer = async (_: string) => {
+    const deletePlayer = async (id: string) => {
         // Delete the player from Supabase
-        // const { data, error } = await supabase
-        //     .from('players')
-        //     .delete()
-        //     .match({ id });
+        const { data, error } = await supabase
+            .from('players')
+            .delete()
+            .match({ id });
 
-        // if (error) {
-        //     // Rollback local state if there's an error
-        //     console.error('Error deleting player:', error.message);
-        // } else {
-        //     console.log('Player deleted successfully:', data);
-        // }
+        if (error) {
+            // Rollback local state if there's an error
+            console.error('Error deleting player:', error.message);
+        } else {
+            console.log('Player deleted successfully:', data);
+        }
 
     };
 
     // Update player attributes
-    const updatePlayerAttributes = async (_: string, __: PlayerUpdate) => {
+    const updatePlayerAttributes = async (id: string, updates: PlayerUpdate) => {
         // First, optimistically update the local state (before waiting for the DB update)
         // setPlayers((prevPlayers) =>
         //     prevPlayers.map((player) =>
@@ -283,16 +283,16 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         // );
 
         // Now, make the request to update the player in the database
-        // const { error } = await supabase
-        //     .from('players')
-        //     .update({ ...updates }) // Ensure the last_updated field is updated
-        //     .match({ id });
+        const { error } = await supabase
+            .from('players')
+            .update({ ...updates }) // Ensure the last_updated field is updated
+            .match({ id });
 
-        // if (error) {
-        //     console.error('Error updating player:', error.message);
-        // } else {
-        //     console.log('Player updated successfully:');
-        // }
+        if (error) {
+            console.error('Error updating player:', error.message);
+        } else {
+            console.log('Player updated successfully:');
+        }
     };
 
     // Update player attributes
