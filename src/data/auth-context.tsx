@@ -1,13 +1,15 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-
+import { getSupabaseClient } from "@/lib/supabase";
+import { SupabaseClient } from "@supabase/supabase-js";
 interface User {
     id: string;
     email: string | null;
 }
 
 interface AuthContextProps {
+    supabase: SupabaseClient | null;
     user: User | null;
+    urlState: string | null;
     signUpWithEmail: (email: string, password: string) => Promise<void>;
     signInWithEmail: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
@@ -16,11 +18,16 @@ interface AuthContextProps {
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider = ({ children, url}: { children: React.ReactNode, url: string | null }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+    const [urlState, _] = useState<string | null>(url);
+
+    console.log("urlState", urlState);
 
     useEffect(() => {
         const getUser = async () => {
+            const supabase = await getSupabaseClient();
             const { data } = await supabase.auth.getUser();
             if (data?.user) {
                 setUser({ id: data.user.id, email: data.user.email ? data.user.email : null });
@@ -29,17 +36,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         getUser();
 
         // Listen for auth state changes
-        supabase.auth.onAuthStateChange((_, session) => {
+        supabase?.auth.onAuthStateChange((_, session) => {
             if (session?.user) {
                 setUser({ id: session.user.id, email: session.user.email || null });
             } else {
                 setUser(null);
             }
         });
+    }, [supabase]);
+
+    useEffect(() => {
+        getSupabaseClient().then((obj) => {
+            setSupabase(obj);
+        });
+
     }, []);
 
     // Sign in with email and password
     const signInWithEmail = async (email: string, password: string) => {
+        if (!supabase) return;
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
         if (error) {
@@ -54,47 +69,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return;
         }
 
-        // If sign-in is successful
         console.log('Signed in successfully:', data);
-        // Redirect or set the user state
     };
 
 
     const signUpWithEmail = async (email: string, password: string) => {
+        if (!supabase) return;
         const { error } = await supabase.auth.signUp({
             email,
             password,
             // Optionally, you can add an email redirect link here
-            options: { emailRedirectTo: 'http://localhost:5173/dashboard' }
+            options: { emailRedirectTo: 'http://localhost:5173/' }
         });
-    
+
         if (error) {
             console.error('Error during sign-up:', error.message);
             alert('Error during sign-up: ' + error.message);
             return;
         }
-    
+
         // After sign-up, show a message to check their inbox for the confirmation email
         alert('Please check your inbox to confirm your email address.');
-    
-        // Optionally, redirect the user to a confirmation screen or wait for them to confirm
     };
-    
+
 
     // Sign out
     const signOut = async () => {
+        if (!supabase) return;
         await supabase.auth.signOut();
         setUser(null);
     };
 
     // Update user password
     const updateUserPassword = async (newPassword: string) => {
+        if (!supabase) return;
         const { error } = await supabase.auth.updateUser({ password: newPassword });
         if (error) throw new Error(error.message);
     };
 
     return (
-        <AuthContext.Provider value={{ user, signUpWithEmail, signInWithEmail, signOut, updateUserPassword }}>
+        <AuthContext.Provider value={{ supabase, user, urlState, signUpWithEmail, signInWithEmail, signOut, updateUserPassword }}>
             {children}
         </AuthContext.Provider>
     );

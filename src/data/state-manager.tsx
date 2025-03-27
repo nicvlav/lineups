@@ -1,5 +1,5 @@
 import LZString from "lz-string";
-import { Player, GamePlayer } from "@/data/player-types"; 
+import { GamePlayer } from "@/data/player-types"; 
 
 export const decodeStateFromURL = (search : string) => {
     const urlParams = new URLSearchParams(search);
@@ -14,8 +14,8 @@ export const decodeStateFromURL = (search : string) => {
     return null;
 };
 
-export const encodeStateToURL = (players : Player[], gamePlayers : GamePlayer[]) => {
-    const stateObject = { players, gamePlayers };
+export const encodeStateToURL = (gamePlayers : GamePlayer[]) => {
+    const stateObject = { gamePlayers };
     const jsonString = JSON.stringify(stateObject);
     const compressed = LZString.compressToEncodedURIComponent(jsonString);
   

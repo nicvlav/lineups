@@ -1,5 +1,5 @@
 import React, { ReactNode, createContext, useContext, useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/data/auth-context";
 import { v4 as uuidv4, } from 'uuid';
 
 import { openDB } from "idb";
@@ -68,6 +68,8 @@ interface PlayersProviderProps {
 
 
 export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) => {
+    const { supabase, urlState } = useAuth();
+
     const [players, setPlayers] = useState<Player[]>([]);
     const [gamePlayers, setGamePlayers] = useState<GamePlayer[]>([]);
     const [zoneWeights, setZoneWeights] = useState<Weighting>(defaultZoneWeights);
@@ -77,11 +79,36 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const gamePlayersRef = useRef(gamePlayers);
     const tabKeyRef = useRef(sessionStorage.getItem("tabKey") || `tab-${crypto.randomUUID()}`);
 
+    const loadURLState = async () => {
+        console.log("urlState in play", urlState);
+        if (!urlState) return;
+        loadingState.current = true;
+        const currentUrl = new URL(window.location.href);
+        const decoded = decodeStateFromURL(urlState);
+
+        console.log(decoded);
+
+        if (decoded && decoded.gamePlayers) {
+            setGamePlayers(decoded.gamePlayers || []);
+            console.log("Loaded from URL:", urlState);
+
+            await saveToDB(tabKeyRef.current, JSON.stringify(urlState));
+            currentUrl.searchParams.delete("state");
+            window.history.replaceState({}, "", currentUrl.toString());
+        }
+
+        console.log("No saved state found, loading from Supabase.");
+        fetchPlayers();
+        loadingState.current = false;
+    };
+
+
     // Real-time updates for players
     useEffect(() => {
+        loadURLState();
+
         // Create a channel for realtime subscriptions
-        const playerChannel = supabase
-            .channel('players')
+        const playerChannel = supabase?.channel('players')
             .on(
                 'postgres_changes',
                 {
@@ -107,8 +134,6 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                     // const localPlayer = playersRef.current.find((p) => p.id === updatedPlayer.id);
 
                     // if (!localPlayer || JSON.stringify(localPlayer.stats) === JSON.stringify(updatedPlayer.stats)) return;
-
-                    // console.log("NOT EQUAL", localPlayer.stats, updatedPlayer.stats);
 
                     setPlayers(() => {
                         return playersRef.current.map((player) =>
@@ -139,37 +164,17 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         // Cleanup the subscription when the component unmounts
         return () => {
-            supabase.removeChannel(playerChannel);
+            if (supabase && playerChannel) supabase.removeChannel(playerChannel);
         };
-    }, []);
+    }, [supabase]);
+
 
     useEffect(() => {
         sessionStorage.setItem("tabKey", tabKeyRef.current);
 
         const loadGameState = async () => {
-            loadingState.current = true;
-            const currentUrl = new URL(window.location.href);
-            const urlState = decodeStateFromURL(currentUrl.search);
-
-            console.log(currentUrl);
-
-            if (urlState && urlState.players) {
-                // setPlayers(urlState.players || []);
-
-                if (urlState.players) {
-                    urlState.players.forEach((p : Player) => {
-                        console.log("===");
-                        console.log(p.id, p.name);
-                        console.log(p.stats);
-                        console.log("===");
-                    });
-                }
-                setGamePlayers(urlState.gamePlayers || []);
-                console.log("Loaded from URL:", urlState);
-
-                await saveToDB(tabKeyRef.current, JSON.stringify(urlState));
-                currentUrl.searchParams.delete("state");
-                window.history.replaceState({}, "", currentUrl.toString());
+            if (urlState) {
+                // loadURLState();
             } else {
                 const savedState = await getFromDB(tabKeyRef.current);
                 if (savedState) {
@@ -192,11 +197,13 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         loadGameState();
     }, []);
 
-
-    console.log("STATE CHANGE");
-
+    useEffect(() => {
+        // if (urlState) loadURLState();
+    }, [urlState]);
 
     const fetchPlayers = async () => {
+        if (!supabase) return;
+
         const { data, error } = await supabase
             .from("players")
             .select("*")
@@ -232,7 +239,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     };
 
     const addPlayer = async (name: string) => {
-        if (!name.trim()) return;
+        if (!name.trim() || !supabase) return;
 
         const newUID = uuidv4();
         const newPlayer: Player = {
@@ -258,6 +265,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
 
     const deletePlayer = async (id: string) => {
+        if (!supabase) return;
+
         // Delete the player from Supabase
         const { data, error } = await supabase
             .from('players')
@@ -275,6 +284,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
     // Update player attributes
     const updatePlayerAttributes = async (id: string, updates: PlayerUpdate) => {
+        if (!supabase) return;
+
         // First, optimistically update the local state (before waiting for the DB update)
         // setPlayers((prevPlayers) =>
         //     prevPlayers.map((player) =>

@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { useAuth } from "@/data/auth-context"; 
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
 
 const SignInPage = () => {
   const { signInWithEmail, signUpWithEmail, /*signOut*/ } = useAuth();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false); // Toggle between sign in and sign up
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
 
+  const navigate = useNavigate();
+  
   // Handle form submission for sign-in/sign-up
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +24,7 @@ const SignInPage = () => {
       } else {
         await signInWithEmail(email, password);
       }
-      navigate("/dashboard"); // Navigate to a protected page after successful login
+       // Navigate to a protected page after successful login
     } catch (err) {
       setError("Invalid email or password.");
       console.error(err);
@@ -32,8 +32,6 @@ const SignInPage = () => {
       setLoading(false);
     }
   };
-
-
 
   return (
     <div className="flex justify-center items-center h-screen bg-background">

@@ -9,7 +9,7 @@ const ProtectedRoute = () => {
     return <Navigate to="/signin" />;
   }
 
-  // If user is authenticated, render the nested components (like Dashboard)
+  // If user is authenticated, render the nested components (like main)
   return <Outlet />;
 };
 
