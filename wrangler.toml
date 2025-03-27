@@ -1,4 +1,4 @@
 name = "lineups"
 compatibility_date = "2023-03-26"
-main = "src/index.ts" 
+main = "dist/index.ts" 
 assets = { directory = "dist" }
