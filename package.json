@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "preview:worker": "bun run build && wrangler preview",
+    "deploy:worker": "bun run build && wrangler build && wrangler deploy"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20250321.0",

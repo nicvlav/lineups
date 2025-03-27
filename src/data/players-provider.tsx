@@ -80,17 +80,13 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const tabKeyRef = useRef(sessionStorage.getItem("tabKey") || `tab-${crypto.randomUUID()}`);
 
     const loadURLState = async () => {
-        console.log("urlState in play", urlState);
         if (!urlState) return;
         loadingState.current = true;
         const currentUrl = new URL(window.location.href);
         const decoded = decodeStateFromURL(urlState);
 
-        console.log(decoded);
-
         if (decoded && decoded.gamePlayers) {
             setGamePlayers(decoded.gamePlayers || []);
-            console.log("Loaded from URL:", urlState);
 
             await saveToDB(tabKeyRef.current, JSON.stringify(urlState));
             currentUrl.searchParams.delete("state");
@@ -174,7 +170,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         const loadGameState = async () => {
             if (urlState) {
-                // loadURLState();
+                loadURLState();
             } else {
                 const savedState = await getFromDB(tabKeyRef.current);
                 if (savedState) {
@@ -198,7 +194,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     }, []);
 
     useEffect(() => {
-        // if (urlState) loadURLState();
+        if (urlState) loadURLState();
     }, [urlState]);
 
     const fetchPlayers = async () => {

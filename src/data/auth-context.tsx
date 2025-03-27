@@ -14,16 +14,15 @@ interface AuthContextProps {
     signInWithEmail: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
     updateUserPassword: (newPassword: string) => Promise<void>;
+    clearUrlState: () => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-export const AuthProvider = ({ children, url}: { children: React.ReactNode, url: string | null }) => {
+export const AuthProvider = ({ children, url }: { children: React.ReactNode, url: string | null }) => {
     const [user, setUser] = useState<User | null>(null);
     const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
-    const [urlState, _] = useState<string | null>(url);
-
-    console.log("urlState", urlState);
+    const [urlState, setUrlState] = useState<string | null>(url);
 
     useEffect(() => {
         const getUser = async () => {
@@ -107,8 +106,12 @@ export const AuthProvider = ({ children, url}: { children: React.ReactNode, url:
         if (error) throw new Error(error.message);
     };
 
+    const clearUrlState = async () => {
+        setUrlState(null);
+    };
+
     return (
-        <AuthContext.Provider value={{ supabase, user, urlState, signUpWithEmail, signInWithEmail, signOut, updateUserPassword }}>
+        <AuthContext.Provider value={{ supabase, user, urlState, signUpWithEmail, signInWithEmail, signOut, updateUserPassword, clearUrlState }}>
             {children}
         </AuthContext.Provider>
     );

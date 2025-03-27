@@ -1,6 +1,5 @@
 /// <reference types="@cloudflare/workers-types" />
 
-
 interface Env {
     SUPABASE_URL: string;
     SUPABASE_ANON_KEY: string;
@@ -8,8 +7,8 @@ interface Env {
 
 export default {
     async fetch(request: Request, env: Env, _: ExecutionContext): Promise<Response> {
-        // 🔒 Security Check: Only allow requests from your domain
-        const allowedOrigins = ["https://your-site.com", "https://staging.your-site.com"];
+        // Security Check: Only allow requests from site
+        const allowedOrigins = ["https://lineups.nicolasvlavianos.workers.dev/", "https://staging.lineups.nicolasvlavianos.workers.dev/"];
         const origin = request.headers.get("Origin");
 
         if (!origin || !allowedOrigins.includes(origin)) {
@@ -24,7 +23,7 @@ export default {
             {
                 headers: {
                     "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": origin, // ✅ Allow only your frontend
+                    "Access-Control-Allow-Origin": origin,
                 },
             }
         );
