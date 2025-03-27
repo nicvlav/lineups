@@ -1,13 +1,14 @@
 import Pitch from '@/components/pitch/pitch'
-import { GamePlayer } from "@/data/player-types";
-
+import { usePlayers } from "@/data/players-provider";
 interface TeamAreaProps {
   team: string;
-  teamPlayers: GamePlayer[];
   playerSize: number;
 }
 
-const TeamArea: React.FC<TeamAreaProps> = ({ team, teamPlayers, playerSize}) => {
+const TeamArea: React.FC<TeamAreaProps> = ({ team, playerSize }) => {
+  const { gamePlayers } = usePlayers();
+
+  const teamPlayers = gamePlayers.filter(player => player.team === team);
 
   return (
     <div className="w-full h-full flex flex-col gap-2 bg-card"> {/* Ensure column flex layout */}
@@ -17,7 +18,7 @@ const TeamArea: React.FC<TeamAreaProps> = ({ team, teamPlayers, playerSize}) => 
       </div>
 
       {/* Player Container (fills remaining space) */}
-      <div className="flex-1 p-3 rounded-lg shadow-lg">
+      <div className="flex-1 p-3 rounded-lg shadow-lg overflow-x-clip">
         <Pitch team={team} teamPlayers={teamPlayers} playerSize={playerSize} />
       </div>
     </div>

@@ -32,12 +32,20 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isOpen, onClose }) => {
 
     // Get non-temporary players and initialize selected players
     useEffect(() => {
+        handlePlayersUpdated();
+    }, [players]);
+
+    useEffect(() => {
+        handlePlayersUpdated();
+    }, []);
+
+    const handlePlayersUpdated = () => {
         if (players && Array.isArray(players)) {
             setSelectedPlayers(players.filter(realPlayer =>
-                gamePlayers.some(gamePlayer => gamePlayer.id === realPlayer.id)
+                gamePlayers.some(gamePlayer => gamePlayer.id == realPlayer.id)
             ).map((player) => player.id));
         }
-    }, [players]);
+    };
 
     // Generate teams with selected players and weights
     const handleGenerateTeams = async () => {
@@ -53,6 +61,8 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isOpen, onClose }) => {
         // Pass both selectedPlayerObjects and zoneWeights
         generateTeams(selectedPlayerObjects);
     };
+
+    const canGenerate = selectedPlayers.length >= 10 && selectedPlayers.length <= 24;
 
     return (
         <Modal title="Team Generation" isOpen={isOpen} onClose={onClose}>
@@ -98,8 +108,8 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isOpen, onClose }) => {
                 <div className="sticky bottom-0 z-10 bg-transparent pt-3">
                     <button
                         onClick={handleGenerateTeams}
-                        disabled={selectedPlayers.length < 2}
-                        className={`flex items-center justify-center w-full p-3 rounded-lg font-medium transition-all duration-200 ${selectedPlayers.length < 2 ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-green-600 text-white cursor-pointer'}`}
+                        disabled={!canGenerate}
+                        className={`flex items-center justify-center w-full p-3 rounded-lg font-medium transition-all duration-200 ${canGenerate ? 'bg-green-600 text-white cursor-pointer' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
                     >
                         <Wand2 size={18} className="mr-2" />
                         <span>Generate Two Teams</span>
@@ -186,9 +196,9 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
                             <Users size={16} className="text-white" />
                             <span>
                                 Selected {selectedPlayers.length} of {players.length} players
-                                {selectedPlayers.length < 2 && (
+                                {!(selectedPlayers.length >= 10 && selectedPlayers.length <= 24) && (
                                     <span className="text-red-500 ml-1 flex items-center gap-1">
-                                        • Need at least 2 players
+                                        • Need between 10 and 24 players (inclusive)
                                     </span>
                                 )}
                             </span>

@@ -71,7 +71,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
     alignItems: "center",
     opacity: isDragging ? 0.5 : 1,
     cursor: "grab",
-    zIndex: 5,
+    zIndex: 0,
     transition: isDragging ? "none" : "left 0.3s ease, top 0.3s ease",
     touchAction: "none",
   };
@@ -102,7 +102,8 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
     whiteSpace: "nowrap",
     pointerEvents: "none",
     textAlign: "center",
-    zIndex: 1000,
+    // textOverflow: "ellipsis",
+    // zIndex: 1,
   };
 
 

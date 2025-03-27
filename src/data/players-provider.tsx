@@ -1,4 +1,7 @@
 import React, { ReactNode, createContext, useContext, useState, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase";
+import { v4 as uuidv4, } from 'uuid';
+
 import { openDB } from "idb";
 import { Player, GamePlayer, Point, Formation, PlayerUpdate, defaultAttributes, GamePlayerUpdate } from "@/data/player-types";
 import { defaultZoneWeights, FilledGamePlayer, Weighting } from "@/data/balance-types";
@@ -63,62 +66,149 @@ interface PlayersProviderProps {
     children: ReactNode;
 }
 
+
 export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) => {
     const [players, setPlayers] = useState<Player[]>([]);
     const [gamePlayers, setGamePlayers] = useState<GamePlayer[]>([]);
-
     const [zoneWeights, setZoneWeights] = useState<Weighting>(defaultZoneWeights);
 
-    // this is probably hacky? idk about this stale capture bs
     const playersRef = useRef(players);
     const loadingState = useRef(false);
     const gamePlayersRef = useRef(gamePlayers);
     const tabKeyRef = useRef(sessionStorage.getItem("tabKey") || `tab-${crypto.randomUUID()}`);
 
+    // Real-time updates for players
     useEffect(() => {
-        sessionStorage.setItem("tabKey", tabKeyRef.current); // Ensure it persists in sessionStorage
+        // Create a channel for realtime subscriptions
+        const playerChannel = supabase
+            .channel('players')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                },
+                (payload) => {
+                    if (loadingState.current) return;
+                    console.log("New player inserted:", payload.new);
+                    setPlayers((prevPlayers) => [...prevPlayers, payload.new as Player]);
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                },
+                (payload) => {
+                    if (loadingState.current) return;
+                    console.log("Player updated:", payload);
+                    const updatedPlayer = payload.new as PlayerUpdate; // Type assertion to ensure it is a Player
+                    // const localPlayer = playersRef.current.find((p) => p.id === updatedPlayer.id);
+
+                    // if (!localPlayer || JSON.stringify(localPlayer.stats) === JSON.stringify(updatedPlayer.stats)) return;
+
+                    // console.log("NOT EQUAL", localPlayer.stats, updatedPlayer.stats);
+
+                    setPlayers(() => {
+                        return playersRef.current.map((player) =>
+                            player.id === updatedPlayer.id ? { ...player, ...updatedPlayer } : player
+                        );
+                    });
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'DELETE',
+                    schema: 'public',
+                },
+                (payload) => {
+                    if (loadingState.current) return;
+                    console.log("Player deleted:", payload);
+                    setPlayers(() => {
+                        return playersRef.current.filter((player) => player.id !== payload.old.id);
+                    });
+                    setGamePlayers(() => {
+                        return gamePlayersRef.current.filter((player) => player.id !== payload.old.id);
+                    });
+
+                }
+            )
+            .subscribe();
+
+        // Cleanup the subscription when the component unmounts
+        return () => {
+            supabase.removeChannel(playerChannel);
+        };
+    }, []);
+
+    useEffect(() => {
+        sessionStorage.setItem("tabKey", tabKeyRef.current);
 
         const loadGameState = async () => {
+            loadingState.current = true;
             const currentUrl = new URL(window.location.href);
             const urlState = decodeStateFromURL(currentUrl.search);
 
+            console.log(currentUrl);
+
             if (urlState && urlState.players) {
-                setPlayers(urlState.players || []);
+                // setPlayers(urlState.players || []);
+
+                if (urlState.players) {
+                    urlState.players.forEach((p : Player) => {
+                        console.log("===");
+                        console.log(p.id, p.name);
+                        console.log(p.stats);
+                        console.log("===");
+                    });
+                }
                 setGamePlayers(urlState.gamePlayers || []);
                 console.log("Loaded from URL:", urlState);
 
-                // Store in tab-specific IndexedDB key
                 await saveToDB(tabKeyRef.current, JSON.stringify(urlState));
-
-                // Clear the URL so future reloads use IndexedDB
                 currentUrl.searchParams.delete("state");
                 window.history.replaceState({}, "", currentUrl.toString());
-
-                return;
-            }
-
-            // Load from tab-specific IndexedDB key
-            loadingState.current = true;
-            const savedState = await getFromDB(tabKeyRef.current);
-            if (savedState) {
-                try {
-                    const parsedData = JSON.parse(savedState);
-                    setPlayers(parsedData.players || []);
-                    setGamePlayers(parsedData.gamePlayers || []);
-                    console.log("Loaded from IndexedDB:", parsedData);
-                } catch (error) {
-                    console.error("Error loading from IndexedDB:", error);
+            } else {
+                const savedState = await getFromDB(tabKeyRef.current);
+                if (savedState) {
+                    try {
+                        const parsedData = JSON.parse(savedState);
+                        // setPlayers(parsedData.players || []);
+                        setGamePlayers(parsedData.gamePlayers || []);
+                        console.log("Loaded from IndexedDB:", parsedData);
+                    } catch (error) {
+                        console.error("Error loading from IndexedDB:", error);
+                    }
                 }
-                loadingState.current = false;
-                return;
             }
 
-            console.log("No saved state found, using default.");
-            setPlayers([]);
+            console.log("No saved state found, loading from Supabase.");
+            fetchPlayers();
+            loadingState.current = false;
         };
 
         loadGameState();
     }, []);
+
+
+    console.log("STATE CHANGE");
+
+
+    const fetchPlayers = async () => {
+        const { data, error } = await supabase
+            .from("players")
+            .select("*")
+            .order("name", { ascending: false });
+
+        if (error) {
+            console.error("Error fetching players:", error);
+        } else {
+            setPlayers(data || []);
+            console.log("Fetched players from Supabase:", data);
+        }
+    };
 
     useEffect(() => {
         if (playersRef.current !== players) {
@@ -143,39 +233,66 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
     const addPlayer = async (name: string) => {
         if (!name.trim()) return;
-        const newUID = Date.now().toString();
-        setPlayers(() => {
-            const updated = [...playersRef.current, {
-                id: newUID,
-                name,
-                stats: defaultAttributes,
-            }
-            ];
 
-            return updated;
-        });
+        const newUID = uuidv4();
+        const newPlayer: Player = {
+            id: newUID,
+            name,
+            stats: defaultAttributes,
+        };
+
+        // Insert the new player into Supabase
+        const { data, error } = await supabase
+            .from('players')
+            .insert([newPlayer]);
+
+        if (error) {
+            // Rollback local state if there's an error
+            console.error('Error adding player:', error.message);
+            // setPlayers((prevPlayers) => prevPlayers.filter(player => player.id !== newUID));
+        } else {
+            console.log('Adding player:', data);
+            // console.log('Player added successfully:', data);
+        }
     };
 
-    const deletePlayer = async (uid: string) => {
-        setPlayers(() => {
-            const filtered = playersRef.current.filter(player => player.id !== uid);
-            return filtered;
-        });
 
-        setGamePlayers(() => {
-            const filtered = gamePlayersRef.current.filter(player => player.id !== uid);
-            return filtered;
-        });
+    const deletePlayer = async (id: string) => {
+        // Delete the player from Supabase
+        const { data, error } = await supabase
+            .from('players')
+            .delete()
+            .match({ id });
+
+        if (error) {
+            // Rollback local state if there's an error
+            console.error('Error deleting player:', error.message);
+        } else {
+            console.log('Player deleted successfully:', data);
+        }
+
     };
 
     // Update player attributes
     const updatePlayerAttributes = async (id: string, updates: PlayerUpdate) => {
-        setPlayers((prevPlayers) => {
-            const updated = prevPlayers.map((player) =>
-                player.id === id ? { ...player, ...updates } : player
-            );
-            return updated;
-        });
+        // First, optimistically update the local state (before waiting for the DB update)
+        // setPlayers((prevPlayers) =>
+        //     prevPlayers.map((player) =>
+        //         player.id === id ? { ...player, ...updates } : player
+        //     )
+        // );
+
+        // Now, make the request to update the player in the database
+        const { error } = await supabase
+            .from('players')
+            .update({ ...updates }) // Ensure the last_updated field is updated
+            .match({ id });
+
+        if (error) {
+            console.error('Error updating player:', error.message);
+        } else {
+            console.log('Player updated successfully:');
+        }
     };
 
     // Update player attributes
@@ -194,7 +311,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     };
 
     const addNewRealPlayerToGame = async (placedTeam: string, name: string, dropX: number, dropY: number) => {
-        const newID = Date.now().toString();
+        const newID = uuidv4();;
         setPlayers(() => {
             const newPlayer = {
                 id: newID,  // Or use a smarter way to generate a unique ID
@@ -218,7 +335,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     };
 
     const addNewGuestPlayerToGame = async (placedTeam: string, name: string, dropX: number, dropY: number) => {
-        const newID = Date.now().toString();
+        const newID = uuidv4();
 
         setGamePlayers(() => {
             const newPlayer = {
@@ -237,7 +354,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         const foundPlayer = gamePlayersRef.current.find((p) => p.id === player.id);
 
         if (foundPlayer) {
-            updateGamePlayerAttributes(player, { team, position: { x: dropX, y: dropY }});
+            updateGamePlayerAttributes(player, { team, position: { x: dropX, y: dropY } });
         } else {
             const foundRealPlayer = playersRef.current.some(p => p.id == player.id);
             if (foundRealPlayer) {
@@ -320,7 +437,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             return;
         }
 
-        const newID = Date.now().toString();
+        const newID = uuidv4();
         const newPlayer = {
             id: newID,  // Or use a smarter way to generate a unique ID
             name: newName,
@@ -347,12 +464,13 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         // Handle missing players by adding new guest players
         else if (teamPlayers.length < numPlayersNeeded) {
-            const newID = Date.now().toString();
+            const newID = uuidv4();
+            const addInc = team === "A" ? 0 : 100;
 
             const missingPlayers: GamePlayer[] = formation.positions
                 .slice(teamPlayers.length, numPlayersNeeded)
-                .map((pos) => ({
-                    id: newID,
+                .map((pos, idx) => ({
+                    id: newID + idx + addInc,
                     guest_name: "[Player]", // Default placeholder name
                     team,
                     position: pos, // Assign correct position type
@@ -426,9 +544,6 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         const filteredPlayers = playersRef.current.filter(realPlayer =>
             gamePlayersRef.current.some(gamePlayer => gamePlayer.id === realPlayer.id)
         );
-
-        // Update state to reflect the removal
-        setPlayers([...playersRef.current]);
 
         // Call generateTeams with the filtered players
         await generateTeams(filteredPlayers);

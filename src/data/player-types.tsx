@@ -1,3 +1,5 @@
+type UUID = string;
+
 export const attributeLabels = [
     "Defending",
     "Attacking",
@@ -48,14 +50,14 @@ export const defaultAttributes: AttributeScores = [50, 50, 50, 50, 50, 50, 50, 5
 
 // Core Player data from Supabase
 export interface Player {
-    id: string;
+    id: UUID;
     name: string;
     stats: AttributeScores; // Stored and synced
 }
 
 // Local-only game-specific attributes
 export interface GamePlayer {
-    id: string; // null if a temporary guest player
+    id: UUID; // null if a temporary guest player
     guest_name: string | null; // non null if a temporary guest player
     team: string;
     position: Point;

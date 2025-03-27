@@ -8,9 +8,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "preview:worker": "bun run build && wrangler dev",
-    "deploy:worker": "bun run build && wrangler deploy"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.6",
@@ -24,12 +22,13 @@
     "@radix-ui/react-separator": "^1.1.2",
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.8",
+    "@supabase/supabase-js": "^2.49.3",
     "@tailwindcss/vite": "^4.0.12",
     "antd": "^5.24.3",
     "chart.js": "^4.4.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "cmdk": "1.0.0",
+    "cmdk": "^1.0.0",
     "framer-motion": "^12.4.11",
     "gh-pages": "^6.3.0",
     "idb": "^8.0.2",
@@ -43,10 +42,11 @@
     "react-dnd-html5-backend": "^16.0.1",
     "react-dnd-touch-backend": "^16.0.1",
     "react-dom": "^19.0.0",
+    "react-router-dom": "^7.4.0",
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.0.12",
     "tailwindcss-animate": "^1.0.7",
-    "wrangler": "^4.4.0"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
