@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate} from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate} from 'react-router-dom';
 import { useAuth } from "@/data/auth-context";
 import { AuthProvider } from "@/data/auth-context";
 import { ThemeProvider } from "@/data/theme-provider"
@@ -11,6 +11,15 @@ import Layout from "@/components/layout.js";
 const App = () => {
   const currentUrl = new URL(window.location.href);
   const urlState = currentUrl.search;
+
+  // Clean up the URL after extracting the state
+  useEffect(() => {
+    if (urlState) {
+      window.history.replaceState(null, "", currentUrl.pathname);
+    }
+  }, [urlState]);
+
+  console.log(new URL(window.location.href));
 
   return (
     <AuthProvider url={urlState}>
@@ -25,28 +34,21 @@ const App = () => {
 
 const AppRoutes = () => {
   const { user } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  // Define allowed paths
-  const allowedPaths = new Set(["/", "/sign-in", "/reset-password"]);
-
-  useEffect(() => {
-    const { pathname, search } = location;
-
-    // If the path is not allowed OR if there are extra search params, clean the URL
-    if (!allowedPaths.has(pathname) || search) {
-      navigate(pathname, { replace: true });
-    }
-  }, [location, navigate]);
 
   return (
     <Routes>
+      {/* Main route: Redirects to Sign In if user is not logged in */}
       <Route path="/" element={user ? <Layout /> : <Navigate to="/sign-in" />} />
+
+      {/* Authentication Routes */}
       <Route path="/sign-in" element={user ? <Navigate to="/" /> : <SignInPage />} />
       <Route path="/reset-password" element={user ? <Navigate to="/" /> : <ResetPasswordPage />} />
+
+      {/* Allow Any Path (Wildcard) */}
+      <Route path="*" element={user ? <Layout /> : <Navigate to="/sign-in" />} />
     </Routes>
   );
 };
+
 
 export default App;
