@@ -130,3 +130,5 @@ dist
 .pnp.*
 /backend/__pycache__
 bun.lock
+.wrangler/tmp/deploy-uyBQwG/index.js.map
+.wrangler/tmp/deploy-uyBQwG/index.js

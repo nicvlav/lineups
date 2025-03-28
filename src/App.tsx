@@ -19,8 +19,6 @@ const App = () => {
     }
   }, [urlState]);
 
-  console.log(new URL(window.location.href));
-
   return (
     <AuthProvider url={urlState}>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
