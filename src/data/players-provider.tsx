@@ -68,7 +68,7 @@ interface PlayersProviderProps {
 
 
 export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) => {
-    const { supabase, urlState } = useAuth();
+    const { supabase, urlState, clearUrlState} = useAuth();
 
     const [players, setPlayers] = useState<Player[]>([]);
     const [gamePlayers, setGamePlayers] = useState<GamePlayer[]>([]);
@@ -80,7 +80,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const tabKeyRef = useRef(sessionStorage.getItem("tabKey") || `tab-${crypto.randomUUID()}`);
 
     const loadURLState = async () => {
-        if (!urlState) return;
+        if (!supabase || !urlState || loadingState.current) return;
+
         loadingState.current = true;
         const currentUrl = new URL(window.location.href);
         const decoded = decodeStateFromURL(urlState);
@@ -92,6 +93,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             currentUrl.searchParams.delete("state");
             window.history.replaceState({}, "", currentUrl.toString());
         }
+        clearUrlState();
 
         console.log("No saved state found, loading from Supabase.");
         fetchPlayers();
@@ -194,7 +196,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     }, []);
 
     useEffect(() => {
-        if (urlState) loadURLState();
+        loadURLState();
     }, [urlState]);
 
     const fetchPlayers = async () => {
