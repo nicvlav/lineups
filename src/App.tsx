@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate} from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from "@/data/auth-context";
 import { AuthProvider } from "@/data/auth-context";
 import { ThemeProvider } from "@/data/theme-provider"
@@ -20,13 +20,16 @@ const App = () => {
   }, [urlState]);
 
   return (
-    <AuthProvider url={urlState}>
-      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-        <Router>
-          <AppRoutes />
-        </Router>
-      </ThemeProvider>
-    </AuthProvider>
+    <div className='h-screen'>
+      <AuthProvider url={urlState}>
+        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+          <Router>
+            <AppRoutes />
+          </Router>
+        </ThemeProvider>
+      </AuthProvider>
+
+    </div>
   );
 };
 
@@ -34,6 +37,7 @@ const AppRoutes = () => {
   const { user } = useAuth();
 
   return (
+
     <Routes>
       {/* Main route: Redirects to Sign In if user is not logged in */}
       <Route path="/" element={user ? <Layout /> : <Navigate to="/sign-in" />} />
@@ -45,6 +49,7 @@ const AppRoutes = () => {
       {/* Allow Any Path (Wildcard) */}
       <Route path="*" element={user ? <Layout /> : <Navigate to="/sign-in" />} />
     </Routes>
+
   );
 };
 

@@ -5,6 +5,7 @@ import { Minus, Plus } from "lucide-react";
 import { } from "lucide-react";
 import { Radar } from "react-chartjs-2";
 import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from "chart.js";
+import Panel from "@/components/dialogs/panel"
 
 ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
@@ -50,58 +51,62 @@ const PlayerCharts: React.FC<PlayerChartsProps> = ({
     const chartPlayer2 = selectedPlayer2 ? players.find((p) => p.id === selectedPlayer2) as Player : null;
 
     return (
-        <div className="p-4 h-[80vh] min-w-[300px] text-sm">
+        <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">
+            <div className="flex flex-col flex-1 min-h-0 space-y-4">
 
-            {/* Static Label */}
+                {/* Static Label */}
 
-            {/* Popover Container (Full Width, Equal Split) */}
-            <div className="flex-col flex-1 gap-2 sticky top-0 bg-background">
-                <span className="w-[300px] text-right shrink-0">Players:</span>
-                <PlayerPopover
-                    players={sortedPlayers}
-                    selectedPlayerName={chartPlayer1 ? chartPlayer1.name : null}
-                    setSelectedPlayer={setSelectedPlayer1}
+                {/* Popover Container (Full Width, Equal Split) */}
+                <div className="flex-col flex-1 gap-2 sticky top-0 bg-background">
+                    <span className="w-[300px] text-right shrink-0">Players:</span>
+                    <PlayerPopover
+                        players={sortedPlayers}
+                        selectedPlayerName={chartPlayer1 ? chartPlayer1.name : null}
+                        setSelectedPlayer={setSelectedPlayer1}
 
-                />
-                <PlayerPopover
-                    players={sortedPlayers}
-                    selectedPlayerName={chartPlayer2 ? chartPlayer2.name : null}
-                    setSelectedPlayer={setSelectedPlayer2}
-                />
-            </div>
+                    />
+                    <PlayerPopover
+                        players={sortedPlayers}
+                        selectedPlayerName={chartPlayer2 ? chartPlayer2.name : null}
+                        setSelectedPlayer={setSelectedPlayer2}
+                    />
+                </div>
+                <Panel>
+                    <PlayerRadarChart
+                        player1={chartPlayer1}
+                        player2={chartPlayer2}>
+                    </PlayerRadarChart>
 
-            <PlayerRadarChart
-                player1={chartPlayer1}
-                player2={chartPlayer2}>
-            </PlayerRadarChart>
+                    <div className="flex-col flex-1 gap-2 bg-background">
+                        {chartPlayer1 && (
+                            <div className="mt-2">
+                                <span className="w-[300px] text-right shrink-0 truncate">{chartPlayer1.name}:</span>
+                                <div className="flex flex-1 flex-col gap-2 ">
+                                    <PlayerStatEditor
+                                        player={chartPlayer1}
+                                        updatePlayerAttributes={updatePlayerAttributes}
 
-            <div className="flex-col flex-1 gap-2 bg-background">
-                {chartPlayer1 && (
-                    <div className="mt-2">
-                        <span className="w-[300px] text-right shrink-0 truncate">{chartPlayer1.name}:</span>
-                        <div className="flex flex-1 flex-col gap-2 ">
-                            <PlayerStatEditor
-                                player={chartPlayer1}
-                                updatePlayerAttributes={updatePlayerAttributes}
+                                    />
+                                </div>
+                            </div>
 
-                            />
-                        </div>
+                        )}
+
+                        {chartPlayer2 && (
+                            <div className="mt-2">
+                                <span className="w-[300px] text-right shrink-0 truncate">{chartPlayer2.name}:</span>
+                                <div className="flex flex-1 flex-col gap-2 ">
+                                    <PlayerStatEditor
+                                        player={chartPlayer2}
+                                        updatePlayerAttributes={updatePlayerAttributes}
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
+                </Panel>
+            </div >
 
-                )}
-
-                {chartPlayer2 && (
-                    <div className="mt-2">
-                        <span className="w-[300px] text-right shrink-0 truncate">{chartPlayer2.name}:</span>
-                        <div className="flex flex-1 flex-col gap-2 ">
-                            <PlayerStatEditor
-                                player={chartPlayer2}
-                                updatePlayerAttributes={updatePlayerAttributes}
-                            />
-                        </div>
-                    </div>
-                )}
-            </div>
         </div >
     );
 };
@@ -116,6 +121,7 @@ const PlayerPopover: React.FC<PlayerPopoverProps> = ({ players, selectedPlayerNa
     const [open, setOpen] = useState(false);
 
     return (
+
         <div className="flex-1 min-w-0 text-sm"> {/* Flex-grow but does not exceed parent */}
             <Popover open={open} onOpenChange={setOpen} modal={true}>
                 <PopoverTrigger asChild>
@@ -170,6 +176,7 @@ const PlayerPopover: React.FC<PlayerPopoverProps> = ({ players, selectedPlayerNa
                 </PopoverContent>
             </Popover>
         </div>
+
     );
 };
 

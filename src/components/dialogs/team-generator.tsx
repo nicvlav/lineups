@@ -3,7 +3,9 @@ import { usePlayers } from "@/data/players-provider";
 import { Player, attributeLabels, attributeColors } from "@/data/player-types";
 import { weightingLabels, Weighting } from "@/data/balance-types";
 import { Users, Dumbbell, Wand2, Check, RotateCcw, Search, ChevronDown, ChevronUp } from "lucide-react";
-import Modal from "@/components/dialogs/modal";
+import { useNavigate } from 'react-router-dom';
+import Panel from "@/components/dialogs/panel"
+
 import {
     Card,
     CardContent,
@@ -14,11 +16,11 @@ import {
 } from "@/components/ui/card"
 
 interface TeamGeneratorProps {
-    isOpen: boolean;
-    onClose: () => void;
+    width: number;
 }
+
 // Main component with tabs
-const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isOpen, onClose }) => {
+const TeamGenerator: React.FC<TeamGeneratorProps> = ({ width }) => {
     const [activeTab, setActiveTab] = useState("generation");
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
     const {
@@ -29,6 +31,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isOpen, onClose }) => {
         setZoneWeights,
         resetToDefaultWeights
     } = usePlayers();
+    const navigate = useNavigate();
 
     // Get non-temporary players and initialize selected players
     useEffect(() => {
@@ -38,6 +41,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isOpen, onClose }) => {
     useEffect(() => {
         handlePlayersUpdated();
     }, []);
+
 
     const handlePlayersUpdated = () => {
         if (players && Array.isArray(players)) {
@@ -60,63 +64,88 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isOpen, onClose }) => {
 
         // Pass both selectedPlayerObjects and zoneWeights
         generateTeams(selectedPlayerObjects);
+
+        navigate("/");
     };
 
     const canGenerate = selectedPlayers.length >= 10 && selectedPlayers.length <= 24;
+    const isSmallScreen = width < 768; // You can customize this to match your breakpoint
 
     return (
-        <Modal title="Team Generation" isOpen={isOpen} onClose={onClose}>
-            <div className="flex flex-col h-[80vh] min-w-[300px]">
-                {/* Tab Navigation with buttons in a row */}
+        <div className="flex-1 min-h-0 flex flex-col w-full h-full border">
+            <div className="min-h-0 flex flex-col h-full border">
 
-                <div className="flex gap-2 w-full max-h-[40px]">
-                    <button
-                        className={`flex-1 flex items-center justify-center p-2 rounded-lg border border-gray-200 transition-all duration-200 ${activeTab === "generation" ? "bg-blue-100 text-blue-600 shadow-sm" : ""}`}
-                        onClick={() => setActiveTab("generation")}
-                    >
-                        <Users size={16} className="mr-2" />
-                        <span>Teams</span>
-                    </button>
-                    <button
-                        className={`flex-1 flex items-center justify-center p-2 rounded-lg border border-gray-200 transition-all duration-200 ${activeTab === "weighting" ? "bg-blue-100 text-blue-600 shadow-sm" : ""}`}
-                        onClick={() => setActiveTab("weighting")}
-                    >
-                        <Dumbbell size={16} className="mr-2" />
-                        <span>Weights</span>
-                    </button>
-                </div>
+                {isSmallScreen && (
+                     <div className="min-h-0 flex flex-col h-full border">
+                        <div className="flex gap-2 w-full max-h-[40px] p-4">
+                            <button
+                                className={`flex-1 flex items-center justify-center p-2  transition-all duration-200 ${activeTab === "generation" ? " text-blue-600 shadow-sm" : ""}`}
+                                onClick={() => setActiveTab("generation")}
+                            >
+                                <Users size={16} className="mr-2" />
 
+                            </button>
+                            <button
+                                className={`flex-1 flex items-center justify-center p-2  transition-all duration-200 ${activeTab === "weighting" ? " text-blue-600 shadow-sm" : ""}`}
+                                onClick={() => setActiveTab("weighting")}
+                            >
+                                <Dumbbell size={16} className="mr-2" />
 
-                {/* Main Content Area - Flexbox Container */}
-                <div className="flex-1 flex flex-col bg-transparent">
-                    {activeTab === "generation" ? (
+                            </button>
+                        </div>
+                        <div className="min-h-0 w-full flex h-full border">
+                            {activeTab === "generation" ? (
+                                <TeamGenerationTab
+                                    players={players}
+                                    selectedPlayers={selectedPlayers}
+                                    setSelectedPlayers={setSelectedPlayers}
+                                />
+                            ) : (
+                                <WeightingTab
+                                    zoneWeights={zoneWeights}
+                                    setZoneWeights={setZoneWeights}
+                                    resetZoneWeights={resetToDefaultWeights}
+                                />
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Layout for large screens (side by side) */}
+                {!isSmallScreen && (
+                    <div className="min-h-0 flex h-full border">
+                        {/* First Div */}
                         <TeamGenerationTab
                             players={players}
                             selectedPlayers={selectedPlayers}
                             setSelectedPlayers={setSelectedPlayers}
                         />
-                    ) : (
+
+
                         <WeightingTab
                             zoneWeights={zoneWeights}
                             setZoneWeights={setZoneWeights}
                             resetZoneWeights={resetToDefaultWeights}
                         />
-                    )}
-                </div>
+
+                    </div>
+                )}
+
 
                 {/* Generate Button - Fixed at Bottom */}
-                <div className="sticky bottom-0 z-10 bg-transparent pt-3">
+                <div className="flex-1">
                     <button
                         onClick={handleGenerateTeams}
                         disabled={!canGenerate}
-                        className={`flex items-center justify-center w-full p-3 rounded-lg font-medium transition-all duration-200 ${canGenerate ? 'bg-green-600 text-white cursor-pointer' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+                        className={`flex items-center justify-center w-full h-[40px] mb-1 rounded-lg font-medium transition-all duration-200 ${canGenerate ? 'bg-green-600 text-white cursor-pointer' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
                     >
                         <Wand2 size={18} className="mr-2" />
                         <span>Generate Two Teams</span>
                     </button>
                 </div>
             </div>
-        </Modal>
+        </div>
+
     );
 };
 
@@ -158,109 +187,95 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
     };
 
     return (
-        <div className="flex flex-col h-full">
-            {/* Search and Toggle Controls */}
-            <div className="sticky top-0 z-10 p-3 border-b bg-accent">
-                <div className="flex items-center gap-3 ">
-                    {/* Search Input */}
-                    <div className="flex  items-center flex-1 borderrounded-xl p-2 transition-all">
-                        <Search size={18} className=" mr-3" />
-                        <input
-                            type="text"
-                            placeholder="Search players..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="border-none outline-none  text-sm"
-                        />
-                    </div>
-
-                    {/* Select/Deselect All Button */}
-                    <button
-                        onClick={toggleAll}
-                        className="bg-background flex items-center px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all whitespace-nowrap"
-                    >
-                        {selectedPlayers.length === players.length ? "Deselect All" : "Select All"}
-                    </button>
-                </div>
-            </div>
-
-            {/* Selected count info with icon */}
-
-
-            {/* Player List - Modern Cards */}
-            <Card className="flex-col w-full overflow-y-auto">
-                <CardHeader>
-                    <CardTitle>Players</CardTitle>
-                    <CardDescription>
-                        <div className="flex items-center gap-2text-sm">
-                            <Users size={16} className="text-white" />
-                            <span>
-                                Selected {selectedPlayers.length} of {players.length} players
-                                {!(selectedPlayers.length >= 10 && selectedPlayers.length <= 24) && (
-                                    <span className="text-red-500 ml-1 flex items-center gap-1">
-                                        • Need between 10 and 24 players (inclusive)
-                                    </span>
-                                )}
-                            </span>
+        <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">
+            <div className="flex flex-col flex-1 min-h-0 space-y-4">
+                {/* Search and Toggle Controls */}
+                <div className="p-3 border-b bg-accent h-[60px]">
+                    <div className="flex items-center gap-3 ">
+                        {/* Search Input */}
+                        <div className="flex  items-center flex-1 borderrounded-xl p-2 transition-all">
+                            <Search size={20} className=" mr-3" />
+                            <input
+                                type="text"
+                                placeholder="Search players..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="border-none outline-none  text-sm"
+                            />
                         </div>
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="">
-                        {sortedPlayers.length > 0 ? (
-                            sortedPlayers.map(player => (
-                                <div
-                                    key={player.id}
-                                    className={`flex items-center break-words truncate whitespace-normal rounded-xl transition-transform duration-200 cursor-pointer gap-3 
-        ${selectedPlayers.includes(player.id) ? 'bg-white/25' : ''} hover:scale-105`}
-                                    onClick={() => togglePlayer(player.id)}
-                                >
 
-                                    {/* Checkbox */}
-                                    <div className="w-6 h-6 flex items-center justify-center">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedPlayers.includes(player.id)}
-                                            onChange={() => togglePlayer(player.id)}
-                                            className="w-4 h-4 cursor-pointer accent-blue-500"
-                                            onClick={(e) => e.stopPropagation()}
-                                        />
-                                    </div>
-
-
-                                    <span
-                                        className="break-words whitespace-normal w-full"
-                                        title={player.name}
-                                    >
-                                        {player.name}
-                                    </span>
-
-                                    {/* Stats */}
-                                    {/* <div className="flex items-center gap-2">
-                                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-blue-800 bg-blue-100 text-sm font-semibold">
-                                            D:{player.stats[0] || 0}
-                                        </span>
-                                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-red-800 bg-red-100 text-sm font-semibold">
-                                            A:{player.stats[1] || 0}
-                                        </span>
-
-                                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-orange-800 bg-orange-100 text-sm font-semibold">
-                                            P:{player.stats[2] || 0}
-                                        </span>
-                                    </div> */}
-                                </div>
-                            ))
-                        ) : (
-                            <div className="p-6 text-center rounded-xl mt-3">
-                                No players match your search
-                            </div>
-                        )}
+                        {/* Select/Deselect All Button */}
+                        <button
+                            onClick={toggleAll}
+                            className="bg-background flex items-center px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all whitespace-nowrap"
+                        >
+                            {selectedPlayers.length === players.length ? "Deselect All" : "Select All"}
+                        </button>
                     </div>
-                </CardContent>
-                {/* <CardFooter>
-                    <p>Card Footer</p>
-                </CardFooter> */}
-            </Card>
+                </div>
+
+                {/* Selected count info with icon */}
+
+                <Panel>
+                    {/* Player List - Modern Cards */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Players</CardTitle>
+                            <CardDescription>
+                                <div className="flex-1 w-full flex items-center gap-2 text-sm">
+                                    <Users size={16} className="text-white" />
+                                    <span>
+                                        Selected {selectedPlayers.length} of {players.length} players
+                                        {!(selectedPlayers.length >= 10 && selectedPlayers.length <= 24) && (
+                                            <span className="text-red-500 ml-1 flex items-center gap-1">
+                                                • Need between 10 and 24 players (inclusive)
+                                            </span>
+                                        )}
+                                    </span>
+                                </div>
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex-1 min-h-0 overflow-y-auto">
+                                {sortedPlayers.length > 0 ? (
+                                    sortedPlayers.map(player => (
+                                        <div
+                                            key={player.id}
+                                            className={`flex items-center break-words truncate whitespace-normal rounded-xl transition-transform duration-200 cursor-pointer gap-3 
+        ${selectedPlayers.includes(player.id) ? 'bg-white/25' : ''} `}
+                                            onClick={() => togglePlayer(player.id)}
+                                        >
+
+                                            {/* Checkbox */}
+                                            <div className="w-6 h-6 flex items-center justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedPlayers.includes(player.id)}
+                                                    onChange={() => togglePlayer(player.id)}
+                                                    className="w-4 h-4 cursor-pointer accent-blue-500"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                            </div>
+
+
+                                            <span
+                                                className="break-words whitespace-normal w-full"
+                                                title={player.name}
+                                            >
+                                                {player.name}
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="p-6 text-center rounded-xl mt-3">
+                                        No players match your search
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Panel>
+            </div>
         </div>
     );
 };
@@ -292,99 +307,103 @@ const WeightingTab: React.FC<WeightingTabProps> = ({ zoneWeights, setZoneWeights
     };
 
     return (
-        <div className="flex flex-col h-full bg-transparent">
-            {/* Header */}
-            <div className=" p-3 flex justify-between items-center shadow-md bg-accent">
-                <h3 className="text-lg font-medium">Zone Weightings</h3>
-                <button
-                    onClick={resetZoneWeights}
-                    className="flex items-center gap-2 px-3 py-2 border rounded-md"
-                >
-                    <RotateCcw size={16} />
-                    <span>Reset to Default</span>
-                </button>
-            </div>
-
-
-            {/* Scrollable Weightings */}
-            <div className="flex-1 overflow-y-auto p-4">
-                <div className="px-4 py-2 text-sm">
-                    Adjust how much each player attribute contributes to team balancing in different zones.
-                    Higher values (0-100) give more importance to that attribute in that zone.
+        <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">
+            <div className="flex flex-col flex-1 min-h-0 space-y-4">
+                {/* Header */}
+                <div className=" p-3 flex justify-between items-center shadow-md h-[60px] bg-accent">
+                    <h3 className="text-lg font-medium">Zone Weightings</h3>
+                    <button
+                        onClick={resetZoneWeights}
+                        className="flex items-center gap-2 px-3 py-2 border rounded-md"
+                    >
+                        <RotateCcw size={16} />
+                        <span>Reset to Default</span>
+                    </button>
                 </div>
-                {weightingLabels.map((zoneObject, zone) => (
-                    zoneObject.name !== "Goalkeeper" && <div key={zone} className="mb-6 p-4 rounded-lg border-gray-700 shadow-md">
-                        <h4 className=" text-md font-medium">{zoneObject.name}</h4>
 
-                        {zoneObject.positions.map((positionName, position) => (
-                            <div key={position} className="mb-6 p-4 rounded-lg border-gray-700 shadow-md">
-                                <h4 className=" text-md font-medium">{positionName}</h4>
 
-                                <div className="flex flex-col gap-4 mt-3">
-                                    {attributeLabels.map((attrLabel, attrIndex) => {
-                                        const attr = Number(attrIndex); // Convert index to number for correct reference
-                                        return (
-                                            <div key={`${zone}-${attr}`} className="flex items-center p-3 rounded-lgborde">
-                                                {/* Attribute Name */}
-                                                <div className="w-32 font-medium">{attrLabel}</div>
-
-                                                {/* Progress Bar */}
-                                                <div className="flex-1 flex flex-col gap-2">
-                                                    <div className="h-2  rounded-md overflow-hidden">
-                                                        <div
-                                                            className={`h-full ${attributeColors[attr]}`}  // Using the number index for color
-                                                            style={{ width: `${zoneWeights[zone][position].weighting[attr]}%` }} // Access zoneWeights by attribute number
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Controls */}
-                                                <div className="w-32 flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => adjustWeight(zone, position, attr, -5)}  // Adjust weight based on attribute number
-                                                        className={`w-7 h-7 flex items-center justify-center rounded ${zoneWeights[zone][position].weighting[attr] <= 0 && "opacity-50 cursor-not-allowed"
-                                                            }`}
-                                                        disabled={zoneWeights[zone][position].weighting[attr] <= 0}
-                                                    >
-                                                        <ChevronDown size={16} />
-                                                    </button>
-
-                                                    <div className="w-10 text-center px-2 py-1 rounded-mdfont-bold text-sm">
-                                                        {zoneWeights[zone][position].weighting[attr]}  {/* Displaying the current weight */}
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => adjustWeight(zone, position, attr, 5)}  // Adjust weight based on attribute number
-                                                        className={`w-7 h-7 flex items-center justify-center rounded ${zoneWeights[zone][position].weighting[attr] >= 100 && "opacity-50 cursor-not-allowed"
-                                                            }`}
-                                                        disabled={zoneWeights[zone][position].weighting[attr] >= 100}
-                                                    >
-                                                        <ChevronUp size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
+                {/* Scrollable Weightings */}
+                <Panel>
+                    <div className="px-4 py-2 text-sm">
+                        Adjust how much each player attribute contributes to team balancing in different zones.
+                        Higher values (0-100) give more importance to that attribute in that zone.
                     </div>
-                ))}
+                    {weightingLabels.map((zoneObject, zone) => (
+                        zoneObject.name !== "Goalkeeper" && <div key={zone} className="mb-6 p-4 rounded-lg border-gray-700 shadow-md">
+                            <h4 className=" text-md font-medium">{zoneObject.name}</h4>
 
-                {/* Info Box */}
-                <div className="m-4 p-4 rounded-lg bg-secondary border border-blue-300 text-secondary-foreground shadow-md">
-                    <h4 className="flex items-center font-medium">
-                        <Check size={16} className="mr-2" />
-                        How Zone Weightings Work
-                    </h4>
-                    <p className="text-sm mt-1">
-                        These weights determine how important each player attribute is when balancing teams across different zones.
-                        For example, a high Attack Skill value in the Attack Zone means players with high attack ratings will be
-                        evenly distributed between teams for balanced offensive capabilities.
-                    </p>
-                </div>
+                            {zoneObject.positions.map((positionName, position) => (
+                                <div key={position} className="mb-6 p-4 rounded-lg border-gray-700 shadow-md">
+                                    <h4 className=" text-md font-medium">{positionName}</h4>
+
+                                    <div className="flex flex-col gap-4 mt-3">
+                                        {attributeLabels.map((attrLabel, attrIndex) => {
+                                            const attr = Number(attrIndex); // Convert index to number for correct reference
+                                            return (
+                                                <div key={`${zone}-${attr}`} className="flex items-center p-3 rounded-lgborde">
+                                                    {/* Attribute Name */}
+                                                    <div className="w-32 font-medium">{attrLabel}</div>
+
+                                                    {/* Progress Bar */}
+                                                    <div className="flex-1 flex flex-col gap-2">
+                                                        <div className="h-2  rounded-md overflow-hidden">
+                                                            <div
+                                                                className={`h-full ${attributeColors[attr]}`}  // Using the number index for color
+                                                                style={{ width: `${zoneWeights[zone][position].weighting[attr]}%` }} // Access zoneWeights by attribute number
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Controls */}
+                                                    <div className="w-32 flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => adjustWeight(zone, position, attr, -5)}  // Adjust weight based on attribute number
+                                                            className={`w-7 h-7 flex items-center justify-center rounded ${zoneWeights[zone][position].weighting[attr] <= 0 && "opacity-50 cursor-not-allowed"
+                                                                }`}
+                                                            disabled={zoneWeights[zone][position].weighting[attr] <= 0}
+                                                        >
+                                                            <ChevronDown size={16} />
+                                                        </button>
+
+                                                        <div className="w-10 text-center px-2 py-1 rounded-mdfont-bold text-sm">
+                                                            {zoneWeights[zone][position].weighting[attr]}  {/* Displaying the current weight */}
+                                                        </div>
+
+                                                        <button
+                                                            onClick={() => adjustWeight(zone, position, attr, 5)}  // Adjust weight based on attribute number
+                                                            className={`w-7 h-7 flex items-center justify-center rounded ${zoneWeights[zone][position].weighting[attr] >= 100 && "opacity-50 cursor-not-allowed"
+                                                                }`}
+                                                            disabled={zoneWeights[zone][position].weighting[attr] >= 100}
+                                                        >
+                                                            <ChevronUp size={16} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+
+                    {/* Info Box */}
+                    <div className="m-4 p-4 rounded-lg bg-secondary border border-blue-300 text-secondary-foreground shadow-md">
+                        <h4 className="flex items-center font-medium">
+                            <Check size={16} className="mr-2" />
+                            How Zone Weightings Work
+                        </h4>
+                        <p className="text-sm mt-1">
+                            These weights determine how important each player attribute is when balancing teams across different zones.
+                            For example, a high Attack Skill value in the Attack Zone means players with high attack ratings will be
+                            evenly distributed between teams for balanced offensive capabilities.
+                        </p>
+                    </div>
+                </Panel>
             </div>
+
         </div>
+
     );
 };
 export default TeamGenerator;

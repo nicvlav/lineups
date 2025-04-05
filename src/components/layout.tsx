@@ -8,7 +8,10 @@ import { PlayersProvider } from "@/data/players-provider";
 
 import PlayersSidebar from "@/components/players-sidebar";
 import HeaderBar from "@/components/header-bar";
-import TeamArea from "@/components/pitch/team-area"; // Render directly
+import Game from "@/components/game";
+import { Routes, Route } from 'react-router-dom';
+import PlayerTable from "@/components/dialogs/player-table";
+import TeamGenerator from "@/components/dialogs/team-generator";
 
 // import { Separator } from "@/components/ui/separator"
 import {
@@ -44,7 +47,7 @@ const Layout = () => {
     const { width, height } = useWindowSize();
 
     const isSmallScreen = width < 768; // You can customize this to match your breakpoint
-    const playerSize = (isSmallScreen ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 12;
+
 
     const backend = isMobile ? TouchBackend : HTML5Backend;
     const options = isMobile
@@ -59,42 +62,31 @@ const Layout = () => {
         : {}; // No extra options for desktop
 
     return (
-        <PlayersProvider>
-            <DndProvider backend={backend} options={options}>
-                <SidebarProvider>
-                    <PlayersSidebar />
-                    <SidebarInset>
-                        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-2 sticky top-0 z-10 bg-background">
-                            <SidebarTrigger className="-ml-1" />
-                            {/* <Separator orientation="vertical" className="mr-2 h-4" /> */}
-                            <HeaderBar iconSize={isSmallScreen ? 13 : 16} showIconText={!isSmallScreen} />
-                        </header>
+        <div className="h-full flex flex-col">
+            <PlayersProvider>
+                <DndProvider backend={backend} options={options}>
+                    <SidebarProvider>
+                        <PlayersSidebar compact={isSmallScreen} />
+                        <SidebarInset className="flex-1 min-h-0 flex flex-col h-full border">
+                            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-2 sticky top-0 z-10 bg-background">
+                                <SidebarTrigger className="-ml-1" />
+                                {/* <Separator orientation="vertical" className="mr-2 h-4" /> */}
+                                <HeaderBar compact={isSmallScreen} />
+                            </header>
 
-                        {/* Layout for small screens (stacked and tall) */}
-                        {isSmallScreen && (
-                            <div className="flex flex-col pl-2 pr-2 pb-5 gap-5 h-[180vh] w-full max-w-[100%] mx-auto">
-                                {/* First Div */}
-                                <TeamArea team="A" playerSize={playerSize} />
+                            {/* Add routes here, above headerbar has the tabbed nav icons */}
+                            <Routes>
+                                <Route index element={<Game width={width} height={height} />} />
+                                <Route path="players" element={<PlayerTable width={width} />} />
+                                <Route path="settings" element={<TeamGenerator width={width} />} />
+                            </Routes>
 
-                                {/* Second Div */}
-                                <TeamArea team="B" playerSize={playerSize} />
-                            </div>
-                        )}
 
-                        {/* Layout for large screens (side by side) */}
-                        {!isSmallScreen && (
-                            <div className="flex flex-1 h-full pl-2 pr-2 gap-2">
-                                {/* First Div */}
-                                <TeamArea team="A" playerSize={playerSize} />
-
-                                {/* Second Div */}
-                                <TeamArea team="B" playerSize={playerSize} />
-                            </div>
-                        )}
-                    </SidebarInset>
-                </SidebarProvider>
-            </DndProvider>
-        </PlayersProvider>
+                        </SidebarInset>
+                    </SidebarProvider>
+                </DndProvider>
+            </PlayersProvider>
+        </div>
     )
 }
 
