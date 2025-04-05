@@ -40,14 +40,11 @@ const AppRoutes = () => {
 
     <Routes>
       {/* Main route: Redirects to Sign In if user is not logged in */}
-      <Route path="/" element={user ? <Layout /> : <Navigate to="/sign-in" />} />
+      <Route path="*" element={user ? <Layout /> : <Navigate to="/sign-in" />} />
 
       {/* Authentication Routes */}
       <Route path="/sign-in" element={user ? <Navigate to="/" /> : <SignInPage />} />
       <Route path="/reset-password" element={user ? <Navigate to="/" /> : <ResetPasswordPage />} />
-
-      {/* Allow Any Path (Wildcard) */}
-      <Route path="*" element={user ? <Layout /> : <Navigate to="/sign-in" />} />
     </Routes>
 
   );

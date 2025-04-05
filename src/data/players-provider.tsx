@@ -68,7 +68,7 @@ interface PlayersProviderProps {
 
 
 export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) => {
-    const { supabase, urlState, clearUrlState} = useAuth();
+    const { supabase, urlState, clearUrlState } = useAuth();
 
     const [players, setPlayers] = useState<Player[]>([]);
     const [gamePlayers, setGamePlayers] = useState<GamePlayer[]>([]);
@@ -78,6 +78,9 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const loadingState = useRef(false);
     const gamePlayersRef = useRef(gamePlayers);
     const tabKeyRef = useRef(sessionStorage.getItem("tabKey") || `tab-${crypto.randomUUID()}`);
+
+    const pendingUpdatesRef = useRef<Map<string, PlayerUpdate>>(new Map());
+    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const loadURLState = async () => {
         if (!supabase || !urlState || loadingState.current) return;
@@ -93,13 +96,43 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             currentUrl.searchParams.delete("state");
             window.history.replaceState({}, "", currentUrl.toString());
         }
-        clearUrlState();
 
-        console.log("No saved state found, loading from Supabase.");
+        clearUrlState();
         fetchPlayers();
         loadingState.current = false;
     };
 
+    // make updates feel more responsive with debounced db sync and optimistic ui updates
+    const flushPendingUpdates = async () => {
+        const updates = Array.from(pendingUpdatesRef.current.entries());
+
+        if (updates.length === 0 || !supabase) return;
+
+        for (const [id, update] of updates) {
+            const { error } = await supabase
+                .from('players')
+                .update({ ...update })
+                .match({ id });
+
+            if (error) {
+                console.error(`Failed to update player ${id}:`, error.message);
+                loadingState.current = true;
+                fetchPlayers();
+                loadingState.current = false;
+            } else {
+                pendingUpdatesRef.current.delete(id);
+            }
+        }
+    };
+
+    const debounceFlush = (delay = 2000) => {
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+        debounceTimeoutRef.current = setTimeout(() => {
+            flushPendingUpdates();
+        }, delay);
+    };
 
     // Real-time updates for players
     useEffect(() => {
@@ -127,17 +160,21 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 },
                 (payload) => {
                     if (loadingState.current) return;
-                    console.log("Player updated:", payload);
-                    const updatedPlayer = payload.new as PlayerUpdate; // Type assertion to ensure it is a Player
-                    // const localPlayer = playersRef.current.find((p) => p.id === updatedPlayer.id);
 
-                    // if (!localPlayer || JSON.stringify(localPlayer.stats) === JSON.stringify(updatedPlayer.stats)) return;
+                    const updatedPlayer = payload.new as Player;
+                    const id = updatedPlayer.id;
 
-                    setPlayers(() => {
-                        return playersRef.current.map((player) =>
-                            player.id === updatedPlayer.id ? { ...player, ...updatedPlayer } : player
-                        );
-                    });
+                    // Skip if local has unsynced changes
+                    if (pendingUpdatesRef.current.has(id)) {
+                        console.log(`[Skip RT] Ignoring real-time update for dirty player ${id}`);
+                        return;
+                    }
+
+                    setPlayers(() =>
+                        playersRef.current.map((p) =>
+                            p.id === id ? { ...p, ...updatedPlayer } : p
+                        )
+                    );
                 }
             )
             .on(
@@ -156,6 +193,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                         return gamePlayersRef.current.filter((player) => player.id !== payload.old.id);
                     });
 
+                    pendingUpdatesRef.current.delete(payload.old.id);
+
                 }
             )
             .subscribe();
@@ -163,6 +202,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         // Cleanup the subscription when the component unmounts
         return () => {
             if (supabase && playerChannel) supabase.removeChannel(playerChannel);
+            flushPendingUpdates();
         };
     }, [supabase]);
 
@@ -186,8 +226,6 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                     }
                 }
             }
-
-            console.log("No saved state found, loading from Supabase.");
             fetchPlayers();
             loadingState.current = false;
         };
@@ -218,10 +256,9 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     useEffect(() => {
         if (playersRef.current !== players) {
             playersRef.current = players;
-            console.log("Updated players in context:", players);
-            if (!loadingState.current) saveState();
         }
     }, [players]);
+
 
     useEffect(() => {
         if (gamePlayersRef.current !== gamePlayers) {
@@ -232,7 +269,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     }, [gamePlayers]);
 
     const saveState = async () => {
-        const stateObject = { players: playersRef.current, gamePlayers: gamePlayersRef.current };
+        const stateObject = { gamePlayers: gamePlayersRef.current };
         await saveToDB(tabKeyRef.current, JSON.stringify(stateObject));
     };
 
@@ -246,62 +283,46 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             stats: defaultAttributes,
         };
 
-        // Insert the new player into Supabase
-        const { data, error } = await supabase
-            .from('players')
-            .insert([newPlayer]);
-
-        if (error) {
-            // Rollback local state if there's an error
-            console.error('Error adding player:', error.message);
-            // setPlayers((prevPlayers) => prevPlayers.filter(player => player.id !== newUID));
-        } else {
-            console.log('Adding player:', data);
-            // console.log('Player added successfully:', data);
-        }
+        supabase.from('players')
+            .insert([newPlayer]).then(({ data, error }) => {
+                if (error) {
+                    // Rollback local state if there's an error
+                    console.error('Error adding player:', error.message);
+                    // setPlayers((prevPlayers) => prevPlayers.filter(player => player.id !== newUID));
+                } else {
+                    console.log('Adding player:', data);
+                    // console.log('Player added successfully:', data);
+                }
+            });
     };
-
 
     const deletePlayer = async (id: string) => {
         if (!supabase) return;
 
-        // Delete the player from Supabase
-        const { data, error } = await supabase
-            .from('players')
+        supabase.from('players')
             .delete()
-            .match({ id });
-
-        if (error) {
-            // Rollback local state if there's an error
-            console.error('Error deleting player:', error.message);
-        } else {
-            console.log('Player deleted successfully:', data);
-        }
-
+            .match({ id }).then(({ data, error }) => {
+                if (error) {
+                    // Rollback local state if there's an error
+                    console.error('Error deleting player:', error.message);
+                } else {
+                    console.log('Player deleted successfully:', data);
+                }
+            });
     };
 
     // Update player attributes
-    const updatePlayerAttributes = async (id: string, updates: PlayerUpdate) => {
-        if (!supabase) return;
+    const updatePlayerAttributes = (id: string, updates: PlayerUpdate) => {
+        // Optimistically update UI
+        setPlayers((prev) =>
+            prev.map((p) =>
+                p.id === id ? { ...p, ...updates } : p
+            )
+        );
 
-        // First, optimistically update the local state (before waiting for the DB update)
-        // setPlayers((prevPlayers) =>
-        //     prevPlayers.map((player) =>
-        //         player.id === id ? { ...player, ...updates } : player
-        //     )
-        // );
-
-        // Now, make the request to update the player in the database
-        const { error } = await supabase
-            .from('players')
-            .update({ ...updates }) // Ensure the last_updated field is updated
-            .match({ id });
-
-        if (error) {
-            console.error('Error updating player:', error.message);
-        } else {
-            console.log('Player updated successfully:');
-        }
+        const existing = pendingUpdatesRef.current.get(id) ?? {};
+        pendingUpdatesRef.current.set(id, { ...existing, ...updates });
+        debounceFlush();
     };
 
     // Update player attributes
@@ -316,7 +337,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
     // Clear game data
     const clearGame = async () => {
-        setGamePlayers([]); // Pass a strict `Player[]`
+        setGamePlayers([]);
     };
 
     const addNewRealPlayerToGame = async (placedTeam: string, name: string, dropX: number, dropY: number) => {

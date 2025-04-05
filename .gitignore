@@ -132,3 +132,4 @@ dist
 bun.lock
 .wrangler/tmp/deploy-uyBQwG/index.js.map
 .wrangler/tmp/deploy-uyBQwG/index.js
+package-lock.json
