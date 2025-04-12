@@ -20,7 +20,7 @@ export default {
             if (origin && !allowedOrigins.includes(origin)) {
                 return new Response("Unauthorized", { status: 403 });
             }
-            
+
             // URL and anon key are not super critical since we use supabase and RLS 
             return new Response(
                 JSON.stringify({
@@ -37,7 +37,13 @@ export default {
         }
 
         // Serve static assets (React app) by default
-        return env.ASSETS.fetch(request);
+        if (/\.(js|html|css|png|jpg|jpeg|svg|woff|woff2|ttf|eot|ico)$/.test(url.pathname)) {
+            return env.ASSETS.fetch(request);
+        }
+
+        // redirect to origin
+        const statusCode = 301;
+        return Response.redirect(url.origin, statusCode);
     },
 };
 

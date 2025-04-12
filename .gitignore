@@ -133,3 +133,5 @@ bun.lock
 .wrangler/tmp/deploy-uyBQwG/index.js.map
 .wrangler/tmp/deploy-uyBQwG/index.js
 package-lock.json
+.wrangler/tmp/deploy-pGlm3I/worker.js
+.wrangler/tmp/deploy-pGlm3I/worker.js.map

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from "@/data/auth-context";
 import { AuthProvider } from "@/data/auth-context";
 import { ThemeProvider } from "@/data/theme-provider"
@@ -12,6 +12,8 @@ const App = () => {
   const currentUrl = new URL(window.location.href);
   const urlState = currentUrl.search;
 
+  console.log("STATE", urlState);
+
   // Clean up the URL after extracting the state
   useEffect(() => {
     if (urlState) {
@@ -23,9 +25,9 @@ const App = () => {
     <div className='h-screen'>
       <AuthProvider url={urlState}>
         <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-          <Router>
+          <BrowserRouter>
             <AppRoutes />
-          </Router>
+          </BrowserRouter>
         </ThemeProvider>
       </AuthProvider>
 
@@ -39,12 +41,12 @@ const AppRoutes = () => {
   return (
 
     <Routes>
-      {/* Main route: Redirects to Sign In if user is not logged in */}
-      <Route path="*" element={user ? <Layout /> : <Navigate to="/sign-in" />} />
-
       {/* Authentication Routes */}
       <Route path="/sign-in" element={user ? <Navigate to="/" /> : <SignInPage />} />
       <Route path="/reset-password" element={user ? <Navigate to="/" /> : <ResetPasswordPage />} />
+
+      {/* Main route: Redirects to Sign In if user is not logged in */}
+      <Route path="*" element={user ? <Layout /> : <Navigate to="/sign-in" />} />
     </Routes>
 
   );
