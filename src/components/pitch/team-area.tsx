@@ -13,9 +13,9 @@ const TeamArea: React.FC<TeamAreaProps> = ({ team, playerSize }) => {
   return (
     <div className="w-full h-full flex flex-col gap-2 bg-card"> {/* Ensure column flex layout */}
       {/* Team Title Bar */}
-      <div className="flex-none h-[20px] rounded-lg shadow-lg flex items-center pl-2">
+      {/* <div className="flex-none h-[20px] rounded-lg shadow-lg flex items-center pl-2">
          Team {team}
-      </div>
+      </div> */}
 
       {/* Player Container (fills remaining space) */}
       <div className="flex-1 p-3 rounded-lg shadow-lg overflow-x-clip">
