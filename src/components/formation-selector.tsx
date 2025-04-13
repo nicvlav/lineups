@@ -1,33 +1,21 @@
 import { usePlayers } from "@/data/players-provider";
-import { Formation } from "@/data/attribute-types";
-import formations from "@/data/formations";
+import { formationTemplates } from "@/data/attribute-types";
 import { Select, SelectTrigger, SelectGroup, SelectItem, SelectLabel, SelectContent, SelectValue } from "@/components/ui/select";
-
-type GroupedFormations = {
-    [key: number]: Formation[];
-};
 
 const FormationSelector = () => {
     const { applyFormation } = usePlayers();
 
     const handleChange = (value: string) => {
-        if (value) {
-            applyFormation(value);
-        }
-    };
+        console.log("VALUE", value);
+        if (!value) return;
 
-    // Group formations by num_players
-    const groupedFormations: GroupedFormations = formations.reduce(
-        (groups, formation) => {
-            const numPlayers = formation.num_players;
-            if (!groups[numPlayers]) {
-                groups[numPlayers] = [];
-            }
-            groups[numPlayers].push(formation);
-            return groups;
-        },
-        {} as GroupedFormations
-    );
+        const allFormations = Object.values(formationTemplates).flat();
+        const selected = allFormations.find(f => f.name === value);
+
+        if (!selected) return;
+        applyFormation(selected);
+
+    };
 
     return (
         <Select onValueChange={handleChange}>
@@ -38,18 +26,16 @@ const FormationSelector = () => {
 
             {/* Dropdown content with dynamically grouped formations */}
             <SelectContent className="w-full">
-                {Object.keys(groupedFormations)
-                    .sort((a, b) => parseInt(a) - parseInt(b)) // Sort formations by number of players
-                    .map((numPlayers) => (
-                        <SelectGroup key={numPlayers}>
-                            <SelectLabel>{`${numPlayers} Players`}</SelectLabel>
-                            {groupedFormations[parseInt(numPlayers)].map((formation) => (
-                                <SelectItem key={formation.id} value={formation.id.toString()}>
-                                    {formation.name}
-                                </SelectItem>
-                            ))}
-                        </SelectGroup>
-                    ))}
+                {Object.entries(formationTemplates).map(([numPlayers, formations]) => (
+                    <SelectGroup key={numPlayers}>
+                        <SelectLabel>{`${numPlayers} Players`}</SelectLabel>
+                        {formations.map((formation) => (
+                            <SelectItem key={formation.name} value={formation.name}>
+                                {formation.name}
+                            </SelectItem>
+                        ))}
+                    </SelectGroup>
+                ))}
             </SelectContent>
         </Select>
     );

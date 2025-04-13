@@ -2,11 +2,9 @@
 import {
     defaultZoneWeights,
     formationTemplates,
-    PositionWeighting,
     weightingShortLabels,
     Weighting,
     ZoneScores,
-    emptyZoneScores
 } from "@/data/attribute-types";
 
 import {
@@ -14,7 +12,9 @@ import {
     ScoredGamePlayer,
     TeamZones,
     emptyTeamZones,
-    TeamResults
+    TeamResults,
+    calculateScores,
+    assignPositions
 } from "@/data/player-types";
 
 const getIdealDistribution = (numPlayers: number) => {
@@ -25,28 +25,8 @@ const getIdealDistribution = (numPlayers: number) => {
     const numTemplates = formations.length;
     const index = Math.round(Math.random() * (numTemplates - 1));
 
-    return structuredClone(formations[index]);
+    return structuredClone(formations[index].positions);
 }
-
-const calculateScores = (players: FilledGamePlayer[], zoneWeights: Weighting): ScoredGamePlayer[] => {
-    return players.map(player => {
-
-        const zoneFit: ZoneScores = structuredClone(emptyZoneScores);
-
-        zoneWeights.forEach((zoneArray, zone) => {
-            zoneArray.forEach((positionObject, position) => {
-                // dot product
-                const score = player.stats.reduce((sum, statValue, index) => {
-                    return sum + statValue * positionObject.weighting[index];
-                }, 0);
-
-                zoneFit[zone][position] = score;
-            });
-        });
-
-        return { ...player, zoneFit };
-    });
-};
 
 const isEmptyFormation = (formation: ZoneScores, zone: number) =>
     formation[zone].every(position => position <= 0);
@@ -391,55 +371,6 @@ const logPlayerStats = (players: ScoredGamePlayer[]) => {
         console.log(scores.best, scores.secondBest);
     });
 };
-
-const getXForPlayerPosition = (position: PositionWeighting, positionIndex: number, numPositionentries: number) => {
-    if (!position.isCentral) {
-        if (positionIndex >= 2) throw new Error(`More than 2 players in ${position.positionName} position?`);
-        return positionIndex;
-    }
-
-    let startShift = 0.0;
-    let spacing = 0.4 / (numPositionentries); // Max width for players
-
-    if (numPositionentries % 2) {
-        if (positionIndex === 0) return 0.5;
-        startShift = spacing;
-        positionIndex--;
-    } else {
-        startShift = -spacing / 2;
-    }
-
-    if (positionIndex % 2 === 0) {
-        return 0.5 - startShift - (spacing * (1 + Math.floor(positionIndex / 2)));
-    } else {
-        return 0.5 + startShift + (spacing * (1 + Math.floor(positionIndex / 2)));
-    }
-};
-
-const assignPositions = (zones: TeamZones, team: string) => {
-    let finalPlayers: FilledGamePlayer[] = [];
-
-    const numZones = zones.length;
-    const zoneYShift = 0.1;
-    const zoneYScaling = 0.8;
-
-    zones.forEach((zone, index) => {
-        const yEnd = index ? (1.0 - zoneYShift - index * zoneYScaling / numZones) : 1.0;
-        const yStart = index ? (1.0 - zoneYShift - (index + 1) * zoneYScaling / numZones) : 1.0;
-
-        zone.forEach((players) => {
-            const numPositionPlayers = players.length;
-            players.forEach((player, pidx) => {
-                const x = getXForPlayerPosition(player.generatedPositionInfo, pidx, numPositionPlayers);
-                const y = player.generatedPositionInfo.relativeYPosition * (yEnd - yStart) + yStart;
-                finalPlayers.push({ ...player, team, position: { x, y } } as FilledGamePlayer);
-            });
-        });
-
-    });
-
-    return finalPlayers;
-}
 
 const generateBalancedTeams = (players: FilledGamePlayer[], attributeWeights: Weighting) => {
     if (players.length < 2) return { a: [], b: [] };

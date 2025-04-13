@@ -4,10 +4,9 @@ import { v4 as uuidv4, } from 'uuid';
 
 import { openDB } from "idb";
 import { Formation, Weighting, defaultZoneWeights, defaultAttributeScores, Point } from "@/data/attribute-types";
-import { Player, GamePlayer, FilledGamePlayer, PlayerUpdate, GamePlayerUpdate } from "@/data/player-types";
+import { Player, GamePlayer, FilledGamePlayer, PlayerUpdate, GamePlayerUpdate, getYRangeForTeamZone, getPointForPosition } from "@/data/player-types";
 import { decodeStateFromURL } from "@/data/state-manager";
 import { autoCreateTeams } from "./auto-balance";
-import formations from "@/data/formations"
 
 interface PlayersContextType {
     players: Player[];
@@ -27,8 +26,7 @@ interface PlayersContextType {
     switchToRealPlayer: (oldPlayer: GamePlayer, newID: string) => void;
     switchToNewPlayer: (oldPlayer: GamePlayer, newName: string, guest: boolean) => void;
 
-    // adjustTeamSize: (currentPlayers: Player[], team: string, formation: Formation) => void;
-    applyFormation: (formationId: string) => void;
+    applyFormation: (formation: Formation) => void;
 
     setZoneWeights: (newWeighting: Weighting) => void;
     resetToDefaultWeights: () => void;
@@ -483,55 +481,49 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     };
 
 
-    const adjustTeamSize = (currentPlayers: GamePlayer[], team: string, formation: Formation) => {
-        let teamPlayers = currentPlayers.filter((p) => p.team === team);
-        const numPlayersNeeded = formation.num_players;
+    const applyFormationToTeam = (team: string, formation: Formation) => {
+        let teamPlayers = gamePlayersRef.current.filter((p) => p.team === team);
+        let newTeamPlayers: GamePlayer[] = [];
 
-        // Handle surplus players by setting team to null
-        if (teamPlayers.length > numPlayersNeeded) {
-            teamPlayers = teamPlayers.slice(0, numPlayersNeeded);
-        }
+        formation.positions.forEach((zone, zoneIndex) => {
+            const { yEnd, yStart } = getYRangeForTeamZone(zoneIndex);
 
-        // Handle missing players by adding new guest players
-        else if (teamPlayers.length < numPlayersNeeded) {
-            const newID = uuidv4();
-            const addInc = team === "A" ? 0 : 100;
+            zone.forEach((numPlayers, idx) => {
+                for (let i = 0; i < numPlayers; i++) {
+                    const player = teamPlayers.shift();
+                    const position = getPointForPosition(
+                        defaultZoneWeights[zoneIndex][idx],
+                        yEnd, yStart, i,
+                        numPlayers);
 
-            const missingPlayers: GamePlayer[] = formation.positions
-                .slice(teamPlayers.length, numPlayersNeeded)
-                .map((pos, idx) => ({
-                    id: newID + idx + addInc,
-                    guest_name: "[Player]", // Default placeholder name
-                    team,
-                    position: pos, // Assign correct position type
-                }));
-
-            currentPlayers.push(...missingPlayers);
-            teamPlayers = currentPlayers.filter((p) => p.team === team);
-        }
-
-        // Ensure all players are assigned correct positions
-        teamPlayers.forEach((player, index) => {
-            const original = currentPlayers.find((cp) => cp.id === player.id);
-            if (original) original.position = formation.positions[index]; // Modify the reference inside `currentPlayers`
+                    newTeamPlayers.push(player ? {
+                        ...player,
+                        team,
+                        position
+                    } : {
+                        id: uuidv4(),
+                        guest_name: "[Player]",
+                        team,
+                        position
+                    });
+                }
+            });
         });
+
+        return newTeamPlayers;
+
     };
 
+    const applyFormation = async (formation: Formation) => {
+        const teamA = applyFormationToTeam("A", formation);
+        const teamB = applyFormationToTeam("B", formation);
 
-    const applyFormation = async (formationId: string) => {
-        // Deep copy to ensure state setting triggers a useEffect
-        let currPlayers: GamePlayer[] = gamePlayersRef.current
-            .filter((player) => !player.guest_name)
-            .map((player) => ({ ...player }));
+        // Create a new array with updated team assignments and positions
+        const merged = teamA.concat(teamB);
 
-        const formation = formations.find((f: Formation) => f.id === Number(formationId));
-
-        if (!formation) return;
-
-        adjustTeamSize(currPlayers, "A", formation);
-        adjustTeamSize(currPlayers, "B", formation);
-
-        setGamePlayers([...currPlayers]); // Ensure a new reference to trigger useEffect
+        // Ensure a new reference and trigger state update
+        gamePlayersRef.current = merged;
+        setGamePlayers([...merged]); // Spread into a new array to trigger useEffect
     };
 
     const resetToDefaultWeights = async () => {
