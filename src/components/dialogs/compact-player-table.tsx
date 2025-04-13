@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Player, AttributeScores, attributeShortLabels, PlayerUpdate } from "@/data/player-types";
+import { attributeScores, attributeShortLabels } from "@/data/attribute-types";
+import { Player, PlayerUpdate } from "@/data/player-types";
 import { X, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
         const player = players.find((p: Player) => p.id === uid);
         if (!player) return;
 
-        const newStats: AttributeScores = [...player.stats];
+        const newStats: attributeScores = [...player.stats];
         newStats[statIndex] = Math.max(1, Math.min(100, newStats[statIndex] + change));
 
         updatePlayerAttributes(uid, { stats: newStats });

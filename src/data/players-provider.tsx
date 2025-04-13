@@ -3,8 +3,8 @@ import { useAuth } from "@/data/auth-context";
 import { v4 as uuidv4, } from 'uuid';
 
 import { openDB } from "idb";
-import { Player, GamePlayer, Point, Formation, PlayerUpdate, defaultAttributes, GamePlayerUpdate } from "@/data/player-types";
-import { defaultZoneWeights, FilledGamePlayer, Weighting } from "@/data/balance-types";
+import { Formation, Weighting, defaultZoneWeights, defaultAttributeScores, Point } from "@/data/attribute-types";
+import { Player, GamePlayer, FilledGamePlayer, PlayerUpdate, GamePlayerUpdate } from "@/data/player-types";
 import { decodeStateFromURL } from "@/data/state-manager";
 import { autoCreateTeams } from "./auto-balance";
 import formations from "@/data/formations"
@@ -280,7 +280,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         const newPlayer: Player = {
             id: newUID,
             name,
-            stats: defaultAttributes,
+            stats: defaultAttributeScores,
         };
 
         supabase.from('players')
@@ -346,7 +346,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             const newPlayer = {
                 id: newID,  // Or use a smarter way to generate a unique ID
                 name: name,
-                stats: defaultAttributes,
+                stats: defaultAttributeScores,
             };
             const updated = [...playersRef.current, newPlayer];
             return updated;
@@ -471,7 +471,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         const newPlayer = {
             id: newID,  // Or use a smarter way to generate a unique ID
             name: newName,
-            stats: defaultAttributes,
+            stats: defaultAttributeScores,
         };
         const updated = [...playersRef.current, newPlayer];
 

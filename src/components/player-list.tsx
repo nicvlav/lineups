@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Player, GamePlayer, Point } from "@/data/player-types";
+import { Point } from "@/data/attribute-types";
+import { Player, GamePlayer } from "@/data/player-types";
 import { usePlayers } from "@/data/players-provider";
 import { useDrag } from "react-dnd";
 import { Trash2, UserPlus, EllipsisVertical } from "lucide-react";

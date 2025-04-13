@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "@/data/theme-provider";
-import { Player, PlayerUpdate, AttributeScores, attributeShortLabels, attributeLabels } from "@/data/player-types";
+import { attributeScores, attributeShortLabels, attributeLabels } from "@/data/attribute-types";
+import { Player, PlayerUpdate  } from "@/data/player-types";
 import { Minus, Plus } from "lucide-react";
 import { } from "lucide-react";
 import { Radar } from "react-chartjs-2";
@@ -189,7 +190,7 @@ const PlayerStatEditor: React.FC<PlayerStatEditorProps> = ({ player, updatePlaye
     if (!player) return <p className="text-center">Select a player to edit stats.</p>;
 
     const handleAttributeChange = (uid: string, statIndex: number, change: number) => {
-        const newStats: AttributeScores = [...player.stats];
+        const newStats: attributeScores = [...player.stats];
         newStats[statIndex] = Math.max(1, Math.min(100, newStats[statIndex] + change));
 
         updatePlayerAttributes(uid, { stats: newStats });

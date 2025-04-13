@@ -41,7 +41,7 @@ export default {
             return env.ASSETS.fetch(request);
         }
 
-        // redirect to origin
+        // Fallback, redirect to origin
         const statusCode = 301;
         return Response.redirect(url.origin, statusCode);
     },

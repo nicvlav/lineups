@@ -1,5 +1,5 @@
 import { usePlayers } from "@/data/players-provider";
-import { Formation } from "@/data/player-types";
+import { Formation } from "@/data/attribute-types";
 import formations from "@/data/formations";
 import { Select, SelectTrigger, SelectGroup, SelectItem, SelectLabel, SelectContent, SelectValue } from "@/components/ui/select";
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePlayers } from "@/data/players-provider";
-import { Player, attributeLabels, attributeColors } from "@/data/player-types";
-import { weightingLabels, Weighting } from "@/data/balance-types";
+import { attributeLabels, attributeColors, weightingLabels, Weighting } from "@/data/attribute-types";
+import { Player  } from "@/data/player-types";
 import { Users, Dumbbell, Wand2, Check, RotateCcw, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import Panel from "@/components/dialogs/panel"

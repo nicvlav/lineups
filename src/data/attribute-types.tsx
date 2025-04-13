@@ -1,9 +1,54 @@
-import { GamePlayer, AttributeScores } from "@/data/player-types"; // Importing from shared file
+export const attributeLabels = [
+    "Defending",
+    "Attacking",
+    "Speed",
+    "Tactical",
+    "Passing",
+    "Shooting",
+    "Dribbling",
+    "Physicality"
+] as const;
+
+export const attributeShortLabels = [
+    "DEF",
+    "ATT",
+    "SPE",
+    "TAC",
+    "PAS",
+    "SHO",
+    "DRI",
+    "PHY"
+] as const;
+
+export const attributeColors = [
+    "bg-blue-600",    // DEF (Defending) - Strong, reliable blue
+    "bg-red-600",     // ATT (Attacking) - Aggressive, fiery red
+    "bg-emerald-500", // SPE (Athleticism) - Vibrant, energetic green
+    "bg-orange-500",  // TAC (Tactical) - Strategic, calculated orange
+    "bg-pink-500",    // PAS (Creativity) - Imaginative, playful pink
+    "bg-blue-600",    // SHO (Defending) - Strong, reliable blue
+    "bg-indigo-500",  // DRI (Attacking) - Skillful, creative indigo
+    "bg-emerald-500", // PHY (Athleticism) - Vibrant, energetic green
+] as const;
+
+export type attributeScores = [
+    DEF: number,
+    ATT: number,
+    ATH: number,
+    TAC: number,
+    PAS: number,
+    SHO: number,
+    DRI: number,
+    PHY: number
+];
+
+export const defaultAttributeScores: attributeScores = [50, 50, 50, 50, 50, 50, 50, 50,] as attributeScores;
+
 
 export type PositionWeighting = {
     positionName: string,
     positionShortName: string,
-    weighting: AttributeScores,
+    weighting: attributeScores,
     isCentral: boolean,
     relativeYPosition: number,
     priorityStat: number;
@@ -93,7 +138,7 @@ export const emptyZoneScores: ZoneScores = [
     [0, 0]// attack
 ] as const;
 
-// AttributeScores (weighting): "DEF", "ATT", "SPE", "TAC", "PAS", SHO DRI PHY
+// attributeScores (weighting): "DEF", "ATT", "SPE", "TAC", "PAS", SHO DRI PHY
 export const defaultZoneWeights: Weighting = [
     [
         {
@@ -124,7 +169,7 @@ export const defaultZoneWeights: Weighting = [
             priorityStat: 1,
         }
     ],
-    // Midfield // AttributeScores (weighting): "DEF", "ATT", "SPE", "TAC", "PAS"     SHO DRI PHY
+    // Midfield // attributeScores (weighting): "DEF", "ATT", "SPE", "TAC", "PAS"     SHO DRI PHY
     [
         {
             positionName: "Defensive Midfield",
@@ -172,6 +217,15 @@ export const defaultZoneWeights: Weighting = [
     ]
 ] as const;
 
+export type Point = { x: number, y: number, };
+
+export type Formation = {
+    id: number;
+    name: string;
+    num_players: number;
+    positions: Point[];
+};
+
 export const formationTemplates: Record<number, ZoneScores[]> = {
     5: [
         [[1], [2, 0], [2, 0, 0], [1, 0]], // 2-2-1
@@ -208,37 +262,3 @@ export const formationTemplates: Record<number, ZoneScores[]> = {
         [[1], [2, 2], [2, 2, 1], [2, 0]], // 4-5-2
     ],
 } as const;
-export interface FilledGamePlayer extends GamePlayer {
-    real_name: string,
-    stats: AttributeScores,
-}
-export interface ScoredGamePlayer extends FilledGamePlayer {
-    zoneFit: ZoneScores;
-}
-
-export interface PositionedGamePlayer extends ScoredGamePlayer {
-    generatedPositionInfo: PositionWeighting;
-}
-
-export type TeamZones = [
-    [PositionedGamePlayer[]], // gk
-    [PositionedGamePlayer[], PositionedGamePlayer[]], // defense
-    [PositionedGamePlayer[], PositionedGamePlayer[], PositionedGamePlayer[], PositionedGamePlayer[]],// midfield
-    [PositionedGamePlayer[], PositionedGamePlayer[]]// attack
-];
-
-export const emptyTeamZones: TeamZones = [
-    [[]], // defense
-    [[], []], // defense
-    [[], [], [], []],// midfield
-    [[], []]// attack
-] as const;
-
-export type TeamAssignments = {
-    team: TeamZones, score: number, totals: [number, number, number]
-};
-
-export type TeamResults = {
-    a: TeamAssignments;
-    b: TeamAssignments;
-};

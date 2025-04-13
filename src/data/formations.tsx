@@ -1,4 +1,4 @@
-import { Formation } from "@/data/player-types"; // Importing from shared file
+import { Formation } from "@/data/attribute-types"; // Importing from shared file
 
 export const formations: Formation[] = [
   {

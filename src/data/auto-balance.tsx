@@ -1,18 +1,21 @@
 
 import {
-    FilledGamePlayer,
-    Weighting,
-    ZoneScores,
-    emptyZoneScores,
     defaultZoneWeights,
     formationTemplates,
+    PositionWeighting,
+    weightingShortLabels,
+    Weighting,
+    ZoneScores,
+    emptyZoneScores
+} from "@/data/attribute-types";
+
+import {
+    FilledGamePlayer,
     ScoredGamePlayer,
     TeamZones,
     emptyTeamZones,
-    PositionWeighting,
-    weightingShortLabels,
     TeamResults
-} from "@/data/balance-types";
+} from "@/data/player-types";
 
 const getIdealDistribution = (numPlayers: number) => {
     const formations = formationTemplates[numPlayers];
