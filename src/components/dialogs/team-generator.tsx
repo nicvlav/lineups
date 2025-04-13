@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePlayers } from "@/data/players-provider";
 import { attributeLabels, attributeColors, weightingLabels, Weighting } from "@/data/attribute-types";
-import { Player  } from "@/data/player-types";
+import { Player } from "@/data/player-types";
 import { Users, Dumbbell, Wand2, Check, RotateCcw, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import Panel from "@/components/dialogs/panel"
@@ -16,11 +16,11 @@ import {
 } from "@/components/ui/card"
 
 interface TeamGeneratorProps {
-    width: number;
+    isCompact: boolean;
 }
 
 // Main component with tabs
-const TeamGenerator: React.FC<TeamGeneratorProps> = ({ width }) => {
+const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isCompact }) => {
     const [activeTab, setActiveTab] = useState("generation");
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
     const {
@@ -69,15 +69,14 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ width }) => {
     };
 
     const canGenerate = selectedPlayers.length >= 10 && selectedPlayers.length <= 24;
-    const isSmallScreen = width < 768; // You can customize this to match your breakpoint
 
     return (
         <div className="flex-1 min-h-0 flex flex-col w-full h-full border">
             <div className="min-h-0 flex flex-col h-full border">
 
-                {isSmallScreen && (
-                     <div className="min-h-0 flex flex-col h-full border">
-                        <div className="flex gap-2 w-full max-h-[40px] p-4">
+                {isCompact && (
+                    <div className="min-h-0 flex flex-col h-full border">
+                        <div className="flex gap-2 w-full max-h-[40px]">
                             <button
                                 className={`flex-1 flex items-center justify-center p-2  transition-all duration-200 ${activeTab === "generation" ? " text-blue-600 shadow-sm" : ""}`}
                                 onClick={() => setActiveTab("generation")}
@@ -112,7 +111,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ width }) => {
                 )}
 
                 {/* Layout for large screens (side by side) */}
-                {!isSmallScreen && (
+                {!isCompact && (
                     <div className="min-h-0 flex h-full border">
                         {/* First Div */}
                         <TeamGenerationTab

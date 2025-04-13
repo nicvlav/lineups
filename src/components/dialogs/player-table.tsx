@@ -5,22 +5,20 @@ import CompactPlayerTable from "@/components/dialogs/compact-player-table";
 import PlayerCharts from "@/components/dialogs/player-charts";
 
 interface TableProps {
-    width: number;
+    isCompact: boolean;
 }
 
-const PlayerTable: React.FC<TableProps> = ({ width }) => {
+const PlayerTable: React.FC<TableProps> = ({ isCompact }) => {
     const { players, updatePlayerAttributes, addPlayer, deletePlayer } = usePlayers();
     const [activeTab, setActiveTab] = useState("chart");
 
     const [selectedPlayer1, setSelectedPlayer1] = useState<string | null>(null);
     const [selectedPlayer2, setSelectedPlayer2] = useState<string | null>(null);
 
-    const isSmallScreen = width < 768; // You can customize this to match your breakpoint
-
     return (
         <div className="flex-1 min-h-0 flex flex-col h-full border">
             {/* Main Content Area - Flexbox Container */}
-            {isSmallScreen && (
+            {isCompact && (
                 <div className="flex-1 min-h-0 flex flex-col h-full border">
                     <div className="flex gap-2 w-full max-h-[40px]">
                         <button
@@ -65,7 +63,7 @@ const PlayerTable: React.FC<TableProps> = ({ width }) => {
 
             {/* Layout for large screens (side by side) */}
             {
-                !isSmallScreen && (
+                !isCompact && (
                     <div className="flex flex-1 h-full gap-2">
                         <div className="flex-5">
                             <CompactPlayerTable
