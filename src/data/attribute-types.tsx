@@ -182,15 +182,15 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Wide Midfielder",
             positionShortName: "WM",
-            weighting: [40, 90, 60, 20, 60, 30, 60, 65], // Higher athleticism and attack
+            weighting: [40, 80, 50, 40, 60, 10, 60, 20], // Higher athleticism and attack
             isCentral: false,
             relativeYPosition: 0.5, // Slightly forward compared to CB
             priorityStat: 1,
         },
         {
             positionName: "Attacking Midfield",
-            positionShortName: "AM", 
-            weighting: [20, 100, 50, 50, 100, 50, 100, 30], // Strong attack and creativity
+            positionShortName: "AM",
+            weighting: [20, 90, 60, 50, 100, 25, 80, 10], // Strong attack and creativity
             isCentral: true,
             relativeYPosition: 0.4, // Higher up the pitch
             priorityStat: 2,
@@ -201,7 +201,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Striker",
             positionShortName: "ST",
-            weighting: [0, 100, 50, 20, 20, 100, 50, 80], // High technicality for scoring, lower creativity
+            weighting: [0, 100, 50, 30, 20, 100, 50, 80], // High technicality for scoring, lower creativity
             isCentral: true,
             relativeYPosition: 0.5, // Always the furthest back
             priorityStat: 3,
@@ -209,7 +209,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Winger",
             positionShortName: "WR",
-            weighting: [0, 100, 100, 10, 60, 50, 90, 20], // High athleticism and creativity
+            weighting: [0, 100, 100, 0, 60, 30, 100, 0], // High athleticism and creativity
             isCentral: false,
             relativeYPosition: 0.7, // Furthest back
             priorityStat: 1,
@@ -229,53 +229,53 @@ export const formationTemplates: Record<number, Formation[]> = {
     5: [
         {
             name: "1-2-1",
-            positions: [[1], [1, 0], [2, 0, 0], [1, 0]] 
+            positions: [[1], [1, 0], [2, 0, 0], [1, 0]]
         },
     ],
     6: [
         {
             name: " 2-1-2",
-            positions: [[1], [2, 0], [1, 0, 0], [2, 0]] 
+            positions: [[1], [2, 0], [1, 0, 0], [2, 0]]
         },
         {
             name: " 2-2-1",
-            positions: [[1], [2, 0], [2, 0, 0], [1, 0]] 
+            positions: [[1], [2, 0], [2, 0, 0], [1, 0]]
         },
     ],
     7: [
         {
             name: "2-3-1",
-            positions: [[1], [2, 0], [1, 0, 2], [1, 0]] 
+            positions: [[1], [2, 0], [1, 0, 2], [1, 0]]
         },
         {
             name: "3-2-1",
-            positions: [[1], [3, 0], [2, 0, 0], [1, 0]] 
+            positions: [[1], [3, 0], [2, 0, 0], [1, 0]]
         },
     ],
     8: [
         {
             name: "3-3-1",
-            positions: [[1], [3, 0], [1, 2, 0], [1, 0]] 
+            positions: [[1], [3, 0], [1, 2, 0], [1, 0]]
         },
         {
             name: "2-4-1",
-            positions: [[1], [2, 0], [2, 2, 0], [1, 0]] 
+            positions: [[1], [2, 0], [2, 2, 0], [1, 0]]
         },
     ],
     9: [
         {
             name: "3-3-2",
-            positions: [[1], [3, 0], [1, 2, 0], [2, 0]] 
+            positions: [[1], [3, 0], [1, 2, 0], [2, 0]]
         },
         {
             name: "3-4-1",
-            positions: [[1], [3, 0], [1, 2, 1], [1, 0]] 
+            positions: [[1], [3, 0], [1, 2, 1], [1, 0]]
         },
     ],
     10: [
         {
             name: "4-4-1",
-            positions: [[1], [2, 2], [0, 2, 2], [1, 0]] 
+            positions: [[1], [2, 2], [0, 2, 2], [1, 0]]
         },
         {
             name: "3-3-3",
@@ -284,15 +284,20 @@ export const formationTemplates: Record<number, Formation[]> = {
     ],
     11: [
         {
-            name: "4-3-3",
-            positions: [[1], [2, 2], [1, 0, 2], [1, 2]]
-        },
-        {
             name: "4-3-3 (2)",
             positions: [[1], [2, 2], [2, 0, 1], [1, 2]]
-        }, {
+        },
+        {
             name: "3-5-2",
             positions: [[1], [3, 0], [2, 2, 1], [2, 0]]
+        },
+        {
+            name: "3-4-3",
+            positions: [[1], [3, 0], [1, 0, 3], [1, 2]]
+        },
+        {
+            name: "3-3-4",
+            positions: [[1], [3, 0], [2, 0, 1], [2, 2]]
         },
         {
             name: " 4-1-2-1-2",
@@ -305,8 +310,12 @@ export const formationTemplates: Record<number, Formation[]> = {
             positions: [[1], [2, 2], [1, 0, 2], [2, 2]]
         },
         {
-            name: "4-5-2",
-            positions: [[1], [2, 2], [2, 2, 1], [2, 0]]
+            name: "3-5-3(2)",
+            positions: [[1], [3, 0], [2, 0, 3], [1, 2]]
+        },
+        {
+            name: "3-4-4",
+            positions: [[1], [3, 0], [1, 0, 3], [2, 2]]
         },
     ],
 
