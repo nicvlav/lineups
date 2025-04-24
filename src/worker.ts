@@ -3,7 +3,7 @@
 interface Env {
     SUPABASE_URL: string;
     SUPABASE_ANON_KEY: string;
-    ASSETS: Fetcher; // ✅ Add this line
+    ASSETS: Fetcher;
 }
 export default {
     async fetch(request: Request, env: Env, _: ExecutionContext): Promise<Response> {

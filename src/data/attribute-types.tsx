@@ -155,7 +155,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Center Back",
             positionShortName: "CB",
-            weighting: [100, 0, 10, 60, 10, 0, 0, 80], // Example values: high defense, moderate physicality
+            weighting: [100, 0, 0, 30, 10, 0, 0, 50], // Example values: high defense, moderate physicality
             isCentral: true,
             relativeYPosition: 1.0, // Furthest back
             priorityStat: 3,
@@ -163,7 +163,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Full Back",
             positionShortName: "FB",
-            weighting: [70, 30, 70, 30, 0, 0, 20, 40], // More balanced defensive + attacking capability
+            weighting: [100, 20, 30, 10, 0, 0, 0, 50], // More balanced defensive + attacking capability
             isCentral: false,
             relativeYPosition: 0.7, // Slightly forward compared to CB
             priorityStat: 1,
@@ -174,7 +174,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Defensive Midfield",
             positionShortName: "DM",
-            weighting: [80, 20, 30, 85, 20, 10, 40, 80], // Strong tactical and defense
+            weighting: [100, 10, 10, 60, 60, 10, 40, 80], // Strong tactical and defense
             isCentral: true,
             relativeYPosition: 1.0, // Always the furthest back
             priorityStat: 3,
@@ -182,15 +182,15 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Wide Midfielder",
             positionShortName: "WM",
-            weighting: [40, 80, 80, 30, 60, 40, 60, 65], // Higher athleticism and attack
+            weighting: [40, 90, 60, 20, 60, 30, 60, 65], // Higher athleticism and attack
             isCentral: false,
             relativeYPosition: 0.5, // Slightly forward compared to CB
             priorityStat: 1,
         },
         {
             positionName: "Attacking Midfield",
-            positionShortName: "AM", // Wing Back
-            weighting: [20, 90, 50, 40, 100, 65, 80, 40], // Strong attack and creativity
+            positionShortName: "AM", 
+            weighting: [20, 100, 50, 50, 100, 50, 100, 30], // Strong attack and creativity
             isCentral: true,
             relativeYPosition: 0.4, // Higher up the pitch
             priorityStat: 2,
@@ -201,7 +201,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Striker",
             positionShortName: "ST",
-            weighting: [0, 100, 50, 50, 20, 100, 55, 85], // High technicality for scoring, lower creativity
+            weighting: [0, 100, 50, 20, 20, 100, 50, 80], // High technicality for scoring, lower creativity
             isCentral: true,
             relativeYPosition: 0.5, // Always the furthest back
             priorityStat: 3,
@@ -209,7 +209,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Winger",
             positionShortName: "WR",
-            weighting: [0, 100, 80, 20, 70, 50, 85, 45], // High athleticism and creativity
+            weighting: [0, 100, 100, 10, 60, 50, 90, 20], // High athleticism and creativity
             isCentral: false,
             relativeYPosition: 0.7, // Furthest back
             priorityStat: 1,
