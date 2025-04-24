@@ -249,23 +249,23 @@ export const formationTemplates: Record<number, Formation[]> = {
         },
         {
             name: "3-2-1",
-            positions: [[1], [3, 0], [2, 0, 0], [1, 0]]
+            positions: [[1], [3, 0], [1, 0, 1], [1, 0]]
         },
     ],
     8: [
         {
             name: "3-3-1",
-            positions: [[1], [3, 0], [1, 2, 0], [1, 0]]
+            positions: [[1], [3, 0], [1, 0, 2], [1, 0]]
         },
         {
             name: "2-4-1",
-            positions: [[1], [2, 0], [2, 2, 0], [1, 0]]
+            positions: [[1], [2, 0], [1, 2, 1], [1, 0]]
         },
     ],
     9: [
         {
             name: "3-3-2",
-            positions: [[1], [3, 0], [1, 2, 0], [2, 0]]
+            positions: [[1], [3, 0], [1, 0, 2], [2, 0]]
         },
         {
             name: "3-4-1",
@@ -279,7 +279,7 @@ export const formationTemplates: Record<number, Formation[]> = {
         },
         {
             name: "3-3-3",
-            positions: [[1], [3, 0], [1, 2, 0], [1, 2]]
+            positions: [[1], [3, 0], [1, 0, 2], [1, 2]]
         },
     ],
     11: [

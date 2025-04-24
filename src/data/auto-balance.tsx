@@ -147,7 +147,7 @@ const assignPlayersToTeams = (players: ScoredGamePlayer[]) => {
     let numTeamBPlayers = players.length - numTeamAPlayers
 
     const formationA = getIdealDistribution(numTeamAPlayers);
-    const formationB = structuredClone(formationA); //getIdealDistribution(numTeamBPlayers); //
+    const formationB = numTeamAPlayers == numTeamBPlayers ? structuredClone(formationA) : getIdealDistribution(numTeamBPlayers);
 
     if (addPlayerAtPos(formationA, 0, 0, true, sortWorst)) --numTeamAPlayers;
     if (addPlayerAtPos(formationB, 0, 0, false, sortWorst)) --numTeamBPlayers;
@@ -251,12 +251,10 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
 
             // console.log("aZoneAvg and bZoneAvg", aZoneAvg, bZoneAvg);
             const maxAvg = Math.min(aZoneAvg, bZoneAvg);
-            const diff = Math.sqrt(Math.abs(aZoneAvg - bZoneAvg) / maxAvg);            
-            
+            const diff = Math.sqrt(Math.abs(aZoneAvg - bZoneAvg) / maxAvg);
+
             const maxBAvg = Math.min(aZoneSum, bZoneSum);
             const bdiff = Math.abs(aZoneSum - bZoneSum) / maxBAvg;
-
-
 
             // If both averages are 0, assume perfect balance (avoid 0/0)
             let zoneScore = maxAvg === 0 ? 1 : 1 - diff;
@@ -292,7 +290,7 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
     }
 
     if (!recursive) {
-        console.log("Internal Run Team Totals: A:", bestAssignment.a.score, "B:", bestAssignment.b.score);
+        // console.log("Internal Run Team Totals: A:", bestAssignment.a.score, "B:", bestAssignment.b.score);
         return bestAssignment;
     }
 
@@ -395,7 +393,7 @@ const generateBalancedTeams = (players: FilledGamePlayer[], attributeWeights: We
 
     let ScoredGamePlayers = calculateScores(players, normalizeWeights(attributeWeights));
 
-    // logPlayerStats(ScoredGamePlayers);
+    logPlayerStats(ScoredGamePlayers);
 
     const teams = getZones(ScoredGamePlayers, true, 150);
 
