@@ -105,9 +105,8 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
   const findPlayerName = (player: GamePlayer) => {
     if (player.guest_name !== null) {
       return player.guest_name;
-    } else {
-      const realPlayer = players.find(searchPlayer => searchPlayer.id === player.id);
-      if (realPlayer != null) return realPlayer.name;
+    } else if (player.id in players) {
+      return players[player.id].name;
     }
     return "[Player]"
   };

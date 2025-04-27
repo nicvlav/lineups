@@ -1,5 +1,6 @@
 import Pitch from '@/components/pitch/pitch'
 import { usePlayers } from "@/data/players-provider";
+
 interface TeamAreaProps {
   team: string;
   playerSize: number;
@@ -8,7 +9,7 @@ interface TeamAreaProps {
 const TeamArea: React.FC<TeamAreaProps> = ({ team, playerSize }) => {
   const { gamePlayers } = usePlayers();
 
-  const teamPlayers = gamePlayers.filter(player => player.team === team);
+  const teamPlayers = Object.values(gamePlayers).filter((p) => p.team === team);
 
   return (
     <div className="w-full h-full flex flex-col gap-2 bg-card"> {/* Ensure column flex layout */}

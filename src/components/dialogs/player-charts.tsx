@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "@/data/theme-provider";
 import { attributeScores, attributeShortLabels, attributeLabels } from "@/data/attribute-types";
-import { Player, PlayerUpdate  } from "@/data/player-types";
+import { Player, PlayerUpdate } from "@/data/player-types";
 import { Minus, Plus } from "lucide-react";
 import { } from "lucide-react";
 import { Radar } from "react-chartjs-2";
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/popover"
 
 interface PlayerChartsProps {
-    players: Player[];
+    players: Record<string, Player>;
     selectedPlayer1: string | null;
     setSelectedPlayer1: React.Dispatch<React.SetStateAction<string | null>>;
 
@@ -44,12 +44,12 @@ const PlayerCharts: React.FC<PlayerChartsProps> = ({
     setSelectedPlayer2,
     updatePlayerAttributes }) => {
 
-    const sortedPlayers = players.sort((a, b) => {
+    const sortedPlayers = Object.values(players).sort((a, b) => {
         return a.name.localeCompare(b.name);
     });
 
-    const chartPlayer1 = selectedPlayer1 ? players.find((p) => p.id === selectedPlayer1) as Player : null;
-    const chartPlayer2 = selectedPlayer2 ? players.find((p) => p.id === selectedPlayer2) as Player : null;
+    const chartPlayer1 = selectedPlayer1 && selectedPlayer1 in players ? players[selectedPlayer1] as Player : null;
+    const chartPlayer2 = selectedPlayer2 && selectedPlayer2 in players ? players[selectedPlayer2] as Player : null;
 
     return (
         <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">

@@ -26,9 +26,8 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
     const inputRef = useRef<HTMLInputElement | null>(null);
 
     const playerIsInGame = (searchPlayer: Player) => {
-        return gamePlayers.some(gamePlayer => gamePlayer.id === searchPlayer.id);
+        return searchPlayer.id in gamePlayers;
     };
-
 
     // Focus the input when the component mounts
     useEffect(() => {
@@ -42,7 +41,12 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
     }, [selectedPlayer]);
 
     // Filter players based on search term
-    const filteredPlayers = players.filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredPlayers = Object.values(players).filter((p) =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ).sort((a, b) =>
+        a.name.localeCompare(b.name)
+    );
+
 
     // Find if there's an exact match
     const exactMatch = filteredPlayers.find(

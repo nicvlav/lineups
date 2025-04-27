@@ -24,7 +24,7 @@ const PlayerList = () => {
 
     const handleAddPlayer = async () => {
         if (newPlayerName.trim()) {
-            addPlayer(newPlayerName);
+            addPlayer({ name: newPlayerName});
             setNewPlayerName("");
             setIsAdding(false);
         }
@@ -45,7 +45,7 @@ const PlayerList = () => {
 
     const handleSortChange = (mode: string) => setSortOrder(mode);
 
-    const sortedPlayers = [...players].sort((a, b) =>
+    const sortedPlayers = Object.values(players).sort((a, b) =>
         sortOrder === "desc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
     );
 
@@ -94,6 +94,7 @@ const SortControls = ({ handleSortChange }: { handleSortChange: (mode: string) =
 
 const PlayerRow = ({ player, onDelete, handleAddPlayerToGame }: { player: Player, onDelete: () => void, handleAddPlayerToGame: (player: GamePlayer, team: string) => void }) => {
     const gamePlayer: GamePlayer = {id: player.id, team: "", guest_name: null, position: {x : 0.5, y: 0.5} as Point};
+   
     const [{ isDragging }, drag] = useDrag(() => ({
         type: "PLAYER",
         item:  gamePlayer,

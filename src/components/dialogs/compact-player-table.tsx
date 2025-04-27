@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { attributeScores, attributeShortLabels } from "@/data/attribute-types";
+import { attributeScores, defaultAttributeScores, attributeShortLabels, attributeLabels } from "@/data/attribute-types";
 import { Player, PlayerUpdate } from "@/data/player-types";
 import { X, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,8 @@ import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@
 import Panel from "@/components/dialogs/panel"
 
 interface CompactPlayerTableProps {
-    players: Player[];
-    addPlayer: (name: string) => void;
+    players: Record<string, Player>;
+    addPlayer: (player: Partial<Player>) => void;
     deletePlayer: (id: string) => void;
     updatePlayerAttributes: (id: string, updates: PlayerUpdate) => void;
 }
@@ -18,13 +18,12 @@ interface CompactPlayerTableProps {
 const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPlayer, deletePlayer, updatePlayerAttributes }) => {
     const [newPlayerName, setNewPlayerName] = useState<string>("");
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [sortingMode, setSortingMode] = useState<string>("Alphabetical");
+    const [sortingMode, setSortingMode] = useState<number>(0);
 
     const handleAttributeChange = (uid: string, statIndex: number, change: number) => {
-        const player = players.find((p: Player) => p.id === uid);
-        if (!player) return;
+        if (uid in players) return;
 
-        const newStats: attributeScores = [...player.stats];
+        const newStats: attributeScores = [...players[uid].stats];
         newStats[statIndex] = Math.max(1, Math.min(100, newStats[statIndex] + change));
 
         updatePlayerAttributes(uid, { stats: newStats });
@@ -32,28 +31,23 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
 
     const handleAddPlayer = () => {
         if (newPlayerName.trim() !== "") {
-            addPlayer(newPlayerName.trim());
+            addPlayer({ name: newPlayerName.trim() });
             setNewPlayerName("");
         }
     };
 
-    const filteredPlayers = players.filter((player: Player) =>
-        player.name.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const filteredPlayers = Object.values(players).filter((p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const sortedPlayers = [...filteredPlayers].sort((a, b) => {
-        switch (sortingMode) {
-            case "Alphabetical":
-                return a.name.localeCompare(b.name);
-            case "Attack":
-                return b.stats[1] - a.stats[1];
-            case "Defense":
-                return b.stats[0] - a.stats[0];
-            case "Athleticism":
-                return b.stats[2] - a.stats[2];
-            default:
-                return 0;
+        if (sortingMode < 0 || sortingMode >= defaultAttributeScores.length) {
+            return a.name.localeCompare(b.name);
         }
+
+        return b.stats[sortingMode] - a.stats[sortingMode];
+
     });
 
     return (
@@ -88,7 +82,7 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                             className="p-2 rounded w-full"
                         />
 
-                        <Select onValueChange={setSortingMode}>
+                        <Select onValueChange={(value: string) => setSortingMode(Number(value))}>
                             {/* Trigger button for the select */}
                             <SelectTrigger>
                                 <SelectValue placeholder="Sort">Sort</SelectValue>
@@ -96,18 +90,14 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
 
                             {/* Dropdown content with dynamically grouped formations */}
                             <SelectContent>
-                                <SelectItem key={"Alphabetical"} value={"Alphabetical"}>
+                                <SelectItem key={"Alphabetical"} value={attributeLabels.length.toString()}>
                                     {"Alphabetical"}
                                 </SelectItem>
-                                <SelectItem key={"Attack"} value={"Attack"}>
-                                    {"Attack"}
-                                </SelectItem>
-                                <SelectItem key={"Defense"} value={"Defense"}>
-                                    {"Defense"}
-                                </SelectItem>
-                                <SelectItem key={"Athleticism"} value={"Athleticism"}>
-                                    {"Athleticism"}
-                                </SelectItem>
+                                {attributeLabels.map((idx, label) => (
+                                    <SelectItem key={label} value={idx.toString()}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>

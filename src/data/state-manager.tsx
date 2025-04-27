@@ -14,7 +14,7 @@ export const decodeStateFromURL = (search : string) => {
     return null;
 };
 
-export const encodeStateToURL = (gamePlayers : GamePlayer[]) => {
+export const encodeStateToURL = (gamePlayers : Record<string, GamePlayer>) => {
     const stateObject = { gamePlayers };
     const jsonString = JSON.stringify(stateObject);
     const compressed = LZString.compressToEncodedURIComponent(jsonString);
