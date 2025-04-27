@@ -12,7 +12,7 @@ const App = () => {
   const currentUrl = new URL(window.location.href);
   const urlState = currentUrl.search;
 
-  console.log("STATE", urlState);
+  // console.log("STATE", urlState);
 
   // Clean up the URL after extracting the state
   useEffect(() => {

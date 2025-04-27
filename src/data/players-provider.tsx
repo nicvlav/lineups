@@ -230,7 +230,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                         const parsedData = JSON.parse(savedState);
                         // setPlayers(parsedData.players || []);
                         setGamePlayers(parsedData.gamePlayers || []);
-                        console.log("Loaded from IndexedDB:", parsedData);
+                        console.log("Loaded from IndexedDB:");
                     } catch (error) {
                         console.error("Error loading from IndexedDB:", error);
                     }
@@ -264,13 +264,13 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             });
 
             setPlayers(playerRecord);
-            console.log("Fetched players from Supabase:", data);
+            console.log("Fetched players from Server:");
         }
     };
 
     useEffect(() => {
         if (!loadingState.current) {
-            console.log("Saving state from change:", gamePlayers);
+            // console.log("Saving state from change:", gamePlayers);
             saveState();
         }
 
