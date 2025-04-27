@@ -39,7 +39,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isCompact }) => {
     }, [players, gamePlayers]);
 
     const handlePlayersUpdated = () => {
-        setSelectedPlayers(Object.keys(gamePlayers));
+        setSelectedPlayers(Object.keys(players).filter((id) => id in gamePlayers));
     };
 
     // Generate teams with selected players and weights
@@ -150,6 +150,7 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
     const [searchTerm, setSearchTerm] = useState<string>("");
 
     const playersArr = Object.values(players);
+
 
     // Filter players based on search
     const filteredPlayers = playersArr.filter(player =>

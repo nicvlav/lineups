@@ -6,7 +6,6 @@ const FormationSelector = () => {
     const { applyFormation } = usePlayers();
 
     const handleChange = (value: string) => {
-        console.log("VALUE", value);
         if (!value) return;
 
         const allFormations = Object.values(formationTemplates).flat();

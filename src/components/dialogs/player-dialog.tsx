@@ -84,10 +84,10 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
         switchToNewPlayer(player, newPlayerName, false);
     };
 
-    const handleSwitchToNewGuest = (newPlayerName: string) => {
-        switchToNewPlayer(player, newPlayerName, true);
+    // const handleSwitchToNewGuest = (newPlayerName: string) => {
+    //     switchToNewPlayer(player, newPlayerName, true);
 
-    };
+    // };
 
     return (
         <Modal title="Player Attributes" isOpen={isOpen} onClose={onClose}>
@@ -148,7 +148,7 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                                 + Add & Select "{searchTerm}"
                             </Button>
 
-                            <Button
+                            {/* <Button
                                 className="mt-2 w-full bg-chart-2 p-2 rounded"
                                 onClick={() => {
                                     handleSwitchToNewGuest(searchTerm);
@@ -156,7 +156,7 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                                 }}
                             >
                                 Add "{searchTerm}" as Guest
-                            </Button>
+                            </Button> */}
                         </>
                     )}
 

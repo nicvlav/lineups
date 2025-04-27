@@ -129,6 +129,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         }, delay);
     };
 
+
     // Real-time updates for players
     useEffect(() => {
         loadURLState();
@@ -143,14 +144,13 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 },
                 (payload) => {
                     if (loadingState.current) return;
-                    console.log("New player inserted:", payload.new);
+                    // console.log("Insert ID internal", payload, players, gamePlayers);
 
                     setPlayers(prevGamePlayers => {
                         const newGamePlayers = { ...prevGamePlayers };
                         newGamePlayers[payload.new.id] = payload.new as Player;
                         return newGamePlayers;
                     });
-
                 }
             )
             .on(
@@ -166,7 +166,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
                     // Skip if local has unsynced changes
                     if (pendingUpdatesRef.current.has(id)) {
-                        console.log(`[Skip RT] Ignoring real-time update for dirty player ${id}`);
+                        // console.log(`[Skip RT] Ignoring real-time update for dirty player ${id}`);
                         return;
                     }
 
@@ -185,25 +185,29 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 },
                 (payload) => {
                     if (loadingState.current) return;
-                    console.log("Player deleted:", payload);
-
                     pendingUpdatesRef.current.delete(payload.old.id);
 
-                    if (payload.old.id in players) {
-                        setPlayers(prevPlayers => {
-                            const newPlayers = { ...prevPlayers };
-                            delete prevPlayers[payload.old.id];
-                            return newPlayers;
-                        });
-                    }
+                    const deletedPlayer = payload.old as Partial<Player>;
+                    let id: string | undefined = deletedPlayer?.id;
 
-                    if (payload.old.id in gamePlayers) {
-                        setGamePlayers(prevGamePlayers => {
-                            const newGamePlayers = { ...prevGamePlayers };
-                            delete newGamePlayers[payload.old.id];
-                            return newGamePlayers;
-                        });
-                    }
+                    // console.log("Delete ID internal", id, players, gamePlayers);
+
+                    if (!id) return;
+
+                    setPlayers(prevPlayers => {
+                        const newPlayers = { ...prevPlayers };
+                        if (id in newPlayers) delete newPlayers[id];
+                        return newPlayers;
+                    });
+
+
+                    setGamePlayers(prevGamePlayers => {
+                        const newGamePlayers = { ...prevGamePlayers };
+                        if (id in newGamePlayers) delete newGamePlayers[id];
+                        return newGamePlayers;
+                    });
+                    
+
                 }
             )
             .subscribe();
@@ -432,18 +436,19 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         }
     };
 
+    // this switches an existing game player to a brand new player entry
     const switchToNewPlayer = async (oldPlayer: GamePlayer, newName: string, guest: boolean = false) => {
         // old player MUST be in the game already
         if (!(oldPlayer.id in gamePlayers)) return;
 
         if (guest) {
-            setGamePlayers(prevGamePlayers => {
-                const newGamePlayers = { ...prevGamePlayers };
-                newGamePlayers[newID] = { id: uuidv4(), guest_name: newName, team: oldPlayer.team, position: oldPlayer.position };
-                delete newGamePlayers[oldPlayer.id];
-                return newGamePlayers;
-            });
-            return;
+            // setGamePlayers(prevGamePlayers => {
+            //     const newGamePlayers = { ...prevGamePlayers };
+            //     newGamePlayers[newID] = { id: uuidv4(), guest_name: newName, team: oldPlayer.team, position: oldPlayer.position };
+            //     delete newGamePlayers[oldPlayer.id];
+            //     return newGamePlayers;
+            // });
+            // return;
         }
 
         const newID = uuidv4();
@@ -453,6 +458,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
                 newGamePlayers[gamePlayer.id] = gamePlayer;
+                delete newGamePlayers[oldPlayer.id];
                 return newGamePlayers;
             });
         });

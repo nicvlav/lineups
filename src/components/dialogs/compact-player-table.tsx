@@ -21,7 +21,7 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
     const [sortingMode, setSortingMode] = useState<number>(0);
 
     const handleAttributeChange = (uid: string, statIndex: number, change: number) => {
-        if (uid in players) return;
+        if (!(uid in players)) return;
 
         const newStats: attributeScores = [...players[uid].stats];
         newStats[statIndex] = Math.max(1, Math.min(100, newStats[statIndex] + change));
