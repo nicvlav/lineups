@@ -16,9 +16,15 @@ interface CompactPlayerTableProps {
 }
 
 const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPlayer, deletePlayer, updatePlayerAttributes }) => {
+    const alphabeticalSortValue: string = "Alphabetical";
+    const sortingRecord: Record<string, number> = {};
     const [newPlayerName, setNewPlayerName] = useState<string>("");
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [sortingMode, setSortingMode] = useState<number>(0);
+    const [sortingMode, setSortingMode] = useState<string>(alphabeticalSortValue);
+
+    attributeLabels.forEach((label, id) => {
+        sortingRecord[label] = id;
+    });
 
     const handleAttributeChange = (uid: string, statIndex: number, change: number) => {
         if (!(uid in players)) return;
@@ -36,17 +42,20 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
         }
     };
 
-
     const filteredPlayers = Object.values(players).filter((p) =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const sortedPlayers = [...filteredPlayers].sort((a, b) => {
-        if (sortingMode < 0 || sortingMode >= defaultAttributeScores.length) {
-            return a.name.localeCompare(b.name);
+        if (sortingMode in sortingRecord) {
+            const idx = sortingRecord[sortingMode];
+          
+            if (idx >= 0 && idx < defaultAttributeScores.length) {
+                return b.stats[sortingRecord[sortingMode]] - a.stats[sortingRecord[sortingMode]];
+            }
         }
+        return a.name.localeCompare(b.name);
 
-        return b.stats[sortingMode] - a.stats[sortingMode];
 
     });
 
@@ -82,7 +91,7 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                             className="p-2 rounded w-full"
                         />
 
-                        <Select onValueChange={(value: string) => setSortingMode(Number(value))}>
+                        <Select onValueChange={setSortingMode}>
                             {/* Trigger button for the select */}
                             <SelectTrigger>
                                 <SelectValue placeholder="Sort">Sort</SelectValue>
@@ -90,11 +99,11 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
 
                             {/* Dropdown content with dynamically grouped formations */}
                             <SelectContent>
-                                <SelectItem key={"Alphabetical"} value={attributeLabels.length.toString()}>
-                                    {"Alphabetical"}
+                                <SelectItem key={alphabeticalSortValue} value={alphabeticalSortValue}>
+                                    {alphabeticalSortValue}
                                 </SelectItem>
-                                {attributeLabels.map((idx, label) => (
-                                    <SelectItem key={label} value={idx.toString()}>
+                                {attributeLabels.map((label) => (
+                                    <SelectItem key={label} value={label}>
                                         {label}
                                     </SelectItem>
                                 ))}
