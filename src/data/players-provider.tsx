@@ -3,28 +3,28 @@ import { useAuth } from "@/data/auth-context";
 import { v4 as uuidv4, } from 'uuid';
 
 import { openDB } from "idb";
-import { Formation, Weighting, defaultZoneWeights, defaultAttributeScores, Point } from "@/data/attribute-types";
-import { Player, GamePlayer, FilledGamePlayer, PlayerUpdate, GamePlayerUpdate, getYRangeForTeamZone, getPointForPosition } from "@/data/player-types";
+import { Formation, Weighting, defaultZoneWeights, defaultAttributeScores, emptyZoneScores, Point, normalizeWeights } from "@/data/attribute-types";
+import { Player, PlayerUpdate, GamePlayerUpdate, getYRangeForTeamZone, getPointForPosition, ScoredGamePlayer, calculateScoresForStats } from "@/data/player-types";
 import { decodeStateFromURL } from "@/data/state-manager";
-import { autoCreateTeams } from "./auto-balance";
+import { autoCreateTeamsScored } from "./auto-balance";
 
 interface PlayersContextType {
     players: Record<string, Player>;
-    gamePlayers: Record<string, GamePlayer>;
     zoneWeights: Weighting;
+    gamePlayers: Record<string, ScoredGamePlayer>;
 
     addPlayer: (player: Partial<Player>, onSuccess?: (player: Player) => void) => void;
     deletePlayer: (id: string) => void;
     updatePlayerAttributes: (id: string, updates: PlayerUpdate) => void;
-    updateGamePlayerAttributes: (gamePlayer: GamePlayer, updates: GamePlayerUpdate) => void;
+    updateGamePlayerAttributes: (gamePlayer: ScoredGamePlayer, updates: GamePlayerUpdate) => void;
 
     clearGame: () => void;
     addNewRealPlayerToGame: (placedTeam: string, name: string, dropX: number, dropY: number) => void;
     addNewGuestPlayerToGame: (placedTeam: string, name: string, dropX: number, dropY: number) => void;
-    addExisitingPlayerToGame: (player: GamePlayer, team: string, dropX: number, dropY: number) => void;
-    removeFromGame: (playerToRemove: GamePlayer) => void;
-    switchToRealPlayer: (oldPlayer: GamePlayer, newID: string) => void;
-    switchToNewPlayer: (oldPlayer: GamePlayer, newName: string, guest: boolean) => void;
+    addExisitingPlayerToGame: (player: ScoredGamePlayer, team: string, dropX: number, dropY: number) => void;
+    removeFromGame: (playerToRemove: ScoredGamePlayer) => void;
+    switchToRealPlayer: (oldPlayer: ScoredGamePlayer, newID: string) => void;
+    switchToNewPlayer: (oldPlayer: ScoredGamePlayer, newName: string, guest: boolean) => void;
 
     applyFormation: (formation: Formation) => void;
 
@@ -68,8 +68,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const { supabase, urlState, clearUrlState } = useAuth();
 
     const [players, setPlayers] = useState<Record<string, Player>>({});
-    const [gamePlayers, setGamePlayers] = useState<Record<string, GamePlayer>>({});
     const [zoneWeights, setZoneWeights] = useState<Weighting>(defaultZoneWeights);
+    const [gamePlayers, setGamePlayers] = useState<Record<string, ScoredGamePlayer>>({});
 
     const loadingState = useRef(false);
     const tabKeyRef = useRef(sessionStorage.getItem("tabKey") || `tab-${crypto.randomUUID()}`);
@@ -206,7 +206,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                         if (id in newGamePlayers) delete newGamePlayers[id];
                         return newGamePlayers;
                     });
-                    
+
 
                 }
             )
@@ -342,11 +342,11 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     };
 
     // Update player attributes
-    const updateGamePlayerAttributes = async (gamePlayer: GamePlayer, updates: GamePlayerUpdate) => {
+    const updateGamePlayerAttributes = async (gamePlayer: ScoredGamePlayer, updates: GamePlayerUpdate) => {
         setGamePlayers(prevGamePlayers => {
             const newGamePlayers = { ...prevGamePlayers };
             if (gamePlayer.id in newGamePlayers) {
-                newGamePlayers[gamePlayer.id] = { ...newGamePlayers[gamePlayer.id], ...updates } as GamePlayer;
+                newGamePlayers[gamePlayer.id] = { ...newGamePlayers[gamePlayer.id], ...updates } as ScoredGamePlayer;
             }
             return newGamePlayers;
         });
@@ -359,7 +359,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     };
 
     // Add real player to game
-    const addExisitingPlayerToGame = async (player: GamePlayer, team: string, dropX: number, dropY: number) => {
+    const addExisitingPlayerToGame = async (player: ScoredGamePlayer, team: string, dropX: number, dropY: number) => {
         // const foundPlayer = gamePlayersRef.current.find((p) => p.id === player.id);
 
         if (player.id in gamePlayers) {
@@ -381,7 +381,13 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         const newID = uuidv4();
 
         addPlayer({ id: newID, name }, () => {
-            const gamePlayer: GamePlayer = { id: newID, team: placedTeam, guest_name: null, position: { x: dropX, y: dropY } as Point };
+            if (!(newID in players)) return;
+            const gamePlayer: ScoredGamePlayer = {
+                id: newID, team: placedTeam,
+                guest_name: null,
+                position: { x: dropX, y: dropY } as Point,
+                zoneFit: calculateScoresForStats(players[newID].stats, normalizeWeights(zoneWeights))
+            };
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
                 newGamePlayers[gamePlayer.id] = gamePlayer;
@@ -393,7 +399,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const addNewGuestPlayerToGame = async (placedTeam: string, name: string, dropX: number, dropY: number) => {
         const newID = uuidv4();
 
-        const gamePlayer: GamePlayer = { id: newID, team: placedTeam, guest_name: name, position: { x: dropX, y: dropY } as Point };
+        const gamePlayer: ScoredGamePlayer = { id: newID, team: placedTeam, guest_name: name, position: { x: dropX, y: dropY } as Point, zoneFit: structuredClone(emptyZoneScores) };
         setGamePlayers(prevGamePlayers => {
             const newGamePlayers = { ...prevGamePlayers };
             newGamePlayers[gamePlayer.id] = gamePlayer;
@@ -401,7 +407,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         });
     };
 
-    const removeFromGame = async (playerToRemove: GamePlayer) => {
+    const removeFromGame = async (playerToRemove: ScoredGamePlayer) => {
         setGamePlayers(prevGamePlayers => {
             const newGamePlayers = { ...prevGamePlayers };
             delete newGamePlayers[playerToRemove.id];
@@ -409,7 +415,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         });
     };
 
-    const switchToRealPlayer = async (oldPlayer: GamePlayer, newID: string) => {
+    const switchToRealPlayer = async (oldPlayer: ScoredGamePlayer, newID: string) => {
         // No need to switch if IDs are the same
         // This function has these requirements:
         // old player MUST be in the game already
@@ -429,7 +435,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             const newPlayer = players[newID];
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
-                newGamePlayers[newID] = { id: newPlayer.id, guest_name: null, team: oldPlayer.team, position: oldPlayer.position };
+                newGamePlayers[newID] = { id: newPlayer.id, guest_name: null, team: oldPlayer.team, position: oldPlayer.position, zoneFit: calculateScoresForStats(newPlayer.stats, normalizeWeights(zoneWeights)) };
                 delete newGamePlayers[oldPlayer.id];
                 return newGamePlayers;
             });
@@ -437,7 +443,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     };
 
     // this switches an existing game player to a brand new player entry
-    const switchToNewPlayer = async (oldPlayer: GamePlayer, newName: string, guest: boolean = false) => {
+    const switchToNewPlayer = async (oldPlayer: ScoredGamePlayer, newName: string, guest: boolean = false) => {
         // old player MUST be in the game already
         if (!(oldPlayer.id in gamePlayers)) return;
 
@@ -454,7 +460,13 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         const newID = uuidv4();
 
         addPlayer({ id: newID, name: newName }, () => {
-            const gamePlayer: GamePlayer = { id: newID, team: oldPlayer.team, guest_name: null, position: oldPlayer.position };
+            const gamePlayer: ScoredGamePlayer = {
+                id: newID,
+                team: oldPlayer.team,
+                guest_name: null,
+                position: oldPlayer.position,
+                zoneFit: structuredClone(emptyZoneScores),
+            };
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
                 newGamePlayers[gamePlayer.id] = gamePlayer;
@@ -467,7 +479,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
     const applyFormationToTeam = (team: string, formation: Formation) => {
         let teamPlayers = Object.values(gamePlayers).filter((player) => player.team === team);
-        let newTeamPlayers: Record<string, GamePlayer> = {};
+        let newTeamPlayers: Record<string, ScoredGamePlayer> = {};
+
 
         formation.positions.forEach((zone, zoneIndex) => {
             const { yEnd, yStart } = getYRangeForTeamZone(zoneIndex);
@@ -491,10 +504,10 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                         newTeamPlayers[newID] = {
                             id: newID,
                             guest_name: "[Player]",
+                            zoneFit: structuredClone(emptyZoneScores),
                             team,
                             position
                         }
-
                     }
                 }
             });
@@ -516,30 +529,19 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         setZoneWeights(defaultZoneWeights);
     };
 
-    const generateTeams = async (filteredPlayers: Player[]) => {
-        let teamA: GamePlayer[] = [];
-        let teamB: GamePlayer[] = [];
-
-        const gamePlayersWithStats = filteredPlayers.map(player => {
-            return {
-                id: player.id,
-                guest_name: null,
-                team: "A",
-                position: { x: 0.5, y: 0.5 } as Point,
-                real_name: player.name,
-                stats: player.stats
-            } as FilledGamePlayer;
-        });
+    const handleGenerateTeams = async (gamePlayersWithScores: ScoredGamePlayer[]) => {
+        let teamA: ScoredGamePlayer[] = [];
+        let teamB: ScoredGamePlayer[] = [];
 
         try {
-            const balanced = autoCreateTeams(gamePlayersWithStats, zoneWeights);
+            const balanced = autoCreateTeamsScored(gamePlayersWithScores);
             teamA = balanced.a;
             teamB = balanced.b;
         } catch (error) {
             return;
         }
 
-        const playerRecord: Record<string, GamePlayer> = {};
+        const playerRecord: Record<string, ScoredGamePlayer> = {};
         teamA.forEach(player => {
             playerRecord[player.id] = player;
         });
@@ -550,18 +552,31 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         setGamePlayers(playerRecord);
     };
 
+    const generateTeams = async (filteredPlayers: Player[]) => {
+        const normalizedWeights = normalizeWeights(zoneWeights);
+        handleGenerateTeams(filteredPlayers.map(player => {
+            return {
+                ...player,
+                guest_name: null,
+                team: "A",
+                position: { x: 0.5, y: 0.5 } as Point,
+                zoneFit: calculateScoresForStats(player.stats, normalizedWeights)
+            } as ScoredGamePlayer;
+        }));
+    };
+
     const rebalanceCurrentGame = async () => {
         // Filter players in the current game
-        let filteredPlayers: Player[] = [];
+        let filteredPlayers: ScoredGamePlayer[] = [];
 
-        Object.keys(gamePlayers).forEach((id) => {
+        Object.entries(gamePlayers).forEach(([id, player]) => {
             if (!(id in players)) return;
 
-            filteredPlayers.push(players[id]);
+            filteredPlayers.push(player);
         });
 
         // Call generateTeams with the filtered players
-        await generateTeams(filteredPlayers);
+        await handleGenerateTeams(filteredPlayers);
     };
 
     return (

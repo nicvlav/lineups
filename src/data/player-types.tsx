@@ -1,4 +1,4 @@
-import { attributeScores, ZoneScores, Weighting, emptyZoneScores, PositionWeighting, Point } from "@/data/attribute-types"; // Importing from shared file
+import { attributeScores, ZoneScores, Weighting, emptyZoneScores, PositionWeighting, weightingShortLabels, Point } from "@/data/attribute-types"; // Importing from shared file
 
 // Core Player data from Supabase
 export interface Player {
@@ -20,10 +20,9 @@ export interface GamePlayer {
 export type GamePlayerUpdate = Partial<GamePlayer>;
 
 export interface FilledGamePlayer extends GamePlayer {
-    real_name: string,
     stats: attributeScores,
 }
-export interface ScoredGamePlayer extends FilledGamePlayer {
+export interface ScoredGamePlayer extends GamePlayer {
     zoneFit: ZoneScores;
 }
 
@@ -96,23 +95,31 @@ export const getPointForPosition = (position: PositionWeighting, yEnd: number, y
     } as Point;
 };
 
+export const calculateScoresForStats = (stats: attributeScores, zoneWeights: Weighting): ZoneScores => {
+    const zoneFit: ZoneScores = structuredClone(emptyZoneScores);
+
+    zoneWeights.forEach((zoneArray, zone) => {
+        zoneArray.forEach((positionObject, position) => {
+            // dot product
+            const score = stats.reduce((sum, statValue, index) => {
+                return sum + statValue * positionObject.weighting[index];
+            }, 0);
+
+            zoneFit[zone][position] = score;
+        });
+    });
+
+    return zoneFit;
+
+};
+
+
 export const calculateScores = (players: FilledGamePlayer[], zoneWeights: Weighting): ScoredGamePlayer[] => {
     return players.map(player => {
 
-        const zoneFit: ZoneScores = structuredClone(emptyZoneScores);
+        const zoneFit: ZoneScores = calculateScoresForStats(player.stats, zoneWeights);
 
-        zoneWeights.forEach((zoneArray, zone) => {
-            zoneArray.forEach((positionObject, position) => {
-                // dot product
-                const score = player.stats.reduce((sum, statValue, index) => {
-                    return sum + statValue * positionObject.weighting[index];
-                }, 0);
-
-                zoneFit[zone][position] = score;
-            });
-        });
-
-        return { ...player, zoneFit };
+        return { ...player, zoneFit } as ScoredGamePlayer;
     });
 };
 
@@ -137,3 +144,77 @@ export const assignPositions = (zones: TeamZones, team: string) => {
 
     return finalPlayers;
 }
+
+export const logPlayerStats = (gamePlayers: Record<string, ScoredGamePlayer>, actualPlayers: Record<string, Player>) => {
+    // this is just for logging purposes
+    // kinda interesting to see the full sorted list
+    // remove when this gets optimized
+    let playersArr: ScoredGamePlayer[] = Object.values(gamePlayers).sort((a, b) => {
+        // Flatten zoneFit values into a single sorted array (highest to lowest)
+        // Exclude goalkeeper (first value)
+        const aScores = Object.values(a.zoneFit).flat().slice(1).sort((x, y) => y - x);
+        const bScores = Object.values(b.zoneFit).flat().slice(1).sort((x, y) => y - x);
+
+        // Compare element by element
+        for (let i = 0; i < Math.min(aScores.length, bScores.length); i++) {
+            if (aScores[i] !== bScores[i]) {
+                return bScores[i] - aScores[i]; // Descending order
+            }
+        }
+
+        return 0; // Players are equal in ranking
+    });
+
+    //Function to get the best position (zone + position) for each player
+    const getBestPosition = (zoneFit: ZoneScores) => {
+        let bestZone = 0;
+        let bestPosition = 0;
+        let bestScore = -Infinity;
+
+        let secondBestZone = 0;
+        let secondBestPosition = 0;
+        let secondBestScore = -Infinity;
+
+        Object.entries(zoneFit).forEach(([zone, positions], zoneIdx) => {
+            Object.entries(positions).forEach(([position, score], positionIdx) => {
+                if (zoneIdx === 0 && positionIdx === 0) return; // Skip the first position (0 index) within the first zone
+
+                if (score > bestScore) {
+                    secondBestZone = bestZone;
+                    secondBestPosition = bestPosition;
+                    secondBestScore = bestScore;
+
+                    bestZone = parseInt(zone);
+                    bestPosition = parseInt(position);
+                    bestScore = score;
+                } else if (score > secondBestScore) {
+                    secondBestZone = parseInt(zone);
+                    secondBestPosition = parseInt(position);
+                    secondBestScore = score;
+                }
+            });
+        });
+
+        return {
+            best: {
+                pos: weightingShortLabels[bestZone].positions[bestPosition],
+                score: bestScore,
+            },
+            secondBest: {
+                pos: weightingShortLabels[secondBestZone].positions[secondBestPosition],
+                score: secondBestScore,
+            },
+        };
+    };
+
+    console.log("===== Ranked Players With Zone Ratings (Best to Worst) =====", playersArr);
+
+
+
+    playersArr.forEach(gamePlayer => {
+        const scores = getBestPosition(gamePlayer.zoneFit);
+        let playerName = gamePlayer.id in actualPlayers ? actualPlayers[gamePlayer.id].name : "[Player]";
+        console.log(`${playerName} Best Scores: `);
+        console.log(scores.best, scores.secondBest);
+    });
+};

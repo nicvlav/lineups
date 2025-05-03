@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Point } from "@/data/attribute-types";
-import { Player, GamePlayer } from "@/data/player-types";
+import { Point, emptyZoneScores } from "@/data/attribute-types";
+import { Player, ScoredGamePlayer } from "@/data/player-types";
 import { usePlayers } from "@/data/players-provider";
 import { useDrag } from "react-dnd";
 import { Trash2, UserPlus, EllipsisVertical } from "lucide-react";
@@ -24,7 +24,7 @@ const PlayerList = () => {
 
     const handleAddPlayer = async () => {
         if (newPlayerName.trim()) {
-            addPlayer({ name: newPlayerName});
+            addPlayer({ name: newPlayerName });
             setNewPlayerName("");
             setIsAdding(false);
         }
@@ -38,7 +38,7 @@ const PlayerList = () => {
 
     const handleDeletePlayer = async (id: string) => await deletePlayer(id);
 
-    const handleAddPlayerToGame = (player: GamePlayer, team: string) => {
+    const handleAddPlayerToGame = (player: ScoredGamePlayer, team: string) => {
         addExisitingPlayerToGame(player, team, Math.random() * 0.9 + 0.05, Math.random() * 0.9 + 0.05);
     };
 
@@ -92,12 +92,12 @@ const SortControls = ({ handleSortChange }: { handleSortChange: (mode: string) =
     </div>
 );
 
-const PlayerRow = ({ player, onDelete, handleAddPlayerToGame }: { player: Player, onDelete: () => void, handleAddPlayerToGame: (player: GamePlayer, team: string) => void }) => {
-    const gamePlayer: GamePlayer = {id: player.id, team: "", guest_name: null, position: {x : 0.5, y: 0.5} as Point};
-   
+const PlayerRow = ({ player, onDelete, handleAddPlayerToGame }: { player: Player, onDelete: () => void, handleAddPlayerToGame: (player: ScoredGamePlayer, team: string) => void }) => {
+    const gamePlayer: ScoredGamePlayer = { id: player.id, team: "", guest_name: null, position: { x: 0.5, y: 0.5 } as Point, zoneFit: structuredClone(emptyZoneScores) };
+
     const [{ isDragging }, drag] = useDrag(() => ({
         type: "PLAYER",
-        item:  gamePlayer,
+        item: gamePlayer,
         collect: (monitor) => ({ isDragging: !!monitor.isDragging() }),
     }));
 

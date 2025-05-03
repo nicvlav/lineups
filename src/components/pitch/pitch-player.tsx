@@ -1,18 +1,24 @@
 import { useState } from "react";
 import { useDrag } from "react-dnd";
 import { User } from "lucide-react";
-import { GamePlayer } from "@/data/player-types";
+import { ScoredGamePlayer } from "@/data/player-types";
 import PlayerDialog from "@/components/dialogs/player-dialog";
 
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
+
 interface PitchPlayerProps {
-  player: GamePlayer;
+  player: ScoredGamePlayer;
   name: string,
   playerSize: number;
   initialLeft: number;
   initialTop: number;
   containerWidth: number;
   containerHeight: number;
-  onPositionChange?: (player: GamePlayer, newX: number, newY: number) => void;
+  onPositionChange?: (player: ScoredGamePlayer, newX: number, newY: number) => void;
 }
 
 const PitchPlayer: React.FC<PitchPlayerProps> = ({
@@ -29,7 +35,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "PLAYER",
-    item: player ,
+    item: player,
     collect: (monitor) => ({ isDragging: !!monitor.isDragging() }),
     end: (_, monitor) => {
       const dropResult = monitor.getDropResult();
@@ -106,7 +112,6 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
     // zIndex: 1,
   };
 
-
   return (
     <>
       <div ref={(node) => {
@@ -115,9 +120,14 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
         style={playerStyle}
         onContextMenu={handleOpenDialog}
         onDoubleClick={handleOpenDialog}>
+
         <div style={nameStyle}>{name}</div>
-        <div style={circleStyle}>{<User size={Math.max(circleSize * 0.4, 20)} />}</div>
+
+        <div style={circleStyle}>
+            {<User size={Math.max(circleSize * 0.4, 20)} />}
+        </div>
       </div>
+
       <PlayerDialog
         player={player}
         isOpen={isDialogOpen}

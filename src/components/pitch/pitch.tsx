@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useDrop, DropTargetMonitor } from 'react-dnd';
 import { usePlayers } from "@/data/players-provider"
-import { GamePlayer } from "@/data/player-types";
+import { ScoredGamePlayer } from "@/data/player-types";
 
 import DraggablePlayer from '@/components/pitch/pitch-player'
 
@@ -14,11 +14,11 @@ const mergeRefs = (...refs: (React.Ref<any> | null)[]) => (el: any) => {
 
 interface PlayerContainerProps {
   team: string;
-  teamPlayers: GamePlayer[];
+  teamPlayers: ScoredGamePlayer[];
   playerSize: number;
 }
 
-const getPlayerPosition = (player: GamePlayer, playerSize: number, containerWidth: number, containerHeight: number) => {
+const getPlayerPosition = (player: ScoredGamePlayer, playerSize: number, containerWidth: number, containerHeight: number) => {
   const halfSize = playerSize / 2;
   const maxWidth = containerWidth - halfSize;
   const maxHeight = containerHeight - halfSize;
@@ -74,14 +74,14 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
   }, []);
 
   // Handle movement of existing player within the container
-  const handlePlayerMove = (player: GamePlayer, newX: number, newY: number) => {
+  const handlePlayerMove = (player: ScoredGamePlayer, newX: number, newY: number) => {
     updateGamePlayerAttributes(player, { position: { x: newX, y: newY } });
   };
 
   // Handle drop interactions
   const [, drop] = useDrop({
     accept: 'PLAYER',
-    drop: (item: GamePlayer, monitor: DropTargetMonitor) => {
+    drop: (item: ScoredGamePlayer, monitor: DropTargetMonitor) => {
       const dropOffset = monitor.getClientOffset();
       if (!containerRef.current || !dropOffset) return;
 
@@ -98,11 +98,11 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
     },
   });
 
-  const handleMainPlayerDrop = (player: GamePlayer, dropX: number, dropY: number) => {
+  const handleMainPlayerDrop = (player: ScoredGamePlayer, dropX: number, dropY: number) => {
     addExisitingPlayerToGame(player, team, dropX, dropY);
   };
 
-  const findPlayerName = (player: GamePlayer) => {
+  const findPlayerName = (player: ScoredGamePlayer) => {
     if (player.guest_name !== null) {
       return player.guest_name;
     } else if (player.id in players) {

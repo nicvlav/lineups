@@ -2,9 +2,9 @@
 import {
     defaultZoneWeights,
     formationTemplates,
-    weightingShortLabels,
     Weighting,
     ZoneScores,
+    normalizeWeights
 } from "@/data/attribute-types";
 
 import {
@@ -307,95 +307,10 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
     return bestAssignment;
 };
 
-const normalizeWeights = (zoneWeights: Weighting): Weighting => {
-    return zoneWeights.map(zoneArray =>
-        zoneArray.map(positionObject => {
-            const sum = positionObject.weighting.reduce((acc, w) => acc + w, 0);
-            const normalizedWeights = positionObject.weighting.map(w => w / sum);
-            return { ...positionObject, weighting: normalizedWeights }; // Return new object
-        })
-    ) as Weighting;
-};
+const generateBalancedTeams = (scoredPlayers: ScoredGamePlayer[]) => {
+    if (scoredPlayers.length < 2) return { a: [], b: [] };
 
-const logPlayerStats = (players: ScoredGamePlayer[]) => {
-    // this is just for logging purposes
-    // kinda interesting to see the full sorted list
-    // remove when this gets optimized
-    players.sort((a, b) => {
-        // Flatten zoneFit values into a single sorted array (highest to lowest)
-        // Exclude goalkeeper (first value)
-        const aScores = Object.values(a.zoneFit).flat().slice(1).sort((x, y) => y - x);
-        const bScores = Object.values(b.zoneFit).flat().slice(1).sort((x, y) => y - x);
-
-        // Compare element by element
-        for (let i = 0; i < Math.min(aScores.length, bScores.length); i++) {
-            if (aScores[i] !== bScores[i]) {
-                return bScores[i] - aScores[i]; // Descending order
-            }
-        }
-
-        return 0; // Players are equal in ranking
-    });
-
-    //Function to get the best position (zone + position) for each player
-    const getBestPosition = (zoneFit: ZoneScores) => {
-        let bestZone = 0;
-        let bestPosition = 0;
-        let bestScore = -Infinity;
-
-        let secondBestZone = 0;
-        let secondBestPosition = 0;
-        let secondBestScore = -Infinity;
-
-        Object.entries(zoneFit).forEach(([zone, positions], zoneIdx) => {
-            Object.entries(positions).forEach(([position, score], positionIdx) => {
-                if (zoneIdx === 0 && positionIdx === 0) return; // Skip the first position (0 index) within the first zone
-
-                if (score > bestScore) {
-                    secondBestZone = bestZone;
-                    secondBestPosition = bestPosition;
-                    secondBestScore = bestScore;
-
-                    bestZone = parseInt(zone);
-                    bestPosition = parseInt(position);
-                    bestScore = score;
-                } else if (score > secondBestScore) {
-                    secondBestZone = parseInt(zone);
-                    secondBestPosition = parseInt(position);
-                    secondBestScore = score;
-                }
-            });
-        });
-
-        return {
-            best: {
-                pos: weightingShortLabels[bestZone].positions[bestPosition],
-                score: bestScore,
-            },
-            secondBest: {
-                pos: weightingShortLabels[secondBestZone].positions[secondBestPosition],
-                score: secondBestScore,
-            },
-        };
-    };
-
-    console.log("===== Ranked Players With Zone Ratings (Best to Worst) =====", players);
-
-    players.forEach(player => {
-        const scores = getBestPosition(player.zoneFit);
-        console.log(`${player.real_name} Best Scores: `);
-        console.log(scores.best, scores.secondBest);
-    });
-};
-
-const generateBalancedTeams = (players: FilledGamePlayer[], attributeWeights: Weighting) => {
-    if (players.length < 2) return { a: [], b: [] };
-
-    let ScoredGamePlayers = calculateScores(players, normalizeWeights(attributeWeights));
-
-    logPlayerStats(ScoredGamePlayers);
-
-    const teams = getZones(ScoredGamePlayers, true, 150);
+    const teams = getZones(scoredPlayers, true, 150);
 
     // Assign positions for both teams
     const positionsA = assignPositions(teams.a.team, "A");
@@ -404,8 +319,13 @@ const generateBalancedTeams = (players: FilledGamePlayer[], attributeWeights: We
     return { a: positionsA, b: positionsB };
 };
 
-export const autoCreateTeams = (players: FilledGamePlayer[], attributeWeights: Weighting) => {
+
+export const autoCreateTeamsScored = (players: ScoredGamePlayer[]) => {
     if (players.length < 10) throw new Error("Not enough players to form teams");
     if (players.length > 24) throw new Error("Too many players to form teams");
-    return generateBalancedTeams(players, attributeWeights);
+    return generateBalancedTeams(players);
+};
+
+export const autoCreateTeamsFilled = (players: FilledGamePlayer[], attributeWeights: Weighting) => {
+    return autoCreateTeamsScored(calculateScores(players, normalizeWeights(attributeWeights)));
 };

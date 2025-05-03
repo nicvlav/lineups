@@ -320,3 +320,13 @@ export const formationTemplates: Record<number, Formation[]> = {
     ],
 
 } as const;
+
+export const normalizeWeights = (zoneWeights: Weighting): Weighting => {
+    return zoneWeights.map(zoneArray =>
+        zoneArray.map(positionObject => {
+            const sum = positionObject.weighting.reduce((acc, w) => acc + w, 0);
+            const normalizedWeights = positionObject.weighting.map(w => w / sum);
+            return { ...positionObject, weighting: normalizedWeights }; // Return new object
+        })
+    ) as Weighting;
+};
