@@ -1,4 +1,4 @@
-import { attributeScores, ZoneScores, Weighting, emptyZoneScores, PositionWeighting, weightingShortLabels, Point } from "@/data/attribute-types"; // Importing from shared file
+import { attributeScores, ZoneScores, Weighting, emptyZoneScores, PositionWeighting, PositionWeightingAndIndex, weightingShortLabels, Point, defaultZoneWeights } from "@/data/attribute-types"; // Importing from shared file
 
 // Core Player data from Supabase
 export interface Player {
@@ -24,6 +24,10 @@ export interface FilledGamePlayer extends GamePlayer {
 }
 export interface ScoredGamePlayer extends GamePlayer {
     zoneFit: ZoneScores;
+}
+
+export interface ScoredGamePlayerWithThreat extends ScoredGamePlayer {
+    threatScore: number;
 }
 
 export interface PositionedGamePlayer extends ScoredGamePlayer {
@@ -77,24 +81,148 @@ const getXForPlayerPosition = (position: PositionWeighting, positionIndex: numbe
     }
 };
 
-export const getYRangeForTeamZone = (zoneIndex: number) => {
-    const numZones = emptyTeamZones.length;
-    const zoneYShift = 0.1;
-    const zoneYScaling = 0.8;
 
-    return {
-        yEnd: zoneIndex ? (1.0 - zoneYShift - zoneIndex * zoneYScaling / numZones) : 1.0,
-        yStart: zoneIndex ? (1.0 - zoneYShift - (zoneIndex + 1) * zoneYScaling / numZones) : 1.0
+const getProximityScore = (absolutePosition: Point, position: PositionWeighting) => {
+    const centerThreshold = 0.3;
+    const y = 1 - Math.abs(position.absoluteYPosition - absolutePosition.y);
+    let score = y;
+
+    if (absolutePosition.x <= (1 - centerThreshold) && absolutePosition.x >= centerThreshold) {
+        score = position.isCentral ? y : 0;
+    } else {
+        const x = (absolutePosition.x < centerThreshold ? absolutePosition.x : (1 - absolutePosition.x)) / centerThreshold;
+        score = position.isCentral ? Math.max(0, x) * y : Math.max(0, 1 - x) * y;
     }
+
+    return Math.pow(score, 10);
+
+
 };
 
-export const getPointForPosition = (position: PositionWeighting, yEnd: number, yStart: number, positionIndex: number, numPositionentries: number) => {
+const filterByVerticalProximity = (positions: PositionWeightingAndIndex[], y: number) => {
+    positions.sort((a, b) => Math.abs(a.position.absoluteYPosition - y) - Math.abs(b.position.absoluteYPosition - y));
+
+    const filteredPositions: PositionWeightingAndIndex[] = [];
+
+    let foundAboveOrEqual = false;
+    let foundBelow = false;
+
+    for (const pos of positions) {
+        if (pos.position.absoluteYPosition < y) {
+            if (foundBelow) continue;
+
+            filteredPositions.push(pos);
+            foundBelow = true;
+
+            if (foundAboveOrEqual) break;
+
+        } else {
+            if (foundAboveOrEqual) continue;
+
+            filteredPositions.push(pos);
+            foundAboveOrEqual = true;
+
+            if (foundBelow) break;
+        }
+    }
+
+    return filteredPositions;
+};
+
+export const getPointForPosition = (position: PositionWeighting, positionIndex: number, numPositionentries: number) => {
     return {
         x: getXForPlayerPosition(position, positionIndex, numPositionentries),
-        y: position.relativeYPosition * (yEnd - yStart) + yStart
+        y: position.absoluteYPosition
     } as Point;
 };
 
+const getProximityPositions = (point: Point) => {
+    const zonePositions = defaultZoneWeights.flat().map((position, index) => {
+        return { position, originalFlatZoneIndex: index } as PositionWeightingAndIndex;
+    }).slice(1);
+
+    let centrals = filterByVerticalProximity(zonePositions.filter((zone) => zone.position.isCentral), point.y);
+    let wides = filterByVerticalProximity(zonePositions.filter((zone) => !zone.position.isCentral), point.y);
+
+    const weights = [...centrals, ...wides].map(position => {
+        return { ...position, weight: getProximityScore(point, position.position) };
+    });
+
+    weights.filter((position) => position.weight > 0).sort((a, b) => b.weight - a.weight);
+
+    if (weights.length > 0 && weights[0].weight == 1) {
+        return weights.slice(0, 1);
+    }
+
+    return weights;
+};
+
+export const normalizeWeights = (zoneWeights: Weighting): Weighting => {
+    return zoneWeights.map(zoneArray =>
+        zoneArray.map(positionObject => {
+            const sum = positionObject.weighting.reduce((acc, w) => acc + w, 0);
+            const normalizedWeights = positionObject.weighting.map(w => w / sum);
+            return { ...positionObject, weighting: normalizedWeights }; // Return new object
+        })
+    ) as Weighting;
+};
+
+export const getThreatScore = (point: Point, playerScores: ZoneScores) => {
+    const proximityPositions = getProximityPositions(point);
+
+    const sum = proximityPositions.reduce((acc, w) => acc + w.weight, 0);
+
+    proximityPositions.forEach((position) => {
+        position.weight = position.weight / sum;
+    });
+
+    const flatScores = playerScores.flat();
+
+    const threat = proximityPositions.reduce((acc, w) => {
+        const c = (w.originalFlatZoneIndex > 0 && w.originalFlatZoneIndex < flatScores.length) ? flatScores[w.originalFlatZoneIndex] : 0;
+        return acc + (c * w.weight / 100);
+    }, 0);
+
+    return threat;
+
+};
+
+export const interpolateColor = (c1: string, c2: string, t: number) => {
+    const hex = (str: string) => parseInt(str, 16);
+    const r1 = hex(c1.slice(1, 3)), g1 = hex(c1.slice(3, 5)), b1 = hex(c1.slice(5, 7));
+    const r2 = hex(c2.slice(1, 3)), g2 = hex(c2.slice(3, 5)), b2 = hex(c2.slice(5, 7));
+    const r = Math.round(r1 + (r2 - r1) * t);
+    const g = Math.round(g1 + (g2 - g1) * t);
+    const b = Math.round(b1 + (b2 - b1) * t);
+    return `rgb(${r}, ${g}, ${b})`;
+};
+
+export const getThreatColor = (score: number): string => {
+    // Magma-inspired color palette
+    const colors = [
+        { stop: 0, color: '#000003' },     // near black, low threat
+        { stop: 0.10, color: '#1d0c3e' },  // dark purple
+        { stop: 0.20, color: '#3f0c58' },  // dark magenta
+        { stop: 0.30, color: '#662d91' },  // purple
+        { stop: 0.40, color: '#9e3a8b' },  // pinkish purple
+        { stop: 0.50, color: '#d54f6e' },  // soft magenta
+        { stop: 0.60, color: '#f06359' },  // soft red-pink
+        { stop: 0.70, color: '#ff8153' },  // orange-red
+        { stop: 0.80, color: '#ff9d3f' },  // light orange
+        { stop: 0.90, color: '#ffcc2d' },  // yellow
+        { stop: 1.00, color: '#f7f7f7' },  // light yellow (max threat)
+    ];
+
+    for (let i = 1; i < colors.length; i++) {
+        const prev = colors[i - 1];
+        const current = colors[i];
+        if (score <= current.stop) {
+            const ratio = (score - prev.stop) / (current.stop - prev.stop);
+            return interpolateColor(prev.color, current.color, ratio);
+        }
+    }
+    return colors[colors.length - 1].color;
+};
 export const calculateScoresForStats = (stats: attributeScores, zoneWeights: Weighting): ZoneScores => {
     const zoneFit: ZoneScores = structuredClone(emptyZoneScores);
 
@@ -126,16 +254,14 @@ export const calculateScores = (players: FilledGamePlayer[], zoneWeights: Weight
 export const assignPositions = (zones: TeamZones, team: string) => {
     let finalPlayers: ScoredGamePlayer[] = [];
 
-    zones.forEach((zone, index) => {
-        const { yEnd, yStart } = getYRangeForTeamZone(index);
-
+    zones.forEach((zone) => {
         zone.forEach((players) => {
             players.forEach((player, pidx) => {
                 finalPlayers.push({
                     ...player,
                     team,
                     position: getPointForPosition(player.generatedPositionInfo,
-                        yEnd, yStart, pidx,
+                        pidx,
                         players.length)
                 } as ScoredGamePlayer);
             });

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useDrag } from "react-dnd";
 import { User } from "lucide-react";
-import { ScoredGamePlayer } from "@/data/player-types";
+import { ScoredGamePlayerWithThreat, getThreatColor } from "@/data/player-types";
+// import Panel from "@/components/dialogs/panel"
 import PlayerDialog from "@/components/dialogs/player-dialog";
 
 import {
@@ -11,14 +12,14 @@ import {
 } from "@/components/ui/hover-card"
 
 interface PitchPlayerProps {
-  player: ScoredGamePlayer;
-  name: string,
+  player: ScoredGamePlayerWithThreat;
+  name: string;
   playerSize: number;
   initialLeft: number;
   initialTop: number;
   containerWidth: number;
   containerHeight: number;
-  onPositionChange?: (player: ScoredGamePlayer, newX: number, newY: number) => void;
+  onPositionChange?: (player: ScoredGamePlayerWithThreat, newX: number, newY: number) => void;
 }
 
 const PitchPlayer: React.FC<PitchPlayerProps> = ({
@@ -33,32 +34,29 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const getRelativePosition = (x: number, y: number) => ({
+    x: Math.max(0, Math.min(1, x / containerWidth)),
+    y: Math.max(0, Math.min(1, y / containerHeight)),
+  });
+
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "PLAYER",
     item: player,
     collect: (monitor) => ({ isDragging: !!monitor.isDragging() }),
     end: (_, monitor) => {
       const dropResult = monitor.getDropResult();
-      const didDrop = monitor.didDrop();
+      if (dropResult) return;
 
-      if (didDrop && dropResult) return;
-
-      if (!didDrop && monitor.getItemType() === "PLAYER") {
-        const initialOffset = monitor.getInitialClientOffset();
-        const currentOffset = monitor.getClientOffset();
-
-        if (initialOffset && currentOffset && containerWidth && containerHeight) {
-          const deltaX = currentOffset.x - initialOffset.x;
-          const deltaY = currentOffset.y - initialOffset.y;
-
-          const newX = Math.max(0, Math.min(1, (initialLeft + deltaX) / containerWidth));
-          const newY = Math.max(0, Math.min(1, (initialTop + deltaY) / containerHeight));
-
-          onPositionChange?.(player, newX, newY);
-        }
+      const initialOffset = monitor.getInitialClientOffset();
+      const currentOffset = monitor.getClientOffset();
+      if (initialOffset && currentOffset) {
+        const deltaX = currentOffset.x - initialOffset.x;
+        const deltaY = currentOffset.y - initialOffset.y;
+        const { x, y } = getRelativePosition(initialLeft + deltaX, initialTop + deltaY);
+        onPositionChange?.(player, x, y);
       }
     },
-  }), [player.id, player.team, initialLeft, initialTop, containerWidth, containerHeight, onPositionChange]);
+  }), [player.id, initialLeft, initialTop, containerWidth, containerHeight]);
 
   const handleOpenDialog = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -66,65 +64,51 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
   };
 
   const circleSize = Math.max(playerSize * 0.8, 40);
-
-  const playerStyle: React.CSSProperties = {
-    position: "absolute",
-    left: `${initialLeft}px`,
-    top: `${initialTop}px`,
-    transform: "translate(-50%, -50%)",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    opacity: isDragging ? 0.5 : 1,
-    cursor: "grab",
-    zIndex: 0,
-    transition: isDragging ? "none" : "left 0.3s ease, top 0.3s ease",
-    touchAction: "none",
-  };
-
-  const circleStyle: React.CSSProperties = {
-    width: `${circleSize}px`,
-    height: `${circleSize}px`,
-    borderRadius: "50%",
-    backgroundColor: "#4c7df0",
-    color: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23)",
-    border: "2px solid white",
-    fontSize: `${Math.max(circleSize * 0.4, 14)}px`,
-  };
-
-  const nameStyle: React.CSSProperties = {
-    position: "absolute",
-    top: `-${circleSize / 2 + 8}px`,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    color: "white",
-    padding: "2px 8px",
-    borderRadius: "10px",
-    fontSize: "12px",
-    fontWeight: "bold",
-    whiteSpace: "nowrap",
-    pointerEvents: "none",
-    textAlign: "center",
-    // textOverflow: "ellipsis",
-    // zIndex: 1,
-  };
+  const iconSize = Math.max(circleSize * 0.4, 20);
+  const nameOffset = -(circleSize / 2 + 8);
 
   return (
-    <>
-      <div ref={(node) => {
-        if (node) drag(node);
-      }}
-        style={playerStyle}
+    <HoverCard>
+      <div
+        ref={(node) => {
+          if (node) drag(node);
+        }}
         onContextMenu={handleOpenDialog}
-        onDoubleClick={handleOpenDialog}>
+        onDoubleClick={handleOpenDialog}
+        className={`
+          absolute flex flex-col items-center touch-none z-0
+          transition-all duration-300
+          ${isDragging ? "opacity-50" : "opacity-100"}
+          cursor-grab
+        `}
+        style={{
+          left: `${initialLeft}px`,
+          top: `${initialTop}px`,
+          transform: "translate(-50%, -50%)",
+        }}
+      >
+        <div
+          className={`
+            absolute text-white text-xs font-bold rounded-md px-2 py-1 bg-black/70
+            whitespace-nowrap pointer-events-none text-center
+          `}
+          style={{ top: `${nameOffset}px` }}
+        >
+          {name}
+        </div>
 
-        <div style={nameStyle}>{name}</div>
-
-        <div style={circleStyle}>
-            {<User size={Math.max(circleSize * 0.4, 20)} />}
+        <div
+          className="rounded-full border-2 border-white shadow-md flex items-center justify-center"
+          style={{
+            width: `${circleSize}px`,
+            height: `${circleSize}px`,
+            backgroundColor: getThreatColor(player.threatScore),
+            fontSize: `${Math.max(circleSize * 0.4, 14)}px`,
+          }}
+        >
+          <HoverCardTrigger>
+            <User size={iconSize} />
+          </HoverCardTrigger>
         </div>
       </div>
 
@@ -133,7 +117,17 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
       />
-    </>
+
+      <HoverCardContent>
+        {/* <div className="flex flex-col h-14 w-48 mx-auto">
+          <Panel> */}
+            <div>
+              <span className="flex">Threat Score: {(player.threatScore * 100).toFixed(1)}% </span>
+            </div>
+          {/* </Panel>
+        </div> */}
+      </HoverCardContent>
+    </HoverCard>
   );
 };
 

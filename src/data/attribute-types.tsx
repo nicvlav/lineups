@@ -50,8 +50,13 @@ export type PositionWeighting = {
     positionShortName: string,
     weighting: attributeScores,
     isCentral: boolean,
-    relativeYPosition: number,
+    absoluteYPosition: number,
     priorityStat: number;
+};
+
+export type PositionWeightingAndIndex = {
+    position: PositionWeighting,
+    originalFlatZoneIndex: number,
 };
 
 export const weightingShortLabels = [
@@ -146,7 +151,7 @@ export const defaultZoneWeights: Weighting = [
             positionShortName: "GK",
             weighting: [100, 0, 0, 0, 0, 0, 0, 0], // High defense, reflexes, positioning
             isCentral: true,
-            relativeYPosition: 1.0, // Always the furthest back
+            absoluteYPosition: 1.0, // Always the furthest back
             priorityStat: 0,
         },
     ],
@@ -157,7 +162,7 @@ export const defaultZoneWeights: Weighting = [
             positionShortName: "CB",
             weighting: [100, 0, 0, 30, 10, 0, 0, 50], // Example values: high defense, moderate physicality
             isCentral: true,
-            relativeYPosition: 1.0, // Furthest back
+            absoluteYPosition: 0.7, // Furthest back
             priorityStat: 3,
         },
         {
@@ -165,7 +170,7 @@ export const defaultZoneWeights: Weighting = [
             positionShortName: "FB",
             weighting: [100, 20, 30, 10, 0, 0, 0, 50], // More balanced defensive + attacking capability
             isCentral: false,
-            relativeYPosition: 0.7, // Slightly forward compared to CB
+            absoluteYPosition: 0.65, // Slightly forward compared to CB
             priorityStat: 1,
         }
     ],
@@ -176,7 +181,7 @@ export const defaultZoneWeights: Weighting = [
             positionShortName: "DM",
             weighting: [100, 10, 10, 60, 60, 10, 40, 80], // Strong tactical and defense
             isCentral: true,
-            relativeYPosition: 1.0, // Always the furthest back
+            absoluteYPosition: 0.55, // Always the furthest back
             priorityStat: 3,
         },
         {
@@ -184,7 +189,7 @@ export const defaultZoneWeights: Weighting = [
             positionShortName: "WM",
             weighting: [40, 80, 50, 40, 60, 10, 60, 20], // Higher athleticism and attack
             isCentral: false,
-            relativeYPosition: 0.5, // Slightly forward compared to CB
+            absoluteYPosition: 0.45, // Slightly forward compared to CB
             priorityStat: 1,
         },
         {
@@ -192,7 +197,7 @@ export const defaultZoneWeights: Weighting = [
             positionShortName: "AM",
             weighting: [20, 90, 60, 50, 100, 25, 80, 10], // Strong attack and creativity
             isCentral: true,
-            relativeYPosition: 0.4, // Higher up the pitch
+            absoluteYPosition: 0.4, // Higher up the pitch
             priorityStat: 2,
         }
     ],
@@ -203,7 +208,7 @@ export const defaultZoneWeights: Weighting = [
             positionShortName: "ST",
             weighting: [0, 100, 50, 30, 20, 100, 50, 80], // High technicality for scoring, lower creativity
             isCentral: true,
-            relativeYPosition: 0.5, // Always the furthest back
+            absoluteYPosition: 0.2, // Always the furthest back
             priorityStat: 3,
         },
         {
@@ -211,7 +216,7 @@ export const defaultZoneWeights: Weighting = [
             positionShortName: "WR",
             weighting: [0, 100, 100, 0, 60, 30, 100, 0], // High athleticism and creativity
             isCentral: false,
-            relativeYPosition: 0.7, // Furthest back
+            absoluteYPosition: 0.25, // Furthest back
             priorityStat: 1,
         }
     ]

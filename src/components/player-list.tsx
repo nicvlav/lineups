@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Point, emptyZoneScores } from "@/data/attribute-types";
-import { Player, ScoredGamePlayer } from "@/data/player-types";
+import { Player, ScoredGamePlayerWithThreat } from "@/data/player-types";
 import { usePlayers } from "@/data/players-provider";
 import { useDrag } from "react-dnd";
 import { Trash2, UserPlus, EllipsisVertical } from "lucide-react";
@@ -38,7 +38,7 @@ const PlayerList = () => {
 
     const handleDeletePlayer = async (id: string) => await deletePlayer(id);
 
-    const handleAddPlayerToGame = (player: ScoredGamePlayer, team: string) => {
+    const handleAddPlayerToGame = (player: ScoredGamePlayerWithThreat, team: string) => {
         addExisitingPlayerToGame(player, team, Math.random() * 0.9 + 0.05, Math.random() * 0.9 + 0.05);
     };
 
@@ -92,8 +92,8 @@ const SortControls = ({ handleSortChange }: { handleSortChange: (mode: string) =
     </div>
 );
 
-const PlayerRow = ({ player, onDelete, handleAddPlayerToGame }: { player: Player, onDelete: () => void, handleAddPlayerToGame: (player: ScoredGamePlayer, team: string) => void }) => {
-    const gamePlayer: ScoredGamePlayer = { id: player.id, team: "", guest_name: null, position: { x: 0.5, y: 0.5 } as Point, zoneFit: structuredClone(emptyZoneScores) };
+const PlayerRow = ({ player, onDelete, handleAddPlayerToGame }: { player: Player, onDelete: () => void, handleAddPlayerToGame: (player: ScoredGamePlayerWithThreat, team: string) => void }) => {
+    const gamePlayer: ScoredGamePlayerWithThreat = { id: player.id, team: "", guest_name: null, position: { x: 0.5, y: 0.5 } as Point, zoneFit: structuredClone(emptyZoneScores), threatScore: 0 };
 
     const [{ isDragging }, drag] = useDrag(() => ({
         type: "PLAYER",
