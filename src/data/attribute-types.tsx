@@ -143,7 +143,7 @@ export const emptyZoneScores: ZoneScores = [
     [0, 0]// attack
 ] as const;
 
-// attributeScores (weighting): "DEF", "ATT", "SPE", "TAC", "PAS", SHO DRI PHY
+// attributeScores (weighting): DEF, ATT, SPE, TAC, PAS, SHO DRI PHY
 export const defaultZoneWeights: Weighting = [
     [
         {
@@ -179,7 +179,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Defensive Midfield",
             positionShortName: "DM",
-            weighting: [100, 10, 10, 60, 60, 10, 40, 80], // Strong tactical and defense
+            weighting: [90, 10, 10, 100, 60, 10, 40, 80], // Strong tactical and defense
             isCentral: true,
             absoluteYPosition: 0.55, // Always the furthest back
             priorityStat: 3,
@@ -195,7 +195,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Attacking Midfield",
             positionShortName: "AM",
-            weighting: [20, 90, 60, 50, 100, 25, 80, 10], // Strong attack and creativity
+            weighting: [20, 90, 60, 70, 100, 25, 80, 10], // Strong attack and creativity
             isCentral: true,
             absoluteYPosition: 0.4, // Higher up the pitch
             priorityStat: 2,
@@ -206,7 +206,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Striker",
             positionShortName: "ST",
-            weighting: [0, 100, 50, 30, 20, 100, 50, 80], // High technicality for scoring, lower creativity
+            weighting: [0, 100, 50, 20, 20, 100, 50, 80], // High technicality for scoring, lower creativity
             isCentral: true,
             absoluteYPosition: 0.2, // Always the furthest back
             priorityStat: 3,
@@ -214,7 +214,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Winger",
             positionShortName: "WR",
-            weighting: [0, 100, 100, 0, 60, 30, 100, 0], // High athleticism and creativity
+            weighting: [0, 100, 100, 0, 80, 30, 90, 0], // High athleticism and creativity
             isCentral: false,
             absoluteYPosition: 0.25, // Furthest back
             priorityStat: 1,

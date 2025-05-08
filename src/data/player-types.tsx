@@ -201,14 +201,14 @@ export const getThreatColor = (score: number): string => {
     // Magma-inspired color palette
     const colors = [
         { stop: 0, color: '#000003' },     // near black, low threat
-        { stop: 0.10, color: '#1d0c3e' },  // dark purple
-        { stop: 0.20, color: '#3f0c58' },  // dark magenta
-        { stop: 0.30, color: '#662d91' },  // purple
-        { stop: 0.40, color: '#9e3a8b' },  // pinkish purple
-        { stop: 0.50, color: '#d54f6e' },  // soft magenta
-        { stop: 0.60, color: '#f06359' },  // soft red-pink
-        { stop: 0.70, color: '#ff8153' },  // orange-red
-        { stop: 0.80, color: '#ff9d3f' },  // light orange
+        { stop: 0.15, color: '#1d0c3e' },  // dark purple
+        { stop: 0.30, color: '#3f0c58' },  // dark magenta
+        { stop: 0.40, color: '#662d91' },  // purple
+        { stop: 0.50, color: '#9e3a8b' },  // pinkish purple
+        { stop: 0.60, color: '#d54f6e' },  // soft magenta
+        { stop: 0.71, color: '#f06359' },  // soft red-pink
+        { stop: 0.77, color: '#ff8153' },  // orange-red
+        { stop: 0.85, color: '#ff9d3f' },  // light orange
         { stop: 0.90, color: '#ffcc2d' },  // yellow
         { stop: 1.00, color: '#f7f7f7' },  // light yellow (max threat)
     ];
