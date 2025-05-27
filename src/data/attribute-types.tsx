@@ -1,48 +1,81 @@
+// MENTAL & TACTICAL INTELLIGENCE
 export const attributeLabels = [
-    "Defending",
-    "Attacking",
-    "Speed",
-    "Tactical",
-    "Passing",
-    "Shooting",
-    "Dribbling",
-    "Physicality"
+    "Positioning Awareness",
+    "Scanning & Situational Awareness",
+    "Off-the-ball Movement",
+    "Decision-making Under Pressure",
+
+    // TECHNICAL EXECUTION
+    "First Touch & Control",
+    "Passing & Vision",
+    "Tackling / Ball Winning",
+    "Finishing",
+
+    // PHYSICAL & ATHLETIC PROFILE
+    "Speed & Acceleration",
+    "Strength & Balance",
+    "Agility & Recovery",
+    "Work Rate & Endurance"
 ] as const;
 
 export const attributeShortLabels = [
-    "DEF",
-    "ATT",
-    "SPE",
-    "TAC",
+    // MENTAL & TACTICAL INTELLIGENCE
+    "POS",
+    "SCAN",
+    "MOV",
+    "DEC",
+
+    // TECHNICAL EXECUTION
+    "FTC",
     "PAS",
-    "SHO",
-    "DRI",
-    "PHY"
+    "TAC",
+    "FIN",
+
+    // PHYSICAL & ATHLETIC PROFILE
+    "SPD",
+    "STR",
+    "AGI",
+    "WRK"
 ] as const;
 
 export const attributeColors = [
-    "bg-blue-600",    // DEF (Defending) - Strong, reliable blue
-    "bg-red-600",     // ATT (Attacking) - Aggressive, fiery red
-    "bg-emerald-500", // SPE (Athleticism) - Vibrant, energetic green
-    "bg-orange-500",  // TAC (Tactical) - Strategic, calculated orange
-    "bg-pink-500",    // PAS (Creativity) - Imaginative, playful pink
-    "bg-blue-600",    // SHO (Defending) - Strong, reliable blue
-    "bg-indigo-500",  // DRI (Attacking) - Skillful, creative indigo
-    "bg-emerald-500", // PHY (Athleticism) - Vibrant, energetic green
+    // MENTAL & TACTICAL INTELLIGENCE - oranges/yellows
+    "bg-orange-600", // POS
+    "bg-yellow-500", // SCAN
+    "bg-orange-400", // MOV
+    "bg-yellow-600", // DEC
+
+    // TECHNICAL EXECUTION - blues/pinks
+    "bg-indigo-500", // FTC
+    "bg-pink-500",   // PAS
+    "bg-blue-600",   // TAC
+    "bg-red-500",    // FIN
+
+    // PHYSICAL & ATHLETIC PROFILE - greens
+    "bg-emerald-500", // SPD
+    "bg-green-600",   // STR
+    "bg-lime-500",    // AGI
+    "bg-green-400"    // WRK
 ] as const;
 
 export type attributeScores = [
-    DEF: number,
-    ATT: number,
-    ATH: number,
-    TAC: number,
+    POS: number,
+    SCA: number,
+    MOV: number,
+    DEC: number,
+
+    FTC: number,
     PAS: number,
-    SHO: number,
-    DRI: number,
-    PHY: number
+    TAC: number,
+    FIN: number,
+
+    SPD: number,
+    STR: number,
+    AGI: number,
+    WRK: number
 ];
 
-export const defaultAttributeScores: attributeScores = [50, 50, 50, 50, 50, 50, 50, 50,] as attributeScores;
+export const defaultAttributeScores: attributeScores = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50] as attributeScores;
 
 
 export type PositionWeighting = {
@@ -143,84 +176,99 @@ export const emptyZoneScores: ZoneScores = [
     [0, 0]// attack
 ] as const;
 
-// attributeScores (weighting): DEF, ATT, SPE, TAC, PAS, SHO DRI PHY
+// Attribute index reference (12 total):
+//  0 - Positioning Awareness
+//  1 - Scanning & Situational Awareness
+//  2 - Off-the-ball Movement
+//  3 - Decision-making Under Pressure
+//  4 - First Touch & Control
+//  5 - Passing & Vision
+//  6 - Tackling / Ball Winning
+//  7 - Finishing / Ball Retention
+//  8 - Speed & Acceleration
+//  9 - Strength & Balance
+// 10 - Agility & Recovery
+// 11 - Work Rate & Endurance
+
 export const defaultZoneWeights: Weighting = [
+    // Goalkeeper
     [
         {
             positionName: "Goalkeeper",
             positionShortName: "GK",
-            weighting: [100, 0, 0, 0, 0, 0, 0, 0], // High defense, reflexes, positioning
+            weighting: [100, 85, 40, 65, 45, 50, 85, 30, 55, 90, 40, 70],
             isCentral: true,
-            absoluteYPosition: 1.0, // Always the furthest back
-            priorityStat: 0,
+            absoluteYPosition: 1.0,
+            priorityStat: 0, // Positioning
         },
     ],
-    // Defense
+    // Defenders
     [
         {
             positionName: "Center Back",
             positionShortName: "CB",
-            weighting: [100, 0, 0, 30, 10, 0, 0, 50], // Example values: high defense, moderate physicality
+            weighting: [100, 60, 35, 65, 40, 45, 90, 10, 45, 95, 35, 60],
             isCentral: true,
-            absoluteYPosition: 0.7, // Furthest back
-            priorityStat: 3,
+            absoluteYPosition: 0.7,
+            priorityStat: 0, // Positioning
         },
         {
             positionName: "Full Back",
             positionShortName: "FB",
-            weighting: [100, 20, 30, 10, 0, 0, 0, 50], // More balanced defensive + attacking capability
+            weighting: [90, 85, 50, 55, 60, 60, 75, 25, 85, 60, 75, 80],
             isCentral: false,
-            absoluteYPosition: 0.65, // Slightly forward compared to CB
-            priorityStat: 1,
-        }
+            absoluteYPosition: 0.65,
+            priorityStat: 1, // Scanning/Awareness
+        },
     ],
-    // Midfield // attributeScores (weighting): "DEF", "ATT", "SPE", "TAC", "PAS"     SHO DRI PHY
+    // Midfield
     [
         {
             positionName: "Defensive Midfield",
             positionShortName: "DM",
-            weighting: [90, 10, 10, 100, 60, 10, 40, 80], // Strong tactical and defense
+            weighting: [85, 80, 45, 65, 50, 85, 100, 25, 55, 80, 60, 75],
             isCentral: true,
-            absoluteYPosition: 0.55, // Always the furthest back
-            priorityStat: 3,
+            absoluteYPosition: 0.55,
+            priorityStat: 6, // Tackling
         },
         {
             positionName: "Wide Midfielder",
             positionShortName: "WM",
-            weighting: [40, 80, 50, 40, 60, 10, 60, 20], // Higher athleticism and attack
+            weighting: [65, 85, 60, 55, 60, 80, 55, 35, 80, 55, 100, 85],
             isCentral: false,
-            absoluteYPosition: 0.45, // Slightly forward compared to CB
-            priorityStat: 1,
+            absoluteYPosition: 0.45,
+            priorityStat: 10, // Agility & Recovery
         },
         {
             positionName: "Attacking Midfield",
             positionShortName: "AM",
-            weighting: [20, 90, 60, 70, 100, 25, 80, 10], // Strong attack and creativity
+            weighting: [65, 85, 70, 75, 90, 100, 40, 65, 70, 50, 75, 70],
             isCentral: true,
-            absoluteYPosition: 0.4, // Higher up the pitch
-            priorityStat: 2,
-        }
+            absoluteYPosition: 0.4,
+            priorityStat: 5, // Passing & Vision
+        },
     ],
     // Attack
     [
         {
             positionName: "Striker",
             positionShortName: "ST",
-            weighting: [0, 100, 50, 20, 20, 100, 50, 80], // High technicality for scoring, lower creativity
+            weighting: [45, 55, 100, 60, 70, 50, 5, 95, 70, 85, 40, 60],
             isCentral: true,
-            absoluteYPosition: 0.2, // Always the furthest back
-            priorityStat: 3,
+            absoluteYPosition: 0.2,
+            priorityStat: 2, // Off-the-ball Movement
         },
         {
             positionName: "Winger",
             positionShortName: "WR",
-            weighting: [0, 100, 100, 0, 80, 30, 90, 0], // High athleticism and creativity
+            weighting: [50, 70, 90, 60, 85, 65, 10, 70, 95, 35, 100, 85],
             isCentral: false,
-            absoluteYPosition: 0.25, // Furthest back
-            priorityStat: 1,
-        }
-    ]
+            absoluteYPosition: 0.25,
+            priorityStat: 10, // Agility
+        },
+    ],
 ] as const;
+
 
 export type Point = { x: number, y: number, };
 
