@@ -4,7 +4,7 @@ import { v4 as uuidv4, } from 'uuid';
 
 import { openDB } from "idb";
 import { Formation, Weighting, defaultZoneWeights, defaultAttributeScores, emptyZoneScores, Point, normalizeWeights, attributeScores } from "@/data/attribute-types";
-import { Player, PlayerUpdate, GamePlayerUpdate, getPointForPosition, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, getThreatScore } from "@/data/player-types";
+import { Player, PlayerUpdate, GamePlayerUpdate, getPointForPosition, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, getThreatScore/*, logPlayerStats*/ } from "@/data/player-types";
 import { decodeStateFromURL } from "@/data/state-manager";
 import { autoCreateTeamsScored } from "./auto-balance";
 
@@ -558,6 +558,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const handleGenerateTeams = async (gamePlayersWithScores: ScoredGamePlayerWithThreat[]) => {
         let teamA: ScoredGamePlayer[] = [];
         let teamB: ScoredGamePlayer[] = [];
+
+        // logPlayerStats(gamePlayers, players);
 
         try {
             const balanced = autoCreateTeamsScored(gamePlayersWithScores);

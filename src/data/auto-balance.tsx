@@ -194,10 +194,10 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
     let bestBalanceDiff = Infinity;
 
     // Adjustable weights (total sums to 1)
-    const W_quality = recursive ? 0.3 : 0.1; // Normalize overall player quality
-    const W_efficiency = recursive ? 0.1 : 0.6; // Normalize overall player quality
+    const W_quality = recursive ? 0.3 : 0.4; // Normalize overall player quality
+    const W_efficiency = recursive ? 0.1 : 0.4; // Normalize overall player quality
     const W_balance = recursive ? 0.6 : 0.0; // Normalize team balance
-    const W_zonal = recursive ? 0.0 : 0.3;   // Normalize zonal variance
+    const W_zonal = recursive ? 0.0 : 0.2;   // Normalize zonal variance
 
     for (let i = 0; i < numSimulations; i++) {
         let results: TeamResults;
