@@ -1,7 +1,84 @@
+
+export const enum AttributeIndex {
+    Positioning = 0,
+    Awareness,
+    OffTheBall,
+    DecisionMaking,
+    FirstTouch,
+    Passing,
+    Tackling,
+    Finishing,
+    Speed,
+    Strength,
+    Agility,
+    Endurance,
+};
+
+
+export const mentalIndexes = [
+    AttributeIndex.Positioning,
+    AttributeIndex.Awareness,
+    AttributeIndex.OffTheBall,
+    AttributeIndex.DecisionMaking,
+] as const;
+
+export const technicalIndexes = [
+    AttributeIndex.FirstTouch,
+    AttributeIndex.Passing,
+    AttributeIndex.Tackling,
+    AttributeIndex.Finishing,
+] as const;
+
+export const physicalIndexes = [
+    AttributeIndex.Speed,
+    AttributeIndex.Strength,
+    AttributeIndex.Agility,
+    AttributeIndex.Endurance,
+] as const;
+
+export const enum CategoryIndex {
+    Mental = 0,
+    Technical,
+    Physical,
+};
+
+export const categoryNames = [
+    "Mental",
+    "Technical",
+    "Physical"
+] as const;
+
+/*
+I really need to rework my whole flat simple array values into more robust records or labelled arrays of some kind
+this is trying to shoehorn in more c++ style array + enum logic but surely this can be better in a more javascript way
+
+I feel like the below could be pretty decent 
+
+export const attributeLabels2: Record<AttributeIndex, String> = {
+    [AttributeIndex.Positioning]: "Positioning Awareness",
+    [AttributeIndex.Awareness]: "Scanning & Situational",
+    [AttributeIndex.OffTheBall]: "Off-the-ball Movement",
+    [AttributeIndex.DecisionMaking]: "Decision-making Under Pressure",
+    [AttributeIndex.FirstTouch]: "First Touch & Control",
+    [AttributeIndex.Passing]: "Passing & Vision",
+    [AttributeIndex.Tackling]: "Tackling / Ball Winning",
+    [AttributeIndex.Finishing]: "Finishing",
+    [AttributeIndex.Speed]: "Speed & Acceleration",
+    [AttributeIndex.Strength]: "Strength & Balance",
+    [AttributeIndex.Agility]: "Agility & Recovery",
+    [AttributeIndex.Endurance]: "Work Rate & Endurance"
+} as const;
+
+I just need to make this change to all arrays like this and update my auto balance algorithm
+
+*/
+
+
+
 // MENTAL & TACTICAL INTELLIGENCE
 export const attributeLabels = [
     "Positioning Awareness",
-    "Scanning & Situational Awareness",
+    "Scanning & Press Resistance",
     "Off-the-ball Movement",
     "Decision-making Under Pressure",
 
@@ -76,7 +153,6 @@ export type attributeScores = [
 ];
 
 export const defaultAttributeScores: attributeScores = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50] as attributeScores;
-
 
 export type PositionWeighting = {
     positionName: string,
@@ -196,7 +272,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Goalkeeper",
             positionShortName: "GK",
-            weighting: [100, 85, 40, 65, 45, 50, 85, 30, 55, 90, 40, 70],
+            weighting: [100, 10, 10, 30, 45, 50, 85, 30, 55, 90, 40, 70],
             isCentral: true,
             absoluteYPosition: 1.0,
             priorityStat: 0, // Positioning
@@ -207,7 +283,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Center Back",
             positionShortName: "CB",
-            weighting: [100, 60, 35, 65, 40, 45, 90, 10, 45, 95, 35, 60],
+            weighting: [90, 10, 0, 25, 0, 45, 100, 0, 5, 70, 10, 0],
             isCentral: true,
             absoluteYPosition: 0.7,
             priorityStat: 0, // Positioning
@@ -215,7 +291,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Full Back",
             positionShortName: "FB",
-            weighting: [90, 85, 50, 55, 60, 60, 75, 25, 85, 60, 75, 80],
+            weighting: [55, 20, 20, 40, 40, 40, 90, 0, 75, 60, 75, 80],
             isCentral: false,
             absoluteYPosition: 0.65,
             priorityStat: 1, // Scanning/Awareness
@@ -226,7 +302,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Defensive Midfield",
             positionShortName: "DM",
-            weighting: [85, 80, 45, 65, 50, 85, 100, 25, 55, 80, 60, 75],
+            weighting: [85, 100, 40, 85, 50, 70, 90, 5, 30, 80, 20, 50],
             isCentral: true,
             absoluteYPosition: 0.55,
             priorityStat: 6, // Tackling
@@ -234,7 +310,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Wide Midfielder",
             positionShortName: "WM",
-            weighting: [65, 85, 60, 55, 60, 80, 55, 35, 80, 55, 100, 85],
+            weighting: [40, 45, 60, 40, 60, 70, 55, 20, 80, 55, 75, 100],
             isCentral: false,
             absoluteYPosition: 0.45,
             priorityStat: 10, // Agility & Recovery
@@ -242,7 +318,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Attacking Midfield",
             positionShortName: "AM",
-            weighting: [65, 85, 70, 75, 90, 100, 40, 65, 70, 50, 75, 70],
+            weighting: [30, 65, 60, 75, 90, 100, 20, 65, 60, 50, 85, 50],
             isCentral: true,
             absoluteYPosition: 0.4,
             priorityStat: 5, // Passing & Vision
@@ -253,7 +329,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Striker",
             positionShortName: "ST",
-            weighting: [45, 55, 100, 60, 70, 50, 5, 95, 70, 85, 40, 60],
+            weighting: [30, 50, 90, 50, 70, 25, 5, 100, 60, 85, 40, 60],
             isCentral: true,
             absoluteYPosition: 0.2,
             priorityStat: 2, // Off-the-ball Movement
@@ -261,7 +337,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Winger",
             positionShortName: "WR",
-            weighting: [50, 70, 90, 60, 85, 65, 10, 70, 95, 35, 100, 85],
+            weighting: [10, 30, 75, 60, 80, 55, 10, 70, 100, 35, 90, 70],
             isCentral: false,
             absoluteYPosition: 0.25,
             priorityStat: 10, // Agility

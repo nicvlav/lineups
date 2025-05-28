@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { attributeScores, defaultAttributeScores, attributeShortLabels, attributeLabels } from "@/data/attribute-types";
+import { CategoryIndex, categoryNames, mentalIndexes, technicalIndexes, physicalIndexes, attributeScores, defaultAttributeScores, attributeShortLabels, attributeLabels } from "@/data/attribute-types";
 import { Player, PlayerUpdate } from "@/data/player-types";
 import { X, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
 import Panel from "@/components/dialogs/panel"
-
 interface CompactPlayerTableProps {
     players: Record<string, Player>;
     addPlayer: (player: Partial<Player>) => void;
@@ -20,6 +19,7 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
     const sortingRecord: Record<string, number> = {};
     const [newPlayerName, setNewPlayerName] = useState<string>("");
     const [searchQuery, setSearchQuery] = useState<string>("");
+    const [filterMode, setFilterMode] = useState<string>(categoryNames[CategoryIndex.Physical]);
     const [sortingMode, setSortingMode] = useState<string>(alphabeticalSortValue);
 
     attributeLabels.forEach((label, id) => {
@@ -42,6 +42,24 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
         }
     };
 
+    const getCurrentIndexes = () => {
+        switch (filterMode) {
+            case categoryNames[CategoryIndex.Technical]:
+                return technicalIndexes;
+                break;
+            case categoryNames[CategoryIndex.Mental]:
+                return mentalIndexes;
+                break;
+            default:
+            case categoryNames[CategoryIndex.Physical]:
+                return physicalIndexes;
+                break;
+                break;
+        }
+    };
+
+    const currIndexes = getCurrentIndexes();
+
     const filteredPlayers = Object.values(players).filter((p) =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -49,7 +67,7 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
     const sortedPlayers = [...filteredPlayers].sort((a, b) => {
         if (sortingMode in sortingRecord) {
             const idx = sortingRecord[sortingMode];
-          
+
             if (idx >= 0 && idx < defaultAttributeScores.length) {
                 return b.stats[sortingRecord[sortingMode]] - a.stats[sortingRecord[sortingMode]];
             }
@@ -91,6 +109,22 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                             className="p-2 rounded w-full"
                         />
 
+                        <Select onValueChange={setFilterMode}>
+                            {/* Trigger button for the select */}
+                            <SelectTrigger>
+                                <SelectValue >{filterMode}</SelectValue>
+                            </SelectTrigger>
+
+                            {/* Dropdown content with dynamically grouped formations */}
+                            <SelectContent>
+                                {categoryNames.map((category) => (
+                                    <SelectItem key={category} value={category}>
+                                        {category}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
                         <Select onValueChange={setSortingMode}>
                             {/* Trigger button for the select */}
                             <SelectTrigger>
@@ -102,30 +136,40 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                                 <SelectItem key={alphabeticalSortValue} value={alphabeticalSortValue}>
                                     {alphabeticalSortValue}
                                 </SelectItem>
-                                {attributeLabels.map((label) => (
-                                    <SelectItem key={label} value={label}>
-                                        {label}
+                                {currIndexes.map((index) => (
+                                    <SelectItem key={attributeLabels[index]} value={attributeLabels[index]}>
+                                        {attributeLabels[index]}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
+
+
                 </div>
 
                 <Panel>
                     <div className="flex-1 min-h-0">
+                        <div className="grid grid-cols-2 gap-y-1 text-muted-foreground text-sm mb-4">
+                            {currIndexes.map((index) => (
+                                <div key={index} className="flex gap-2">
+                                    <span className="text-xs font-medium w-10">{attributeShortLabels[index]}</span>
+                                    <span>{attributeLabels[index]}</span>
+                                </div>
+                            ))}
+                        </div>
                         <Table className="rounded-lg w-full">
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[50%]">Name</TableHead>
-                                    <TableHead className="w-[50%]">Attributes</TableHead>
+                                    <TableHead className="w-[calc(100%-300px)]">Name</TableHead>
+                                    <TableHead className="w-[300px]">{filterMode} Attributes</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {sortedPlayers.map((player) => (
                                     <TableRow key={player.id}>
                                         {/* Name Column */}
-                                        <TableCell className="w-[50%] flex-1 min-w-[200px]">
+                                        <TableCell className="w-[calc(100%-300px)] min-w-[200px]">
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => deletePlayer(player.id)}
@@ -143,11 +187,11 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                                         </TableCell>
 
                                         {/* Attributes Column Second Hal*/}
-                                        <TableCell className="w-[50%]">
+                                        <TableCell className="w-[300px]">
                                             <div className="flex flex-wrap gap-1 justify-evenly">
-                                                {attributeShortLabels.map((label, index) => (
-                                                    <div key={label} className="flex flex-col items-center ">
-                                                        <span className="">{label}</span>
+                                                {currIndexes.map((index) => (
+                                                    <div key={attributeShortLabels[index]} className="flex flex-col items-center ">
+                                                        <span className="">{attributeShortLabels[index]}</span>
                                                         <div className="flex items-center gap-1 rounded-md bg-accent w-full">
                                                             <span>{player.stats[index]}</span>
                                                             <div className="flexrounded-lg">
@@ -169,6 +213,7 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                                                                 </Button>
                                                             </div>
                                                         </div>
+
                                                     </div>
                                                 ))}
                                             </div>
