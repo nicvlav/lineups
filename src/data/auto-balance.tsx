@@ -40,34 +40,82 @@ const getBestAndSecondBestStats = (zoneFit: ZoneScores) => {
     return { best, secondBest };
 };
 
+function getZoneSpecialistZone(player: ScoredGamePlayer, dominanceRatio = 1.05): number | undefined {
+    const zoneBestScores = player.zoneFit.map(
+        (positions) => Math.max(...positions)
+    );
+
+    const scoredZones = zoneBestScores
+        .map((score, zoneIndex) => ({ zoneIndex, score }))
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score);
+
+    if (scoredZones.length === 0) return undefined;
+    if (scoredZones.length === 1) return scoredZones[0].zoneIndex;
+
+    const best = scoredZones[0];
+    const second = scoredZones[1];
+
+    return best.score >= second.score * dominanceRatio ? best.zoneIndex : undefined;
+}
+
 const sortBest = (players: ScoredGamePlayer[], zone: number, position: number, randomSeed: number) => {
-    // const specializationRatios = [randomSeed * 0.4 + 0.5, randomSeed * 0.4 + 0.0, randomSeed * 0.4 + 0.4];
+    const specializationRatios = [randomSeed * 0.4 + 0.5, randomSeed * 0.3 + 0.0, randomSeed * 0.3 + 0.0];
 
     // Pick the best available player from this zone
-    const ratio = randomSeed * 0.4 + 0.5; //specializationRatios[zone];
+    const ratio = specializationRatios[zone];
 
     // Sort player pool by specialization in the zone
     players.sort((a, b) => {
         const aStats = getBestAndSecondBestStats(a.zoneFit);
         const bStats = getBestAndSecondBestStats(b.zoneFit);
 
-        let specializationScoreA = 0;
-        let specializationScoreB = 0;
+        const aSpecialZone = getZoneSpecialistZone(a);
+        const bSpecialZone = getZoneSpecialistZone(b);
 
-        if (a.zoneFit[zone][position] === aStats.best) {
-            specializationScoreA = a.zoneFit[zone][position] / (aStats.secondBest || 1);
-        } else {
-            specializationScoreA = a.zoneFit[zone][position] / (aStats.secondBest || 1);
+        const aIsSpecialist = aSpecialZone !== undefined;
+        const bIsSpecialist = bSpecialZone !== undefined;
+
+        const aFit = a.zoneFit[zone][position];
+        const bFit = b.zoneFit[zone][position];
+
+        // === STEP 1: One is a zone specialist for this zone, the other isn't
+        if (aIsSpecialist !== bIsSpecialist) {
+            if (aIsSpecialist && aSpecialZone === zone) return -1;
+            if (bIsSpecialist && bSpecialZone === zone) return 1;
+            return aIsSpecialist ? 1 : -1;  // Prefer non-specialist for off-zone cases
         }
 
-        if (b.zoneFit[zone][position] === bStats.best) {
-            specializationScoreB = b.zoneFit[zone][position] / (bStats.secondBest || 1);
-        } else {
-            specializationScoreB = b.zoneFit[zone][position] / (bStats.secondBest || 1);
+        // === STEP 2: Both are specialists
+        if (aIsSpecialist && bIsSpecialist) {
+            const aMatches = aSpecialZone === zone;
+            const bMatches = bSpecialZone === zone;
+
+            // One matches zone, one doesn't
+            if (aMatches !== bMatches) return aMatches ? -1 : 1;
+
+            const aRatio = aStats.best / (aStats.secondBest || 1);
+            const bRatio = bStats.best / (bStats.secondBest || 1);
+
+            if (aMatches && bMatches) {
+                // Both match the zone — prefer sharper specialization, slightly softened by randomness
+                return (bRatio * ratio) - (aRatio * ratio);
+            } else {
+                // Both are specialists for another zone — prefer the more adaptable one
+                return (aRatio * (1 - ratio)) - (bRatio * (1 - ratio));
+            }
         }
 
-        return (specializationScoreB * ratio * b.zoneFit[zone][position] - specializationScoreA * ratio * a.zoneFit[zone][position]);
+        // === STEP 3: Standard fallback with random-weighted specialization scoring
+        const specializationScoreA = aFit / (aStats.secondBest || 1);
+        const specializationScoreB = bFit / (bStats.secondBest || 1);
+
+        const weightedA = specializationScoreA * ratio * aFit;
+        const weightedB = specializationScoreB * ratio * bFit;
+
+        return weightedB - weightedA;
     });
+
 };
 
 const sortWorst = (players: ScoredGamePlayer[], _: number, __: number, ___: number) => {
@@ -176,6 +224,23 @@ const assignPlayersToTeams = (players: ScoredGamePlayer[]) => {
         foundBZones[currZone] = foundBZones[currZone] || isEmptyFormation(formationB, currZone);
     }
 
+    while (numTeamAPlayers || numTeamBPlayers) {
+        if (foundAZones.every(val => val === true) && foundBZones.every(val => val === true)) {
+            throw new Error("WTF???");
+        }
+
+        const currZone = Math.round(Math.random() * 3);
+
+        if (((numTeamAPlayers && teamATotalScore <= teamBTotalScore) || !numTeamBPlayers) && !foundAZones[currZone]) {
+            if (addPlayer(formationA, currZone, true)) --numTeamAPlayers;
+        } else if (numTeamBPlayers && !foundBZones[currZone]) {
+            if (addPlayer(formationB, currZone, false)) --numTeamBPlayers;
+        }
+
+        foundAZones[currZone] = foundAZones[currZone] || isEmptyFormation(formationA, currZone);
+        foundBZones[currZone] = foundBZones[currZone] || isEmptyFormation(formationB, currZone);
+    }
+
     return {
         a: { team: teamA, score: teamATotalScore, totals: teamAZoneScores },
         b: { team: teamB, score: teamBTotalScore, totals: teamBZoneScores }
@@ -191,19 +256,18 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
 
     // Tracking best values for output clarity
     let bestWeightedScore = -Infinity;
-    let bestBalanceDiff = Infinity;
 
     // Adjustable weights (total sums to 1)
-    const W_quality = recursive ? 0.0 : 0.4; // Normalize overall player quality
-    const W_efficiency = recursive ? 0.4 : 0.4; // Normalize overall player quality
-    const W_balance = recursive ? 0.6 : 0.0; // Normalize team balance
-    const W_zonal = recursive ? 0.0 : 0.2;   // Normalize zonal variance
+    const W_quality = recursive ? 0.2 : 0.2; // Normalize overall player quality
+    const W_efficiency = recursive ? 0.4 : 0.5; // Normalize overall player quality
+    const W_balance = recursive ? 0.4 : 0.0; // Normalize team balance
+    const W_zonal = recursive ? 0.0 : 0.3;   // Normalize zonal variance
 
     for (let i = 0; i < numSimulations; i++) {
         let results: TeamResults;
 
         try {
-            results = recursive ? getZones(players, false, 5) : assignPlayersToTeams(structuredClone(players));
+            results = recursive ? getZones(players, false, numSimulations / 20) : assignPlayersToTeams(structuredClone(players));
             // results = assignPlayersToTeams(structuredClone(players));
         } catch (error) {
             console.warn(error);
@@ -211,7 +275,14 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
         }
 
         let normalizedZonal = 1;
+        let efficiencyDiff = 0;
         let normalizedEfficiency = 0;
+
+        let teamAPlayers = 0;
+        let teamBPlayers = 0;
+
+        let aPositionalTotal = 0;
+        let bPositionalTotal = 0;
 
         let aPeakTotal = 0;
         let bPeakTotal = 0;
@@ -224,8 +295,8 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
             const bZoneNum = b.length;
 
             // realtive sum is the scores based on players at assigned positions
-            const aZoneRelativeSum = results.a.totals[zone];
-            const bZoneRelativeSum = results.b.totals[zone];
+            const aZoneRelativeSum = results.a.totals[zone] / 100;
+            const bZoneRelativeSum = results.b.totals[zone] / 100;
 
             // peak sum is the sum of all players' abolsute best position scores - max potential
             let aZonePeakSum = 0;
@@ -236,8 +307,11 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
                 const y = player.generatedPositionInfo.absoluteYPosition;
                 const threat = getThreatScore({ x, y }, player.zoneFit);
                 const maxScore = Math.max(...player.zoneFit.flat()) / 100;
+                const ratio = ((maxScore - threat) / maxScore);
+
+                efficiencyDiff += Math.pow(ratio, 0.1);
                 aZonePeakSum += maxScore;
-                normalizedEfficiency += Math.pow((threat / maxScore), 3);
+                teamAPlayers++;
             });
 
             b.forEach((player) => {
@@ -245,8 +319,11 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
                 const y = player.generatedPositionInfo.absoluteYPosition;
                 const threat = getThreatScore({ x, y }, player.zoneFit);
                 const maxScore = Math.max(...player.zoneFit.flat()) / 100;
-                aZonePeakSum += maxScore;
-                normalizedEfficiency += Math.pow((threat / maxScore), 3);
+                const ratio = Math.pow(((maxScore - threat) / maxScore), 0.5)
+
+                efficiencyDiff += Math.pow(ratio, 0.33);
+                bZonePeakSum += maxScore;
+                teamBPlayers++;
             });
 
             // zone score is based on player assignments rather than absolute peak score
@@ -254,48 +331,37 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
             const bZoneAvg = bZoneRelativeSum / bZoneNum;
 
             const maxAvg = Math.min(aZoneAvg, bZoneAvg);
-            const diff = Math.sqrt(Math.abs(aZoneAvg - bZoneAvg) / maxAvg);
+            const diff = Math.abs(aZoneAvg - bZoneAvg) / maxAvg;
 
             // If both averages are 0, assume perfect balance (avoid 0/0)
             // zone score is the average zone score for team a vs average team score for team b
             // high score means both seems have similar average zone scores, low means there is a quality gap
-            let zoneScore = maxAvg === 0 ? 1 : 1 - diff;
+            let zoneScore = maxAvg === 0 ? 1 : (1 - diff / maxAvg);
 
-            normalizedZonal *= zoneScore;
+            normalizedZonal *= Math.pow(zoneScore, 0.5);
             aPeakTotal += aZonePeakSum;
             bPeakTotal += bZonePeakSum;
+            aPositionalTotal += aZoneRelativeSum;
+            bPositionalTotal += bZoneRelativeSum;
         }
 
-        // Count players per team overall
-        let teamAPlayers = results.a.team.flat().reduce((acc, w) => acc + w.length, 0);
-        let teamBPlayers = results.b.team.flat().reduce((acc, w) => acc + w.length, 0);
-
         // Maximum possible scores (each player can score 100)
-        let maxTeamAScore = (teamAPlayers - 1) * 100;
-        let maxTeamBScore = (teamBPlayers - 1) * 100;
+        let maxTeamAScore = teamAPlayers;
+        let maxTeamBScore = teamBPlayers;
         let maxTotalScore = maxTeamAScore + maxTeamBScore;
 
-        // Overall team total scores
-        let totalScore = aPeakTotal + bPeakTotal;//results.a.score + results.a.score;
+        // Normalize overall quality (average player quality)
+        let normalizedQuality = Math.pow((aPositionalTotal + bPositionalTotal) / maxTotalScore, 0.33); // 1 means every player scored 100
 
-        // 1. Normalize overall quality (average player quality)
-        let normalizedQuality = totalScore / maxTotalScore; // 1 means every player scored 100
-
-        // 2. Normalize team balance
-        let diff = Math.abs(results.a.score - results.b.score);
+        // Normalize team balance
+        let diff = Math.abs(aPeakTotal - bPeakTotal);
         // Maximum possible difference is if the larger team scores max and the smaller scores 0.
-        let maxPossibleDiff = Math.max(teamAPlayers, teamBPlayers) * 100;
-        let normalizedBalance = 1 - (diff / maxPossibleDiff); // 1 is perfect balance
+        let maxPossibleDiff = Math.max(teamAPlayers, teamBPlayers);
+        let normalizedBalance = 1 - Math.pow(diff / maxPossibleDiff, 0.25); // 1 is perfect balance
 
         // exclude goalkeepers
-        normalizedEfficiency /= (teamAPlayers + teamBPlayers - 2);
+        normalizedEfficiency = 1 - (efficiencyDiff / (teamAPlayers + teamBPlayers));
 
-        // console.log("(teamAPlayers + teamBPlayers)",teamAPlayers + teamBPlayers);
-        // console.log("normalizedEfficiency", W_quality, normalizedEfficiency);
-        // console.log("num players", W_quality, teamAPlayers);
-        // console.log("normalizedQuality", W_quality, normalizedQuality);
-        // console.log("normalizedBalance", W_balance, normalizedBalance);
-        // console.log("normalizedZonal", W_zonal, normalizedZonal);
 
         // Compute weighted overall score
         let weightedScore =
@@ -304,14 +370,21 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
             W_balance * normalizedBalance +
             W_zonal * normalizedZonal;
 
+        // console.log("(teamAPlayers + teamBPlayers)", teamAPlayers + teamBPlayers);
+        // console.log("aPeakTotal, bPeakTotal", aPeakTotal, bPeakTotal);
+        // console.log("totalPositionalScore", aPositionalTotal + bPositionalTotal);
+        // console.log("normalizedEfficiency", W_efficiency, normalizedEfficiency);
+        // console.log("normalizedQuality", W_quality, normalizedQuality);
+        // console.log("normalizedBalance", W_balance, normalizedBalance);
+        // console.log("normalizedZonal", W_zonal, normalizedZonal);
         // console.log("weightedScore", weightedScore);
 
         // Choose best assignment based on weighted score
         if (weightedScore > bestWeightedScore) {
             bestWeightedScore = weightedScore;
             bestAssignment = results
-            bestBalanceDiff = diff;
         }
+
     }
 
     if (!recursive) {
@@ -319,12 +392,30 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
         return bestAssignment;
     }
 
+    let peakScoreA = 0;
+    let peakScoreB = 0;
+
+    const a = bestAssignment.a.team.flat().flat();
+    const b = bestAssignment.b.team.flat().flat();
+
+    [...a].forEach((player) => {
+        peakScoreA += Math.max(...player.zoneFit.flat());
+    });
+
+    [...b].forEach((player) => {
+        peakScoreB += Math.max(...player.zoneFit.flat());
+    });
+
+
     console.log("===== Final Optimized Team Zone Scores =====");
     console.log("Team A Zones (GK, Defense, Midfield, Attack):", bestAssignment.a.totals);
     console.log("Team B Zones (GK, Defense, Midfield, Attack):", bestAssignment.b.totals);
     console.log("==================================");
-    console.log("Total Scores → Team A:", bestAssignment.a.score, "Team B:", bestAssignment.b.score);
-    console.log("Team Balance Difference (Lower is better):", bestBalanceDiff);
+    console.log("Total Positional Scores → Team A:", bestAssignment.a.score, "Team B:", bestAssignment.b.score);
+    console.log("Team Positional Balance Difference (Lower is better):", Math.abs(bestAssignment.a.score - bestAssignment.b.score));
+
+    console.log("Total Peak Scores → Team A:", peakScoreA, "Team B:", peakScoreB);
+    console.log("Team Peak Balance Difference (Lower is better):", Math.abs(peakScoreA - peakScoreB));
     console.log("==================================");
 
     return bestAssignment;
@@ -333,7 +424,7 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
 const generateBalancedTeams = (scoredPlayers: ScoredGamePlayer[]) => {
     if (scoredPlayers.length < 2) return { a: [], b: [] };
 
-    const teams = getZones(scoredPlayers, true, 100);
+    const teams = getZones(scoredPlayers, true, 200);
 
     // Assign positions for both teams
     const positionsA = assignPositions(teams.a.team, "A");

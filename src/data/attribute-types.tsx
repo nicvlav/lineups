@@ -283,15 +283,15 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Center Back",
             positionShortName: "CB",
-            weighting: [90, 10, 0, 25, 0, 45, 100, 0, 5, 70, 10, 0],
+            weighting: [80, 10, 0, 20, 0, 30, 100, 0, 0, 60, 0, 0],
             isCentral: true,
             absoluteYPosition: 0.7,
-            priorityStat: 0, // Positioning
+            priorityStat: 5, // Positioning
         },
         {
             positionName: "Full Back",
             positionShortName: "FB",
-            weighting: [55, 20, 20, 40, 40, 40, 90, 0, 75, 60, 75, 80],
+            weighting: [40, 0, 20, 0, 20, 20, 100, 0, 50, 50, 40, 50],
             isCentral: false,
             absoluteYPosition: 0.65,
             priorityStat: 1, // Scanning/Awareness
@@ -302,26 +302,26 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Defensive Midfield",
             positionShortName: "DM",
-            weighting: [85, 100, 40, 85, 50, 70, 90, 5, 30, 80, 20, 50],
+            weighting: [75, 100, 10, 80, 40, 50, 70, 0, 20, 60, 10, 30],
             isCentral: true,
             absoluteYPosition: 0.55,
-            priorityStat: 6, // Tackling
+            priorityStat: 10, // Tackling
         },
         {
             positionName: "Wide Midfielder",
             positionShortName: "WM",
-            weighting: [40, 45, 60, 40, 60, 70, 55, 20, 80, 55, 75, 100],
+            weighting: [30, 60, 50, 20, 40, 60, 50, 20, 70, 30, 70, 100],
             isCentral: false,
             absoluteYPosition: 0.45,
-            priorityStat: 10, // Agility & Recovery
+            priorityStat: 2, // Agility & Recovery
         },
         {
             positionName: "Attacking Midfield",
             positionShortName: "AM",
-            weighting: [30, 65, 60, 75, 90, 100, 20, 65, 60, 50, 85, 50],
+            weighting: [20, 50, 60, 90, 90, 100, 10, 20, 50, 30, 60, 30],
             isCentral: true,
             absoluteYPosition: 0.4,
-            priorityStat: 5, // Passing & Vision
+            priorityStat: 8, // Passing & Vision
         },
     ],
     // Attack
@@ -329,18 +329,18 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Striker",
             positionShortName: "ST",
-            weighting: [30, 50, 90, 50, 70, 25, 5, 100, 60, 85, 40, 60],
+            weighting: [20, 50, 90, 60, 70, 10, 0, 100, 60, 80, 40, 60],
             isCentral: true,
             absoluteYPosition: 0.2,
-            priorityStat: 2, // Off-the-ball Movement
+            priorityStat: 10, // Off-the-ball Movement
         },
         {
             positionName: "Winger",
             positionShortName: "WR",
-            weighting: [10, 30, 75, 60, 80, 55, 10, 70, 100, 35, 90, 70],
+            weighting: [0, 20, 75, 60, 80, 40, 0, 30, 100, 10, 90, 50],
             isCentral: false,
             absoluteYPosition: 0.25,
-            priorityStat: 10, // Agility
+            priorityStat: 2, // Agility
         },
     ],
 ] as const;
