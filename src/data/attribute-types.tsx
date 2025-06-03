@@ -337,7 +337,7 @@ export const defaultZoneWeights: Weighting = [
         {
             positionName: "Winger",
             positionShortName: "WR",
-            weighting: [0, 20, 75, 60, 80, 40, 0, 30, 100, 10, 90, 50],
+            weighting: [0, 20, 75, 60, 80, 60, 0, 50, 100, 0, 90, 40],
             isCentral: false,
             absoluteYPosition: 0.25,
             priorityStat: 2, // Agility

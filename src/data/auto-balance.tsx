@@ -60,10 +60,10 @@ function getZoneSpecialistZone(player: ScoredGamePlayer, dominanceRatio = 1.05):
 }
 
 const sortBest = (players: ScoredGamePlayer[], zone: number, position: number, randomSeed: number) => {
-    const specializationRatios = [randomSeed * 0.4 + 0.5, randomSeed * 0.3 + 0.0, randomSeed * 0.3 + 0.0];
+    // const specializationRatios = [randomSeed * 0.8 + 0.1, randomSeed * 0.5 + 0.1, randomSeed * 0.2 + 0.0];
 
     // Pick the best available player from this zone
-    const ratio = specializationRatios[zone];
+    const ratio = randomSeed;//specializationRatios[zone];
 
     // Sort player pool by specialization in the zone
     players.sort((a, b) => {
@@ -258,10 +258,11 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
     let bestWeightedScore = -Infinity;
 
     // Adjustable weights (total sums to 1)
-    const W_quality = recursive ? 0.2 : 0.2; // Normalize overall player quality
+    const W_quality = recursive ? 0.0 : 0.3; // Normalize overall player quality
     const W_efficiency = recursive ? 0.4 : 0.5; // Normalize overall player quality
     const W_balance = recursive ? 0.4 : 0.0; // Normalize team balance
-    const W_zonal = recursive ? 0.0 : 0.3;   // Normalize zonal variance
+    const W_pos_balance = recursive ? 0.2 : 0.0; // Normalize team balance
+    const W_zonal = recursive ? 0.0 : 0.2;   // Normalize zonal variance
 
     for (let i = 0; i < numSimulations; i++) {
         let results: TeamResults;
@@ -321,7 +322,7 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
                 const maxScore = Math.max(...player.zoneFit.flat()) / 100;
                 const ratio = Math.pow(((maxScore - threat) / maxScore), 0.5)
 
-                efficiencyDiff += Math.pow(ratio, 0.33);
+                efficiencyDiff += Math.pow(ratio, 0.1);
                 bZonePeakSum += maxScore;
                 teamBPlayers++;
             });
@@ -359,6 +360,10 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
         let maxPossibleDiff = Math.max(teamAPlayers, teamBPlayers);
         let normalizedBalance = 1 - Math.pow(diff / maxPossibleDiff, 0.25); // 1 is perfect balance
 
+
+        let diffPos = Math.abs(aPositionalTotal - bPositionalTotal);
+        let normalizedPosBalance = 1 - Math.pow(diffPos / maxPossibleDiff, 0.25); // 1 is perfect balanc
+        
         // exclude goalkeepers
         normalizedEfficiency = 1 - (efficiencyDiff / (teamAPlayers + teamBPlayers));
 
@@ -368,6 +373,7 @@ const getZones = (players: ScoredGamePlayer[], recursive: boolean, numSimulation
             W_quality * normalizedQuality +
             W_efficiency * normalizedEfficiency +
             W_balance * normalizedBalance +
+            W_pos_balance * normalizedPosBalance+
             W_zonal * normalizedZonal;
 
         // console.log("(teamAPlayers + teamBPlayers)", teamAPlayers + teamBPlayers);
