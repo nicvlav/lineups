@@ -197,32 +197,39 @@ export const interpolateColor = (c1: string, c2: string, t: number) => {
     return `rgb(${r}, ${g}, ${b})`;
 };
 
+// Maps score (assumed in [0, 1]) through a nonlinear curve to enhance visual contrast
+const skew = (x: number, exponent = 0.8) => Math.pow(x, exponent); // sqrt by default
+
 export const getThreatColor = (score: number): string => {
-    // Magma-inspired color palette
     const colors = [
-        { stop: 0, color: '#000003' },     // near black, low threat
-        { stop: 0.15, color: '#1d0c3e' },  // dark purple
-        { stop: 0.30, color: '#3f0c58' },  // dark magenta
-        { stop: 0.50, color: '#662d91' },  // purple
-        { stop: 0.60, color: '#9e3a8b' },  // pinkish purple
-        { stop: 0.70, color: '#d54f6e' },  // soft magenta
-        { stop: 0.75, color: '#f06359' },  // soft red-pink
-        { stop: 0.80, color: '#ff8153' },  // orange-red
-        { stop: 0.85, color: '#ff9d3f' },  // light orange
-        { stop: 0.90, color: '#ffcc2d' },  // yellow
-        { stop: 1.00, color: '#f7f7f7' },  // light yellow (max threat)
+        { stop: 0.0, color: '#000003' },
+        { stop: 0.15, color: '#1d0c3e' },
+        { stop: 0.30, color: '#3f0c58' },
+        { stop: 0.50, color: '#662d91' },
+        { stop: 0.60, color: '#9e3a8b' },
+        { stop: 0.70, color: '#d54f6e' },
+        { stop: 0.75, color: '#f06359' },
+        { stop: 0.80, color: '#ff8153' },
+        { stop: 0.85, color: '#ff9d3f' },
+        { stop: 0.90, color: '#ffcc2d' },
+        { stop: 1.00, color: '#f7f7f7' },
     ];
+
+    // Apply skew to emphasize differences among high values
+    const adjusted = Math.min(1, Math.max(0, skew(score)));
 
     for (let i = 1; i < colors.length; i++) {
         const prev = colors[i - 1];
-        const current = colors[i];
-        if (score <= current.stop) {
-            const ratio = (score - prev.stop) / (current.stop - prev.stop);
-            return interpolateColor(prev.color, current.color, ratio);
+        const curr = colors[i];
+        if (adjusted <= curr.stop) {
+            const ratio = (adjusted - prev.stop) / (curr.stop - prev.stop);
+            return interpolateColor(prev.color, curr.color, ratio);
         }
     }
+
     return colors[colors.length - 1].color;
 };
+
 export const calculateScoresForStats = (stats: attributeScores, zoneWeights: Weighting): ZoneScores => {
     const zoneFit: ZoneScores = structuredClone(emptyZoneScores);
 
