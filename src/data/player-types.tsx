@@ -49,7 +49,7 @@ export const emptyTeamZones: TeamZones = [
 ] as const;
 
 export type TeamAssignments = {
-    team: TeamZones, score: number, totals: [number, number, number]
+    team: TeamZones, score: number, totals: [number, number, number, number]
 };
 
 export type TeamResults = {
