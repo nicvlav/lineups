@@ -98,11 +98,12 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
         </div>
 
         <div
-          className="rounded-full border-2 border-white shadow-md flex items-center justify-center"
+          className={`rounded-full border-4 shadow-md flex items-center justify-center bg-muted`}
           style={{
             width: `${circleSize}px`,
             height: `${circleSize}px`,
-            backgroundColor: getThreatColor(player.threatScore),
+            borderColor: getThreatColor(player.threatScore),
+            // backgroundColor:" #4c7df0",
             fontSize: `${Math.max(circleSize * 0.4, 14)}px`,
           }}
         >
