@@ -98,7 +98,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
         </div>
 
         <div
-          className={`rounded-full border-4 shadow-md flex items-center justify-center bg-muted`}
+          className={`rounded-full border-3 shadow-md flex items-center justify-center bg-muted`}
           style={{
             width: `${circleSize}px`,
             height: `${circleSize}px`,
