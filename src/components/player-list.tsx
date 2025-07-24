@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Point, emptyZoneScores } from "@/data/attribute-types";
-import { Player, ScoredGamePlayerWithThreat } from "@/data/player-types";
+import { emptyZoneScores } from "@/data/position-types";
+import { Player, Point, ScoredGamePlayerWithThreat } from "@/data/player-types";
 import { usePlayers } from "@/data/players-provider";
 import { useDrag } from "react-dnd";
 import { Trash2, UserPlus, EllipsisVertical } from "lucide-react";

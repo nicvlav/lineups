@@ -1,13 +1,16 @@
-import { attributeScores, ZoneScores, Weighting, emptyZoneScores, PositionWeighting, PositionWeightingAndIndex, weightingShortLabels, Point, defaultZoneWeights } from "@/data/attribute-types"; // Importing from shared file
+import { StatsKey, PlayerStats } from "@/data/stat-types"; // Importing from shared file
+import { defaultZoneWeights, ZoneScores, emptyZoneScores, Weighting, PositionWeighting, PositionWeightingAndIndex, Position } from "@/data/position-types"; // Importing from shared file
 
 // Core Player data from Supabase
 export interface Player {
     id: string;
     name: string;
-    stats: attributeScores; // Stored and synced
+    stats: PlayerStats;
 }
 
 export type PlayerUpdate = Partial<Player>;
+
+export type Point = { x: number, y: number, };
 
 // Local-only game-specific attributes
 export interface GamePlayer {
@@ -20,7 +23,8 @@ export interface GamePlayer {
 export type GamePlayerUpdate = Partial<GamePlayer>;
 
 export interface FilledGamePlayer extends GamePlayer {
-    stats: attributeScores,
+    // stats: attributeScores,
+    stats: PlayerStats;
 }
 export interface ScoredGamePlayer extends GamePlayer {
     zoneFit: ZoneScores;
@@ -34,19 +38,11 @@ export interface PositionedGamePlayer extends ScoredGamePlayer {
     generatedPositionInfo: PositionWeighting;
 }
 
-export type TeamZones = [
-    [PositionedGamePlayer[]], // gk
-    [PositionedGamePlayer[], PositionedGamePlayer[]], // defense
-    [PositionedGamePlayer[], PositionedGamePlayer[], PositionedGamePlayer[], PositionedGamePlayer[]],// midfield
-    [PositionedGamePlayer[], PositionedGamePlayer[]]// attack
-];
+export type TeamZones = Record<Position, PositionedGamePlayer[]>;
 
-export const emptyTeamZones: TeamZones = [
-    [[]], // defense
-    [[], []], // defense
-    [[], [], [], []],// midfield
-    [[], []]// attack
-] as const;
+export const emptyTeamZones: TeamZones = {
+    GK: [], CB: [], FB: [], DM: [], WM: [], AM: [], ST: [], WR: []
+} as const;
 
 export type TeamAssignments = {
     team: TeamZones, score: number, totals: [number, number, number, number]
@@ -137,9 +133,19 @@ export const getPointForPosition = (position: PositionWeighting, positionIndex: 
 };
 
 const getProximityPositions = (point: Point) => {
-    const zonePositions = defaultZoneWeights.flat().map((position, index) => {
-        return { position, originalFlatZoneIndex: index } as PositionWeightingAndIndex;
-    }).slice(1);
+    const zonePositions: PositionWeightingAndIndex[] = [];
+
+    let copyWeights = structuredClone(defaultZoneWeights);
+
+    for (const zoneKey in copyWeights) {
+        const zone = zoneKey as keyof ZoneScores;
+        const positionMap = copyWeights[zone];
+
+        zonePositions.push({
+            position: positionMap,
+            positionKey: zone
+        });
+    }
 
     let centrals = filterByVerticalProximity(zonePositions.filter((zone) => zone.position.isCentral), point.y);
     let wides = filterByVerticalProximity(zonePositions.filter((zone) => !zone.position.isCentral), point.y);
@@ -157,30 +163,22 @@ const getProximityPositions = (point: Point) => {
     return weights;
 };
 
-export const normalizeWeights = (zoneWeights: Weighting): Weighting => {
-    return zoneWeights.map(zoneArray =>
-        zoneArray.map(positionObject => {
-            const sum = positionObject.weighting.reduce((acc, w) => acc + w, 0);
-            const normalizedWeights = positionObject.weighting.map(w => w / sum);
-            return { ...positionObject, weighting: normalizedWeights }; // Return new object
-        })
-    ) as Weighting;
-};
+
+
 
 export const getThreatScore = (point: Point, playerScores: ZoneScores) => {
     const proximityPositions = getProximityPositions(point);
 
+    // Normalize weights to sum to 1
     const sum = proximityPositions.reduce((acc, w) => acc + w.weight, 0);
-
     proximityPositions.forEach((position) => {
         position.weight = position.weight / sum;
     });
 
-    const flatScores = playerScores.flat();
-
     const threat = proximityPositions.reduce((acc, w) => {
-        const c = (w.originalFlatZoneIndex > 0 && w.originalFlatZoneIndex < flatScores.length) ? flatScores[w.originalFlatZoneIndex] : 0;
-        return acc + (c * w.weight / 100);
+        const score = playerScores[w.positionKey];
+
+        return acc + (score * w.weight / 100);
     }, 0);
 
     return threat;
@@ -230,22 +228,26 @@ export const getThreatColor = (score: number): string => {
     return colors[colors.length - 1].color;
 };
 
-export const calculateScoresForStats = (stats: attributeScores, zoneWeights: Weighting): ZoneScores => {
-    const zoneFit: ZoneScores = structuredClone(emptyZoneScores);
+export const calculateScoresForStats = (stats: PlayerStats, zoneWeights: Weighting): ZoneScores => {
+    let zoneFit = structuredClone(emptyZoneScores);
 
-    zoneWeights.forEach((zoneArray, zone) => {
-        zoneArray.forEach((positionObject, position) => {
-            // dot product
-            const score = stats.reduce((sum, statValue, index) => {
-                return sum + statValue * positionObject.weighting[index];
-            }, 0);
+    for (const zoneKey in zoneWeights) {
+        const zone = zoneKey as keyof ZoneScores;
+        const positionMap = zoneWeights[zone];
 
-            zoneFit[zone][position] = score;
-        });
-    });
+        let score = 0;
+        for (const attr in positionMap.weights) {
+            const attrKey = attr as StatsKey;
+            const weight = positionMap.weights[attrKey];
+            score += weight ? stats[attrKey] * weight : 0;
+        }
+
+        zoneFit[zone] = score;
+        console.log(zone, score)
+
+    }
 
     return zoneFit;
-
 };
 
 
@@ -261,93 +263,93 @@ export const calculateScores = (players: FilledGamePlayer[], zoneWeights: Weight
 export const assignPositions = (zones: TeamZones, team: string) => {
     let finalPlayers: ScoredGamePlayer[] = [];
 
-    zones.forEach((zone) => {
-        zone.forEach((players) => {
-            players.forEach((player, pidx) => {
-                finalPlayers.push({
-                    ...player,
-                    team,
-                    position: getPointForPosition(player.generatedPositionInfo,
-                        pidx,
-                        players.length)
-                } as ScoredGamePlayer);
-            });
+    for (const zoneKey in zones) {
+        const zone = zoneKey as keyof ZoneScores;
+        const players = zones[zone];
+
+        players.forEach((player, pidx) => {
+            finalPlayers.push({
+                ...player,
+                team,
+                position: getPointForPosition(player.generatedPositionInfo,
+                    pidx,
+                    players.length)
+            } as ScoredGamePlayer);
         });
-    });
+    }
 
     return finalPlayers;
 }
 
-export const logPlayerStats = (gamePlayers: Record<string, ScoredGamePlayer>, actualPlayers: Record<string, Player>) => {
+export const logPlayerStats = (/*gamePlayers*/__: Record<string, ScoredGamePlayer>, actualPlayers: Record<string, Player>) => {
     // this is just for logging purposes
     // kinda interesting to see the full sorted list
     // remove when this gets optimized
-    let playersArr: ScoredGamePlayer[] = Object.values(gamePlayers).sort((a, b) => {
-        // Flatten zoneFit values into a single sorted array (highest to lowest)
-        // Exclude goalkeeper (first value)
-        const aScores = Object.values(a.zoneFit).flat().slice(1).sort((x, y) => y - x);
-        const bScores = Object.values(b.zoneFit).flat().slice(1).sort((x, y) => y - x);
+    let playersArr: ScoredGamePlayer[] = [];
+    // = Object.values(gamePlayers).sort((a, b) => {
+    // Flatten zoneFit values into a single sorted array (highest to lowest)
+    // Exclude goalkeeper (first value)
+    // const aScores = Object.values(a.zoneFit).flat().slice(1).sort((x, y) => y - x);
+    // const bScores = Object.values(b.zoneFit).flat().slice(1).sort((x, y) => y - x);
 
-        // Compare element by element
-        for (let i = 0; i < Math.min(aScores.length, bScores.length); i++) {
-            if (aScores[i] !== bScores[i]) {
-                return bScores[i] - aScores[i]; // Descending order
-            }
-        }
+    // Compare element by element
+    // for (let i = 0; i < Math.min(aScores.length, bScores.length); i++) {
+    //     if (aScores[i] !== bScores[i]) {
+    //         return bScores[i] - aScores[i]; // Descending order
+    //     }
+    // }
 
-        return 0; // Players are equal in ranking
-    });
+    // return 0; // Players are equal in ranking
+    // });
 
     //Function to get the best position (zone + position) for each player
-    const getBestPosition = (zoneFit: ZoneScores) => {
-        let bestZone = 0;
-        let bestPosition = 0;
-        let bestScore = -Infinity;
+    // const getBestPosition = (/*zoneFit8*/_: ZoneScores) => {
+    //     let bestZone = 0;
+    //     let bestPosition = 0;
+    //     let bestScore = -Infinity;
 
-        let secondBestZone = 0;
-        let secondBestPosition = 0;
-        let secondBestScore = -Infinity;
+    //     let secondBestZone = 0;
+    //     let secondBestPosition = 0;
+    //     let secondBestScore = -Infinity;
 
-        Object.entries(zoneFit).forEach(([zone, positions], zoneIdx) => {
-            Object.entries(positions).forEach(([position, score], positionIdx) => {
-                if (zoneIdx === 0 && positionIdx === 0) return; // Skip the first position (0 index) within the first zone
+    //     // Object.entries(zoneFit).forEach(([zone, positions], zoneIdx) => {
+    //     //     Object.entries(positions).forEach(([position, score], positionIdx) => {
+    //     //         if (zoneIdx === 0 && positionIdx === 0) return; // Skip the first position (0 index) within the first zone
 
-                if (score > bestScore) {
-                    secondBestZone = bestZone;
-                    secondBestPosition = bestPosition;
-                    secondBestScore = bestScore;
+    //     //         if (score > bestScore) {
+    //     //             secondBestZone = bestZone;
+    //     //             secondBestPosition = bestPosition;
+    //     //             secondBestScore = bestScore;
 
-                    bestZone = parseInt(zone);
-                    bestPosition = parseInt(position);
-                    bestScore = score;
-                } else if (score > secondBestScore) {
-                    secondBestZone = parseInt(zone);
-                    secondBestPosition = parseInt(position);
-                    secondBestScore = score;
-                }
-            });
-        });
+    //     //             bestZone = parseInt(zone);
+    //     //             bestPosition = parseInt(position);
+    //     //             bestScore = score;
+    //     //         } else if (score > secondBestScore) {
+    //     //             secondBestZone = parseInt(zone);
+    //     //             secondBestPosition = parseInt(position);
+    //     //             secondBestScore = score;
+    //     //         }
+    //     //     });
+    //     // });
 
-        return {
-            best: {
-                pos: weightingShortLabels[bestZone].positions[bestPosition],
-                score: bestScore,
-            },
-            secondBest: {
-                pos: weightingShortLabels[secondBestZone].positions[secondBestPosition],
-                score: secondBestScore,
-            },
-        };
-    };
+    //     return {
+    //         best: {
+    //             pos: weightingShortLabels[bestZone].positions[bestPosition],
+    //             score: bestScore,
+    //         },
+    //         secondBest: {
+    //             pos: weightingShortLabels[secondBestZone].positions[secondBestPosition],
+    //             score: secondBestScore,
+    //         },
+    //     };
+    // };
 
     console.log("===== Ranked Players With Zone Ratings (Best to Worst) =====", playersArr);
 
-
-
     playersArr.forEach(gamePlayer => {
-        const scores = getBestPosition(gamePlayer.zoneFit);
+        // const scores = getBestPosition(gamePlayer.zoneFit);
         let playerName = gamePlayer.id in actualPlayers ? actualPlayers[gamePlayer.id].name : "[Player]";
         console.log(`${playerName} Best Scores: `);
-        console.log(scores.best, scores.secondBest);
+        // console.log(scores.best, scores.secondBest);
     });
 };

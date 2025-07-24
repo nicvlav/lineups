@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePlayers } from "@/data/players-provider";
-import { attributeLabels, attributeColors, weightingLabels, Weighting } from "@/data/attribute-types";
+import { statColorsMap, statLabelMap, statKeys, StatsKey } from "@/data/stat-types";
+import { Weighting, Position, Zone, ZoneLabels, ZonePositions, PositionLabels } from "@/data/position-types";
 import { Player } from "@/data/player-types";
 import { Users, Dumbbell, Wand2, Check, RotateCcw, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
@@ -281,23 +282,30 @@ interface WeightingTabProps {
 // Weighting Tab
 const WeightingTab: React.FC<WeightingTabProps> = ({ zoneWeights, setZoneWeights, resetZoneWeights }) => {
     // Function to update a specific weight
-    const updateZoneWeight = (zone: number, position: number, attribute: number, value: number) => {
+    const updateZoneWeight = (position: Position, attribute: StatsKey, value: number) => {
         // Clamp value between 0 and 100
         const newValue = Math.max(0, Math.min(100, value));
 
         // Create a new copy of the previous weightings
         const updatedWeights: Weighting = structuredClone(zoneWeights); // Deep copy ensures immutability
 
-        updatedWeights[zone][position].weighting[attribute] = newValue;
+        updatedWeights[position].weights[attribute] = newValue;
 
         setZoneWeights(updatedWeights);
     };
 
     // Helper to adjust weight by a given amount
-    const adjustWeight = (zone: number, position: number, attribute: number, adjustment: number) => {
-        const currentValue = zoneWeights[zone][position].weighting[attribute];
-        updateZoneWeight(zone, position, attribute, currentValue + adjustment);
+    const adjustWeight = (position: Position, attribute: StatsKey, adjustment: number) => {
+        const currentValue = zoneWeights[position].weights[attribute];
+        if (currentValue === undefined) return;
+        updateZoneWeight(position, attribute, currentValue + adjustment);
     };
+
+    const displayedZoneWeights: Zone[] = [
+        "defense",
+        "midfield",
+        "attack",
+    ];
 
     return (
         <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">
@@ -321,28 +329,27 @@ const WeightingTab: React.FC<WeightingTabProps> = ({ zoneWeights, setZoneWeights
                         Adjust how much each player attribute contributes to team balancing in different zones.
                         Higher values (0-100) give more importance to that attribute in that zone.
                     </div>
-                    {weightingLabels.map((zoneObject, zone) => (
-                        zoneObject.name !== "Goalkeeper" && <div key={zone} className="mb-6 p-4 rounded-lg border-gray-700 shadow-md">
-                            <h4 className=" text-md font-medium">{zoneObject.name}</h4>
+                    {displayedZoneWeights.map((zone) => (
+                        <div key={zone} className="mb-6 p-4 rounded-lg border-gray-700 shadow-md">
+                            <h4 className=" text-md font-medium">{ZoneLabels[zone]}</h4>
 
-                            {zoneObject.positions.map((positionName, position) => (
+                            {ZonePositions[zone].map((position) => (
                                 <div key={position} className="mb-6 p-4 rounded-lg border-gray-700 shadow-md">
-                                    <h4 className=" text-md font-medium">{positionName}</h4>
+                                    <h4 className=" text-md font-medium">{PositionLabels[position]}</h4>
 
                                     <div className="flex flex-col gap-4 mt-3">
-                                        {attributeLabels.map((attrLabel, attrIndex) => {
-                                            const attr = Number(attrIndex); // Convert index to number for correct reference
+                                        {statKeys.map((attr) => {
                                             return (
                                                 <div key={`${zone}-${attr}`} className="flex items-center p-3 rounded-lgborde">
                                                     {/* Attribute Name */}
-                                                    <div className="w-32 font-medium">{attrLabel}</div>
+                                                    <div className="w-32 font-medium">{statLabelMap[attr]}</div>
 
                                                     {/* Progress Bar */}
                                                     <div className="flex-1 flex flex-col gap-2">
                                                         <div className="h-2  rounded-md overflow-hidden">
                                                             <div
-                                                                className={`h-full ${attributeColors[attr]}`}  // Using the number index for color
-                                                                style={{ width: `${zoneWeights[zone][position].weighting[attr]}%` }} // Access zoneWeights by attribute number
+                                                                className={`h-full ${statColorsMap[attr]}`}  // Using the number index for color
+                                                                style={{ width: `${zoneWeights[position].weights[attr] ?? 0}%` }} // Access zoneWeights by attribute number
                                                             />
                                                         </div>
                                                     </div>
@@ -350,23 +357,23 @@ const WeightingTab: React.FC<WeightingTabProps> = ({ zoneWeights, setZoneWeights
                                                     {/* Controls */}
                                                     <div className="w-32 flex items-center justify-end gap-2">
                                                         <button
-                                                            onClick={() => adjustWeight(zone, position, attr, -5)}  // Adjust weight based on attribute number
-                                                            className={`w-7 h-7 flex items-center justify-center rounded ${zoneWeights[zone][position].weighting[attr] <= 0 && "opacity-50 cursor-not-allowed"
+                                                            onClick={() => adjustWeight(position, attr, -5)}  // Adjust weight based on attribute number
+                                                            className={`w-7 h-7 flex items-center justify-center rounded ${(zoneWeights[position].weights[attr] === undefined || zoneWeights[position].weights[attr] <= 0) && "opacity-50 cursor-not-allowed"
                                                                 }`}
-                                                            disabled={zoneWeights[zone][position].weighting[attr] <= 0}
+                                                            disabled={zoneWeights[position].weights[attr] === undefined || zoneWeights[position].weights[attr] <= 0}
                                                         >
                                                             <ChevronDown size={16} />
                                                         </button>
 
                                                         <div className="w-10 text-center px-2 py-1 rounded-mdfont-bold text-sm">
-                                                            {zoneWeights[zone][position].weighting[attr]}  {/* Displaying the current weight */}
+                                                            {zoneWeights[position].weights[attr] ?? 0}  {/* Displaying the current weight */}
                                                         </div>
 
                                                         <button
-                                                            onClick={() => adjustWeight(zone, position, attr, 5)}  // Adjust weight based on attribute number
-                                                            className={`w-7 h-7 flex items-center justify-center rounded ${zoneWeights[zone][position].weighting[attr] >= 100 && "opacity-50 cursor-not-allowed"
+                                                            onClick={() => adjustWeight(position, attr, 5)}  // Adjust weight based on attribute number
+                                                            className={`w-7 h-7 flex items-center justify-center rounded ${(zoneWeights[position].weights[attr] === undefined || zoneWeights[position].weights[attr] >= 100) && "opacity-50 cursor-not-allowed"
                                                                 }`}
-                                                            disabled={zoneWeights[zone][position].weighting[attr] >= 100}
+                                                            disabled={zoneWeights[position].weights[attr] === undefined || zoneWeights[position].weights[attr] >= 100}
                                                         >
                                                             <ChevronUp size={16} />
                                                         </button>

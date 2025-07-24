@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTheme } from "@/data/theme-provider";
-import { attributeScores, attributeShortLabels, attributeLabels } from "@/data/attribute-types";
+import { PlayerStats, statLabelMap, StatsKey, statKeys, statShortLabelMap } from "@/data/stat-types";
 import { Player, PlayerUpdate } from "@/data/player-types";
 import { Minus, Plus } from "lucide-react";
 import { } from "lucide-react";
@@ -189,84 +189,51 @@ interface PlayerStatEditorProps {
 const PlayerStatEditor: React.FC<PlayerStatEditorProps> = ({ player, updatePlayerAttributes }) => {
     if (!player) return <p className="text-center">Select a player to edit stats.</p>;
 
-    const handleAttributeChange = (uid: string, statIndex: number, change: number) => {
-        const newStats: attributeScores = [...player.stats];
-        newStats[statIndex] = Math.max(1, Math.min(100, newStats[statIndex] + change));
-
-        updatePlayerAttributes(uid, { stats: newStats });
+    const handleAttributeChange = (uid: string, statIndex: StatsKey, change: number) => {
+        let newStats2: PlayerStats = player.stats;
+        newStats2[statIndex] = Math.max(1, Math.min(100, newStats2[statIndex] + change));
+        updatePlayerAttributes(uid, { stats: newStats2 });
     };
 
-    const halfAttributesLength = Math.ceil(attributeLabels.length / 2);
+
+    // const halfAttributesLength = Math.ceil(attributeLabels.length / 2);
 
     return (
         <div className="p-1 border rounded-lg shadow-md text-sm">
-            <div className="flex gap-2">
-                {/* Attributes Column First Half*/}
+            <div className="grid grid-cols-2 gap-2">
+                {Object.entries(player.stats).map(([key, value]) => (
+                    <div key={key} className="flex justify-between items-center p-1 rounded border">
+                        {/* Label */}
+                        <span>{statLabelMap[key as StatsKey]}</span>
 
-                <div className="w-[50%] mr-2">
-                    {attributeLabels.slice(0, halfAttributesLength).map((label, index) => (
-                        <div className="p-0.5 flex justify-between items-center">
-                            <span className="">{label}</span>
-
-                            <div className="flex items-center gap-1 rounded-md bg-accent ml-auto">
-                                <span>{player.stats[index]}</span>
-                                <div className="flex flex-col rounded-lg">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => handleAttributeChange(player.id, index, 5)}
-                                        size="sm"
-                                        className="w-6 h-4 p-0 flex justify-center items-center rounded-t-md"
-                                    >
-                                        <Plus size={8} />
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => handleAttributeChange(player.id, index, -5)}
-                                        size="sm"
-                                        className="w-6 h-4 p-0 flex justify-center items-center rounded-b-md"
-                                    >
-                                        <Minus size={8} />
-                                    </Button>
-                                </div>
+                        {/* Value + Buttons */}
+                        <div className="flex items-center gap-1 bg-accent rounded-md ml-auto">
+                            <span>{value}</span>
+                            <div className="flex flex-col">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => handleAttributeChange(player.id, key as StatsKey, 5)}
+                                    size="sm"
+                                    className="w-6 h-4 p-0 flex justify-center items-center rounded-t-md"
+                                >
+                                    <Plus size={8} />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => handleAttributeChange(player.id, key as StatsKey, -5)}
+                                    size="sm"
+                                    className="w-6 h-4 p-0 flex justify-center items-center rounded-b-md"
+                                >
+                                    <Minus size={8} />
+                                </Button>
                             </div>
                         </div>
-
-                    ))}
-                </div>
-
-                {/* Attributes Column Second Hal*/}
-                <div className="w-[50%] mr-2">
-                    {attributeLabels.slice(halfAttributesLength).map((label, index) => (
-                        <div className="p-0.5 flex justify-between items-center">
-                            <span className="">{label}</span>
-                            <div className="flex items-center gap-1 rounded-md bg-accent">
-                                <span>{player.stats[halfAttributesLength + index]}</span>
-                                <div className="flex flex-col rounded-lg">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => handleAttributeChange(player.id, halfAttributesLength + index, 5)}
-                                        size="sm"
-                                        className="w-6 h-4 p-0 flex justify-center items-center rounded-t-md"
-                                    >
-                                        <Plus size={8} />
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => handleAttributeChange(player.id, halfAttributesLength + index, -5)}
-                                        size="sm"
-                                        className="w-6 h-4 p-0 flex justify-center items-center rounded-b-md"
-                                    >
-                                        <Minus size={8} />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
+                    </div>
+                ))}
             </div>
         </div>
     );
+
 };
 
 interface PlayerRadarChartProps {
@@ -285,13 +252,13 @@ const PlayerRadarChart: React.FC<PlayerRadarChartProps> = ({ player1, player2 })
             : `rgba(0, 0, 0, ${alpha})`; // Adjust light mode color if needed
     };
 
-    const labels = [...attributeShortLabels];
+    const labels = statKeys.map(key => statShortLabelMap[key]);
     const datasets = [];
 
     if (player1) {
         datasets.push({
             label: player1.name,
-            data: Object.values(player1.stats),
+            data: statKeys.map(key => player1.stats[key]),
             backgroundColor: "rgba(54, 162, 235, 0.2)",
             borderColor: "rgba(54, 162, 235, 1)",
             borderWidth: 2,
@@ -301,7 +268,7 @@ const PlayerRadarChart: React.FC<PlayerRadarChartProps> = ({ player1, player2 })
     if (player2) {
         datasets.push({
             label: player2.name,
-            data: Object.values(player2.stats),
+            data: statKeys.map(key => player2.stats[key]),
             backgroundColor: "rgba(255, 99, 132, 0.2)",
             borderColor: "rgba(255, 99, 132, 1)",
             borderWidth: 2,

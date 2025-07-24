@@ -3,8 +3,11 @@ import { useAuth } from "@/data/auth-context";
 import { v4 as uuidv4, } from 'uuid';
 
 import { openDB } from "idb";
-import { Formation, Weighting, defaultZoneWeights, defaultAttributeScores, emptyZoneScores, Point, normalizeWeights, attributeScores } from "@/data/attribute-types";
-import { Player, PlayerUpdate, GamePlayerUpdate, getPointForPosition, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, getThreatScore/*, logPlayerStats*/ } from "@/data/player-types";
+import { defaultStatScores, PlayerStats } from "@/data/stat-types";
+import { Formation, Position, defaultZoneWeights, Weighting, emptyZoneScores, normalizeWeights } from "@/data/position-types";
+import {
+    Player, PlayerUpdate, GamePlayerUpdate, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, getThreatScore, Point, getPointForPosition/*, logPlayerStats*/
+} from "@/data/player-types";
 import { decodeStateFromURL } from "@/data/state-manager";
 import { autoCreateTeamsScored } from "./auto-balance";
 
@@ -12,6 +15,9 @@ interface PlayersContextType {
     players: Record<string, Player>;
     zoneWeights: Weighting;
     gamePlayers: Record<string, ScoredGamePlayerWithThreat>;
+
+    setZoneWeights: (newWeighting: Weighting) => void;
+    resetToDefaultWeights: () => void;
 
     addPlayer: (player: Partial<Player>, onSuccess?: (player: Player) => void) => void;
     deletePlayer: (id: string) => void;
@@ -27,10 +33,6 @@ interface PlayersContextType {
     switchToNewPlayer: (oldPlayer: ScoredGamePlayerWithThreat, newName: string, guest: boolean) => void;
 
     applyFormation: (formation: Formation) => void;
-
-    setZoneWeights: (newWeighting: Weighting) => void;
-    resetToDefaultWeights: () => void;
-
     generateTeams: (filteredPlayers: Player[]) => void;
     rebalanceCurrentGame: () => void;
 }
@@ -146,10 +148,10 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                     if (loadingState.current) return;
                     // console.log("Insert ID internal", payload, players, gamePlayers);
 
-                    setPlayers(prevGamePlayers => {
-                        const newGamePlayers = { ...prevGamePlayers };
-                        newGamePlayers[payload.new.id] = payload.new as Player;
-                        return newGamePlayers;
+                    setPlayers(prevPlayers => {
+                        const newPlayers = { ...prevPlayers };
+                        newPlayers[payload.new.id] = payload.new as Player;
+                        return newPlayers;
                     });
                 }
             )
@@ -265,10 +267,10 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             const playerRecord: Record<string, Player> = {};
             (data || []).forEach(player => {
                 playerRecord[player.id] = player;
+
             });
 
             setPlayers(playerRecord);
-            console.log("Fetched players from Server:");
         }
     };
 
@@ -294,7 +296,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         const newPlayer: Player = {
             id: player.id ? player.id : uuidv4(),
             name: player.name ? player.name : "Player Name",
-            stats: player.stats ? player.stats : defaultAttributeScores,
+            // stats: player.stats ? player.stats : defaultStatScores,
+            stats: player.stats ? player.stats : defaultStatScores,
         };
 
         supabase.from('players')
@@ -339,7 +342,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         if (id in gamePlayers && updates.stats) {
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
-                const zoneFit = calculateScoresForStats(updates.stats as attributeScores, normalizeWeights(zoneWeights));
+                const zoneFit = calculateScoresForStats(updates.stats as PlayerStats, normalizeWeights(zoneWeights));
                 newGamePlayers[id].zoneFit = zoneFit;
                 newGamePlayers[id].threatScore = getThreatScore(newGamePlayers[id].position, zoneFit);
                 return newGamePlayers;
@@ -507,37 +510,36 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         let teamPlayers = Object.values(gamePlayers).filter((player) => player.team === team);
         let newTeamPlayers: Record<string, ScoredGamePlayerWithThreat> = {};
 
+        console.log(formation, teamPlayers);
 
-        formation.positions.forEach((zone, zoneIndex) => {
+        for (const [key, value] of Object.entries(formation.positions)) {
+            for (let i = 0; i < value; i++) {
+                // key is a string
+                // value is of type 'unknown' by default — you can cast it
+                const player = teamPlayers.shift();
+                const position = getPointForPosition(zoneWeights[key as Position], i, value);
 
-            zone.forEach((numPlayers, idx) => {
-                for (let i = 0; i < numPlayers; i++) {
-                    const player = teamPlayers.shift();
-                    const position = getPointForPosition(
-                        defaultZoneWeights[zoneIndex][idx],
-                        i, numPlayers);
-
-                    if (player) {
-                        newTeamPlayers[player.id] = {
-                            ...player,
-                            team,
-                            position
-                        }
-                    } else {
-                        const newID = uuidv4();
-                        const zoneFit = structuredClone(emptyZoneScores);
-                        newTeamPlayers[newID] = {
-                            id: newID,
-                            guest_name: "[Player]",
-                            team,
-                            position,
-                            zoneFit,
-                            threatScore: getThreatScore(position, zoneFit)
-                        }
+                if (player) {
+                    newTeamPlayers[player.id] = {
+                        ...player,
+                        team,
+                        position
+                    }
+                } else {
+                    const newID = uuidv4();
+                    const zoneFit = structuredClone(emptyZoneScores);
+                    newTeamPlayers[newID] = {
+                        id: newID,
+                        guest_name: "[Player]",
+                        team,
+                        position,
+                        zoneFit,
+                        threatScore: getThreatScore(position, zoneFit)
                     }
                 }
-            });
-        });
+            }
+
+        }
 
         return newTeamPlayers;
 
@@ -614,6 +616,10 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         <PlayersContext.Provider value={{
             players,
             gamePlayers,
+            zoneWeights,
+            setZoneWeights,
+            resetToDefaultWeights,
+
             addPlayer,
             deletePlayer,
             updatePlayerAttributes,
@@ -624,11 +630,9 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             addNewGuestPlayerToGame,
             switchToRealPlayer,
             switchToNewPlayer,
+
             applyFormation,
             clearGame,
-            zoneWeights,
-            resetToDefaultWeights,
-            setZoneWeights,
             generateTeams,
             rebalanceCurrentGame,
         }}>

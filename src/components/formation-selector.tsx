@@ -1,5 +1,5 @@
 import { usePlayers } from "@/data/players-provider";
-import { formationTemplates } from "@/data/attribute-types";
+import { formationTemplates } from "@/data/position-types";
 import { Select, SelectTrigger, SelectGroup, SelectItem, SelectLabel, SelectContent, SelectValue } from "@/components/ui/select";
 
 const FormationSelector = () => {

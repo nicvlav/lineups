@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CategoryIndex, categoryNames, mentalIndexes, technicalIndexes, physicalIndexes, attributeScores, defaultAttributeScores, attributeShortLabels, attributeLabels } from "@/data/attribute-types";
+import { statShortLabelMap, statLabelMap, CategorizedStats, StatsKey, StatCategoryNameMap } from "@/data/stat-types";
 import { Player, PlayerUpdate } from "@/data/player-types";
 import { X, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,22 +16,16 @@ interface CompactPlayerTableProps {
 
 const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPlayer, deletePlayer, updatePlayerAttributes }) => {
     const alphabeticalSortValue: string = "Alphabetical";
-    const sortingRecord: Record<string, number> = {};
     const [newPlayerName, setNewPlayerName] = useState<string>("");
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [filterMode, setFilterMode] = useState<string>(categoryNames[CategoryIndex.Physical]);
+    const [filterMode, setFilterMode] = useState<string>(StatCategoryNameMap["physical"]);
     const [sortingMode, setSortingMode] = useState<string>(alphabeticalSortValue);
 
-    attributeLabels.forEach((label, id) => {
-        sortingRecord[label] = id;
-    });
-
-    const handleAttributeChange = (uid: string, statIndex: number, change: number) => {
+    const handleAttributeChange = (uid: string, statIndex: StatsKey, change: number) => {
         if (!(uid in players)) return;
 
-        const newStats: attributeScores = [...players[uid].stats];
+        const newStats = players[uid].stats;
         newStats[statIndex] = Math.max(1, Math.min(100, newStats[statIndex] + change));
-
         updatePlayerAttributes(uid, { stats: newStats });
     };
 
@@ -44,17 +38,13 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
 
     const getCurrentIndexes = () => {
         switch (filterMode) {
-            case categoryNames[CategoryIndex.Technical]:
-                return technicalIndexes;
-                break;
-            case categoryNames[CategoryIndex.Mental]:
-                return mentalIndexes;
-                break;
+            case StatCategoryNameMap["technical"]:
+                return CategorizedStats.technical;
+            case StatCategoryNameMap["mental"]:
+                return CategorizedStats.mental;
             default:
-            case categoryNames[CategoryIndex.Physical]:
-                return physicalIndexes;
-                break;
-                break;
+            case StatCategoryNameMap["physical"]:
+                return CategorizedStats.physical;
         }
     };
 
@@ -64,18 +54,24 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const sortedPlayers = [...filteredPlayers].sort((a, b) => {
-        if (sortingMode in sortingRecord) {
-            const idx = sortingRecord[sortingMode];
-
-            if (idx >= 0 && idx < defaultAttributeScores.length) {
-                return b.stats[sortingRecord[sortingMode]] - a.stats[sortingRecord[sortingMode]];
+    const getSorted = () => {
+        if (sortingMode !== alphabeticalSortValue) {
+            for (const key of currIndexes) {
+                if (statLabelMap[key] === sortingMode) {
+                    return [...filteredPlayers].sort((a, b) => {
+                        return b.stats[key] - a.stats[key];
+                    });
+                }
             }
         }
-        return a.name.localeCompare(b.name);
 
+        return [...filteredPlayers].sort((a, b) => {
+            return a.name.localeCompare(b.name);
+        });
 
-    });
+    };
+
+    const sortedPlayers = getSorted(); 
 
     return (
         <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">
@@ -117,7 +113,7 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
 
                             {/* Dropdown content with dynamically grouped formations */}
                             <SelectContent>
-                                {categoryNames.map((category) => (
+                                {Object.values(StatCategoryNameMap).map((category) => (
                                     <SelectItem key={category} value={category}>
                                         {category}
                                     </SelectItem>
@@ -137,8 +133,8 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                                     {alphabeticalSortValue}
                                 </SelectItem>
                                 {currIndexes.map((index) => (
-                                    <SelectItem key={attributeLabels[index]} value={attributeLabels[index]}>
-                                        {attributeLabels[index]}
+                                    <SelectItem key={statLabelMap[index]} value={statLabelMap[index]}>
+                                        {statLabelMap[index]}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -153,8 +149,8 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                         <div className="grid grid-cols-2 gap-y-1 text-muted-foreground text-sm mb-4">
                             {currIndexes.map((index) => (
                                 <div key={index} className="flex gap-2">
-                                    <span className="text-xs font-medium w-10">{attributeShortLabels[index]}</span>
-                                    <span>{attributeLabels[index]}</span>
+                                    <span className="text-xs font-medium w-10">{statShortLabelMap[index]}</span>
+                                    <span>{statLabelMap[index]}</span>
                                 </div>
                             ))}
                         </div>
@@ -190,8 +186,8 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                                         <TableCell className="w-[300px]">
                                             <div className="flex flex-wrap gap-1 justify-evenly">
                                                 {currIndexes.map((index) => (
-                                                    <div key={attributeShortLabels[index]} className="flex flex-col items-center ">
-                                                        <span className="">{attributeShortLabels[index]}</span>
+                                                    <div key={statShortLabelMap[index]} className="flex flex-col items-center ">
+                                                        <span className="">{statShortLabelMap[index]}</span>
                                                         <div className="flex items-center gap-1 rounded-md bg-accent w-full">
                                                             <span>{player.stats[index]}</span>
                                                             <div className="flexrounded-lg">
