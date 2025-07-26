@@ -1,5 +1,5 @@
-import { StatsKey, PlayerStats } from "@/data/stat-types"; // Importing from shared file
-import { Point, ZoneScores, emptyZoneScores, Weighting } from "@/data/position-types"; // Importing from shared file
+import { StatsKey, PlayerStats, CategorizedStats } from "@/data/stat-types"; // Importing from shared file
+import { Point, PositionShortLabels, ZoneScores, emptyZoneScores, Weighting, defaultZoneWeights, Position } from "@/data/position-types"; // Importing from shared file
 
 // Core Player data from Supabase
 export interface Player {
@@ -96,4 +96,47 @@ export const calculateScoresForStats = (stats: PlayerStats, zoneWeights: Weighti
     return zoneFit;
 };
 
+export interface PositionAndScore {
+    position: string;
+    score: number;
+}
+
+export type ZoneAverages = Record<string, number>;
+
+export function getTopPositions(player: Player) {
+    const scores = calculateScoresForStats(player.stats, defaultZoneWeights);
+
+    const allItems: PositionAndScore[] = Object.entries(scores).map(([pos, score]) => {
+        return { position: PositionShortLabels[pos as Position], score } as PositionAndScore;
+    }).slice(1).sort((a, b) => {
+        return b.score - a.score;
+    });
+
+    const result: PositionAndScore[] = [];
+
+    const max = allItems[0].score;
+
+    allItems.splice(0, 3).forEach((entry) => {
+        if (entry.score >= max * 0.95) result.push(entry);
+    });
+
+    return result;
+}
+
+export function getZoneAverages(player: Player) {
+    const zones = {
+        mental: CategorizedStats.mental,
+        physical: CategorizedStats.physical,
+        technical: CategorizedStats.technical,
+    };
+
+    const result: ZoneAverages = {};
+
+    for (const [zone, stats] of Object.entries(zones)) {
+        const total = stats.reduce((sum, stat) => sum + player.stats[stat], 0);
+        result[zone] = Math.round(total / stats.length);
+    }
+
+    return result;
+}
 

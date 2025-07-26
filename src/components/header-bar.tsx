@@ -1,5 +1,5 @@
 import { ModeToggle } from "@/components/mode-toggle"
-import { Users, Home, Wand2 } from "lucide-react";
+import { Users, Home, Wand2, BookDashed } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 interface HeaderBarProps {
@@ -33,6 +33,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
             <div className="flex flex-1 justify-center space-x-2 min-w-0 overflow-hidden ml-1">
                 <TabIcon icon={Home} to="/" />
                 <TabIcon icon={Users} to="/players" />
+                <TabIcon icon={BookDashed} to="/cards" />
                 <TabIcon icon={Wand2} to="/generate" />
             </div>
 

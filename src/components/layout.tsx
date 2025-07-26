@@ -9,6 +9,7 @@ import HeaderBar from "@/components/header-bar";
 
 import Game from "@/components/game";
 import { Routes, Route } from 'react-router-dom';
+import PlayerCards from "@/components/dialogs/player-cards";
 import PlayerTable from "@/components/dialogs/player-table";
 import TeamGenerator from "@/components/dialogs/team-generator";
 
@@ -65,6 +66,7 @@ const Layout = () => {
                     <Routes>
                         <Route index element={<Game isCompact={isCompact} playerSize={(isCompact ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 16} />} />
                         <Route path="players" element={<PlayerTable isCompact={isCompact} />} />
+                        <Route path="cards" element={<PlayerCards isCompact={isCompact} />} />
                         <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
                     </Routes>
                 </DndProvider>

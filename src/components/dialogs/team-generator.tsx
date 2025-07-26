@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePlayers } from "@/data/players-provider";
-import { statColorsMap, statLabelMap, statKeys, StatsKey } from "@/data/stat-types";
-import { Weighting, Position, Zone, ZoneLabels, ZonePositions, PositionLabels } from "@/data/position-types";
 import { Player } from "@/data/player-types";
-import { Users, Dumbbell, Wand2, Check, RotateCcw, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Users, Wand2, Search } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import Panel from "@/components/dialogs/panel"
 
@@ -22,18 +20,14 @@ interface TeamGeneratorProps {
 
 // Main component with tabs
 const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isCompact }) => {
-    const [activeTab, setActiveTab] = useState("generation");
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
     const {
         players,
         gamePlayers,
         generateTeams,
-        zoneWeights,
-        setZoneWeights,
-        resetToDefaultWeights
     } = usePlayers();
     const navigate = useNavigate();
-
+    isCompact
     // Get non-temporary players and initialize selected players
     useEffect(() => {
         handlePlayersUpdated();
@@ -66,62 +60,18 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isCompact }) => {
         <div className="flex-1 min-h-0 flex flex-col w-full h-full border">
             <div className="min-h-0 flex flex-col h-full border">
 
-                {isCompact && (
-                    <div className="min-h-0 flex flex-col h-full border">
-                        <div className="flex gap-2 w-full max-h-[40px]">
-                            <button
-                                className={`flex-1 flex items-center justify-center p-2  transition-all duration-200 ${activeTab === "generation" ? " text-blue-600 shadow-sm" : ""}`}
-                                onClick={() => setActiveTab("generation")}
-                            >
-                                <Users size={16} className="mr-2" />
+                <div className="min-h-0 flex flex-col h-full border">
 
-                            </button>
-                            <button
-                                className={`flex-1 flex items-center justify-center p-2  transition-all duration-200 ${activeTab === "weighting" ? " text-blue-600 shadow-sm" : ""}`}
-                                onClick={() => setActiveTab("weighting")}
-                            >
-                                <Dumbbell size={16} className="mr-2" />
+                    <div className="min-h-0 w-full flex h-full border">
 
-                            </button>
-                        </div>
-                        <div className="min-h-0 w-full flex h-full border">
-                            {activeTab === "generation" ? (
-                                <TeamGenerationTab
-                                    players={players}
-                                    selectedPlayers={selectedPlayers}
-                                    setSelectedPlayers={setSelectedPlayers}
-                                />
-                            ) : (
-                                <WeightingTab
-                                    zoneWeights={zoneWeights}
-                                    setZoneWeights={setZoneWeights}
-                                    resetZoneWeights={resetToDefaultWeights}
-                                />
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Layout for large screens (side by side) */}
-                {!isCompact && (
-                    <div className="min-h-0 flex h-full border">
-                        {/* First Div */}
                         <TeamGenerationTab
                             players={players}
                             selectedPlayers={selectedPlayers}
                             setSelectedPlayers={setSelectedPlayers}
                         />
 
-
-                        <WeightingTab
-                            zoneWeights={zoneWeights}
-                            setZoneWeights={setZoneWeights}
-                            resetZoneWeights={resetToDefaultWeights}
-                        />
-
                     </div>
-                )}
-
+                </div>
 
                 {/* Generate Button - Fixed at Bottom */}
                 <div className="flex-1">
@@ -271,139 +221,6 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
                 </Panel>
             </div>
         </div>
-    );
-};
-interface WeightingTabProps {
-    zoneWeights: Weighting;
-    setZoneWeights: (weights: Weighting) => void;
-    resetZoneWeights: () => void;
-}
-
-// Weighting Tab
-const WeightingTab: React.FC<WeightingTabProps> = ({ zoneWeights, setZoneWeights, resetZoneWeights }) => {
-    // Function to update a specific weight
-    const updateZoneWeight = (position: Position, attribute: StatsKey, value: number) => {
-        // Clamp value between 0 and 100
-        const newValue = Math.max(0, Math.min(100, value));
-
-        // Create a new copy of the previous weightings
-        const updatedWeights: Weighting = structuredClone(zoneWeights); // Deep copy ensures immutability
-
-        updatedWeights[position].weights[attribute] = newValue;
-
-        setZoneWeights(updatedWeights);
-    };
-
-    // Helper to adjust weight by a given amount
-    const adjustWeight = (position: Position, attribute: StatsKey, adjustment: number) => {
-        const currentValue = zoneWeights[position].weights[attribute];
-        if (currentValue === undefined) return;
-        updateZoneWeight(position, attribute, currentValue + adjustment);
-    };
-
-    const displayedZoneWeights: Zone[] = [
-        "defense",
-        "midfield",
-        "attack",
-    ];
-
-    return (
-        <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">
-            <div className="flex flex-col flex-1 min-h-0 space-y-4">
-                {/* Header */}
-                <div className=" p-3 flex justify-between items-center shadow-md h-[60px] bg-accent">
-                    <h3 className="text-lg font-medium">Zone Weightings</h3>
-                    <button
-                        onClick={resetZoneWeights}
-                        className="flex items-center gap-2 px-3 py-2 border rounded-md"
-                    >
-                        <RotateCcw size={16} />
-                        <span>Reset to Default</span>
-                    </button>
-                </div>
-
-
-                {/* Scrollable Weightings */}
-                <Panel>
-                    <div className="px-4 py-2 text-sm">
-                        Adjust how much each player attribute contributes to team balancing in different zones.
-                        Higher values (0-100) give more importance to that attribute in that zone.
-                    </div>
-                    {displayedZoneWeights.map((zone) => (
-                        <div key={zone} className="mb-6 p-4 rounded-lg border-gray-700 shadow-md">
-                            <h4 className=" text-md font-medium">{ZoneLabels[zone]}</h4>
-
-                            {ZonePositions[zone].map((position) => (
-                                <div key={position} className="mb-6 p-4 rounded-lg border-gray-700 shadow-md">
-                                    <h4 className=" text-md font-medium">{PositionLabels[position]}</h4>
-
-                                    <div className="flex flex-col gap-4 mt-3">
-                                        {statKeys.map((attr) => {
-                                            return (
-                                                <div key={`${zone}-${attr}`} className="flex items-center p-3 rounded-lgborde">
-                                                    {/* Attribute Name */}
-                                                    <div className="w-32 font-medium">{statLabelMap[attr]}</div>
-
-                                                    {/* Progress Bar */}
-                                                    <div className="flex-1 flex flex-col gap-2">
-                                                        <div className="h-2  rounded-md overflow-hidden">
-                                                            <div
-                                                                className={`h-full ${statColorsMap[attr]}`}  // Using the number index for color
-                                                                style={{ width: `${zoneWeights[position].weights[attr] ?? 0}%` }} // Access zoneWeights by attribute number
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Controls */}
-                                                    <div className="w-32 flex items-center justify-end gap-2">
-                                                        <button
-                                                            onClick={() => adjustWeight(position, attr, -5)}  // Adjust weight based on attribute number
-                                                            className={`w-7 h-7 flex items-center justify-center rounded ${(zoneWeights[position].weights[attr] === undefined || zoneWeights[position].weights[attr] <= 0) && "opacity-50 cursor-not-allowed"
-                                                                }`}
-                                                            disabled={zoneWeights[position].weights[attr] === undefined || zoneWeights[position].weights[attr] <= 0}
-                                                        >
-                                                            <ChevronDown size={16} />
-                                                        </button>
-
-                                                        <div className="w-10 text-center px-2 py-1 rounded-mdfont-bold text-sm">
-                                                            {zoneWeights[position].weights[attr] ?? 0}  {/* Displaying the current weight */}
-                                                        </div>
-
-                                                        <button
-                                                            onClick={() => adjustWeight(position, attr, 5)}  // Adjust weight based on attribute number
-                                                            className={`w-7 h-7 flex items-center justify-center rounded ${(zoneWeights[position].weights[attr] === undefined || zoneWeights[position].weights[attr] >= 100) && "opacity-50 cursor-not-allowed"
-                                                                }`}
-                                                            disabled={zoneWeights[position].weights[attr] === undefined || zoneWeights[position].weights[attr] >= 100}
-                                                        >
-                                                            <ChevronUp size={16} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ))}
-
-                    {/* Info Box */}
-                    <div className="m-4 p-4 rounded-lg bg-secondary border border-blue-300 text-secondary-foreground shadow-md">
-                        <h4 className="flex items-center font-medium">
-                            <Check size={16} className="mr-2" />
-                            How Zone Weightings Work
-                        </h4>
-                        <p className="text-sm mt-1">
-                            These weights determine how important each player attribute is when balancing teams across different zones.
-                            For example, a high Attack Skill value in the Attack Zone means players with high attack ratings will be
-                            evenly distributed between teams for balanced offensive capabilities.
-                        </p>
-                    </div>
-                </Panel>
-            </div>
-
-        </div>
-
     );
 };
 export default TeamGenerator;
