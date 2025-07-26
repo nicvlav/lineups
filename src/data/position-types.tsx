@@ -32,6 +32,7 @@ export const PositionLabels: Record<Position, string> = {
     WR: "Winger",
 } as const;
 
+
 export type Zone = "goalkeeper" | "defense" | "midfield" | "attack";
 
 export const ZoneKeys: Zone[] = [
@@ -381,4 +382,137 @@ export const normalizeWeights = (zoneWeights: Weighting): Weighting => {
     }
 
     return normalized;
+};
+
+
+export type Point = { x: number, y: number, };
+
+const getXForPlayerPosition = (position: PositionWeighting, positionIndex: number, numPositionentries: number) => {
+    if (!position.isCentral) {
+        if (positionIndex >= 2) throw new Error(`More than 2 players in ${position.positionName} position?`);
+        return positionIndex;
+    }
+
+    let startShift = 0.0;
+    let spacing = 0.4 / (numPositionentries); // Max width for players
+
+    if (numPositionentries % 2) {
+        if (positionIndex === 0) return 0.5;
+        startShift = spacing;
+        positionIndex--;
+    } else {
+        startShift = -spacing / 2;
+    }
+
+    if (positionIndex % 2 === 0) {
+        return 0.5 - startShift - (spacing * (1 + Math.floor(positionIndex / 2)));
+    } else {
+        return 0.5 + startShift + (spacing * (1 + Math.floor(positionIndex / 2)));
+    }
+};
+
+
+const getProximityScore = (absolutePosition: Point, position: PositionWeighting) => {
+    const centerThreshold = 0.3;
+    const y = 1 - Math.abs(position.absoluteYPosition - absolutePosition.y);
+    let score = y;
+
+    if (absolutePosition.x <= (1 - centerThreshold) && absolutePosition.x >= centerThreshold) {
+        score = position.isCentral ? y : 0;
+    } else {
+        const x = (absolutePosition.x < centerThreshold ? absolutePosition.x : (1 - absolutePosition.x)) / centerThreshold;
+        score = position.isCentral ? Math.max(0, x) * y : Math.max(0, 1 - x) * y;
+    }
+
+    return Math.pow(score, 10);
+
+
+};
+
+const filterByVerticalProximity = (positions: PositionWeightingAndIndex[], y: number) => {
+    positions.sort((a, b) => Math.abs(a.position.absoluteYPosition - y) - Math.abs(b.position.absoluteYPosition - y));
+
+    const filteredPositions: PositionWeightingAndIndex[] = [];
+
+    let foundAboveOrEqual = false;
+    let foundBelow = false;
+
+    for (const pos of positions) {
+        if (pos.position.absoluteYPosition < y) {
+            if (foundBelow) continue;
+
+            filteredPositions.push(pos);
+            foundBelow = true;
+
+            if (foundAboveOrEqual) break;
+
+        } else {
+            if (foundAboveOrEqual) continue;
+
+            filteredPositions.push(pos);
+            foundAboveOrEqual = true;
+
+            if (foundBelow) break;
+        }
+    }
+
+    return filteredPositions;
+};
+
+export const getPointForPosition = (position: PositionWeighting, positionIndex: number, numPositionentries: number) => {
+    return {
+        x: getXForPlayerPosition(position, positionIndex, numPositionentries),
+        y: position.absoluteYPosition
+    } as Point;
+};
+
+const getProximityPositions = (point: Point) => {
+    const zonePositions: PositionWeightingAndIndex[] = [];
+
+    let copyWeights = structuredClone(defaultZoneWeights);
+
+    for (const zoneKey in copyWeights) {
+        const zone = zoneKey as keyof ZoneScores;
+        const positionMap = copyWeights[zone];
+
+        zonePositions.push({
+            position: positionMap,
+            positionKey: zone
+        });
+    }
+
+    let centrals = filterByVerticalProximity(zonePositions.filter((zone) => zone.position.isCentral), point.y);
+    let wides = filterByVerticalProximity(zonePositions.filter((zone) => !zone.position.isCentral), point.y);
+
+    const weights = [...centrals, ...wides].map(position => {
+        return { ...position, weight: getProximityScore(point, position.position) };
+    });
+
+    weights.filter((position) => position.weight > 0).sort((a, b) => b.weight - a.weight);
+
+    if (weights.length > 0 && weights[0].weight == 1) {
+        return weights.slice(0, 1);
+    }
+
+    return weights;
+};
+
+
+export const getThreatScore = (point: Point, playerScores: ZoneScores) => {
+    const proximityPositions = getProximityPositions(point);
+
+    // Normalize weights to sum to 1
+    const sum = proximityPositions.reduce((acc, w) => acc + w.weight, 0);
+    proximityPositions.forEach((position) => {
+        position.weight = position.weight / sum;
+    });
+
+    const threat = proximityPositions.reduce((acc, w) => {
+        const score = playerScores[w.positionKey];
+
+        return acc + (score * w.weight / 100);
+    }, 0);
+
+    return threat;
+
 };

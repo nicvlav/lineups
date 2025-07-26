@@ -4,10 +4,9 @@ import { v4 as uuidv4, } from 'uuid';
 
 import { openDB } from "idb";
 import { defaultStatScores, PlayerStats } from "@/data/stat-types";
-import { Formation, Position, defaultZoneWeights, Weighting, emptyZoneScores, normalizeWeights } from "@/data/position-types";
-import {
-    Player, PlayerUpdate, GamePlayerUpdate, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, getThreatScore, Point, getPointForPosition/*, logPlayerStats*/
-} from "@/data/player-types";
+import { Formation, Point, Position, getPointForPosition, getThreatScore, defaultZoneWeights, Weighting, emptyZoneScores, normalizeWeights } from "@/data/position-types";
+import { Player, PlayerUpdate, GamePlayerUpdate, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats } from "@/data/player-types";
+import { /*, logPlayerStats*/ } from "@/data/auto-balance-types";
 import { decodeStateFromURL } from "@/data/state-manager";
 import { autoCreateTeamsScored } from "./auto-balance";
 
