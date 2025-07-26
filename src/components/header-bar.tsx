@@ -1,6 +1,7 @@
 import { ModeToggle } from "@/components/mode-toggle"
 import { Users, Home, Wand2, BookDashed } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useEffect } from "react";
 
 interface HeaderBarProps {
     compact: boolean;

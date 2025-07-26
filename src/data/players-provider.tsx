@@ -5,7 +5,7 @@ import { v4 as uuidv4, } from 'uuid';
 import { openDB } from "idb";
 import { defaultStatScores, PlayerStats } from "@/data/stat-types";
 import { Formation, Point, Position, getPointForPosition, getThreatScore, defaultZoneWeights, emptyZoneScores, normalizeWeights } from "@/data/position-types";
-import { Player, PlayerUpdate, GamePlayerUpdate, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats } from "@/data/player-types";
+import { Player, PlayerUpdate, GamePlayerUpdate, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, GamePlayer } from "@/data/player-types";
 import { /*, logPlayerStats*/ } from "@/data/auto-balance-types";
 import { decodeStateFromURL } from "@/data/state-manager";
 import { autoCreateTeamsScored } from "./auto-balance";
@@ -73,8 +73,33 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const pendingUpdatesRef = useRef<Map<string, PlayerUpdate>>(new Map());
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    const loadJSONGamePlayers = async (newGamePlayers: Record<string, GamePlayer>, freshLoadedPlayers: Record<string, Player>) => {
+        if (!newGamePlayers) {
+            setGamePlayers({});
+            return;
+        }
+
+        const updatedPlayers: Record<string, ScoredGamePlayerWithThreat> = Object.fromEntries(
+            Object.entries(newGamePlayers).map(([key, value]) => {
+                if (!freshLoadedPlayers[value.id]) {
+                    return [key, { ...value, zoneFit: structuredClone(emptyZoneScores), threatScore: 0 }];
+                }
+
+                const realPlayer = freshLoadedPlayers[value.id];
+                const zoneFit = calculateScoresForStats(realPlayer.stats, normalizeWeights(defaultZoneWeights));
+                const threatScore = getThreatScore(value.position, zoneFit);
+
+                return [key, { ...value, zoneFit, threatScore }];
+            })
+        );
+
+        setGamePlayers(updatedPlayers);
+    };
+
     const loadURLState = async () => {
         if (loadingState.current) return;
+
+        const freshPlayers = await fetchPlayers();
 
         if (urlState) {
             loadingState.current = true;
@@ -82,8 +107,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             const decoded = decodeStateFromURL(urlState);
 
             if (decoded && decoded.gamePlayers) {
-                setGamePlayers(decoded.gamePlayers || []);
-
+                await loadJSONGamePlayers(decoded.gamePlayers, freshPlayers);
                 await saveToDB(tabKeyRef.current, JSON.stringify(urlState));
                 currentUrl.searchParams.delete("state");
                 window.history.replaceState({}, "", currentUrl.toString());
@@ -91,8 +115,6 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
             clearUrlState();
         }
-
-        fetchPlayers();
         loadingState.current = false;
     };
 
@@ -143,7 +165,6 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 },
                 (payload) => {
                     if (loadingState.current) return;
-                    // console.log("Insert ID internal", payload, players, gamePlayers);
 
                     setPlayers(prevPlayers => {
                         const newPlayers = { ...prevPlayers };
@@ -199,14 +220,11 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                         return newPlayers;
                     });
 
-
                     setGamePlayers(prevGamePlayers => {
                         const newGamePlayers = { ...prevGamePlayers };
                         if (id in newGamePlayers) delete newGamePlayers[id];
                         return newGamePlayers;
                     });
-
-
                 }
             )
             .subscribe();
@@ -223,6 +241,9 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         sessionStorage.setItem("tabKey", tabKeyRef.current);
         const loadGameState = async () => {
             loadingState.current = true;
+
+            const freshPlayers = await fetchPlayers();
+
             if (urlState) {
                 loadURLState();
             } else {
@@ -231,14 +252,13 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                     try {
                         const parsedData = JSON.parse(savedState);
                         // setPlayers(parsedData.players || []);
-                        setGamePlayers(parsedData.gamePlayers || []);
+                        await loadJSONGamePlayers(parsedData.gamePlayers, freshPlayers);
                         console.log("Loaded from IndexedDB:");
                     } catch (error) {
                         console.error("Error loading from IndexedDB:", error);
                     }
                 }
             }
-            fetchPlayers();
             loadingState.current = false;
         };
 
@@ -249,8 +269,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         loadURLState();
     }, [urlState]);
 
-    const fetchPlayers = async () => {
-        if (!supabase) return;
+    const fetchPlayers = async (): Promise<Record<string, Player>> => {
+        if (!supabase) return {};
 
         const { data, error } = await supabase
             .from("players")
@@ -259,15 +279,16 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         if (error) {
             console.error("Error fetching players:", error);
-        } else {
-            const playerRecord: Record<string, Player> = {};
-            (data || []).forEach(player => {
-                playerRecord[player.id] = player;
-
-            });
-
-            setPlayers(playerRecord);
+            return {};
         }
+
+        const playerRecord: Record<string, Player> = {};
+        (data || []).forEach(player => {
+            playerRecord[player.id] = player;
+        });
+
+        setPlayers(playerRecord); // still set state for global use
+        return playerRecord; // return immediately for local use
     };
 
     useEffect(() => {
@@ -445,8 +466,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
-                newGamePlayers[oldPlayer.id] = { ...oldPlayer, team: newPlayer.team, position: newPlayer.position };
-                newGamePlayers[newID] = { ...newPlayer, team: oldPlayer.team, position: oldPlayer.position };
+                newGamePlayers[oldPlayer.id] = { ...oldPlayer, team: newPlayer.team, position: newPlayer.position, threatScore: getThreatScore(newPlayer.position, oldPlayer.zoneFit) };
+                newGamePlayers[newID] = { ...newPlayer, team: oldPlayer.team, position: oldPlayer.position, threatScore: getThreatScore(oldPlayer.position, newPlayer.zoneFit)  };
                 return newGamePlayers;
             });
         } else {

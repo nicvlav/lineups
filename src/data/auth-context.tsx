@@ -10,6 +10,7 @@ interface AuthContextProps {
     supabase: SupabaseClient | null;
     user: User | null;
     urlState: string | null;
+    canEdit: boolean;
     signUpWithEmail: (email: string, password: string) => Promise<void>;
     signInWithEmail: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
@@ -20,10 +21,32 @@ interface AuthContextProps {
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider = ({ children, url }: { children: React.ReactNode, url: string | null }) => {
+    const [canEdit, setCanEdit] = useState(false);
     const [user, setUser] = useState<User | null>(null);
     const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
     const [urlState, setUrlState] = useState<string | null>(url);
     const [loading, setLoading] = useState(true);
+
+    const checkEditAccess = () => {
+        if (!supabase || !user) {
+            setCanEdit(false);
+            return;
+        }
+        const checkPermission = async () => {
+            const { data } = await supabase
+                .from("user_permissions")
+                .select("can_edit")
+                .eq("user_id", user.id)
+                .single();
+
+            console.log("d", data);
+
+            // if (data?.can_edit) setCanEdit(true);
+        };
+
+        checkPermission();
+    };
+
 
     useEffect(() => {
         const getUser = async () => {
@@ -54,6 +77,9 @@ export const AuthProvider = ({ children, url }: { children: React.ReactNode, url
         };
     }, [supabase]);
 
+    useEffect(() => {
+        checkEditAccess();
+    }, [user]);
 
     useEffect(() => {
         if (supabase) return;
@@ -130,7 +156,7 @@ export const AuthProvider = ({ children, url }: { children: React.ReactNode, url
 
 
     return (
-        <AuthContext.Provider value={{ supabase, user, urlState, signUpWithEmail, signInWithEmail, signOut, updateUserPassword, clearUrlState }}>
+        <AuthContext.Provider value={{ supabase, user, urlState, canEdit, signUpWithEmail, signInWithEmail, signOut, updateUserPassword, clearUrlState }}>
             {children}
         </AuthContext.Provider>
     );
