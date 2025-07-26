@@ -18,7 +18,7 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
     const alphabeticalSortValue: string = "Alphabetical";
     const [newPlayerName, setNewPlayerName] = useState<string>("");
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [filterMode, setFilterMode] = useState<string>(StatCategoryNameMap["physical"]);
+    const [filterMode, setFilterMode] = useState<string>(StatCategoryNameMap["attacking"]);
     const [sortingMode, setSortingMode] = useState<string>(alphabeticalSortValue);
 
     const handleAttributeChange = (uid: string, statIndex: StatsKey, change: number) => {
@@ -38,13 +38,23 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
 
     const getCurrentIndexes = () => {
         switch (filterMode) {
-            case StatCategoryNameMap["technical"]:
-                return CategorizedStats.technical;
-            case StatCategoryNameMap["mental"]:
-                return CategorizedStats.mental;
-            default:
+            case StatCategoryNameMap["pace"]:
+                return CategorizedStats.pace;
+            case StatCategoryNameMap["attacking"]:
+                return CategorizedStats.attacking;
+            case StatCategoryNameMap["passing"]:
+                return CategorizedStats.passing;
+            case StatCategoryNameMap["dribbling"]:
+                return CategorizedStats.dribbling;
+            case StatCategoryNameMap["defending"]:
+                return CategorizedStats.defending;
             case StatCategoryNameMap["physical"]:
-                return CategorizedStats.physical;
+                return CategorizedStats.physical; 
+                case StatCategoryNameMap["morale"]:
+                return CategorizedStats.morale;
+            default:
+            case StatCategoryNameMap["attacking"]:
+                return CategorizedStats.attacking;
         }
     };
 
@@ -71,7 +81,7 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
 
     };
 
-    const sortedPlayers = getSorted(); 
+    const sortedPlayers = getSorted();
 
     return (
         <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">

@@ -17,8 +17,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ playerName, overall, top3Positi
                     {overall}
                 </div>
 
-
-
                 {/* Name + Positions */}
                 <div className="flex flex-col items-start">
                     <span className="font-bold text-lg text-left">{playerName}</span>
@@ -26,12 +24,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ playerName, overall, top3Positi
                 </div>
             </div>
 
-
             <div className="mt-3 flex justify-center gap-3">
                 {[
-                    { label: "MEN", value: averages.mental },
-                    { label: "PHY", value: averages.physical },
-                    { label: "TEC", value: averages.technical },
+                    { label: "PAC", value: averages.pace },
+                    { label: "ATT", value: averages.attacking },
+                    { label: "PAS", value: averages.passing },
                 ].map((stat) => (
                     <div
                         key={stat.label}
@@ -43,11 +40,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ playerName, overall, top3Positi
                 ))}
             </div>
 
-            {/* <div className="mt-3 flex justify-center gap-3">
+            <div className="mt-3 flex justify-center gap-3">
                 {[
-                    { label: "MEN", value: averages.mental },
+                    { label: "DRI", value: averages.dribbling },
+                    { label: "DEF", value: averages.defending },
                     { label: "PHY", value: averages.physical },
-                    { label: "TEC", value: averages.technical },
                 ].map((stat) => (
                     <div
                         key={stat.label}
@@ -57,7 +54,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ playerName, overall, top3Positi
                         <span className="font-bold">{stat.value}</span>
                     </div>
                 ))}
-            </div> */}
+            </div>
         </div>
     );
 }

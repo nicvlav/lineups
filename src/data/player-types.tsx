@@ -1,5 +1,5 @@
 import { StatsKey, PlayerStats, CategorizedStats } from "@/data/stat-types"; // Importing from shared file
-import { Point, PositionShortLabels, ZoneScores, emptyZoneScores, Weighting, defaultZoneWeights, Position } from "@/data/position-types"; // Importing from shared file
+import { Point, PositionShortLabels, normalizeWeights, ZoneScores, emptyZoneScores, Weighting, defaultZoneWeights, Position } from "@/data/position-types"; // Importing from shared file
 
 // Core Player data from Supabase
 export interface Player {
@@ -104,7 +104,7 @@ export interface PositionAndScore {
 export type ZoneAverages = Record<string, number>;
 
 export function getTopPositions(player: Player) {
-    const scores = calculateScoresForStats(player.stats, defaultZoneWeights);
+    const scores = calculateScoresForStats(player.stats, normalizeWeights(defaultZoneWeights));
 
     const allItems: PositionAndScore[] = Object.entries(scores).map(([pos, score]) => {
         return { position: PositionShortLabels[pos as Position], score } as PositionAndScore;
@@ -125,9 +125,13 @@ export function getTopPositions(player: Player) {
 
 export function getZoneAverages(player: Player) {
     const zones = {
-        mental: CategorizedStats.mental,
+        pace: CategorizedStats.pace,
+        attacking: CategorizedStats.attacking,
+        passing: CategorizedStats.passing,
+        dribbling: CategorizedStats.dribbling,
+        defending: CategorizedStats.defending,
         physical: CategorizedStats.physical,
-        technical: CategorizedStats.technical,
+        morale: CategorizedStats.morale,
     };
 
     const result: ZoneAverages = {};
