@@ -8,6 +8,9 @@ Our core data types for things like positions, zones, weights, etc, are stored i
 However, for monte carlo simulations in our auto balance methods, we prefer raw arrays for raw speed
 The below types are designed to convert the named types to raw types for our mass sorting/splitting algorithms
 found in auto-balance. 
+
+Currently these arrays are rigid by design but the manual work to alter them (add/remove positionss) is non ideal
+Need to generate auto sized types based on the record structures
 */
 
 
@@ -23,6 +26,7 @@ export type DEFPlayers = [
 
 export type MIDPlayers = [
     PositionedGamePlayer[], // DM
+    PositionedGamePlayer[], // CM
     PositionedGamePlayer[], // WM
     PositionedGamePlayer[], // AM
 ];
@@ -43,6 +47,7 @@ export type DEFScores = [
 
 export type MIDScores = [
     number, // DM
+    number, // CM
     number, // WM
     number, // AM
 ];
@@ -84,14 +89,14 @@ export interface PositionedGamePlayer extends ArrayScoredGamePlayer {
 export const emptyZonePlayers: ZonePlayers = [
     [[]],          // GKPlayers
     [[], []],      // DEFPlayers
-    [[], [], []],  // MIDPlayers
+    [[], [], [], []],  // MIDPlayers
     [[], []],      // ATTPlayers
 ];
 
 export const emptyZoneScores: ZoneScoresArray = [
     [0],          // GKPlayers
     [0, 0],      // DEFPlayers
-    [0, 0, 0],  // MIDPlayers
+    [0, 0, 0, 0],  // MIDPlayers
     [0, 0],      // ATTPlayers
 ];
 

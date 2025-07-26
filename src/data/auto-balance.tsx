@@ -151,16 +151,20 @@ const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
     const addPlayerAtPos = (dist: ZoneScoresArray, zone: number, position: number, isTeamA: boolean, sortType: (players: ArrayScoredGamePlayer[], zone: number, position: number, rand: number) => void) => {
         if (dist[zone][position] <= 0) return false;
 
+        if (teamA[zone] === undefined || teamA[zone][position] === undefined) {
+            // console.log("HUH");
+            return false
+        }
+
         sortType(players, zone, position, rand);
 
         let player = players.shift();
 
         if (!player) return false;
 
-        // Move one player to the high-priority template
-        dist[zone][position] -= 1;
-
         const weight = defaultZoneWeights[ZonePositions[ZoneKeys[zone]][position]];
+
+        dist[zone][position] -= 1;
 
         if (isTeamA) {
             teamAZoneScores[zone] += player.zoneFitArr[zone][position];
@@ -179,6 +183,8 @@ const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
     const addPlayer = (dist: ZoneScoresArray, zone: number, isTeamA: boolean) => {
         const formationZone = dist[zone];
 
+        if (formationZone.length <= 0) return false;
+
         // Sort positions by priorityStat (higher is better), breaking ties with count and index
         const sortedPositions = formationZone
             .map((count, positionIndex) => ({
@@ -193,7 +199,7 @@ const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
                 a.positionIndex - b.positionIndex // Lower index if still tied
             );
 
-        if (sortedPositions.length < 0 || !sortedPositions[0]) return false;
+        if (sortedPositions.length <= 0 || !sortedPositions[0]) return false;
 
         return addPlayerAtPos(dist, zone, sortedPositions[0].positionIndex, isTeamA, sortBest);
 
@@ -276,7 +282,6 @@ const getZones = (players: ArrayScoredGamePlayer[], recursive: boolean, numSimul
     const W_balance = recursive ? 0.3 : 0.0; // Normalize team balance
     const W_pos_balance = recursive ? 0.25 : 0.2; // Normalize team balance
     const W_zonal = recursive ? 0.0 : 0.3;   // Normalize zonal variance
-
 
     for (let i = 0; i < numSimulations; i++) {
         let results: TeamResults;
