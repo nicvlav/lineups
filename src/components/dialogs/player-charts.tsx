@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "@/data/theme-provider";
-import { PlayerStats, statLabelMap, StatsKey, statKeys, statShortLabelMap } from "@/data/stat-types";
-import { Player, PlayerUpdate } from "@/data/player-types";
-import { Minus, Plus } from "lucide-react";
+import { StatCategory, StatCategoryNameMap, StatCategoryKeys } from "@/data/stat-types";
+import { Player, PlayerUpdate, getZoneAverages, ZoneAverages } from "@/data/player-types";
 import { } from "lucide-react";
 import { Radar } from "react-chartjs-2";
 import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from "chart.js";
@@ -48,8 +47,12 @@ const PlayerCharts: React.FC<PlayerChartsProps> = ({
         return a.name.localeCompare(b.name);
     });
 
+
     const chartPlayer1 = selectedPlayer1 && selectedPlayer1 in players ? players[selectedPlayer1] as Player : null;
     const chartPlayer2 = selectedPlayer2 && selectedPlayer2 in players ? players[selectedPlayer2] as Player : null;
+
+    const chartPlayer1Stats = chartPlayer1 ? getZoneAverages(chartPlayer1) : null;
+    const chartPlayer2Stats = chartPlayer2 ? getZoneAverages(chartPlayer2) : null;
 
     return (
         <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">
@@ -75,16 +78,19 @@ const PlayerCharts: React.FC<PlayerChartsProps> = ({
                 <Panel>
                     <PlayerRadarChart
                         player1={chartPlayer1}
-                        player2={chartPlayer2}>
+                        player1Stats={chartPlayer1Stats}
+                        player2={chartPlayer2}
+                        player2Stats={chartPlayer2Stats}>
                     </PlayerRadarChart>
 
                     <div className="flex-col flex-1 gap-2 bg-background">
                         {chartPlayer1 && (
                             <div className="mt-2">
                                 <span className="w-[300px] text-right shrink-0 truncate">{chartPlayer1.name}:</span>
-                                <div className="flex flex-1 flex-col gap-2 ">
-                                    <PlayerStatEditor
+                                <div className="flex flex-1 flex-col gap-2 mt-2">
+                                    <PlayerStatViewer
                                         player={chartPlayer1}
+                                        playerStats={chartPlayer1Stats}
                                         updatePlayerAttributes={updatePlayerAttributes}
 
                                     />
@@ -96,9 +102,10 @@ const PlayerCharts: React.FC<PlayerChartsProps> = ({
                         {chartPlayer2 && (
                             <div className="mt-2">
                                 <span className="w-[300px] text-right shrink-0 truncate">{chartPlayer2.name}:</span>
-                                <div className="flex flex-1 flex-col gap-2 ">
-                                    <PlayerStatEditor
+                                <div className="flex flex-1 flex-col gap-2 mt-2">
+                                    <PlayerStatViewer
                                         player={chartPlayer2}
+                                        playerStats={chartPlayer2Stats}
                                         updatePlayerAttributes={updatePlayerAttributes}
                                     />
                                 </div>
@@ -181,67 +188,35 @@ const PlayerPopover: React.FC<PlayerPopoverProps> = ({ players, selectedPlayerNa
     );
 };
 
-interface PlayerStatEditorProps {
+interface PlayerStatViewerProps {
     player: Player | null;
+    playerStats: ZoneAverages | null;
     updatePlayerAttributes: (id: string, updates: PlayerUpdate) => void;
 }
 
-const PlayerStatEditor: React.FC<PlayerStatEditorProps> = ({ player, updatePlayerAttributes }) => {
-    if (!player) return <p className="text-center">Select a player to edit stats.</p>;
-
-    const handleAttributeChange = (uid: string, statIndex: StatsKey, change: number) => {
-        let newStats2: PlayerStats = player.stats;
-        newStats2[statIndex] = Math.max(1, Math.min(100, newStats2[statIndex] + change));
-        updatePlayerAttributes(uid, { stats: newStats2 });
-    };
-
-
-    // const halfAttributesLength = Math.ceil(attributeLabels.length / 2);
+const PlayerStatViewer: React.FC<PlayerStatViewerProps> = ({ player, playerStats }) => {
+    if (!player || !playerStats) return <p className="text-center">Select a player to edit stats.</p>;
 
     return (
-        <div className="p-1 border rounded-lg shadow-md text-sm">
-            <div className="grid grid-cols-2 gap-2">
-                {Object.entries(player.stats).map(([key, value]) => (
-                    <div key={key} className="flex justify-between items-center p-1 rounded border">
-                        {/* Label */}
-                        <span>{statLabelMap[key as StatsKey]}</span>
-
-                        {/* Value + Buttons */}
-                        <div className="flex items-center gap-1 bg-accent rounded-md ml-auto">
-                            <span>{value}</span>
-                            <div className="flex flex-col">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => handleAttributeChange(player.id, key as StatsKey, 5)}
-                                    size="sm"
-                                    className="w-6 h-4 p-0 flex justify-center items-center rounded-t-md"
-                                >
-                                    <Plus size={8} />
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => handleAttributeChange(player.id, key as StatsKey, -5)}
-                                    size="sm"
-                                    className="w-6 h-4 p-0 flex justify-center items-center rounded-b-md"
-                                >
-                                    <Minus size={8} />
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+            {StatCategoryKeys.map((label) => (
+                <div key={label} className="flex justify-between items-center border bg-accent rounded-md px-3 py-2">
+                    <span>{StatCategoryNameMap[label as StatCategory]}:</span>
+                    <span>{playerStats[label as StatCategory]}</span>
+                </div>
+            ))}
         </div>
     );
-
 };
 
 interface PlayerRadarChartProps {
     player1: Player | null;
     player2: Player | null;
+    player1Stats: ZoneAverages | null;
+    player2Stats: ZoneAverages | null;
 }
 
-const PlayerRadarChart: React.FC<PlayerRadarChartProps> = ({ player1, player2 }) => {
+const PlayerRadarChart: React.FC<PlayerRadarChartProps> = ({ player1, player2, player1Stats, player2Stats }) => {
     if (!player1 && !player2) return <p className="mt-4 text-center">Select at least one player to see stats.</p>;
 
     const { theme } = useTheme();
@@ -252,23 +227,23 @@ const PlayerRadarChart: React.FC<PlayerRadarChartProps> = ({ player1, player2 })
             : `rgba(0, 0, 0, ${alpha})`; // Adjust light mode color if needed
     };
 
-    const labels = statKeys.map(key => statShortLabelMap[key]);
+    const labels = StatCategoryKeys.map(key => StatCategoryNameMap[key]);
     const datasets = [];
 
-    if (player1) {
+    if (player1 && player1Stats) {
         datasets.push({
             label: player1.name,
-            data: statKeys.map(key => player1.stats[key]),
+            data: StatCategoryKeys.map(key => player1Stats[key]),
             backgroundColor: "rgba(54, 162, 235, 0.2)",
             borderColor: "rgba(54, 162, 235, 1)",
             borderWidth: 2,
         });
     }
 
-    if (player2) {
+    if (player2 && player2Stats) {
         datasets.push({
             label: player2.name,
-            data: statKeys.map(key => player2.stats[key]),
+            data: StatCategoryKeys.map(key => player2Stats[key]),
             backgroundColor: "rgba(255, 99, 132, 0.2)",
             borderColor: "rgba(255, 99, 132, 1)",
             borderWidth: 2,

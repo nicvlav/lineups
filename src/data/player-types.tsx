@@ -1,4 +1,4 @@
-import { StatsKey, PlayerStats, CategorizedStats } from "@/data/stat-types"; // Importing from shared file
+import { StatsKey, PlayerStats, CategorizedStats, StatCategory } from "@/data/stat-types"; // Importing from shared file
 import { Point, PositionShortLabels, normalizeWeights, ZoneScores, emptyZoneScores, Weighting, defaultZoneWeights, Position } from "@/data/position-types"; // Importing from shared file
 
 // Core Player data from Supabase
@@ -101,7 +101,7 @@ export interface PositionAndScore {
     score: number;
 }
 
-export type ZoneAverages = Record<string, number>;
+export type ZoneAverages = Record<StatCategory, number>;
 
 export function getTopPositions(player: Player) {
     const scores = calculateScoresForStats(player.stats, normalizeWeights(defaultZoneWeights));
@@ -123,22 +123,20 @@ export function getTopPositions(player: Player) {
     return result;
 }
 
-export function getZoneAverages(player: Player) {
-    const zones = {
-        pace: CategorizedStats.pace,
-        attacking: CategorizedStats.attacking,
-        passing: CategorizedStats.passing,
-        dribbling: CategorizedStats.dribbling,
-        defending: CategorizedStats.defending,
-        physical: CategorizedStats.physical,
-        morale: CategorizedStats.morale,
+export function getZoneAverages(player: Player): ZoneAverages {
+    const result: ZoneAverages = {
+        pace: 0,
+        attacking: 0,
+        passing: 0,
+        dribbling: 0,
+        defending: 0,
+        physical: 0,
+        morale: 0,
     };
 
-    const result: ZoneAverages = {};
-
-    for (const [zone, stats] of Object.entries(zones)) {
+    for (const [zone, stats] of Object.entries(CategorizedStats)) {
         const total = stats.reduce((sum, stat) => sum + player.stats[stat], 0);
-        result[zone] = Math.round(total / stats.length);
+        result[zone as StatCategory] = Math.round(total / stats.length);
     }
 
     return result;

@@ -180,6 +180,16 @@ export const defaultStatScores: PlayerStats = Object.fromEntries(
 
 export type StatCategory = 'pace' | 'attacking' | 'passing' | "dribbling" | "defending" | "physical" | "morale";
 
+export const StatCategoryKeys: StatCategory[] = [
+    "pace",
+    "attacking",
+    "passing",
+    "dribbling",
+    "defending",
+    "physical",
+    "morale"
+] as const;
+
 export const StatCategoryNameMap: Record<StatCategory, string> = {
     pace: "Pace",
     attacking: "Attacking",
