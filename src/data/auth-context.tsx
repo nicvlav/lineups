@@ -10,7 +10,6 @@ interface AuthContextProps {
     supabase: SupabaseClient | null;
     user: User | null;
     urlState: string | null;
-    loading: boolean;
     signUpWithEmail: (email: string, password: string) => Promise<void>;
     signInWithEmail: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
@@ -131,7 +130,7 @@ export const AuthProvider = ({ children, url }: { children: React.ReactNode, url
 
 
     return (
-        <AuthContext.Provider value={{ supabase, user, urlState, loading, signUpWithEmail, signInWithEmail, signOut, updateUserPassword, clearUrlState }}>
+        <AuthContext.Provider value={{ supabase, user, urlState, signUpWithEmail, signInWithEmail, signOut, updateUserPassword, clearUrlState }}>
             {children}
         </AuthContext.Provider>
     );

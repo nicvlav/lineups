@@ -14,7 +14,7 @@ import PlayerTable from "@/components/dialogs/player-table";
 import TeamGenerator from "@/components/dialogs/team-generator";
 
 const Layout = () => {
-    const { user, supabase, loading } = useAuth();
+    const { user, supabase } = useAuth();
     const [canEdit, setCanEdit] = useState(false);
 
     const useWindowSize = () => {
