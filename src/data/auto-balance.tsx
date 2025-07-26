@@ -44,27 +44,36 @@ const getBestAndSecondBestStats = (zoneFitArr: ZoneScoresArray) => {
     return { best, secondBest };
 };
 
-function getZoneSpecialistZone(player: ArrayScoredGamePlayer, dominanceRatio = 1.05): number | undefined {
-    const zoneBestScores = player.zoneFitArr.map(
-        (positions) => Math.max(...positions)
-    );
+type SpecialistInfo = {
+    score: number,
+    zoneIndex: number,
+    positionIndex: number,
+};
 
-    const scoredZones = zoneBestScores
-        .map((score, zoneIndex) => ({ zoneIndex, score }))
-        .filter(({ score }) => score > 0)
-        .sort((a, b) => b.score - a.score);
 
-    if (scoredZones.length === 0) return undefined;
-    if (scoredZones.length === 1) return scoredZones[0].zoneIndex;
+function getZoneSpecialistZoneAndPosition(player: ArrayScoredGamePlayer, dist: ZoneScoresArray, dominanceRatio = 1.05): SpecialistInfo | undefined {
+    const infos: SpecialistInfo[] = [];
 
-    const best = scoredZones[0];
-    const second = scoredZones[1];
+    player.zoneFitArr.forEach((zoneArr, zoneIndex) => {
+        zoneArr.forEach((score, positionIndex) => {
+            if (!dist[zoneIndex][positionIndex]) return;
+            infos.push({ score, zoneIndex, positionIndex });
+        });
+    });
 
-    return best.score >= second.score * dominanceRatio ? best.zoneIndex : undefined;
+    const sorted = infos.sort((a, b) => b.score - a.score);
+
+    if (sorted.length === 0) return undefined;
+    if (sorted.length === 1) return sorted[0];
+
+    const best = sorted[0];
+    const second = sorted[1];
+
+    return best.score >= second.score * dominanceRatio ? best : undefined;
 }
 
 // special sorting with randomization
-const sortBest = (players: ArrayScoredGamePlayer[], zone: number, position: number, randomSeed: number) => {
+const sortBest = (players: ArrayScoredGamePlayer[], zone: number, position: number, randomSeed: number, dist: ZoneScoresArray) => {
     // const specializationRatios = [randomSeed * 0.8 + 0.1, randomSeed * 0.5 + 0.1, randomSeed * 0.2 + 0.0];
 
     // Pick the best available player from this zone
@@ -76,38 +85,40 @@ const sortBest = (players: ArrayScoredGamePlayer[], zone: number, position: numb
         const aStats = getBestAndSecondBestStats(a.zoneFitArr);
         const bStats = getBestAndSecondBestStats(b.zoneFitArr);
 
-        const aSpecialZone = getZoneSpecialistZone(a);
-        const bSpecialZone = getZoneSpecialistZone(b);
-
-        const aIsSpecialist = aSpecialZone !== undefined;
-        const bIsSpecialist = bSpecialZone !== undefined;
+        const aSpecialZone = getZoneSpecialistZoneAndPosition(a, dist);
+        const bSpecialZone = getZoneSpecialistZoneAndPosition(b, dist);
 
         const aFit = a.zoneFitArr[zone][position];
         const bFit = b.zoneFitArr[zone][position];
 
         // === STEP 1: One is a zone specialist for this zone, the other isn't
-        if (aIsSpecialist !== bIsSpecialist) {
-            if (aIsSpecialist && aSpecialZone === zone) return -1;
-            if (bIsSpecialist && bSpecialZone === zone) return 1;
-            return aIsSpecialist ? 1 : -1;  // Prefer non-specialist for off-zone cases
+        if (aSpecialZone !== bSpecialZone) {
+            if (aSpecialZone && aSpecialZone.zoneIndex === zone && aSpecialZone.positionIndex === position) return -1;
+            if (bSpecialZone && bSpecialZone.zoneIndex === zone && bSpecialZone.positionIndex === position) return 1;
+            return aSpecialZone ? 1 : -1;  // Prefer non-specialist for off-zone cases
         }
 
         // === STEP 2: Both are specialists
-        if (aIsSpecialist && bIsSpecialist) {
-            const aMatches = aSpecialZone === zone;
-            const bMatches = bSpecialZone === zone;
+        if (aSpecialZone && bSpecialZone) {
+            const aMatchesZone = aSpecialZone.zoneIndex === zone
+            const bMatchesZone = bSpecialZone.zoneIndex === zone
 
-            // One matches zone, one doesn't
-            if (aMatches !== bMatches) return aMatches ? -1 : 1;
+            const aMatchesPos = aMatchesZone && aSpecialZone.positionIndex === position;
+            const bMatchesPos = bMatchesZone && bSpecialZone.positionIndex === position;
+
+            // One matches pos, one doesn't
+            if (aMatchesPos !== bMatchesPos) return aMatchesPos ? -1 : 1;
+
+            if (aMatchesZone !== bMatchesZone) return aMatchesPos ? -1 : 1;
 
             const aRatio = aStats.best / (aStats.secondBest || 1);
             const bRatio = bStats.best / (bStats.secondBest || 1);
 
-            if (aMatches && bMatches) {
-                // Both match the zone — prefer sharper specialization, slightly softened by randomness
+            if (aMatchesPos && bMatchesPos) {
+                // Both match the pos — prefer sharper specialization, slightly softened by randomness
                 return (bRatio * bSeed) - (aRatio * aSeed);
             } else {
-                // Both are specialists for another zone — prefer the more adaptable one
+                // Both are specialists for another pos — prefer the more adaptable one
                 return (aRatio * aSeed) - (bRatio * bSeed);
             }
         }
@@ -148,7 +159,7 @@ const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
     // eg - 0.1 means at most we can randomize players by 10%
     const rand = Math.random() * 0.1;
 
-    const addPlayerAtPos = (dist: ZoneScoresArray, zone: number, position: number, isTeamA: boolean, sortType: (players: ArrayScoredGamePlayer[], zone: number, position: number, rand: number) => void) => {
+    const addPlayerAtPos = (dist: ZoneScoresArray, zone: number, position: number, isTeamA: boolean, sortType: (players: ArrayScoredGamePlayer[], zone: number, position: number, rand: number, dist: ZoneScoresArray) => void) => {
         if (dist[zone][position] <= 0) return false;
 
         if (teamA[zone] === undefined || teamA[zone][position] === undefined) {
@@ -156,7 +167,7 @@ const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
             return false
         }
 
-        sortType(players, zone, position, rand);
+        sortType(players, zone, position, rand, dist);
 
         let player = players.shift();
 
@@ -277,10 +288,10 @@ const getZones = (players: ArrayScoredGamePlayer[], recursive: boolean, numSimul
     let bestWeightedScore = -Infinity;
 
     // Adjustable weights (total sums to 1)
-    const W_quality = recursive ? 0.0 : 0.1; // Normalize overall player quality
-    const W_efficiency = recursive ? 0.35 : 0.4; // Normalize overall player quality
-    const W_balance = recursive ? 0.3 : 0.0; // Normalize team balance
-    const W_pos_balance = recursive ? 0.25 : 0.2; // Normalize team balance
+    const W_quality = recursive ? 0.0 : 0.2; // Normalize overall player quality
+    const W_efficiency = recursive ? 0.2 : 0.5; // Normalize overall player quality
+    const W_balance = recursive ? 0.6 : 0.0; // Normalize team balance
+    const W_pos_balance = recursive ? 0.2 : 0.0; // Normalize team balance
     const W_zonal = recursive ? 0.0 : 0.3;   // Normalize zonal variance
 
     for (let i = 0; i < numSimulations; i++) {
@@ -388,7 +399,6 @@ const getZones = (players: ArrayScoredGamePlayer[], recursive: boolean, numSimul
         // Maximum possible difference is if the larger team scores max and the smaller scores 0.
         let maxPossibleDiff = Math.max(teamAPlayers, teamBPlayers);
         let normalizedBalance = 1 - Math.pow(diff / maxPossibleDiff, 0.25); // 1 is perfect balance
-
 
         let diffPos = Math.abs(aPositionalTotal - bPositionalTotal);
         let normalizedPosBalance = 1 - Math.pow(diffPos / maxPossibleDiff, 0.25); // 1 is perfect balanc

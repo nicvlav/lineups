@@ -4,9 +4,10 @@ import { NavLink } from "react-router-dom";
 
 interface HeaderBarProps {
     compact: boolean;
+    canEdit: boolean;
 }
 
-const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
+const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
     const iconSize = compact ? 15 : 18;
 
     const TabIcon = ({ icon: Icon, to }: { icon: any; to: string }) => (
@@ -32,7 +33,11 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
             {/* Buttons container (ensures shrink behavior) */}
             <div className="flex flex-1 justify-center space-x-2 min-w-0 overflow-hidden ml-1">
                 <TabIcon icon={Home} to="/" />
-                <TabIcon icon={Users} to="/players" />
+
+                {canEdit && (
+                    <TabIcon icon={Users} to="/players" />
+                )}
+
                 <TabIcon icon={BookDashed} to="/cards" />
                 <TabIcon icon={Wand2} to="/generate" />
             </div>

@@ -74,21 +74,24 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const loadURLState = async () => {
-        if (!supabase || !urlState || loadingState.current) return;
+        if (loadingState.current) return;
 
-        loadingState.current = true;
-        const currentUrl = new URL(window.location.href);
-        const decoded = decodeStateFromURL(urlState);
+        if (urlState) {
+            loadingState.current = true;
+            const currentUrl = new URL(window.location.href);
+            const decoded = decodeStateFromURL(urlState);
 
-        if (decoded && decoded.gamePlayers) {
-            setGamePlayers(decoded.gamePlayers || []);
+            if (decoded && decoded.gamePlayers) {
+                setGamePlayers(decoded.gamePlayers || []);
 
-            await saveToDB(tabKeyRef.current, JSON.stringify(urlState));
-            currentUrl.searchParams.delete("state");
-            window.history.replaceState({}, "", currentUrl.toString());
+                await saveToDB(tabKeyRef.current, JSON.stringify(urlState));
+                currentUrl.searchParams.delete("state");
+                window.history.replaceState({}, "", currentUrl.toString());
+            }
+
+            clearUrlState();
         }
 
-        clearUrlState();
         fetchPlayers();
         loadingState.current = false;
     };
@@ -218,7 +221,6 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
     useEffect(() => {
         sessionStorage.setItem("tabKey", tabKeyRef.current);
-
         const loadGameState = async () => {
             loadingState.current = true;
             if (urlState) {
@@ -273,7 +275,6 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             // console.log("Saving state from change:", gamePlayers);
             saveState();
         }
-
     }, [gamePlayers]);
 
     const saveState = async () => {
@@ -503,8 +504,6 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const applyFormationToTeam = (team: string, formation: Formation) => {
         let teamPlayers = Object.values(gamePlayers).filter((player) => player.team === team);
         let newTeamPlayers: Record<string, ScoredGamePlayerWithThreat> = {};
-
-        console.log(formation, teamPlayers);
 
         for (const [key, value] of Object.entries(formation.positions)) {
             for (let i = 0; i < value; i++) {

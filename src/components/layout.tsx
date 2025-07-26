@@ -3,18 +3,20 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import { isMobile } from 'react-device-detect'; // Use this to detect touch devices
-
+import { useAuth } from "@/data/auth-context";
 import { PlayersProvider } from "@/data/players-provider";
 import HeaderBar from "@/components/header-bar";
 
 import Game from "@/components/game";
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import PlayerCards from "@/components/dialogs/player-cards";
 import PlayerTable from "@/components/dialogs/player-table";
 import TeamGenerator from "@/components/dialogs/team-generator";
 
-
 const Layout = () => {
+    const { user, supabase, loading } = useAuth();
+    const [canEdit, setCanEdit] = useState(false);
+
     const useWindowSize = () => {
         const [windowSize, setWindowSize] = useState({
             width: window.innerWidth,
@@ -38,6 +40,22 @@ const Layout = () => {
         return windowSize;
     };
 
+    useEffect(() => {
+        if (!supabase || !user) return;
+
+        const checkPermission = async () => {
+            const { data } = await supabase
+                .from("user_permissions")
+                .select("can_edit")
+                .eq("user_id", user.id)
+                .single();
+
+            if (data?.can_edit) setCanEdit(true);
+        };
+
+        checkPermission();
+    }, [user]);
+
     const { width, height } = useWindowSize();
 
     const isCompact = width < 768;
@@ -59,15 +77,16 @@ const Layout = () => {
                 <DndProvider backend={backend} options={options}>
                     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-2 sticky top-0 z-10 bg-background">
                         {/* <Separator orientation="vertical" className="mr-2 h-4" /> */}
-                        <HeaderBar compact={isCompact} />
+                        <HeaderBar compact={isCompact} canEdit />
                     </header>
 
                     {/* Add routes here, above headerbar has the tabbed nav icons */}
                     <Routes>
                         <Route index element={<Game isCompact={isCompact} playerSize={(isCompact ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 16} />} />
-                        <Route path="players" element={<PlayerTable isCompact={isCompact} />} />
+                        {canEdit && <Route path="players" element={<PlayerTable isCompact={isCompact} />} />}
                         <Route path="cards" element={<PlayerCards isCompact={isCompact} />} />
                         <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
+                        <Route path="players" element={<Navigate to="/" />} />
                     </Routes>
                 </DndProvider>
             </PlayersProvider>

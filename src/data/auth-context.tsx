@@ -10,6 +10,7 @@ interface AuthContextProps {
     supabase: SupabaseClient | null;
     user: User | null;
     urlState: string | null;
+    loading: boolean;
     signUpWithEmail: (email: string, password: string) => Promise<void>;
     signInWithEmail: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
@@ -23,33 +24,47 @@ export const AuthProvider = ({ children, url }: { children: React.ReactNode, url
     const [user, setUser] = useState<User | null>(null);
     const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
     const [urlState, setUrlState] = useState<string | null>(url);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const getUser = async () => {
-            const supabase = await getSupabaseClient();
+            if (!supabase) {
+                setUser(null);
+                return;
+            }
+
             const { data } = await supabase.auth.getUser();
             if (data?.user) {
-                setUser({ id: data.user.id, email: data.user.email ? data.user.email : null });
+                setUser({ id: data.user.id, email: data.user.email || null });
             }
         };
+
         getUser();
 
-        // Listen for auth state changes
-        supabase?.auth.onAuthStateChange((_, session) => {
+        // Listen for auth changes
+        const { data: subscription } = supabase?.auth.onAuthStateChange((_, session) => {
             if (session?.user) {
                 setUser({ id: session.user.id, email: session.user.email || null });
             } else {
                 setUser(null);
             }
-        });
+        }) ?? { data: null };
+
+        return () => {
+            subscription?.subscription?.unsubscribe();
+        };
     }, [supabase]);
 
+
     useEffect(() => {
+        if (supabase) return;
+
         getSupabaseClient().then((obj) => {
             setSupabase(obj);
+            setLoading(false); // done loading after supabase is ready
         });
-
     }, []);
+
 
     // Sign in with email and password
     const signInWithEmail = async (email: string, password: string) => {
@@ -110,8 +125,13 @@ export const AuthProvider = ({ children, url }: { children: React.ReactNode, url
         setUrlState(null);
     };
 
+    if (!supabase || loading) {
+        return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    }
+
+
     return (
-        <AuthContext.Provider value={{ supabase, user, urlState, signUpWithEmail, signInWithEmail, signOut, updateUserPassword, clearUrlState }}>
+        <AuthContext.Provider value={{ supabase, user, urlState, loading, signUpWithEmail, signInWithEmail, signOut, updateUserPassword, clearUrlState }}>
             {children}
         </AuthContext.Provider>
     );

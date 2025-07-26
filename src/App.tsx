@@ -46,7 +46,7 @@ const AppRoutes = () => {
       <Route path="/reset-password" element={user ? <Navigate to="/" /> : <ResetPasswordPage />} />
 
       {/* Main route: Redirects to Sign In if user is not logged in */}
-      <Route path="*" element={user ? <Layout /> : <Navigate to="/sign-in" />} />
+      <Route path="*" element={<Layout />} />
     </Routes>
 
   );
