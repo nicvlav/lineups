@@ -92,7 +92,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             {/* Popup dialog */}
             <Modal title={playerName} isOpen={open} onClose={() => setOpen(false)}>
                 <div className="flex flex-col h-[80vh] min-w-[200px]">
-                    <div className="sticky top-0 bg-card shadow-md pb-2 flex-col">
+                    <div className="bg-card shadow-md pt-2 pb-2 flex-col">
                         <span className="flex font-bold text-sm sm:text-base tracking-wide">
                             Overall: {overall} &nbsp;•&nbsp; [{top3Positions}]
                         </span>
