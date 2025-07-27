@@ -8,13 +8,14 @@ import { PlayersProvider } from "@/data/players-provider";
 import HeaderBar from "@/components/header-bar";
 
 import Game from "@/components/game";
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PlayerCards from "@/components/dialogs/player-cards";
 import PlayerTable from "@/components/dialogs/player-table";
 import TeamGenerator from "@/components/dialogs/team-generator";
+// import SignInPage from "@/components/signin/sign-in";
 
 const Layout = () => {
-    const { canEdit } = useAuth();
+    const { canEdit, user } = useAuth();
 
     const useWindowSize = () => {
         const [windowSize, setWindowSize] = useState({
@@ -39,6 +40,8 @@ const Layout = () => {
         return windowSize;
     };
 
+    console.log(user)
+
     const { width, height } = useWindowSize();
 
     const isCompact = width < 768;
@@ -56,24 +59,27 @@ const Layout = () => {
 
     return (
         <div className="h-full flex flex-col">
-            <PlayersProvider>
-                <DndProvider backend={backend} options={options}>
-                    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-2 sticky top-0 z-10 bg-background">
-                        {/* <Separator orientation="vertical" className="mr-2 h-4" /> */}
-                        <HeaderBar compact={isCompact} canEdit={canEdit} />
-                    </header>
+            <BrowserRouter>
+                <PlayersProvider>
+                    <DndProvider backend={backend} options={options}>
+                        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-2 sticky top-0 z-10 bg-background">
+                            {/* <Separator orientation="vertical" className="mr-2 h-4" /> */}
+                            <HeaderBar compact={isCompact} canEdit={canEdit} />
+                        </header>
 
-                    {/* Add routes here, above headerbar has the tabbed nav icons */}
-                    <Routes>
-                        <Route index element={<Game isCompact={isCompact} playerSize={(isCompact ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 16} />} />
-                        {canEdit && <Route path="players" element={<PlayerTable isCompact={isCompact} />} />}
-                        {!canEdit && <Route path="players" element={<Navigate to="/" />} />}
-                        <Route path="cards" element={<PlayerCards isCompact={isCompact} />} />
-                        <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
-
-                    </Routes>
-                </DndProvider>
-            </PlayersProvider>
+                        {/* Add routes here, above headerbar has the tabbed nav icons */}
+                        <Routes>
+                            <Route index element={<Game isCompact={isCompact} playerSize={(isCompact ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 16} />} />
+                            {canEdit && <Route path="players" element={<PlayerTable isCompact={isCompact} />} />}
+                            {!canEdit && <Route path="players" element={<Navigate to="/" />} />}
+                            <Route path="cards" element={<PlayerCards isCompact={isCompact} />} />
+                            <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
+                            {/* {!user && <Route path="signin" element={<SignInPage />} />}
+                            {user && <Route path="signin" element={<Navigate to="/" />} />} */}
+                        </Routes>
+                    </DndProvider>
+                </PlayersProvider>
+            </BrowserRouter>
         </div>
     )
 }
