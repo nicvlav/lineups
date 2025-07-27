@@ -59,7 +59,7 @@ export const statKeys: StatsKey[] = [
 export const statLabelMap: Record<StatsKey, string> = {
     defensiveAwareness: "Defensive Awareness",
     pressResistance: "Press Resistance",
-    offTheBall: "Off the Ball",
+    offTheBall: "Off the Ball Movement",
     vision: "Vision",
     firstTouch: "First Touch",
     shortPassing: "Short Passing",

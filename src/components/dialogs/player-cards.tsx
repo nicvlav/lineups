@@ -20,7 +20,7 @@ const PlayerCards: React.FC<TeamGeneratorProps> = ({ isCompact }) => {
         <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {withScores.map((item) => (
 
-                <PlayerCard key={item.player.id} playerName={item.player.name} overall={item.overall} top3Positions={item.topPositions} averages={item.averages} />
+                <PlayerCard key={item.player.id} playerName={item.player.name} stats={item.player.stats} overall={item.overall} top3Positions={item.topPositions} averages={item.averages} />
             ))}
         </div>
     );
