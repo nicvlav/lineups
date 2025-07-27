@@ -102,9 +102,9 @@ export interface PositionAndScore {
 }
 
 export type ZoneAverages = Record<StatCategory, number>;
-
 export function getTopPositions(player: Player) {
-    const scores = calculateScoresForStats(player.stats, normalizeWeights(defaultZoneWeights));
+    const normalized = normalizeWeights(defaultZoneWeights);
+    const scores = calculateScoresForStats(player.stats, normalized);
 
     const allItems: PositionAndScore[] = Object.entries(scores).map(([pos, score]) => {
         return { position: PositionShortLabels[pos as Position], score } as PositionAndScore;

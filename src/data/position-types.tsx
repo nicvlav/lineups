@@ -1,4 +1,4 @@
-import { StatsKey } from "@/data/stat-types"; // Importing from shared file
+import { statKeys, StatsKey } from "@/data/stat-types"; // Importing from shared file
 
 export type Position =
     | "GK"
@@ -74,7 +74,7 @@ export type PositionWeighting = {
     positionName: string;
     zone: Zone;
     shortName: string;
-    weights: Partial<Record<StatsKey, number>>; // missing values = 0
+    weights: Record<StatsKey, number>; // missing values = 0
     isCentral: boolean;
     absoluteYPosition: number;
     priorityStat: number;
@@ -88,12 +88,41 @@ export type PositionWeightingAndIndex = {
 export type ZoneScores = Record<Position, number>;
 export type Weighting = Record<Position, PositionWeighting>;
 
-export const emptyZoneScores: ZoneScores = {
-    GK: 0, CB: 0, FB: 0, DM: 0, CM: 0, WM: 0, AM: 0, ST: 0, WR: 0
+export const emptyStatWeights: Record<StatsKey, number> = {
+    defensiveAwareness: 950,
+    pressResistance: 200,
+    offTheBall: 0,
+    vision: 150,
+    firstTouch: 200,
+    shortPassing: 200,
+    tackling: 0,
+    finishing: 0,
+    speed: 200,
+    strength: 300,
+    agility: 500,
+    defensiveWorkrate: 250,
+    crossing: 0,
+    attackPositioning: 0,
+    longPassing: 200,
+    dribbling: 50,
+    ballCarrying: 50,
+    interceptions: 300,
+    blocking: 800,
+    heading: 0,
+    aggression: 400,
+    attackingWorkrate: 0,
+    teamwork: 0,
+    positivity: 0,
+    willingToSwitch: 0,
+    communication: 0,
 
 } as const;
 
-export const defaultZoneWeights = {
+export const emptyZoneScores: ZoneScores = {
+    GK: 0, CB: 0, FB: 0, DM: 0, CM: 0, WM: 0, AM: 0, ST: 0, WR: 0
+} as const;
+
+export const defaultZoneWeights: Weighting = {
     GK: {
         positionName: "Goalkeeper",
         shortName: "GK",
@@ -120,6 +149,11 @@ export const defaultZoneWeights = {
             blocking: 800,
             heading: 0,
             aggression: 400,
+            attackingWorkrate: 0,
+            teamwork: 0,
+            positivity: 0,
+            willingToSwitch: 1000,
+            communication: 0,
         },
         isCentral: true,
         absoluteYPosition: 1.0,
@@ -132,11 +166,11 @@ export const defaultZoneWeights = {
         zone: "defense",
         weights: {
             defensiveAwareness: 900,
-            pressResistance: 10,
+            pressResistance: 100,
             offTheBall: 0,
             vision: 0,
             firstTouch: 0,
-            shortPassing: 50,
+            shortPassing: 100,
             tackling: 1000,
             finishing: 0,
             speed: 0,
@@ -145,13 +179,18 @@ export const defaultZoneWeights = {
             defensiveWorkrate: 100,
             crossing: 0,
             attackPositioning: 0,
-            longPassing: 40,
+            longPassing: 100,
             dribbling: 0,
             ballCarrying: 0,
             interceptions: 800,
             blocking: 800,
             heading: 800,
             aggression: 600,
+            attackingWorkrate: 0,
+            teamwork: 0,
+            positivity: 0,
+            willingToSwitch: 200,
+            communication: 0,
         },
         isCentral: true,
         absoluteYPosition: 0.7,
@@ -184,6 +223,11 @@ export const defaultZoneWeights = {
             blocking: 400,
             heading: 400,
             aggression: 300,
+            attackingWorkrate: 0,
+            teamwork: 0,
+            positivity: 0,
+            willingToSwitch: 200,
+            communication: 0,
         },
         isCentral: false,
         absoluteYPosition: 0.65,
@@ -216,6 +260,11 @@ export const defaultZoneWeights = {
             blocking: 500,
             heading: 400,
             aggression: 400,
+            attackingWorkrate: 0,
+            teamwork: 0,
+            positivity: 0,
+            willingToSwitch: 0,
+            communication: 0,
         },
         isCentral: true,
         absoluteYPosition: 0.55,
@@ -248,6 +297,11 @@ export const defaultZoneWeights = {
             blocking: 10,
             heading: 200,
             aggression: 200,
+            attackingWorkrate: 0,
+            teamwork: 0,
+            positivity: 0,
+            willingToSwitch: 0,
+            communication: 0,
         },
         isCentral: true,
         absoluteYPosition: 0.5,
@@ -280,6 +334,11 @@ export const defaultZoneWeights = {
             blocking: 0,
             heading: 0,
             aggression: 200,
+            attackingWorkrate: 200,
+            teamwork: 0,
+            positivity: 0,
+            willingToSwitch: 0,
+            communication: 0,
         },
         isCentral: false,
         absoluteYPosition: 0.4,
@@ -312,6 +371,11 @@ export const defaultZoneWeights = {
             blocking: 0,
             heading: 0,
             aggression: 50,
+            attackingWorkrate: 300,
+            teamwork: 0,
+            positivity: 0,
+            willingToSwitch: 0,
+            communication: 0,
         },
         isCentral: true,
         absoluteYPosition: 0.35,
@@ -344,6 +408,11 @@ export const defaultZoneWeights = {
             blocking: 0,
             heading: 500,
             aggression: 500,
+            attackingWorkrate: 400,
+            teamwork: 0,
+            positivity: 0,
+            willingToSwitch: 0,
+            communication: 0,
         },
 
         isCentral: true,
@@ -377,6 +446,11 @@ export const defaultZoneWeights = {
             blocking: 0,
             heading: 200,
             aggression: 0,
+            attackingWorkrate: 400,
+            teamwork: 0,
+            positivity: 0,
+            willingToSwitch: 0,
+            communication: 0,
         },
 
         isCentral: false,
@@ -484,25 +558,17 @@ export const formationTemplates: Record<number, Formation[]> = {
 export const normalizeWeights = (zoneWeights: Weighting): Weighting => {
     let normalized = structuredClone(zoneWeights);
 
-    for (const zoneKey in zoneWeights) {
-        const zone = zoneKey as keyof ZoneScores;
-        const positionMap = zoneWeights[zone];
+    for (const [_, posWeighting] of Object.entries(normalized)) {
+        const total = statKeys.reduce(
+            (sum, key) => sum + (posWeighting.weights[key] ?? 0),
+            0
+        );
 
-
-        let score = 0;
-        for (const attr in positionMap.weights) {
-            const attrKey = attr as StatsKey;
-            const weight = positionMap.weights[attrKey];
-            score += weight ? weight : 0;
+        for (const key of statKeys) {
+            const val = (posWeighting.weights[key] ?? 0) / total;
+            posWeighting.weights[key] = val;
         }
-
-        for (const attr in positionMap.weights) {
-            const attrKey = attr as StatsKey;
-            if (positionMap.weights[attrKey]) positionMap.weights[attrKey] /= score;
-        }
-
     }
-
     return normalized;
 };
 
