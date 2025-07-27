@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/data/auth-context"; 
+import { useAuth } from "@/context/auth-context"; 
 import { useNavigate } from 'react-router-dom';
 
 const SignInPage = () => {

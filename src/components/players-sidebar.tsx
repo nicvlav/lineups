@@ -1,7 +1,7 @@
 import * as React from "react"
 import FormationSelector from "@/components/formation-selector"
 // import PlayerList from "@/components/player-list"
-import { usePlayers } from "@/data/players-provider"
+import { usePlayers } from "@/context/players-provider"
 import { Button } from "@/components/ui/button"
 import { Share, Trash2 } from "lucide-react";
 import { encodeStateToURL } from "@/data/state-manager";

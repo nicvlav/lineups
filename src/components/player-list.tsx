@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { emptyZoneScores, Point } from "@/data/position-types";
 import { Player, ScoredGamePlayerWithThreat } from "@/data/player-types";
-import { usePlayers } from "@/data/players-provider";
+import { usePlayers } from "@/context/players-provider";
 import { useDrag } from "react-dnd";
 import { Trash2, UserPlus, EllipsisVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";

@@ -1,6 +1,6 @@
 
-import { AuthProvider } from "@/data/auth-context";
-import { ThemeProvider } from "@/data/theme-provider"
+import { AuthProvider } from "@/context/auth-context";
+import { ThemeProvider } from "@/context/theme-provider"
 import { useEffect } from "react";
 import Layout from "@/components/layout.js";
 
@@ -11,7 +11,7 @@ const App = () => {
   // console.log("STATE", urlState);
 
   // Clean up the URL after extracting the state
-  
+
   useEffect(() => {
     if (urlState) {
       window.history.replaceState(null, "", currentUrl.pathname);

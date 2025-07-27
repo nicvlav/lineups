@@ -41,7 +41,7 @@ export const AuthProvider = ({ children, url }: { children: React.ReactNode, url
 
             console.log("d", data);
 
-            // if (data?.can_edit) setCanEdit(true);
+            if (data?.can_edit) setCanEdit(true);
         };
 
         checkPermission();
@@ -57,6 +57,7 @@ export const AuthProvider = ({ children, url }: { children: React.ReactNode, url
 
             const { data } = await supabase.auth.getUser();
             if (data?.user) {
+                console.log("d", data);
                 setUser({ id: data.user.id, email: data.user.email || null });
             }
         };

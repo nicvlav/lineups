@@ -1,4 +1,4 @@
-import { usePlayers } from "@/data/players-provider";
+import { usePlayers } from "@/context/players-provider";
 import { getZoneAverages, getTopPositions } from "@/data/player-types";
 import PlayerCard from "@/components/dialogs/player-card";
 

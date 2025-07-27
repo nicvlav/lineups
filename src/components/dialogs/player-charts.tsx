@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTheme } from "@/data/theme-provider";
+import { useTheme } from "@/context/theme-provider";
 import { StatCategory, StatCategoryNameMap, StatCategoryKeys } from "@/data/stat-types";
 import { Player, PlayerUpdate, getZoneAverages, ZoneAverages } from "@/data/player-types";
 import { } from "lucide-react";

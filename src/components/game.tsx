@@ -2,7 +2,7 @@ import TeamArea from "@/components/pitch/team-area"; // Render directly
 import Panel from "@/components/dialogs/panel"
 import { Button } from "@/components/ui/button"
 import { Share, Trash2 } from "lucide-react";
-import { usePlayers } from "@/data/players-provider"
+import { usePlayers } from "@/context/players-provider"
 import { encodeStateToURL } from "@/data/state-manager";
 import FormationSelector from "@/components/formation-selector"
 

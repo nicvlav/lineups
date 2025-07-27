@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { usePlayers } from "@/data/players-provider";
+import { usePlayers } from "@/context/players-provider";
 import { Player, ScoredGamePlayerWithThreat } from "@/data/player-types";
 import { Button } from "@/components/ui/button"
 import Modal from "@/components/dialogs/modal";

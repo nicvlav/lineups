@@ -1,5 +1,5 @@
 import React, { ReactNode, createContext, useContext, useState, useEffect, useRef } from "react";
-import { useAuth } from "@/data/auth-context";
+import { useAuth } from "@/context/auth-context";
 import { v4 as uuidv4, } from 'uuid';
 
 import { openDB } from "idb";
@@ -8,7 +8,7 @@ import { Formation, Point, Position, getPointForPosition, getThreatScore, defaul
 import { Player, PlayerUpdate, GamePlayerUpdate, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, GamePlayer } from "@/data/player-types";
 import { /*, logPlayerStats*/ } from "@/data/auto-balance-types";
 import { decodeStateFromURL } from "@/data/state-manager";
-import { autoCreateTeamsScored } from "./auto-balance";
+import { autoCreateTeamsScored } from "../data/auto-balance";
 
 interface PlayersContextType {
     players: Record<string, Player>;

@@ -3,8 +3,8 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import { isMobile } from 'react-device-detect'; // Use this to detect touch devices
-import { useAuth } from "@/data/auth-context";
-import { PlayersProvider } from "@/data/players-provider";
+import { useAuth } from "@/context/auth-context";
+import { PlayersProvider } from "@/context/players-provider";
 import HeaderBar from "@/components/header-bar";
 
 import Game from "@/components/game";

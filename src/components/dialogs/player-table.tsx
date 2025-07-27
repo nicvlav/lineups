@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { usePlayers } from "@/data/players-provider";
+import { usePlayers } from "@/context/players-provider";
 import { List, ChartPie } from "lucide-react";
 import CompactPlayerTable from "@/components/dialogs/compact-player-table";
 import PlayerCharts from "@/components/dialogs/player-charts";

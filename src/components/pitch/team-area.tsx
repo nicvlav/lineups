@@ -1,5 +1,5 @@
 import Pitch from '@/components/pitch/pitch'
-import { usePlayers } from "@/data/players-provider";
+import { usePlayers } from "@/context/players-provider";
 
 interface TeamAreaProps {
   team: string;

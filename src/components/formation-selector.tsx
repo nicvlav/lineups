@@ -1,4 +1,4 @@
-import { usePlayers } from "@/data/players-provider";
+import { usePlayers } from "@/context/players-provider";
 import { formationTemplates } from "@/data/position-types";
 import { Select, SelectTrigger, SelectGroup, SelectItem, SelectLabel, SelectContent, SelectValue } from "@/components/ui/select";
 

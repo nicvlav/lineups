@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { usePlayers } from "@/data/players-provider";
+import { usePlayers } from "@/context/players-provider";
 import { Player } from "@/data/player-types";
 import { Users, Wand2, Search } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
