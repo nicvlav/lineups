@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StatCategory, StatsKey, statLabelMap, CategorizedStats } from "@/data/stat-types";
 import { ZoneAverages, } from "@/data/player-types";
+import Modal from "@/components/dialogs/modal";
 
 interface PlayerCardProps {
     playerName: string;
@@ -90,19 +90,19 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             </div>
 
             {/* Popup dialog */}
-            <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="sm:max-w-lg w-[90%] rounded-xl p-6 max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-bold">{playerName} – Detailed Stats</DialogTitle>
-                        <p className="text-sm">Overall: {overall}</p>
-                    </DialogHeader>
-
-                    <div className="mt-4 space-y-6">
+            <Modal title={playerName} isOpen={open} onClose={() => setOpen(false)}>
+                <div className="flex flex-col h-[80vh] min-w-[200px]">
+                    <div className="sticky top-0 pt-2 pb-2  bg-card shadow-md flex-col">
+                        <span className="flex font-bold text-sm sm:text-base tracking-wide">
+                            Overall: {overall} &nbsp;•&nbsp; [{top3Positions}]
+                        </span>
+                    </div>
+                    <div >
                         {Object.entries(CategorizedStats)
                             .filter(([category]) => category !== "morale") // ⬅️ exclude morale
                             .map(([category, keys]) => (
-                                <div key={category}>
-                                    <h3 className="text-md font-bold mb-2">
+                                <div className="mt-4" key={category}>
+                                    <h3 className="font-bold text-sm sm:text-base tracking-wide mb-2">
                                         {category.toUpperCase()} ({averages[category as StatCategory]})
                                     </h3>
 
@@ -120,8 +120,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                                 </div>
                             ))}
                     </div>
-                </DialogContent>
-            </Dialog>
+                </div>
+            </Modal >
         </>
     );
 };
