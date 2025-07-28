@@ -27,21 +27,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         setOpen(true);
     };
 
-    // Mobile long-press
-    let pressTimer: NodeJS.Timeout;
-    const handleTouchStart = () => {
-        pressTimer = setTimeout(() => setOpen(true), 500);
-    };
-    const handleTouchEnd = () => clearTimeout(pressTimer);
-
     return (
         <>
             <div
-                className="w-full h-auto flex flex-col items-center bg-gradient-to-b from-yellow-200 to-yellow-400 rounded-2xl text-black shadow-lg p-4 text-center cursor-pointer"
+                className="select-none w-full h-auto flex flex-col items-center bg-gradient-to-b from-yellow-200 to-yellow-400 rounded-2xl text-black shadow-lg p-4 text-center cursor-pointer"
                 onContextMenu={handleOpenDialog}
                 onDoubleClick={handleOpenDialog}
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
             >
                 <div className="flex items-center w-full gap-3 min-w-">
                     {/* Badge */}
