@@ -17,7 +17,7 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
     isOpen,
     onClose,
 }) => {
-    const { players, gamePlayers, removeFromGame, switchToRealPlayer, switchToNewPlayer } = usePlayers();
+    const { players, gamePlayers, removeFromGame, switchToRealPlayer } = usePlayers();
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
     const [isConfirmOpen, setConfirmOpen] = useState(false);
@@ -79,10 +79,10 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
         switchToRealPlayer(player, newPlayer.id);
     };
 
-    const handleSwitchToNewPlayer = (newPlayerName: string) => {
-        if (!player.team) return;
-        switchToNewPlayer(player, newPlayerName, false);
-    };
+    // const handleSwitchToNewPlayer = (newPlayerName: string) => {
+    //     if (!player.team) return;
+    //     switchToNewPlayer(player, newPlayerName, false);
+    // };
 
     // const handleSwitchToNewGuest = (newPlayerName: string) => {
     //     switchToNewPlayer(player, newPlayerName, true);
@@ -136,7 +136,8 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                     )}
 
                     {/* Add and Select New Player Button */}
-                    {!exactMatch && searchTerm && (
+
+                    {/* {!exactMatch && searchTerm && (
                         <>
                             <Button
                                 className="mt-2 w-full bg-chart-1 p-2 rounded"
@@ -148,17 +149,17 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                                 + Add & Select "{searchTerm}"
                             </Button>
 
-                            {/* <Button
+                            <Button
                                 className="mt-2 w-full bg-chart-2 p-2 rounded"
                                 onClick={() => {
-                                    handleSwitchToNewGuest(searchTerm);
+                                    // handleSwitchToNewGuest(searchTerm);
                                     onClose();
                                 }}
                             >
                                 Add "{searchTerm}" as Guest
-                            </Button> */}
+                            </Button> }
                         </>
-                    )}
+                    )} */}
 
                     {/* Remove from Game Button */}
                     <Button
