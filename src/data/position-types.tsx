@@ -267,7 +267,7 @@ export const defaultZoneWeights: Weighting = {
             communication: 0,
         },
         isCentral: true,
-        absoluteYPosition: 0.55,
+        absoluteYPosition: 0.5,
         priorityStat: 6,
     },
 
@@ -304,7 +304,7 @@ export const defaultZoneWeights: Weighting = {
             communication: 0,
         },
         isCentral: true,
-        absoluteYPosition: 0.5,
+        absoluteYPosition: 0.4,
         priorityStat: 6,
     },
 
@@ -341,7 +341,7 @@ export const defaultZoneWeights: Weighting = {
             communication: 0,
         },
         isCentral: false,
-        absoluteYPosition: 0.4,
+        absoluteYPosition: 0.35,
         priorityStat: 10,
     },
 
@@ -378,7 +378,7 @@ export const defaultZoneWeights: Weighting = {
             communication: 0,
         },
         isCentral: true,
-        absoluteYPosition: 0.35,
+        absoluteYPosition: 0.3,
         priorityStat: 5,
     },
 
@@ -416,7 +416,7 @@ export const defaultZoneWeights: Weighting = {
         },
 
         isCentral: true,
-        absoluteYPosition: 0.2,
+        absoluteYPosition: 0.15,
         priorityStat: 2,
     },
 
@@ -454,7 +454,7 @@ export const defaultZoneWeights: Weighting = {
         },
 
         isCentral: false,
-        absoluteYPosition: 0.25,
+        absoluteYPosition: 0.175,
         priorityStat: 10,
     },
 } as const;
@@ -473,8 +473,8 @@ export const formationTemplates: Record<number, Formation[]> = {
     ],
     6: [
         {
-            name: "2-1-2",
-            positions: { GK: 1, CB: 2, FB: 0, DM: 1, CM: 0, WM: 0, AM: 0, ST: 2, WR: 0 }
+            name: "2-2-1",
+            positions: { GK: 1, CB: 2, FB: 0, DM: 0, CM: 2, WM: 0, AM: 0, ST: 1, WR: 0 }
         }
     ],
     7: [
@@ -532,7 +532,7 @@ export const formationTemplates: Record<number, Formation[]> = {
         },
         {
             name: "3-3-4",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 2, WM: 0, AM: 1, ST: 2, WR: 2 }
+            positions: { GK: 1, CB: 3, FB: 0, DM: 2, CM: 0, WM: 0, AM: 1, ST: 2, WR: 2 }
         },
         // {
         //     name: " 4-1-2-1-2",
@@ -546,12 +546,12 @@ export const formationTemplates: Record<number, Formation[]> = {
         // },
         {
             name: "3-5-3(2)",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 2, WM: 0, AM: 3, ST: 1, WR: 2 }
+            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 2, AM: 2, ST: 1, WR: 2 }
         },
-        {
-            name: "3-4-4",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 0, AM: 3, ST: 2, WR: 2 }
-        },
+        // {
+        //     name: "3-4-4",
+        //     positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 0, AM: 3, ST: 2, WR: 2 }
+        // },
     ],
 } as const;
 
