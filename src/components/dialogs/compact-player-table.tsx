@@ -78,7 +78,6 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
         return [...filteredPlayers].sort((a, b) => {
             return a.name.localeCompare(b.name);
         });
-
     };
 
     const sortedPlayers = getSorted();

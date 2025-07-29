@@ -1,29 +1,100 @@
+import React, { useState } from "react";
 import { usePlayers } from "@/context/players-provider";
-import { getZoneAverages, getTopPositions } from "@/data/player-types";
+import { StatCategoryKeys, StatCategoryNameMap } from "@/data/stat-types";
+import { getZoneAverages, getTopPositions, } from "@/data/player-types";
 import PlayerCard from "@/components/dialogs/player-card";
-
+import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import Panel from "@/components/dialogs/panel"
 interface TeamGeneratorProps {
-    isCompact: boolean;
-}
-const PlayerCards: React.FC<TeamGeneratorProps> = ({ isCompact }) => {
-    isCompact
-    const { players, } = usePlayers();
 
-    const withScores = Object.values(players).map((player) => {
+}
+const PlayerCards: React.FC<TeamGeneratorProps> = ({ }) => {
+    const { players, } = usePlayers();
+    const alphabeticalSortValue: string = "Alphabetical";
+    const overallSortValue: string = "Overall";
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [sortingMode, setSortingMode] = useState<string>(overallSortValue);
+
+    const filteredPlayers = Object.values(players).filter((p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ).map((player) => {
         const topScores = getTopPositions(player);
         return { player, overall: Math.round(Math.max(...topScores.map((t) => t.score))), topPositions: topScores.slice(0, 3).map((t) => t.position).join(", "), averages: getZoneAverages(player) }
-    }).sort((a, b) => {
-        return b.overall - a.overall;
-    });
+    })
+
+    const getSorted = () => {
+        if (sortingMode !== alphabeticalSortValue && sortingMode !== overallSortValue) {
+            for (const key of StatCategoryKeys) {
+                if (StatCategoryNameMap[key] === sortingMode) {
+                    return [...filteredPlayers].sort((a, b) => {
+                        return b.averages[key] - a.averages[key];
+                    });
+                }
+            }
+        }
+        if (sortingMode === alphabeticalSortValue) {
+            return [...filteredPlayers].sort((a, b) => {
+                return a.player.name.localeCompare(b.player.name);
+            });
+        }
+
+        return [...filteredPlayers].sort((a, b) => {
+            return b.overall - a.overall;
+        });
+    };
+
+    const withScores = getSorted();
 
     return (
-        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {withScores.map((item) => (
+        <div className="flex flex-col h-screen overflow-hidden border p-4">
+            {/* Search and Sorting */}
+            <div className="flex items-center mb-4 space-x-2">
+                <Input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search players..."
+                    className="p-2 rounded w-full"
+                />
 
-                <PlayerCard key={item.player.id} playerName={item.player.name} stats={item.player.stats} overall={item.overall} top3Positions={item.topPositions} averages={item.averages} />
-            ))}
+                <Select onValueChange={setSortingMode}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Sort">Sort</SelectValue>
+                    </SelectTrigger>
+
+                    <SelectContent>
+                        <SelectItem key={overallSortValue} value={overallSortValue}>
+                            {overallSortValue}
+                        </SelectItem>
+                        <SelectItem key={alphabeticalSortValue} value={alphabeticalSortValue}>
+                            {alphabeticalSortValue}
+                        </SelectItem>
+
+                        {Object.entries(StatCategoryNameMap)
+                            .filter(([category]) => category !== "morale")
+                            .map(([key, name]) => (
+                                <SelectItem key={key} value={name}>
+                                    {name}
+                                </SelectItem>
+                            ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* Panel fills the remaining space */}
+            <div className="flex-1 overflow-y-auto">
+                <Panel >
+                    <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        {withScores.map((item) => (
+                            <PlayerCard key={item.player.id} playerName={item.player.name} stats={item.player.stats} overall={item.overall} top3Positions={item.topPositions} averages={item.averages} />
+                        ))}
+                    </div>
+                </Panel>
+            </div>
         </div>
     );
-};
 
+
+}
 export default PlayerCards;

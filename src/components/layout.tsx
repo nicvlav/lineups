@@ -72,7 +72,7 @@ const Layout = () => {
                             <Route index element={<Game isCompact={isCompact} playerSize={(isCompact ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 16} />} />
                             {canEdit && <Route path="players" element={<PlayerTable isCompact={isCompact} />} />}
                             {!canEdit && <Route path="players" element={<Navigate to="/" />} />}
-                            <Route path="cards" element={<PlayerCards isCompact={isCompact} />} />
+                            <Route path="cards" element={<PlayerCards />} />
                             <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
                             {/* {!user && <Route path="signin" element={<SignInPage />} />}
                             {user && <Route path="signin" element={<Navigate to="/" />} />} */}

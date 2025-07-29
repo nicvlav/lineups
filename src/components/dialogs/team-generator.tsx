@@ -180,7 +180,7 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex-1 min-h-0 overflow-y-auto">
+                            <div className="flex-1 min-h-0 overflow-y-auto  p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                                 {sortedPlayers.length > 0 ? (
                                     sortedPlayers.map(player => (
                                         <div
