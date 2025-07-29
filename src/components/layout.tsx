@@ -15,7 +15,8 @@ import TeamGenerator from "@/components/dialogs/team-generator";
 // import SignInPage from "@/components/signin/sign-in";
 
 const Layout = () => {
-    const { canEdit, user } = useAuth();
+    // const { canEdit, user } = useAuth();
+    const { canEdit } = useAuth();
 
     const useWindowSize = () => {
         const [windowSize, setWindowSize] = useState({
@@ -39,8 +40,6 @@ const Layout = () => {
 
         return windowSize;
     };
-
-    console.log(user)
 
     const { width, height } = useWindowSize();
 

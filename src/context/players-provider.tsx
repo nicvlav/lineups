@@ -73,8 +73,11 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const pendingUpdatesRef = useRef<Map<string, PlayerUpdate>>(new Map());
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    sessionStorage.setItem("tabKey", tabKeyRef.current);
+
     const loadJSONGamePlayers = async (newGamePlayers: Record<string, GamePlayer>, freshLoadedPlayers: Record<string, Player>) => {
         if (!newGamePlayers) {
+            saveState({});
             setGamePlayers({});
             return;
         }
@@ -92,29 +95,51 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 return [key, { ...value, zoneFit, threatScore }];
             })
         );
-
+        saveState(updatedPlayers);
         setGamePlayers(updatedPlayers);
     };
 
     const loadURLState = async () => {
-        if (loadingState.current) return;
+        if (loadingState.current || !supabase) return;
 
         const freshPlayers = await fetchPlayers();
 
-        if (urlState) {
-            loadingState.current = true;
-            const currentUrl = new URL(window.location.href);
-            const decoded = decodeStateFromURL(urlState);
+        if (!urlState) return;
 
-            if (decoded && decoded.gamePlayers) {
-                await loadJSONGamePlayers(decoded.gamePlayers, freshPlayers);
-                await saveToDB(tabKeyRef.current, JSON.stringify(urlState));
-                currentUrl.searchParams.delete("state");
-                window.history.replaceState({}, "", currentUrl.toString());
-            }
+        const currentUrl = new URL(window.location.href);
+        const decoded = decodeStateFromURL(urlState);
 
-            clearUrlState();
+        loadingState.current = true;
+        if (decoded) {
+            await loadJSONGamePlayers(decoded.gamePlayers, freshPlayers);
+            currentUrl.searchParams.delete("state");
+            window.history.replaceState({}, "", currentUrl.toString());
         }
+
+        clearUrlState();
+
+        loadingState.current = false;
+    };
+
+    const loadTabState = async () => {
+        if (!supabase || loadingState.current) return;
+
+        const freshPlayers = await fetchPlayers();
+        const savedState = await getFromDB(tabKeyRef.current);
+
+        if (!savedState) return;
+
+        loadingState.current = true;
+
+        try {
+            const parsedData = JSON.parse(savedState);
+            await loadJSONGamePlayers(parsedData.gamePlayers, freshPlayers);
+            console.log("Loaded from IndexedDB:");
+        } catch (error) {
+
+            console.error("Error loading from IndexedDB:", error);
+        }
+
         loadingState.current = false;
     };
 
@@ -153,7 +178,11 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
     // Real-time updates for players
     useEffect(() => {
-        loadURLState();
+        if (urlState) {
+            loadURLState();
+        } else {
+            loadTabState();
+        }
 
         // Create a channel for realtime subscriptions
         const playerChannel = supabase?.channel('players')
@@ -238,39 +267,13 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
 
     useEffect(() => {
-        sessionStorage.setItem("tabKey", tabKeyRef.current);
-        const loadGameState = async () => {
-            loadingState.current = true;
-
-            const freshPlayers = await fetchPlayers();
-
-            if (urlState) {
-                loadURLState();
-            } else {
-                const savedState = await getFromDB(tabKeyRef.current);
-                if (savedState) {
-                    try {
-                        const parsedData = JSON.parse(savedState);
-                        // setPlayers(parsedData.players || []);
-                        await loadJSONGamePlayers(parsedData.gamePlayers, freshPlayers);
-                        console.log("Loaded from IndexedDB:");
-                    } catch (error) {
-                        console.error("Error loading from IndexedDB:", error);
-                    }
-                }
-            }
-            loadingState.current = false;
-        };
-
-        loadGameState();
-    }, []);
-
-    useEffect(() => {
         loadURLState();
     }, [urlState]);
 
     const fetchPlayers = async (): Promise<Record<string, Player>> => {
         if (!supabase) return {};
+
+        loadingState.current = true;
 
         const { data, error } = await supabase
             .from("players")
@@ -279,6 +282,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         if (error) {
             console.error("Error fetching players:", error);
+            loadingState.current = false;
             return {};
         }
 
@@ -288,18 +292,20 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         });
 
         setPlayers(playerRecord); // still set state for global use
+
+        loadingState.current = false;
         return playerRecord; // return immediately for local use
     };
 
     useEffect(() => {
         if (!loadingState.current) {
             // console.log("Saving state from change:", gamePlayers);
-            saveState();
+            saveState(gamePlayers);
         }
     }, [gamePlayers]);
 
-    const saveState = async () => {
-        const stateObject = { gamePlayers };
+    const saveState = async (gamePlayersToSave: Record<string, ScoredGamePlayerWithThreat>) => {
+        const stateObject = { gamePlayers: gamePlayersToSave };
         await saveToDB(tabKeyRef.current, JSON.stringify(stateObject));
     };
 
@@ -467,7 +473,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
                 newGamePlayers[oldPlayer.id] = { ...oldPlayer, team: newPlayer.team, position: newPlayer.position, threatScore: getThreatScore(newPlayer.position, oldPlayer.zoneFit) };
-                newGamePlayers[newID] = { ...newPlayer, team: oldPlayer.team, position: oldPlayer.position, threatScore: getThreatScore(oldPlayer.position, newPlayer.zoneFit)  };
+                newGamePlayers[newID] = { ...newPlayer, team: oldPlayer.team, position: oldPlayer.position, threatScore: getThreatScore(oldPlayer.position, newPlayer.zoneFit) };
                 return newGamePlayers;
             });
         } else {
