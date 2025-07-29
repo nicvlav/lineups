@@ -63,9 +63,18 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
     setIsDialogOpen(true);
   };
 
-  const circleSize = Math.max(playerSize * 0.8, 40);
+  const circleSize = Math.max(playerSize * 0.8, 45);
   const iconSize = Math.max(circleSize * 0.4, 20);
-  const nameOffset = -(circleSize / 2 + 8);
+  const nameOffset = -(circleSize / 2);
+
+  // Split name into words by spaces
+  const words = name.trim().split(/\s+/); // split on any whitespace, ignoring multiple spaces
+
+  const maxLines = 3;
+  // Number of lines = number of words (words.length)
+  const numLines = Math.min(words.length, maxLines);
+
+  const adjustedNameOffset = nameOffset - (numLines - 1) * 15;
 
   return (
     <HoverCard>
@@ -89,16 +98,21 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
       >
         <div
           className={`
-            absolute text-white text-xs font-bold rounded-md px-2 py-1 bg-black/70
-            whitespace-nowrap pointer-events-none text-center
-          `}
-          style={{ top: `${nameOffset}px` }}
+    absolute text-white text-xs font-bold rounded-md  
+    p pointer-events-none text-center flex flex-col
+  `}
+          style={{ top: `${adjustedNameOffset}px` }}
         >
-          {name}
+          {name.split(" ").map((word, i) => (
+            <span key={i} style={{ whiteSpace: "nowrap", marginBottom: "0.1em" }}>
+              {word}
+            </span>
+          ))}
         </div>
 
+
         <div
-          className={`rounded-full border-3 shadow-md flex items-center justify-center bg-muted`}
+          className={`z-200 rounded-full border-3 shadow-md flex items-center justify-center bg-muted`}
           style={{
             width: `${circleSize}px`,
             height: `${circleSize}px`,
@@ -122,10 +136,10 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
       <HoverCardContent>
         {/* <div className="flex flex-col h-14 w-48 mx-auto">
           <Panel> */}
-            <div>
-              <span className="flex">Threat Score: {(player.threatScore * 100).toFixed(1)}% </span>
-            </div>
-          {/* </Panel>
+        <div>
+          <span className="flex">Threat Score: {(player.threatScore * 100).toFixed(1)}% </span>
+        </div>
+        {/* </Panel>
         </div> */}
       </HoverCardContent>
     </HoverCard>

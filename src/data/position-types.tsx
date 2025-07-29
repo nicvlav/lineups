@@ -578,7 +578,7 @@ export type Point = { x: number, y: number, };
 const getXForPlayerPosition = (position: PositionWeighting, positionIndex: number, numPositionentries: number) => {
     if (!position.isCentral) {
         if (positionIndex >= 2) throw new Error(`More than 2 players in ${position.positionName} position?`);
-        return positionIndex;
+        return positionIndex + (0.075 * (positionIndex ? -1 : 1));
     }
 
     let startShift = 0.0;

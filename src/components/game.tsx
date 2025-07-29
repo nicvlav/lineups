@@ -48,7 +48,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                 </div>
 
                 {isCompact && (
-                  <div className="flex-1 flex flex-col w-full gap-2 overflow-hidden">
+                  <div className="flex-1 flex flex-col w-full gap-2">
                         <Panel>
                             {/* First Div */}
                             <TeamArea team="A" playerSize={playerSize} />
