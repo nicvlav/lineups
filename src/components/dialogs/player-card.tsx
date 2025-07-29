@@ -27,6 +27,28 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         setOpen(true);
     };
 
+    const getStatColor = (value: number) => {
+        if (value >= 80) return "text-green-500"; // Good
+        if (value >= 50) return "text-yellow-500"; // Medium
+        return "text-red-500"; // Bad
+    };
+
+    const getBarColor = (value: number) => {
+        if (value >= 80) return "bg-green-500";
+        if (value >= 50) return "bg-yellow-500";
+        return "bg-red-500";
+    };
+    // Collect all morale stat keys
+    const moraleKeys = CategorizedStats.morale;
+
+    // Get only non-morale values
+    const nonMoraleValues = Object.entries(stats)
+        .filter(([key]) => !moraleKeys.includes(key as StatsKey))
+        .map(([_, value]) => value);
+
+    const allStatAverage = nonMoraleValues.reduce((sum, v) => sum + v, 0) /
+        (nonMoraleValues.length || 1);
+
     return (
         <>
             <div
@@ -83,33 +105,56 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             {/* Popup dialog */}
             <Modal title={playerName} isOpen={open} onClose={() => setOpen(false)}>
                 <div className="flex flex-col h-[80vh] min-w-[200px]">
-                    <div className="bg-card shadow-md pt-2 pb-2 flex-col">
-                        <span className="flex font-bold text-sm sm:text-base tracking-wide">
-                            Overall: {overall} &nbsp;•&nbsp; [{top3Positions}]
-                        </span>
+                    <div className="grid grid-cols-[auto_max-content_auto] gap-x-2 p-1 text-sm sm:text-base font-bold tracking-wide">
+                        <span>Overall:</span>
+                        <span className={`${getStatColor(overall)}`}>{overall}</span>
+                        <span>[{top3Positions}]</span>
+
+                        <span>Average:</span>
+                        <span className={`${getStatColor(allStatAverage)}`}>{allStatAverage.toFixed(0)}</span>
+                        <span>[ALL STATS]</span>
                     </div>
+
                     <div >
                         {Object.entries(CategorizedStats)
-                            .filter(([category]) => category !== "morale") // ⬅️ exclude morale
-                            .map(([category, keys]) => (
-                                <div className="mt-4" key={category}>
-                                    <h3 className="font-bold text-sm sm:text-base tracking-wide mb-2">
-                                        {category.toUpperCase()} ({averages[category as StatCategory]})
-                                    </h3>
+                            .filter(([category]) => category !== "morale")
+                            .map(([category, keys]) => {
+                                const avg = averages[category as StatCategory] ?? 0;
 
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {keys.map((key) => (
+                                return (
+                                    <div className="mt-4 p-1" key={category}>
+                                        <h3 className="font-bold text-sm sm:text-base tracking-wide mb-1">
+                                            {category.toUpperCase()} (
+                                            <span className={`text-sm font-bold ${getStatColor(avg ?? 0)}`}>
+                                                {avg}
+                                            </span>
+                                            <span className="font-bold text-sm sm:text-base tracking-wide mb-1">)</span>
+                                        </h3>
+
+                                        {/* Progress bar */}
+                                        <div className="w-full h-2 bg-gray-300 rounded mb-2">
                                             <div
-                                                key={key}
-                                                className="flex justify-between items-center bg-accent rounded-lg p-2"
-                                            >
-                                                <span className="text-sm font-medium">{statLabelMap[key]}</span>
-                                                <span className="text-sm font-bold">{stats[key] ?? 0}</span>
-                                            </div>
-                                        ))}
+                                                className={`${getBarColor(avg)} h-2 rounded`}
+                                                style={{ width: `${avg}%` }}
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2 pt-2 pb-2">
+                                            {keys.map((key) => (
+                                                <div
+                                                    key={key}
+                                                    className="flex justify-between items-center bg-accent rounded-lg p-2"
+                                                >
+                                                    <span className="text-sm font-medium p-1">{statLabelMap[key]}</span>
+                                                    <span className={`text-sm font-bold ${getStatColor(stats[key] ?? 0)}`}>
+                                                        {stats[key] ?? 0}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                     </div>
                 </div>
             </Modal >
