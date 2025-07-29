@@ -157,7 +157,7 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
                     {/* Player List - Modern Cards */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Players</CardTitle>
+                            <CardTitle>Generate Squads</CardTitle>
                             <CardDescription>
                                 <div className="flex-1 w-full flex items-center gap-2 text-sm">
                                     <Users size={16} className="text-white" />
