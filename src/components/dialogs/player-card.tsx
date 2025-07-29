@@ -56,7 +56,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 onContextMenu={handleOpenDialog}
                 onDoubleClick={handleOpenDialog}
             >
-                <div className="flex items-center w-full gap-3 min-w-">
+                <div className="flex items-center w-full gap-2">
                     {/* Badge */}
                     <div className="bg-black text-white font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
                         {overall}
@@ -69,7 +69,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                     </div>
                 </div>
 
-                <div className="mt-3 flex justify-center gap-3">
+                <div className="mt-3 flex justify-center gap-2">
                     {[
                         { label: "PAC", value: averages.pace },
                         { label: "ATT", value: averages.attacking },
@@ -85,7 +85,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                     ))}
                 </div>
 
-                <div className="mt-3 flex justify-center gap-3">
+                <div className="mt-3 flex justify-center gap-2">
                     {[
                         { label: "DRI", value: averages.dribbling },
                         { label: "DEF", value: averages.defending },

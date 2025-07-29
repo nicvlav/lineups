@@ -47,15 +47,15 @@ const PlayerCards: React.FC<TeamGeneratorProps> = ({ }) => {
     const withScores = getSorted();
 
     return (
-        <div className="flex flex-col h-screen overflow-hidden border p-4">
+        <div className="flex flex-col h-full w-full overflow-hidden p-2">
             {/* Search and Sorting */}
-            <div className="flex items-center mb-4 space-x-2">
+            <div className="w-full h-[40px] flex">
                 <Input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search players..."
-                    className="p-2 rounded w-full"
+                    className="flex-1 rounded w-full"
                 />
 
                 <Select onValueChange={setSortingMode}>
@@ -85,7 +85,7 @@ const PlayerCards: React.FC<TeamGeneratorProps> = ({ }) => {
             {/* Panel fills the remaining space */}
             <div className="flex-1 overflow-y-auto">
                 <Panel >
-                    <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                         {withScores.map((item) => (
                             <PlayerCard key={item.player.id} playerName={item.player.name} stats={item.player.stats} overall={item.overall} top3Positions={item.topPositions} averages={item.averages} />
                         ))}

@@ -61,7 +61,7 @@ const Layout = () => {
             <BrowserRouter>
                 <PlayersProvider>
                     <DndProvider backend={backend} options={options}>
-                        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-2 sticky top-0 z-10 bg-background">
+                        <header className="flex h-16 shrink-0 items-center sticky top-0 z-10 bg-background">
                             {/* <Separator orientation="vertical" className="mr-2 h-4" /> */}
                             <HeaderBar compact={isCompact} canEdit={canEdit} />
                         </header>

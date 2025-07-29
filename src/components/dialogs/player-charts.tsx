@@ -55,7 +55,7 @@ const PlayerCharts: React.FC<PlayerChartsProps> = ({
     const chartPlayer2Stats = chartPlayer2 ? getZoneAverages(chartPlayer2) : null;
 
     return (
-        <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">
+        <div className=" h-full flex-1 min-h-0 flex flex-col">
             <div className="flex flex-col flex-1 min-h-0 space-y-4">
 
                 {/* Static Label */}
@@ -87,7 +87,7 @@ const PlayerCharts: React.FC<PlayerChartsProps> = ({
                         {chartPlayer1 && (
                             <div className="mt-2">
                                 <span className="w-[300px] text-right shrink-0 truncate">{chartPlayer1.name}:</span>
-                                <div className="flex flex-1 flex-col gap-2 mt-2">
+                                <div className="flex flex-1 flex-col gap-2">
                                     <PlayerStatViewer
                                         player={chartPlayer1}
                                         playerStats={chartPlayer1Stats}

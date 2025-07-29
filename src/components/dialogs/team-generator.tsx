@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { usePlayers } from "@/context/players-provider";
 import { Player } from "@/data/player-types";
-import { Users, Wand2, Search } from "lucide-react";
+import { Users, Wand2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import Panel from "@/components/dialogs/panel"
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button"
 
 import {
     Card,
@@ -57,28 +59,22 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isCompact }) => {
     const canGenerate = selectedPlayers.length >= 10 && selectedPlayers.length <= 24;
 
     return (
-        <div className="flex-1 min-h-0 flex flex-col w-full h-full border">
-            <div className="min-h-0 flex flex-col h-full border">
-
-                <div className="min-h-0 flex flex-col h-full border">
-
-                    <div className="min-h-0 w-full flex h-full border">
-
-                        <TeamGenerationTab
-                            players={players}
-                            selectedPlayers={selectedPlayers}
-                            setSelectedPlayers={setSelectedPlayers}
-                        />
-
-                    </div>
+        <div className="flex-1 min-h-0 w-full h-full p-2">
+            <div className="flex flex-col h-full">
+                <div className="flex-1 min-h-0 w-full">
+                    <TeamGenerationTab
+                        players={players}
+                        selectedPlayers={selectedPlayers}
+                        setSelectedPlayers={setSelectedPlayers}
+                    />
                 </div>
 
                 {/* Generate Button - Fixed at Bottom */}
-                <div className="flex-1">
+                <div className="flex-1 max-h-[40px]">
                     <button
                         onClick={handleGenerateTeams}
                         disabled={!canGenerate}
-                        className={`flex items-center justify-center w-full h-[40px] mb-1 rounded-lg font-medium transition-all duration-200 ${canGenerate ? 'bg-green-600 text-white cursor-pointer' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+                        className={`flex items-center justify-center h-full w-full rounded-lg font-medium transition-all duration-200 ${canGenerate ? 'bg-green-600 text-white cursor-pointer' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
                     >
                         <Wand2 size={18} className="mr-2" />
                         <span>Generate Two Teams</span>
@@ -86,7 +82,6 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isCompact }) => {
                 </div>
             </div>
         </div>
-
     );
 };
 
@@ -131,30 +126,28 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
     };
 
     return (
-        <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">
-            <div className="flex flex-col flex-1 min-h-0 space-y-4">
+        <div className=" h-full flex-1 min-h-0 flex flex-col">
+            <div className="flex flex-col flex-1 min-h-0">
                 {/* Search and Toggle Controls */}
-                <div className="p-3 border-b bg-accent h-[60px]">
+                <div className="bg-accent h-[40px]">
                     <div className="flex items-center gap-3 ">
                         {/* Search Input */}
-                        <div className="flex  items-center flex-1 borderrounded-xl p-2 transition-all">
-                            <Search size={20} className=" mr-3" />
-                            <input
+                        <div className="flex flex-1 transition-all">
+                            <Input
                                 type="text"
-                                placeholder="Search players..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="border-none outline-none  text-sm"
+                                placeholder="Search players..."
+                                className="flex-1 rounded w-full"
                             />
                         </div>
 
                         {/* Select/Deselect All Button */}
-                        <button
-                            onClick={toggleAll}
-                            className="bg-background flex items-center px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all whitespace-nowrap"
-                        >
-                            {selectedPlayers.length === playersArr.length ? "Deselect All" : "Select All"}
-                        </button>
+                        <Button variant="ghost"
+                            className={`flex-1 max-w-[100px] flex items-center justify-center  transition-all duration-200 ${selectedPlayers.length === playersArr.length ? "text-red-600" : ""} `}
+                            onClick={toggleAll}>
+                            <span>{selectedPlayers.length === playersArr.length ? "Deselect All" : "Select All"}</span>
+                        </Button>
                     </div>
                 </div>
 
@@ -180,7 +173,7 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex-1 min-h-0 overflow-y-auto  p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                                 {sortedPlayers.length > 0 ? (
                                     sortedPlayers.map(player => (
                                         <div
@@ -211,7 +204,7 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="p-6 text-center rounded-xl mt-3">
+                                    <div className="flex rounded-xl">
                                         No players match your search
                                     </div>
                                 )}

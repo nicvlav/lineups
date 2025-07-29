@@ -23,24 +23,24 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
     };
 
     return (
-        <div className="w-full h-full">
+        <div className="w-full h-full p-2">
             {/* Layout for small screens (stacked and tall) */}
-            <div className="flex flex-col pl-2 pr-2 pb-5 gap-2 h-full w-full max-w-[100%] ">
+            <div className='flex flex-col h-full w-full max-w-[100%] '>
 
-                <div className="w-full h-[40px] flex items-center justify-center overflow-hidden">
-                    <div className={`flex-1 flex items-center justify-center p-2  transition-all duration-200`}>
+                <div className="flex-1 max-h-[40px] w-full flex overflow-hidden">
+                    <div className={`flex-1 flex transition-all duration-200`}>
                         <FormationSelector />
                     </div>
 
                     <Button variant="ghost"
-                        className={`flex-1 flex items-center justify-center p-2  transition-all duration-200 text-red-600 max-h-[60px]`}
+                        className={`flex-1 flex items-center justify-center  transition-all duration-200 text-red-600 max-h-[60px]`}
                         onClick={clearGame}>
                         <Trash2 size={18} />
                         <span>Clear</span>
                     </Button>
 
                     <Button variant="ghost"
-                        className={`flex-1 flex items-center justify-center p-2  transition-all duration-200`}
+                        className={`flex-1 flex items-center justify-center transition-all duration-200`}
                         onClick={handleShare}>
                         <Share size={iconSize} />
                         <span>Share</span>
@@ -48,7 +48,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                 </div>
 
                 {isCompact && (
-                    <div className="flex flex-col pl-2 pr-2 pb-5 gap-5 h-full w-full max-w-[100%] mx-auto">
+                  <div className="flex-1 flex flex-col w-full gap-2 overflow-hidden">
                         <Panel>
                             {/* First Div */}
                             <TeamArea team="A" playerSize={playerSize} />
@@ -63,7 +63,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
 
                 {/* Layout for large screens (side by side) */}
                 {!isCompact && (
-                    <div className="flex w-full h-full pl-2 pr-2 gap-2">
+                    <div className="flex-1 flex w-full gap-2 overflow-hidden">
                         {/* First Div */}
                         <TeamArea team="A" playerSize={playerSize} />
 
@@ -75,5 +75,4 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
         </div>
     )
 }
-
 export default Game;

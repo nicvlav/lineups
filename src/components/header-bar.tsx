@@ -23,15 +23,15 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
     );
 
     return (
-        <div className="w-full flex items-center justify-center h-[60px] min-h-[60px] max-h-[60px] overflow-hidden">
+        <div className="w-full flex items-center w-full h-[40px] min-h-[40px] max-h-[40px] overflow-hidden">
             {/* title */}
 
-            <div className="flex items-center space-x-3 flex-shrink-0 min-w-[50px]">
-                <h1 className="font-bold text-lg truncate" style={{ fontSize: "1.25rem" }}>LM</h1>
+            <div className="flex justify-center items-center h-full w-[40px] pl-1">
+                <h1 className="font-bold text-left text-lg truncate" style={{ fontSize: "1.25rem" }}>LM</h1>
             </div>
 
             {/* Buttons container (ensures shrink behavior) */}
-            <div className="flex flex-1 justify-center space-x-2 min-w-0 overflow-hidden ml-1">
+            <div className="flex flex-1  justify-center min-w-0 overflow-hidden">
                 <TabIcon icon={Home} to="/" />
 
                 {canEdit && (
@@ -42,8 +42,10 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
                 <TabIcon icon={Wand2} to="/generate" />
             </div>
 
-            <div className="flex">
+            <div className="flex items-center h-full w-[40px]  ">
+
                 <ModeToggle></ModeToggle>
+
             </div>
         </div>
     );

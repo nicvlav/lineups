@@ -19,10 +19,11 @@ const App = () => {
   }, [urlState]);
 
   return (
-    <div className='h-screen'>
+
+    <div className="h-[100dvh] flex flex-col">
       <AuthProvider url={urlState}>
         <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-            <Layout />
+          <Layout />
         </ThemeProvider>
       </AuthProvider>
 

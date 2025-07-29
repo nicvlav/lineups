@@ -36,7 +36,7 @@ const PlayersSidebar: React.FC<PlayersSidebarProps> = ({ compact, props }) => {
       </SidebarHeader> */}
       <SidebarContent>
 
-        <div className={`h-full flex flex-col gap-4 p-4 rounded-lg shadow-lg`}>
+        <div className={`h-full flex flex-col gap-2 p-4 rounded-lg shadow-lg`}>
           {/* Content here */}
 
 

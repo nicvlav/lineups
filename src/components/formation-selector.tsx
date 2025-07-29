@@ -24,7 +24,7 @@ const FormationSelector = () => {
             </SelectTrigger>
 
             {/* Dropdown content with dynamically grouped formations */}
-            <SelectContent className="w-full">
+            <SelectContent className="w-full rounded">
                 {Object.entries(formationTemplates).map(([numPlayers, formations]) => (
                     <SelectGroup key={numPlayers}>
                         <SelectLabel>{`${numPlayers} Players`}</SelectLabel>

@@ -83,11 +83,11 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
     const sortedPlayers = getSorted();
 
     return (
-        <div className=" h-full flex-1 min-h-0 flex flex-col border p-4">
-            <div className="flex flex-col flex-1 min-h-0 space-y-4">
+        <div className=" h-full flex-1 min-h-0 flex flex-col border">
+            <div className="flex flex-col flex-1 min-h-0">
                 <div className="bg-background z-10 ">
                     {/* Player Input */}
-                    <div className="flex-1 items-center space-x-2">
+                    <div className="flex-1 items-center">
                         <Input
                             type="text"
                             value={newPlayerName}
@@ -98,14 +98,14 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                     </div>
 
                     {/* Search and Sorting */}
-                    <div className="flex w-full items-center mb-4 space-x-2">
+                    <div className="flex w-full items-center">
                         <Button onClick={handleAddPlayer} className=" bg-blue-600 text-white hover:bg-blue-700  w-full">
                             Add Player
                         </Button>
                     </div>
 
                     {/* Search and Sorting */}
-                    <div className="flex items-center mb-4 space-x-2">
+                    <div className="flex items-center">
                         <input
                             type="text"
                             value={searchQuery}
@@ -193,11 +193,11 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
 
                                         {/* Attributes Column Second Hal*/}
                                         <TableCell className="w-[300px]">
-                                            <div className="flex flex-wrap gap-1 justify-evenly">
+                                            <div className="flex flex-wrap gap-2 justify-evenly">
                                                 {currIndexes.map((index) => (
                                                     <div key={statShortLabelMap[index]} className="flex flex-col items-center ">
                                                         <span className="">{statShortLabelMap[index]}</span>
-                                                        <div className="flex items-center gap-1 rounded-md bg-accent w-full">
+                                                        <div className="flex items-center gap-2 rounded-md bg-accent w-full">
                                                             <span>{player.stats[index]}</span>
                                                             <div className="flexrounded-lg">
                                                                 <Button
