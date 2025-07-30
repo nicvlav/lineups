@@ -196,7 +196,7 @@ const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
 
         if (formationZone.length <= 0) return false;
 
-        // Sort positions by priorityStat (higher is better), breaking ties with count and index
+        // Sort positions by priorityStat (lower is better), breaking ties with count and index
         const sortedPositions = formationZone
             .map((count, positionIndex) => ({
                 count,
@@ -205,7 +205,7 @@ const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
             }))
             .filter(pos => pos.count > 0) // Ignore empty positions
             .sort((a, b) =>
-                b.priority - a.priority || // Higher priority first
+                a.priority - b.priority || // Lower priority first
                 b.count - a.count || // More players in that position
                 a.positionIndex - b.positionIndex // Lower index if still tied
             );
