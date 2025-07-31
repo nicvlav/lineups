@@ -2,12 +2,15 @@
 
 import React, { useState } from "react";
 import { StatCategory, StatsKey, statLabelMap, CategorizedStats } from "@/data/stat-types";
-import { ZoneAverages, } from "@/data/player-types";
+import { ZoneAverages } from "@/data/player-types";
+import { ZoneScores } from "@/data/position-types";
+import { PositionScoreList } from "@/components/dialogs/position-score-list";
 import Modal from "@/components/dialogs/modal";
 
 interface PlayerCardProps {
     playerName: string;
     overall: number;
+    zoneFit: ZoneScores
     top3Positions: string;
     averages: ZoneAverages;
     stats: Record<StatsKey, number>; // Pass in full stats for breakdown
@@ -16,6 +19,7 @@ interface PlayerCardProps {
 const PlayerCard: React.FC<PlayerCardProps> = ({
     playerName,
     overall,
+    zoneFit,
     top3Positions,
     averages,
     stats,
@@ -49,6 +53,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     const allStatAverage = nonMoraleValues.reduce((sum, v) => sum + v, 0) /
         (nonMoraleValues.length || 1);
 
+    const overallRounded = Math.round(overall);
+
     return (
         <>
             <div
@@ -59,7 +65,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 <div className="flex items-center w-full gap-2">
                     {/* Badge */}
                     <div className="bg-black text-white font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
-                        {overall}
+                        {overallRounded}
                     </div>
 
                     {/* Name + Positions */}
@@ -104,17 +110,16 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
             {/* Popup dialog */}
             <Modal title={playerName} isOpen={open} onClose={() => setOpen(false)}>
-                <div className="flex flex-col h-[80vh] min-w-[200px]">
+                <div className="flex flex-col h-[80vh] min-w-[200px] max-w-[1000px]">
                     <div className="grid grid-cols-[auto_max-content_auto] gap-x-2 p-1 text-sm sm:text-base font-bold tracking-wide">
-                        <span>Overall:</span>
-                        <span className={`${getStatColor(overall)}`}>{overall}</span>
+                        <span>OVERALL:</span>
+                        <span className={`${getStatColor(overallRounded)}`}>{overallRounded}</span>
                         <span>[{top3Positions}]</span>
 
-                        <span>Average:</span>
+                        <span>AVERAGE:</span>
                         <span className={`${getStatColor(allStatAverage)}`}>{allStatAverage.toFixed(0)}</span>
                         <span>[ALL STATS]</span>
                     </div>
-
                     <div >
                         {Object.entries(CategorizedStats)
                             .filter(([category]) => category !== "morale")
@@ -156,6 +161,17 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                                 );
                             })}
                     </div>
+
+                    <div className="mt-4 p-1 text-sm sm:text-base font-bold tracking-wide">
+                        <span>ALL POSITIONS:</span>
+                    </div>
+
+                    <div className=" h-[200px]"> {/* Allows it to grow/shrink */}
+                        {/* <Panel> */}
+                        <PositionScoreList zoneFit={zoneFit} />
+                        {/* </Panel> */}
+                    </div>
+
                 </div>
             </Modal >
         </>

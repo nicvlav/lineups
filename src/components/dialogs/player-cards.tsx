@@ -1,15 +1,14 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { usePlayers } from "@/context/players-provider";
-import { StatCategoryKeys, StatCategoryNameMap } from "@/data/stat-types";
-import { getZoneAverages, getTopPositions, } from "@/data/player-types";
+import { StatCategoryKeys, StatCategoryNameMap, } from "@/data/stat-types";
+import { getZoneAverages, getTopPositions, calculateScoresForStats } from "@/data/player-types";
+import { normalizedDefaultWeights } from "@/data/position-types";
 import PlayerCard from "@/components/dialogs/player-card";
 import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import Panel from "@/components/dialogs/panel"
-interface TeamGeneratorProps {
 
-}
-const PlayerCards: React.FC<TeamGeneratorProps> = ({ }) => {
+const PlayerCards = () => {
     const { players, } = usePlayers();
     const alphabeticalSortValue: string = "Alphabetical";
     const overallSortValue: string = "Overall";
@@ -19,8 +18,14 @@ const PlayerCards: React.FC<TeamGeneratorProps> = ({ }) => {
     const filteredPlayers = Object.values(players).filter((p) =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     ).map((player) => {
-        const topScores = getTopPositions(player);
-        return { player, overall: Math.round(Math.max(...topScores.map((t) => t.score))), topPositions: topScores.slice(0, 3).map((t) => t.position).join(", "), averages: getZoneAverages(player) }
+        const scores = calculateScoresForStats(player.stats, normalizedDefaultWeights);
+        const topScores = getTopPositions(scores);
+
+        return {
+            player, overall:Math.max(...topScores.map((t) => t.score)),
+            zoneFit: scores, topPositions: topScores.slice(0, 3).map((t) => t.position).join(", "),
+            averages: getZoneAverages(player)
+        }
     })
 
     const getSorted = () => {
@@ -87,7 +92,10 @@ const PlayerCards: React.FC<TeamGeneratorProps> = ({ }) => {
                 <Panel >
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                         {withScores.map((item) => (
-                            <PlayerCard key={item.player.id} playerName={item.player.name} stats={item.player.stats} overall={item.overall} top3Positions={item.topPositions} averages={item.averages} />
+                            <PlayerCard key={item.player.id} playerName={item.player.name}
+                                stats={item.player.stats} overall={item.overall}
+                                zoneFit={item.zoneFit} top3Positions={item.topPositions}
+                                averages={item.averages} />
                         ))}
                     </div>
                 </Panel>
