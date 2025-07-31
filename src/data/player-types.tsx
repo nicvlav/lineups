@@ -119,7 +119,7 @@ export function getTopPositions(zoneFit: ZoneScores): PositionAndScore[] {
     const max = allItems[0].score;
 
     return allItems.splice(0, 3).filter((entry) => {
-        return entry.score >= max * 0.95;
+        return entry.score >= max * 0.97;
     });
 
 }
