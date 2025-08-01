@@ -73,12 +73,8 @@ function getZoneSpecialistZoneAndPosition(player: ArrayScoredGamePlayer, dist: Z
 }
 
 // special sorting with randomization
-const sortBest = (players: ArrayScoredGamePlayer[], zone: number, position: number, randomSeed: number, dist: ZoneScoresArray) => {
+const sortBest = (players: ArrayScoredGamePlayer[], zone: number, position: number, dist: ZoneScoresArray) => {
     // const specializationRatios = [randomSeed * 0.8 + 0.1, randomSeed * 0.5 + 0.1, randomSeed * 0.2 + 0.0];
-
-    // Pick the best available player from this zone
-    const aSeed = randomSeed > 0.5 ? 1 + randomSeed : 1 - randomSeed;//specializationRatios[zone];
-    const bSeed = 1 / aSeed;//specializationRatios[zone];
 
     // Sort player pool by specialization in the zone
     players.sort((a, b) => {
@@ -116,10 +112,10 @@ const sortBest = (players: ArrayScoredGamePlayer[], zone: number, position: numb
 
             if (aMatchesPos && bMatchesPos) {
                 // Both match the pos — prefer sharper specialization, slightly softened by randomness
-                return (bRatio * bSeed) - (aRatio * aSeed);
+                return (bRatio) - (aRatio);
             } else {
                 // Both are specialists for another pos — prefer the more adaptable one
-                return (aRatio * aSeed) - (bRatio * bSeed);
+                return (aRatio) - (bRatio);
             }
         }
 
@@ -127,15 +123,15 @@ const sortBest = (players: ArrayScoredGamePlayer[], zone: number, position: numb
         const specializationScoreA = aFit / (aStats.secondBest || 1);
         const specializationScoreB = bFit / (bStats.secondBest || 1);
 
-        const weightedA = specializationScoreA * aSeed * aFit;
-        const weightedB = specializationScoreB * bSeed * bFit;
+        const weightedA = specializationScoreA * aFit;
+        const weightedB = specializationScoreB * bFit;
 
         return weightedB - weightedA;
     });
 
 };
 
-const sortWorst = (players: ArrayScoredGamePlayer[], _: number, __: number, ___: number) => {
+const sortWorst = (players: ArrayScoredGamePlayer[], _: number, __: number) => {
     // Sort player pool by specialization in the zone
     players.sort((a, b) => {
         const aStats = getBestAndSecondBestStats(a.zoneFitArr);
@@ -155,11 +151,7 @@ const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
     let teamAZoneScores = [0, 0, 0, 0];
     let teamBZoneScores = [0, 0, 0, 0];
 
-    // Dynamic weighting ratio - multiplier indicates random limit
-    // eg - 0.1 means at most we can randomize players by 10%
-    const rand = Math.random() * 0.1;
-
-    const addPlayerAtPos = (dist: ZoneScoresArray, zone: number, position: number, isTeamA: boolean, sortType: (players: ArrayScoredGamePlayer[], zone: number, position: number, rand: number, dist: ZoneScoresArray) => void) => {
+    const addPlayerAtPos = (dist: ZoneScoresArray, zone: number, position: number, isTeamA: boolean, sortType: (players: ArrayScoredGamePlayer[], zone: number, position: number, dist: ZoneScoresArray) => void) => {
         if (dist[zone][position] <= 0) return false;
 
         if (teamA[zone] === undefined || teamA[zone][position] === undefined) {
@@ -167,7 +159,7 @@ const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
             return false
         }
 
-        sortType(players, zone, position, rand, dist);
+        sortType(players, zone, position, dist);
 
         let player = players.shift();
 
@@ -288,17 +280,17 @@ const getZones = (players: ArrayScoredGamePlayer[], recursive: boolean, numSimul
     let bestWeightedScore = -Infinity;
 
     // Adjustable weights (total sums to 1)
-    const W_quality = recursive ? 0.0 : 0.2; // Normalize overall player quality
-    const W_efficiency = recursive ? 0.2 : 0.5; // Normalize overall player quality
-    const W_balance = recursive ? 0.6 : 0.0; // Normalize team balance
-    const W_pos_balance = recursive ? 0.2 : 0.0; // Normalize team balance
-    const W_zonal = recursive ? 0.0 : 0.3;   // Normalize zonal variance
+    const W_quality = recursive ? 0.1 : 0.0; // Normalize overall player quality
+    const W_efficiency = recursive ? 0.5 : 0.7; // Normalize overall player quality
+    const W_balance = recursive ? 0.2 : 0.0; // Normalize team balance
+    const W_pos_balance = recursive ? 0.2 : 0.1; // Normalize team balance
+    const W_zonal = recursive ? 0.0 : 0.2;   // Normalize zonal variance
 
     for (let i = 0; i < numSimulations; i++) {
         let results: TeamResults;
 
         try {
-            results = recursive ? getZones(players, false, numSimulations / 20) : assignPlayersToTeams(structuredClone(players));
+            results = recursive ? getZones(players, false, numSimulations / 15) : assignPlayersToTeams(structuredClone(players));
             // results = assignPlayersToTeams(structuredClone(players));
         } catch (error) {
             console.warn(error);
@@ -470,7 +462,7 @@ const getZones = (players: ArrayScoredGamePlayer[], recursive: boolean, numSimul
 const generateBalancedTeams = (scoredPlayers: ScoredGamePlayer[]) => {
     if (scoredPlayers.length < 2) return { a: [], b: [] };
 
-    const teams = getZones(toArrayScoredGamePlayers(scoredPlayers), true, 200);
+    const teams = getZones(toArrayScoredGamePlayers(scoredPlayers), true, 100);
 
     // Assign positions for both teams
     const positionsA = assignPositions(teams.a.team, "A");
