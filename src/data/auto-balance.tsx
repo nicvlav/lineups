@@ -479,5 +479,5 @@ export const autoCreateTeamsScored = (players: ScoredGamePlayer[]) => {
 };
 
 // export const autoCreateTeamsFilled = (players: FilledGamePlayer[], attributeWeights: Weighting) => {
-//     return autoCreateTeamsScored(calculateScores(players, normalizeWeights(attributeWeights)));
+//     return autoCreateTeamsScored(calculateScores(players, normalizedDefaultWeights));
 // };

@@ -1,5 +1,5 @@
 import { StatsKey, PlayerStats, CategorizedStats, StatCategory } from "@/data/stat-types"; // Importing from shared file
-import { Point, PositionShortLabels, normalizeWeights, ZoneScores, emptyZoneScores, Weighting, defaultZoneWeights, Position } from "@/data/position-types"; // Importing from shared file
+import { Point, PositionShortLabels, normalizedDefaultWeights, ZoneScores, emptyZoneScores, Weighting, Position } from "@/data/position-types"; // Importing from shared file
 
 // Core Player data from Supabase
 export interface Player {
@@ -103,25 +103,25 @@ export interface PositionAndScore {
 
 export type ZoneAverages = Record<StatCategory, number>;
 
-export function getTopPositions(player: Player) {
-    const normalized = normalizeWeights(defaultZoneWeights);
-    const scores = calculateScoresForStats(player.stats, normalized);
+export function getAllPositions(player: Player): ZoneScores {
+    return calculateScoresForStats(player.stats, normalizedDefaultWeights);
+}
 
-    const allItems: PositionAndScore[] = Object.entries(scores).map(([pos, score]) => {
+export function getTopPositions(zoneFit: ZoneScores): PositionAndScore[] {
+    const allItems = Object.entries(zoneFit)
+     .filter(([pos]) => pos !== "GK")
+     .map(([pos, score]) => {
         return { position: PositionShortLabels[pos as Position], score } as PositionAndScore;
-    }).slice(1).sort((a, b) => {
+    }).sort((a, b) => {
         return b.score - a.score;
-    });
-
-    const result: PositionAndScore[] = [];
+    }) as PositionAndScore[];
 
     const max = allItems[0].score;
 
-    allItems.splice(0, 3).forEach((entry) => {
-        if (entry.score >= max * 0.95) result.push(entry);
+    return allItems.splice(0, 3).filter((entry) => {
+        return entry.score >= max * 0.97;
     });
 
-    return result;
 }
 
 export function getZoneAverages(player: Player): ZoneAverages {

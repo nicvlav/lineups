@@ -4,7 +4,7 @@ import { v4 as uuidv4, } from 'uuid';
 
 import { openDB } from "idb";
 import { defaultStatScores, PlayerStats } from "@/data/stat-types";
-import { Formation, Point, Position, getPointForPosition, getThreatScore, defaultZoneWeights, emptyZoneScores, normalizeWeights } from "@/data/position-types";
+import { Formation, Point, Position, getPointForPosition, getThreatScore, normalizedDefaultWeights, emptyZoneScores } from "@/data/position-types";
 import { Player, PlayerUpdate, GamePlayerUpdate, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, GamePlayer } from "@/data/player-types";
 import { /*, logPlayerStats*/ } from "@/data/auto-balance-types";
 import { decodeStateFromURL } from "@/data/state-manager";
@@ -89,7 +89,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 }
 
                 const realPlayer = freshLoadedPlayers[value.id];
-                const zoneFit = calculateScoresForStats(realPlayer.stats, normalizeWeights(defaultZoneWeights));
+                const zoneFit = calculateScoresForStats(realPlayer.stats, normalizedDefaultWeights);
                 const threatScore = getThreatScore(value.position, zoneFit);
 
                 return [key, { ...value, zoneFit, threatScore }];
@@ -364,7 +364,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         if (id in gamePlayers && updates.stats) {
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
-                const zoneFit = calculateScoresForStats(updates.stats as PlayerStats, normalizeWeights(defaultZoneWeights));
+                const zoneFit = calculateScoresForStats(updates.stats as PlayerStats, normalizedDefaultWeights);
                 newGamePlayers[id].zoneFit = zoneFit;
                 newGamePlayers[id].threatScore = getThreatScore(newGamePlayers[id].position, zoneFit);
                 return newGamePlayers;
@@ -422,7 +422,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             if (!(newID in players)) return;
 
             const position = { x: dropX, y: dropY } as Point;
-            const zoneFit = calculateScoresForStats(players[newID].stats, normalizeWeights(defaultZoneWeights));
+            const zoneFit = calculateScoresForStats(players[newID].stats, normalizedDefaultWeights);
 
             const gamePlayer: ScoredGamePlayerWithThreat = {
                 id: newID, team: placedTeam,
@@ -480,7 +480,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             const newPlayer = players[newID];
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
-                const zoneFit = calculateScoresForStats(newPlayer.stats, normalizeWeights(defaultZoneWeights));
+                const zoneFit = calculateScoresForStats(newPlayer.stats, normalizedDefaultWeights);
                 newGamePlayers[newID] = { id: newPlayer.id, guest_name: null, team: oldPlayer.team, position: oldPlayer.position, zoneFit, threatScore: getThreatScore(oldPlayer.position, zoneFit) };
                 delete newGamePlayers[oldPlayer.id];
                 return newGamePlayers;
@@ -508,7 +508,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         addPlayer({ id: newID, name: newName }, () => {
             if (!(newID in players)) return;
 
-            const zoneFit = calculateScoresForStats(players[newID].stats, normalizeWeights(defaultZoneWeights));
+            const zoneFit = calculateScoresForStats(players[newID].stats, normalizedDefaultWeights);
 
             const gamePlayer: ScoredGamePlayerWithThreat = {
                 id: newID,
@@ -537,7 +537,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 // key is a string
                 // value is of type 'unknown' by default — you can cast it
                 const player = teamPlayers.shift();
-                const position = getPointForPosition(defaultZoneWeights[key as Position], i, value);
+                const position = getPointForPosition(normalizedDefaultWeights[key as Position], i, value);
 
                 if (player) {
                     newTeamPlayers[player.id] = {
@@ -599,7 +599,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     };
 
     const generateTeams = async (filteredPlayers: Player[]) => {
-        const normalizedWeights = normalizeWeights(defaultZoneWeights);
+        const normalizedWeights = normalizedDefaultWeights;
         handleGenerateTeams(filteredPlayers.map(player => {
             const position = { x: 0.5, y: 0.5 } as Point;
             const zoneFit = calculateScoresForStats(player.stats, normalizedWeights);
