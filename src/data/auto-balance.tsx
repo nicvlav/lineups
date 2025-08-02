@@ -142,14 +142,14 @@ const sortWorst = (players: ArrayScoredGamePlayer[], _: number, __: number) => {
 };
 
 const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
-    let teamA: ZonePlayers = structuredClone(emptyZonePlayers);
-    let teamB: ZonePlayers = structuredClone(emptyZonePlayers);
+    const teamA: ZonePlayers = structuredClone(emptyZonePlayers);
+    const teamB: ZonePlayers = structuredClone(emptyZonePlayers);
 
     let teamATotalScore = 0;
     let teamBTotalScore = 0;
 
-    let teamAZoneScores = [0, 0, 0, 0];
-    let teamBZoneScores = [0, 0, 0, 0];
+    const teamAZoneScores = [0, 0, 0, 0];
+    const teamBZoneScores = [0, 0, 0, 0];
 
     const addPlayerAtPos = (dist: ZoneScoresArray, zone: number, position: number, isTeamA: boolean, sortType: (players: ArrayScoredGamePlayer[], zone: number, position: number, dist: ZoneScoresArray) => void) => {
         if (dist[zone][position] <= 0) return false;
@@ -161,7 +161,7 @@ const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
 
         sortType(players, zone, position, dist);
 
-        let player = players.shift();
+        const player = players.shift();
 
         if (!player) return false;
 
@@ -226,8 +226,8 @@ const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
         teamBTotalScore += Math.max(...teamB[0][0][0].zoneFitArr.flat());
     }
 
-    let foundAZones = [isEmptyFormation(formationA, 0), isEmptyFormation(formationA, 1), isEmptyFormation(formationA, 2), isEmptyFormation(formationA, 3)];
-    let foundBZones = [isEmptyFormation(formationB, 0), isEmptyFormation(formationB, 1), isEmptyFormation(formationB, 2), isEmptyFormation(formationB, 3)];
+    const foundAZones = [isEmptyFormation(formationA, 0), isEmptyFormation(formationA, 1), isEmptyFormation(formationA, 2), isEmptyFormation(formationA, 3)];
+    const foundBZones = [isEmptyFormation(formationB, 0), isEmptyFormation(formationB, 1), isEmptyFormation(formationB, 2), isEmptyFormation(formationB, 3)];
 
     while (numTeamAPlayers || numTeamBPlayers) {
         if (foundAZones.every(val => val === true) && foundBZones.every(val => val === true)) {
@@ -373,34 +373,34 @@ const getZones = (players: ArrayScoredGamePlayer[], recursive: boolean, numSimul
             // If both averages are 0, assume perfect balance (avoid 0/0)
             // zone score is the average zone score for team a vs average team score for team b
             // high score means both seems have similar average zone scores, low means there is a quality gap
-            let zoneScore = maxAvg === 0 ? 1 : (1 - diff / maxAvg);
+            const zoneScore = maxAvg === 0 ? 1 : (1 - diff / maxAvg);
 
             normalizedZonal *= Math.pow(zoneScore, 0.5);
         }
 
         // Maximum possible scores (each player can score 100)
-        let maxTeamAScore = teamAPlayers;
-        let maxTeamBScore = teamBPlayers;
-        let maxTotalScore = maxTeamAScore + maxTeamBScore;
+        const maxTeamAScore = teamAPlayers;
+        const maxTeamBScore = teamBPlayers;
+        const maxTotalScore = maxTeamAScore + maxTeamBScore;
 
         // Normalize overall quality (average player quality)
-        let normalizedQuality = Math.pow((aPositionalTotal + bPositionalTotal) / maxTotalScore, 0.33); // 1 means every player scored 100
+        const normalizedQuality = Math.pow((aPositionalTotal + bPositionalTotal) / maxTotalScore, 0.33); // 1 means every player scored 100
 
         // Normalize team balance
-        let diff = Math.abs(aPeakTotal - bPeakTotal);
+        const diff = Math.abs(aPeakTotal - bPeakTotal);
         // Maximum possible difference is if the larger team scores max and the smaller scores 0.
-        let maxPossibleDiff = Math.max(teamAPlayers, teamBPlayers);
-        let normalizedBalance = 1 - Math.pow(diff / maxPossibleDiff, 0.25); // 1 is perfect balance
+        const maxPossibleDiff = Math.max(teamAPlayers, teamBPlayers);
+        const normalizedBalance = 1 - Math.pow(diff / maxPossibleDiff, 0.25); // 1 is perfect balance
 
-        let diffPos = Math.abs(aPositionalTotal - bPositionalTotal);
-        let normalizedPosBalance = 1 - Math.pow(diffPos / maxPossibleDiff, 0.25); // 1 is perfect balanc
+        const diffPos = Math.abs(aPositionalTotal - bPositionalTotal);
+        const normalizedPosBalance = 1 - Math.pow(diffPos / maxPossibleDiff, 0.25); // 1 is perfect balanc
 
         // exclude goalkeepers
         normalizedEfficiency = 1 - (efficiencyDiff / (teamAPlayers + teamBPlayers));
 
 
         // Compute weighted overall score
-        let weightedScore =
+        const weightedScore =
             W_quality * normalizedQuality +
             W_efficiency * normalizedEfficiency +
             W_balance * normalizedBalance +

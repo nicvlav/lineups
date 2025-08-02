@@ -237,7 +237,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                     pendingUpdatesRef.current.delete(payload.old.id);
 
                     const deletedPlayer = payload.old as Partial<Player>;
-                    let id: string | undefined = deletedPlayer?.id;
+                    const id: string | undefined = deletedPlayer?.id;
 
                     // console.log("Delete ID internal", id, players, gamePlayers);
 
@@ -529,8 +529,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
 
     const applyFormationToTeam = (team: string, formation: Formation) => {
-        let teamPlayers = Object.values(gamePlayers).filter((player) => player.team === team);
-        let newTeamPlayers: Record<string, ScoredGamePlayerWithThreat> = {};
+        const teamPlayers = Object.values(gamePlayers).filter((player) => player.team === team);
+        const newTeamPlayers: Record<string, ScoredGamePlayerWithThreat> = {};
 
         for (const [key, value] of Object.entries(formation.positions)) {
             for (let i = 0; i < value; i++) {
@@ -616,7 +616,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
     const rebalanceCurrentGame = async () => {
         // Filter players in the current game
-        let filteredPlayers: ScoredGamePlayerWithThreat[] = [];
+        const filteredPlayers: ScoredGamePlayerWithThreat[] = [];
 
         Object.entries(gamePlayers).forEach(([id, player]) => {
             if (!(id in players)) return;

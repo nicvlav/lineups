@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { statShortLabelMap, statLabelMap, CategorizedStats, StatsKey, StatCategoryNameMap } from "@/data/stat-types";
 import { Player, PlayerUpdate } from "@/data/player-types";
-import { X, Plus, Minus } from "lucide-react";
+import { X, Plus, Minus, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
-import Panel from "@/components/dialogs/panel"
+import Panel from "@/components/dialogs/panel";
+import { ActionBarTwoColumn, ActionBarThreeColumn, ActionBarGroup } from "@/components/ui/action-bar";
 interface CompactPlayerTableProps {
     players: Record<string, Player>;
     addPlayer: (player: Partial<Player>) => void;
@@ -83,74 +84,81 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
     const sortedPlayers = getSorted();
 
     return (
-        <div className=" h-full flex-1 min-h-0 flex flex-col border">
+        <div className="h-full flex-1 min-h-0 flex flex-col p-4">
             <div className="flex flex-col flex-1 min-h-0">
-                <div className="bg-background z-10 ">
-                    {/* Player Input */}
-                    <div className="flex-1 items-center">
-                        <Input
-                            type="text"
-                            value={newPlayerName}
-                            onChange={(e) => setNewPlayerName(e.target.value)}
-                            placeholder="Enter player name"
-                        />
+                <div className="bg-background z-10">
+                    {/* Add Player Bar */}
+                    <ActionBarTwoColumn
+                        variant="compact"
+                        left={
+                            <Input
+                                type="text"
+                                value={newPlayerName}
+                                onChange={(e) => setNewPlayerName(e.target.value)}
+                                placeholder="Enter player name"
+                                className="w-full max-w-sm"
+                                onKeyPress={(e) => e.key === 'Enter' && handleAddPlayer()}
+                            />
+                        }
+                        right={
+                            <ActionBarGroup variant="outlined">
+                                <Button 
+                                    onClick={handleAddPlayer} 
+                                    size="sm"
+                                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                                    disabled={!newPlayerName.trim()}
+                                >
+                                    <UserPlus size={16} />
+                                    <span className="ml-2">Add Player</span>
+                                </Button>
+                            </ActionBarGroup>
+                        }
+                    />
 
-                    </div>
-
-                    {/* Search and Sorting */}
-                    <div className="flex w-full items-center">
-                        <Button onClick={handleAddPlayer} className=" bg-blue-600 text-white hover:bg-blue-700  w-full">
-                            Add Player
-                        </Button>
-                    </div>
-
-                    {/* Search and Sorting */}
-                    <div className="flex items-center">
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search players..."
-                            className="p-2 rounded w-full"
-                        />
-
-                        <Select onValueChange={setFilterMode}>
-                            {/* Trigger button for the select */}
-                            <SelectTrigger>
-                                <SelectValue >{filterMode}</SelectValue>
-                            </SelectTrigger>
-
-                            {/* Dropdown content with dynamically grouped formations */}
-                            <SelectContent>
-                                {Object.values(StatCategoryNameMap).map((category) => (
-                                    <SelectItem key={category} value={category}>
-                                        {category}
+                    {/* Search, Filter and Sort Bar */}
+                    <ActionBarThreeColumn
+                        variant="compact"
+                        left={
+                            <Input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search players..."
+                                className="w-full max-w-xs"
+                            />
+                        }
+                        center={
+                            <Select onValueChange={setFilterMode} value={filterMode}>
+                                <SelectTrigger className="w-32">
+                                    <SelectValue>{filterMode}</SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.values(StatCategoryNameMap).map((category) => (
+                                        <SelectItem key={category} value={category}>
+                                            {category}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        }
+                        right={
+                            <Select onValueChange={setSortingMode} value={sortingMode}>
+                                <SelectTrigger className="w-32">
+                                    <SelectValue placeholder="Sort">{sortingMode}</SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem key={alphabeticalSortValue} value={alphabeticalSortValue}>
+                                        {alphabeticalSortValue}
                                     </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        <Select onValueChange={setSortingMode}>
-                            {/* Trigger button for the select */}
-                            <SelectTrigger>
-                                <SelectValue placeholder="Sort">Sort</SelectValue>
-                            </SelectTrigger>
-
-                            {/* Dropdown content with dynamically grouped formations */}
-                            <SelectContent>
-                                <SelectItem key={alphabeticalSortValue} value={alphabeticalSortValue}>
-                                    {alphabeticalSortValue}
-                                </SelectItem>
-                                {currIndexes.map((index) => (
-                                    <SelectItem key={statLabelMap[index]} value={statLabelMap[index]}>
-                                        {statLabelMap[index]}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-
+                                    {currIndexes.map((index) => (
+                                        <SelectItem key={statLabelMap[index]} value={statLabelMap[index]}>
+                                            {statLabelMap[index]}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        }
+                    />
                 </div>
 
                 <Panel>

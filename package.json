@@ -5,12 +5,16 @@
   "homepage": "https://lineups.nicolasvlavianos.workers.dev",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "preview:worker": "wrangler preview",
-    "deploy:worker": " bunx wrangler build && wrangler deploy"
+    "dev": "bun --bun vite",
+    "build": "bun run typecheck && bun --bun vite build",
+    "typecheck": "bun tsc -b --noEmit",
+    "lint": "bun eslint .",
+    "lint:fix": "bun eslint . --fix",
+    "preview": "bun --bun vite preview",
+    "preview:worker": "bunx wrangler preview",
+    "deploy:worker": "bunx wrangler build && bunx wrangler deploy",
+    "clean": "rimraf dist node_modules/.vite tsconfig.tsbuildinfo",
+    "install:clean": "bun run clean && bun install"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20250412.0",
@@ -34,9 +38,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "framer-motion": "^12.6.5",
-    "gh-pages": "^6.3.0",
     "idb": "^8.0.2",
-    "install": "^0.13.0",
     "lucide-react": "^0.479.0",
     "lz-string": "^1.5.0",
     "react": "^19.1.0",
@@ -63,8 +65,13 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
+    "rimraf": "^6.0.1",
     "typescript": "~5.7.3",
     "typescript-eslint": "^8.29.1",
     "vite": "^6.2.6"
-  }
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "packageManager": "bun@1.1.34"
 }

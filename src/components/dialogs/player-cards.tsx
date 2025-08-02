@@ -6,7 +6,8 @@ import { normalizedDefaultWeights } from "@/data/position-types";
 import PlayerCard from "@/components/dialogs/player-card";
 import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import Panel from "@/components/dialogs/panel"
+import Panel from "@/components/dialogs/panel";
+import { ActionBarTwoColumn } from "@/components/ui/action-bar";
 
 const PlayerCards = () => {
     const { players, } = usePlayers();
@@ -52,40 +53,43 @@ const PlayerCards = () => {
     const withScores = getSorted();
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden p-2">
+        <div className="flex flex-col h-full w-full overflow-hidden p-4">
             {/* Search and Sorting */}
-            <div className="w-full h-[40px] flex">
-                <Input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search players..."
-                    className="flex-1 rounded w-full"
-                />
+            <ActionBarTwoColumn
+                left={
+                    <Input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search players..."
+                        className="w-full max-w-sm"
+                    />
+                }
+                right={
+                    <Select onValueChange={setSortingMode}>
+                        <SelectTrigger className="w-40">
+                            <SelectValue placeholder="Sort by">{sortingMode}</SelectValue>
+                        </SelectTrigger>
 
-                <Select onValueChange={setSortingMode}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Sort">Sort</SelectValue>
-                    </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem key={overallSortValue} value={overallSortValue}>
+                                {overallSortValue}
+                            </SelectItem>
+                            <SelectItem key={alphabeticalSortValue} value={alphabeticalSortValue}>
+                                {alphabeticalSortValue}
+                            </SelectItem>
 
-                    <SelectContent>
-                        <SelectItem key={overallSortValue} value={overallSortValue}>
-                            {overallSortValue}
-                        </SelectItem>
-                        <SelectItem key={alphabeticalSortValue} value={alphabeticalSortValue}>
-                            {alphabeticalSortValue}
-                        </SelectItem>
-
-                        {Object.entries(StatCategoryNameMap)
-                            .filter(([category]) => category !== "morale")
-                            .map(([key, name]) => (
-                                <SelectItem key={key} value={name}>
-                                    {name}
-                                </SelectItem>
-                            ))}
-                    </SelectContent>
-                </Select>
-            </div>
+                            {Object.entries(StatCategoryNameMap)
+                                .filter(([category]) => category !== "morale")
+                                .map(([key, name]) => (
+                                    <SelectItem key={key} value={name}>
+                                        {name}
+                                    </SelectItem>
+                                ))}
+                        </SelectContent>
+                    </Select>
+                }
+            />
 
             {/* Panel fills the remaining space */}
             <div className="flex-1 overflow-y-auto">

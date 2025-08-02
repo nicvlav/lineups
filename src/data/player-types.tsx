@@ -75,7 +75,7 @@ export const getThreatColor = (score: number): string => {
 };
 
 export const calculateScoresForStats = (stats: PlayerStats, zoneWeights: Weighting): ZoneScores => {
-    let zoneFit = structuredClone(emptyZoneScores);
+    const zoneFit = structuredClone(emptyZoneScores);
 
     for (const zoneKey in zoneWeights) {
         const zone = zoneKey as keyof ZoneScores;

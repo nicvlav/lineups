@@ -61,21 +61,22 @@ const Layout = () => {
             <BrowserRouter>
                 <PlayersProvider>
                     <DndProvider backend={backend} options={options}>
-                        <header className="flex h-16 shrink-0 items-center sticky top-0 z-10 bg-background">
-                            {/* <Separator orientation="vertical" className="mr-2 h-4" /> */}
+                        <div className="sticky top-0 z-50">
                             <HeaderBar compact={isCompact} canEdit={canEdit} />
-                        </header>
+                        </div>
 
-                        {/* Add routes here, above headerbar has the tabbed nav icons */}
-                        <Routes>
-                            <Route index element={<Game isCompact={isCompact} playerSize={(isCompact ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 16} />} />
-                            {canEdit && <Route path="players" element={<PlayerTable isCompact={isCompact} />} />}
-                            {!canEdit && <Route path="players" element={<Navigate to="/" />} />}
-                            <Route path="cards" element={<PlayerCards />} />
-                            <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
-                            {/* {!user && <Route path="signin" element={<SignInPage />} />}
-                            {user && <Route path="signin" element={<Navigate to="/" />} />} */}
-                        </Routes>
+                        {/* Main content area */}
+                        <main className="flex-1 overflow-auto">
+                            <Routes>
+                                <Route index element={<Game isCompact={isCompact} playerSize={(isCompact ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 16} />} />
+                                {canEdit && <Route path="players" element={<PlayerTable isCompact={isCompact} />} />}
+                                {!canEdit && <Route path="players" element={<Navigate to="/" />} />}
+                                <Route path="cards" element={<PlayerCards />} />
+                                <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
+                                {/* {!user && <Route path="signin" element={<SignInPage />} />}
+                                {user && <Route path="signin" element={<Navigate to="/" />} />} */}
+                            </Routes>
+                        </main>
                     </DndProvider>
                 </PlayersProvider>
             </BrowserRouter>

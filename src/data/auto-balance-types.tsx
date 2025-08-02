@@ -136,7 +136,7 @@ export function toArrayScoredGamePlayers(players: ScoredGamePlayer[]): ArrayScor
 }
 
 export const assignPositions = (zones: ZonePlayers, team: string) => {
-    let finalPlayers: ScoredGamePlayer[] = [];
+    const finalPlayers: ScoredGamePlayer[] = [];
 
     zones.forEach((zone) => {
         zone.forEach((players) => {

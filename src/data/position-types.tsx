@@ -528,7 +528,7 @@ export const formationTemplates: Record<number, Formation[]> = {
 } as const;
 
 export const normalizeWeights = (zoneWeights: Weighting): Weighting => {
-    let normalized = structuredClone(zoneWeights);
+    const normalized = structuredClone(zoneWeights);
 
     for (const [_, posWeighting] of Object.entries(normalized)) {
         const total = statKeys.reduce(
@@ -555,7 +555,7 @@ const getXForPlayerPosition = (position: PositionWeighting, positionIndex: numbe
     }
 
     let startShift = 0.0;
-    let spacing = 0.4 / (numPositionentries); // Max width for players
+    const spacing = 0.4 / (numPositionentries); // Max width for players
 
     if (numPositionentries % 2) {
         if (positionIndex === 0) return 0.5;
@@ -630,7 +630,7 @@ export const getPointForPosition = (position: PositionWeighting, positionIndex: 
 const getProximityPositions = (point: Point) => {
     const zonePositions: PositionWeightingAndIndex[] = [];
 
-    let copyWeights = structuredClone(defaultZoneWeights);
+    const copyWeights = structuredClone(defaultZoneWeights);
 
     for (const zoneKey in copyWeights) {
         const zone = zoneKey as keyof ZoneScores;
@@ -642,8 +642,8 @@ const getProximityPositions = (point: Point) => {
         });
     }
 
-    let centrals = filterByVerticalProximity(zonePositions.filter((zone) => zone.position.isCentral), point.y);
-    let wides = filterByVerticalProximity(zonePositions.filter((zone) => !zone.position.isCentral), point.y);
+    const centrals = filterByVerticalProximity(zonePositions.filter((zone) => zone.position.isCentral), point.y);
+    const wides = filterByVerticalProximity(zonePositions.filter((zone) => !zone.position.isCentral), point.y);
 
     const weights = [...centrals, ...wides].map(position => {
         return { ...position, weight: getProximityScore(point, position.position) };

@@ -5,7 +5,10 @@ import { Users, Wand2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import Panel from "@/components/dialogs/panel"
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
+import { ActionBarTwoColumn } from "@/components/ui/action-bar";
+import { cn } from "@/lib/utils";
+import { ANIMATIONS } from "@/lib/design-tokens";
 
 import {
     Card,
@@ -59,7 +62,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isCompact }) => {
     const canGenerate = selectedPlayers.length >= 10 && selectedPlayers.length <= 24;
 
     return (
-        <div className="flex-1 min-h-0 w-full h-full p-2">
+        <div className="flex-1 min-h-0 w-full h-full p-4">
             <div className="flex flex-col h-full">
                 <div className="flex-1 min-h-0 w-full">
                     <TeamGenerationTab
@@ -129,27 +132,36 @@ const TeamGenerationTab: React.FC<TeamGenerationTabProps> = ({ players, selected
         <div className=" h-full flex-1 min-h-0 flex flex-col">
             <div className="flex flex-col flex-1 min-h-0">
                 {/* Search and Toggle Controls */}
-                <div className="bg-accent h-[40px]">
-                    <div className="flex items-center gap-3 ">
-                        {/* Search Input */}
-                        <div className="flex flex-1 transition-all">
-                            <Input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search players..."
-                                className="flex-1 rounded w-full"
-                            />
-                        </div>
-
-                        {/* Select/Deselect All Button */}
-                        <Button variant="ghost"
-                            className={`flex-1 max-w-[100px] flex items-center justify-center  transition-all duration-200 ${selectedPlayers.length === playersArr.length ? "text-red-600" : ""} `}
-                            onClick={toggleAll}>
-                            <span>{selectedPlayers.length === playersArr.length ? "Deselect All" : "Select All"}</span>
+                <ActionBarTwoColumn
+                    left={
+                        <Input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Search players..."
+                            className="w-full max-w-sm"
+                        />
+                    }
+                    right={
+                        <Button 
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                                "w-32",
+                                selectedPlayers.length === playersArr.length 
+                                    ? "text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/30" 
+                                    : "hover:bg-accent hover:text-accent-foreground",
+                                ANIMATIONS.transition.normal
+                            )}
+                            onClick={toggleAll}
+                        >
+                            <Users size={16} />
+                            <span className="hidden sm:inline ml-2">
+                                {selectedPlayers.length === playersArr.length ? "Deselect All" : "Select All"}
+                            </span>
                         </Button>
-                    </div>
-                </div>
+                    }
+                />
 
                 {/* Selected count info with icon */}
 

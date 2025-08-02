@@ -135,3 +135,4 @@ bun.lock
 package-lock.json
 .wrangler/tmp/deploy-pGlm3I/worker.js
 .wrangler/tmp/deploy-pGlm3I/worker.js.map
+CLAUDE.md

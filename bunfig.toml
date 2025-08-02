@@ -1,0 +1,36 @@
+# Bun configuration for LineUps project
+# See: https://bun.sh/docs/cli/bunfig
+
+[install]
+# Prefer exact versions for reproducibility
+exact = true
+# Cache packages globally for faster installs
+cache = true
+# Save to registry for private packages if needed
+# registry = "https://registry.npmjs.org/"
+
+[install.scopes]
+# Add any scoped package configurations if needed
+
+[run]
+# Prefer bun for running scripts when possible
+prefer = "bun"
+# Set environment for running scripts
+env = "development"
+
+[test]
+# Test configuration (if you add tests later)
+# preload = ["./test/setup.ts"]
+
+[build]
+# Build optimizations
+minify = true
+sourcemap = "external"
+target = "browser"
+
+# Development server optimizations
+[dev]
+# Hot reload settings
+hot = true
+# Port preference
+port = 5173
