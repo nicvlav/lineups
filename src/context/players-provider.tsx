@@ -1,5 +1,7 @@
 import React, { ReactNode, createContext, useContext, useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/auth-context";
+import { useLocation } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4, } from 'uuid';
 
 import { openDB } from "idb";
@@ -62,7 +64,12 @@ interface PlayersProviderProps {
 }
 
 export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) => {
-    const { supabase, urlState, clearUrlState } = useAuth();
+    const { urlState, clearUrlState } = useAuth();
+    const location = useLocation();
+    
+    // Routes that should NOT have game state management
+    const isStaticRoute = location.pathname.startsWith('/auth') || 
+                         location.pathname === '/data-deletion';
 
     const [players, setPlayers] = useState<Record<string, Player>>({});
     const [gamePlayers, setGamePlayers] = useState<Record<string, ScoredGamePlayerWithThreat>>({});
@@ -178,6 +185,9 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
     // Real-time updates for players
     useEffect(() => {
+        // Skip game state management on static routes
+        if (isStaticRoute) return;
+        
         if (urlState) {
             loadURLState();
         } else {
@@ -267,8 +277,11 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
 
     useEffect(() => {
+        // Skip URL state management on static routes
+        if (isStaticRoute) return;
+        
         loadURLState();
-    }, [urlState]);
+    }, [urlState, isStaticRoute]);
 
     const fetchPlayers = async (): Promise<Record<string, Player>> => {
         if (!supabase) return {};
@@ -288,7 +301,15 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         const playerRecord: Record<string, Player> = {};
         (data || []).forEach(player => {
-            playerRecord[player.id] = player;
+            // Use community-voted stats if available, otherwise fall back to original stats
+            const effectiveStats = player.vote_count > 0 && player.aggregated_stats 
+                ? calculateCommunityStats(player.aggregated_stats, player.vote_count)
+                : player.stats;
+
+            playerRecord[player.id] = {
+                ...player,
+                stats: effectiveStats
+            };
         });
 
         setPlayers(playerRecord); // still set state for global use
@@ -297,12 +318,30 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         return playerRecord; // return immediately for local use
     };
 
+    // Convert aggregated vote totals back to 0-100 stat scores
+    const calculateCommunityStats = (aggregatedStats: any, voteCount: number): PlayerStats => {
+        const communityStats = { ...defaultStatScores };
+        
+        for (const [statKey, totalVotes] of Object.entries(aggregatedStats)) {
+            if (typeof totalVotes === 'number' && voteCount > 0) {
+                // Convert from sum of 0-10 votes back to 0-100 scale
+                const averageVote = totalVotes / voteCount; // 0-10 average
+                communityStats[statKey as keyof PlayerStats] = Math.round(averageVote * 10); // Convert to 0-100
+            }
+        }
+        
+        return communityStats;
+    };
+
     useEffect(() => {
+        // Skip auto-save on static routes
+        if (isStaticRoute) return;
+        
         if (!loadingState.current) {
             // console.log("Saving state from change:", gamePlayers);
             saveState(gamePlayers);
         }
-    }, [gamePlayers]);
+    }, [gamePlayers, isStaticRoute]);
 
     const saveState = async (gamePlayersToSave: Record<string, ScoredGamePlayerWithThreat>) => {
         const stateObject = { gamePlayers: gamePlayersToSave };

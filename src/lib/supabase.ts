@@ -1,21 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-let supabase: ReturnType<typeof createClient> | null = null;
+const supabaseUrl = "https://flgjxepsxnqkdlfiwded.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsZ2p4ZXBzeG5xa2RsZml3ZGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4Njc3OTIsImV4cCI6MjA1ODQ0Mzc5Mn0.mXcK4aWDuTBlm2TEITMeZEjXIVyFQhf28xjrYO2sMUw";
 
-interface SupabaseConfig {
-    supabaseUrl: string;
-    supabaseAnonKey: string;
-}
-export const getSupabaseClient = async () => {
-    if (!supabase) {
-        if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
-            supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
-        } else {
-            const res = await fetch("https://lineups.nicolasvlavianos.workers.dev/api");
-            const { supabaseUrl, supabaseAnonKey } = await res.json() as SupabaseConfig;
-
-            supabase = createClient(supabaseUrl, supabaseAnonKey);
-        }
-    }
-    return supabase;
-};
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

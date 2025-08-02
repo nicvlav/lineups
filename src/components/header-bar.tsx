@@ -1,8 +1,10 @@
 import { ModeToggle } from "@/components/mode-toggle"
-import { Users, Home, Wand2, BookDashed, type LucideIcon } from "lucide-react";
+import { Users, Home, Wand2, BookDashed, Vote, LogIn, LogOut, type LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LAYOUT, GAP, ANIMATIONS } from "@/lib/design-tokens";
+import { useAuth } from "@/context/auth-context";
+import { Button } from "@/components/ui/button";
 
 interface HeaderBarProps {
     compact: boolean;
@@ -16,7 +18,12 @@ interface TabIconProps {
 }
 
 const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
+    const { user, signOut } = useAuth();
     const iconSize = compact ? 16 : 20;
+
+    const handleSignOut = async () => {
+        await signOut();
+    };
 
     const TabIcon = ({ icon: Icon, to, label }: TabIconProps) => (
         <NavLink
@@ -84,14 +91,39 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
                         )}
                         <TabIcon icon={BookDashed} to="/cards" label="Cards" />
                         <TabIcon icon={Wand2} to="/generate" label="Generate Teams" />
+                        <TabIcon icon={Vote} to="/vote" label="Vote" />
                     </nav>
                 </div>
 
                 {/* Actions - Far right edge */}
                 <div className={cn(
+                    "flex items-center gap-2",
                     "bg-gradient-to-l from-muted/40 to-muted/20 rounded-xl",
                     compact ? "p-1.5" : "p-2"
                 )}>
+                    {user ? (
+                        <Button
+                            variant="ghost"
+                            size={compact ? "sm" : "default"}
+                            onClick={handleSignOut}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            <LogOut className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
+                            {!compact && "Sign Out"}
+                        </Button>
+                    ) : (
+                        <Button
+                            asChild
+                            variant="ghost"
+                            size={compact ? "sm" : "default"}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            <NavLink to="/auth/sign-in">
+                                <LogIn className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
+                                {!compact && "Sign In"}
+                            </NavLink>
+                        </Button>
+                    )}
                     <ModeToggle />
                 </div>
             </div>

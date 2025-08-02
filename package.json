@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "bun --bun vite",
     "build": "bun run typecheck && bun --bun vite build",
+    "build:node": "npm run typecheck:node && npx vite build",
     "typecheck": "bun tsc -b --noEmit",
+    "typecheck:node": "npx tsc -b --noEmit",
     "lint": "bun eslint .",
     "lint:fix": "bun eslint . --fix",
     "preview": "bun --bun vite preview",
@@ -17,6 +19,7 @@
     "install:clean": "bun run clean && bun install"
   },
   "dependencies": {
+    "@cloudflare/kv-asset-handler": "0.4.0",
     "@cloudflare/workers-types": "^4.20250412.0",
     "@radix-ui/react-alert-dialog": "^1.1.7",
     "@radix-ui/react-context-menu": "^2.2.7",

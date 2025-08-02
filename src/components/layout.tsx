@@ -6,17 +6,28 @@ import { isMobile } from 'react-device-detect'; // Use this to detect touch devi
 import { useAuth } from "@/context/auth-context";
 import { PlayersProvider } from "@/context/players-provider";
 import HeaderBar from "@/components/header-bar";
+import { useLocation } from 'react-router-dom';
 
 import Game from "@/components/game";
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PlayerCards from "@/components/dialogs/player-cards";
 import PlayerTable from "@/components/dialogs/player-table";
 import TeamGenerator from "@/components/dialogs/team-generator";
-// import SignInPage from "@/components/signin/sign-in";
+import VotingPage from "@/components/voting-page";
+import SignInPage from "@/components/auth/sign-in";
+import SignUpPage from "@/components/auth/sign-up";
+import ResetPasswordPage from "@/components/auth/reset-password";
+import UpdatePasswordPage from "@/components/auth/update-password";
+import AuthDebugPage from "@/components/auth/debug";
+import AuthCallbackPage from "@/components/auth/callback";
+import DataDeletionPage from "@/components/data-deletion";
 
-const Layout = () => {
-    // const { canEdit, user } = useAuth();
+const LayoutContent = () => {
     const { canEdit } = useAuth();
+    const location = useLocation();
+
+    // Check if current route is an auth route
+    const isAuthRoute = location.pathname.startsWith('/auth');
 
     const useWindowSize = () => {
         const [windowSize, setWindowSize] = useState({
@@ -57,31 +68,52 @@ const Layout = () => {
         : {}; // No extra options for desktop
 
     return (
+        <PlayersProvider>
+            <DndProvider backend={backend} options={options}>
+                {/* Conditionally show header - not on auth routes */}
+                {!isAuthRoute && (
+                    <div className="sticky top-0 z-50">
+                        <HeaderBar compact={isCompact} canEdit={canEdit} />
+                    </div>
+                )}
+
+                {/* Main content area */}
+                <main className="flex-1 overflow-auto">
+                    <Routes>
+                        {/* Auth routes - accessible to all */}
+                        <Route path="auth/sign-in" element={<SignInPage />} />
+                        <Route path="auth/sign-up" element={<SignUpPage />} />
+                        <Route path="auth/reset-password" element={<ResetPasswordPage />} />
+                        <Route path="auth/update-password" element={<UpdatePasswordPage />} />
+                        <Route path="auth/callback" element={<AuthCallbackPage />} />
+                        <Route path="auth/debug" element={<AuthDebugPage />} />
+                        <Route path="data-deletion" element={<DataDeletionPage />} />
+                        
+                        {/* App routes */}
+                        <Route index element={<Game isCompact={isCompact} playerSize={(isCompact ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 16} />} />
+                        {canEdit && <Route path="players" element={<PlayerTable isCompact={isCompact} />} />}
+                        {!canEdit && <Route path="players" element={<Navigate to="/" />} />}
+                        <Route path="cards" element={<PlayerCards />} />
+                        <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
+                        <Route path="vote" element={<VotingPage />} />
+                        
+                        {/* Catch all - redirect to home */}
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                </main>
+            </DndProvider>
+        </PlayersProvider>
+    );
+};
+
+const Layout = () => {
+    return (
         <div className="h-full flex flex-col">
             <BrowserRouter>
-                <PlayersProvider>
-                    <DndProvider backend={backend} options={options}>
-                        <div className="sticky top-0 z-50">
-                            <HeaderBar compact={isCompact} canEdit={canEdit} />
-                        </div>
-
-                        {/* Main content area */}
-                        <main className="flex-1 overflow-auto">
-                            <Routes>
-                                <Route index element={<Game isCompact={isCompact} playerSize={(isCompact ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 16} />} />
-                                {canEdit && <Route path="players" element={<PlayerTable isCompact={isCompact} />} />}
-                                {!canEdit && <Route path="players" element={<Navigate to="/" />} />}
-                                <Route path="cards" element={<PlayerCards />} />
-                                <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
-                                {/* {!user && <Route path="signin" element={<SignInPage />} />}
-                                {user && <Route path="signin" element={<Navigate to="/" />} />} */}
-                            </Routes>
-                        </main>
-                    </DndProvider>
-                </PlayersProvider>
+                <LayoutContent />
             </BrowserRouter>
         </div>
-    )
-}
+    );
+};
 
 export default Layout;

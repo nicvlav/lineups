@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { useAuth } from "@/context/auth-context"; 
+import { supabase } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 
 const ResetPasswordPage = () => {
-  const { supabase } = useAuth();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -15,7 +14,6 @@ const ResetPasswordPage = () => {
     setLoading(true);
     setError(null);
     try {
-      if (!supabase)   throw new Error("Supabase not connected!")
       const { error } = await supabase.auth.resetPasswordForEmail(email);
       if (error) {
         setError("Failed to send password reset email.");

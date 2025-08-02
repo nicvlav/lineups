@@ -130,9 +130,16 @@ dist
 .pnp.*
 /backend/__pycache__
 bun.lock
-.wrangler/tmp/deploy-uyBQwG/index.js.map
-.wrangler/tmp/deploy-uyBQwG/index.js
 package-lock.json
-.wrangler/tmp/deploy-pGlm3I/worker.js
-.wrangler/tmp/deploy-pGlm3I/worker.js.map
+
+# Wrangler (Cloudflare Workers)
+.wrangler/
+src/worker.ts.backup
+
+# Build output
+dist/
+
+# Claude Code files
 CLAUDE.md
+supabase-migration.sql
+.claude/
