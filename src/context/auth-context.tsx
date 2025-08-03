@@ -2,11 +2,29 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/lib/supabase";
 import { User, Session, AuthError } from "@supabase/supabase-js";
 
+interface Squad {
+    id: string;
+    name: string;
+    description: string | null;
+    created_at: string;
+}
+
+interface UserProfile {
+    id: string;
+    user_id: string;
+    squad_id: string | null;
+    associated_player_id: string | null;
+    is_verified: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
 interface AuthUser {
     id: string;
     email: string | null;
     user_metadata?: Record<string, any>;
     app_metadata?: Record<string, any>;
+    profile?: UserProfile;
 }
 
 interface AuthContextProps {
@@ -14,6 +32,9 @@ interface AuthContextProps {
     session: Session | null;
     urlState: string | null;
     canEdit: boolean;
+    canVote: boolean;
+    isVerified: boolean;
+    needsVerification: boolean;
     loading: boolean;
     // Email auth methods
     signUpWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>;
@@ -26,6 +47,10 @@ interface AuthContextProps {
     // Session management
     signOut: () => Promise<{ error: AuthError | null }>;
     clearUrlState: () => void;
+    // Profile management
+    updateAssociatedPlayer: (playerId: string | null) => Promise<{ error: AuthError | null }>;
+    verifySquadAndPlayer: (squadId: string, playerId: string | null, createNew?: boolean, newPlayerName?: string) => Promise<{ error: AuthError | null }>;
+    getAvailableSquads: () => Promise<Squad[]>;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -39,6 +64,9 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [canEdit, setCanEdit] = useState(false);
+    const [canVote, setCanVote] = useState(false);
+    const [isVerified, setIsVerified] = useState(false);
+    const [needsVerification, setNeedsVerification] = useState(false);
     const [urlState, setUrlState] = useState<string | null>(url);
     const [loading, setLoading] = useState(true);
 
@@ -53,9 +81,13 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                 
                 if (error) {
                     console.error('Error getting session:', error);
+                } else if (mounted && session?.user) {
+                    setSession(session);
+                    const authUser = await transformUser(session.user);
+                    setUser(authUser);
                 } else if (mounted) {
                     setSession(session);
-                    setUser(session?.user ? transformUser(session.user) : null);
+                    setUser(null);
                 }
             } catch (error) {
                 console.error('Failed to get initial session:', error);
@@ -75,7 +107,12 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                 
                 if (mounted) {
                     setSession(session);
-                    setUser(session?.user ? transformUser(session.user) : null);
+                    if (session?.user) {
+                        const authUser = await transformUser(session.user);
+                        setUser(authUser);
+                    } else {
+                        setUser(null);
+                    }
                     
                     // Handle different auth events
                     if (event === 'SIGNED_OUT') {
@@ -91,25 +128,50 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         };
     }, []);
 
-    // Check edit permissions when user changes
+    // Check permissions when user changes
     useEffect(() => {
         if (!user || loading) {
             setCanEdit(false);
+            setCanVote(false);
+            setIsVerified(false);
+            setNeedsVerification(false);
             return;
         }
 
-        // For now, give all authenticated users edit access
-        // TODO: Implement proper permission system later
+        const profile = user.profile;
+        
+        // Check if user is verified (has squad and player association)
+        const verified = !!(profile?.is_verified && profile?.squad_id && profile?.associated_player_id);
+        setIsVerified(verified);
+        
+        // Check if user needs verification (signed in but not verified)
+        const needsVerif = !verified;
+        setNeedsVerification(needsVerif);
+        
+        // Can edit: all authenticated users
         setCanEdit(true);
+        
+        // Can vote: only verified squad members with player association
+        setCanVote(verified);
     }, [user, loading]);
 
     // Transform Supabase User to our AuthUser type
-    const transformUser = (user: User): AuthUser => ({
-        id: user.id,
-        email: user.email || null,
-        user_metadata: user.user_metadata,
-        app_metadata: user.app_metadata,
-    });
+    const transformUser = async (user: User): Promise<AuthUser> => {
+        // Load user profile with associated player
+        const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+
+        return {
+            id: user.id,
+            email: user.email || null,
+            user_metadata: user.user_metadata,
+            app_metadata: user.app_metadata,
+            profile: profile || undefined,
+        };
+    };
 
     // Auth methods
     const signUpWithEmail = async (email: string, password: string) => {
@@ -221,6 +283,127 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         setUrlState(null);
     };
 
+    const updateAssociatedPlayer = async (playerId: string | null) => {
+        if (!user) {
+            return { error: { message: 'User not authenticated' } as AuthError };
+        }
+
+        try {
+            const { error } = await supabase
+                .from('user_profiles')
+                .upsert({
+                    user_id: user.id,
+                    associated_player_id: playerId,
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id'
+                });
+
+            if (error) throw error;
+
+            // Update local user state
+            setUser(prev => prev ? {
+                ...prev,
+                profile: {
+                    ...prev.profile!,
+                    associated_player_id: playerId,
+                    updated_at: new Date().toISOString()
+                }
+            } : null);
+
+            return { error: null };
+        } catch (error) {
+            return { error: error as AuthError };
+        }
+    };
+
+    const getAvailableSquads = async (): Promise<Squad[]> => {
+        try {
+            const { data, error } = await supabase
+                .from('squads')
+                .select('*')
+                .order('name');
+
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Error fetching squads:', error);
+            return [];
+        }
+    };
+
+    const verifySquadAndPlayer = async (
+        squadId: string, 
+        playerId: string | null, 
+        createNew: boolean = false, 
+        newPlayerName?: string
+    ) => {
+        if (!user) {
+            return { error: { message: 'User not authenticated' } as AuthError };
+        }
+
+        try {
+            let finalPlayerId = playerId;
+
+            // If creating a new player, create it first
+            if (createNew && newPlayerName) {
+                const { data: newPlayer, error: playerError } = await supabase
+                    .from('players')
+                    .insert({
+                        name: newPlayerName.trim(),
+                        stats: {
+                            // Default stats for new player
+                            pace: 50, shooting: 50, passing: 50, dribbling: 50,
+                            defending: 50, physical: 50, finishing: 50, crossing: 50,
+                            free_kicks: 50, penalties: 50, technique: 50, aggression: 50,
+                            interceptions: 50, positioning: 50, vision: 50, composure: 50,
+                            ball_control: 50, reactions: 50
+                        }
+                    })
+                    .select()
+                    .single();
+
+                if (playerError) throw playerError;
+                finalPlayerId = newPlayer.id;
+            }
+
+            if (!finalPlayerId) {
+                return { error: { message: 'Player ID is required' } as AuthError };
+            }
+
+            // Update user profile with squad verification and player association
+            const { error } = await supabase
+                .from('user_profiles')
+                .upsert({
+                    user_id: user.id,
+                    squad_id: squadId,
+                    associated_player_id: finalPlayerId,
+                    is_verified: true,
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id'
+                });
+
+            if (error) throw error;
+
+            // Update local user state
+            setUser(prev => prev ? {
+                ...prev,
+                profile: {
+                    ...prev.profile!,
+                    squad_id: squadId,
+                    associated_player_id: finalPlayerId,
+                    is_verified: true,
+                    updated_at: new Date().toISOString()
+                }
+            } : null);
+
+            return { error: null };
+        } catch (error) {
+            return { error: error as AuthError };
+        }
+    };
+
     // Show loading screen while initializing
     if (loading) {
         return (
@@ -239,6 +422,9 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             session,
             urlState,
             canEdit,
+            canVote,
+            isVerified,
+            needsVerification,
             loading,
             signUpWithEmail,
             signInWithEmail,
@@ -246,7 +432,10 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             resetPassword,
             updatePassword,
             signOut,
-            clearUrlState
+            clearUrlState,
+            updateAssociatedPlayer,
+            verifySquadAndPlayer,
+            getAvailableSquads
         }}>
             {children}
         </AuthContext.Provider>

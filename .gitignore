@@ -143,3 +143,4 @@ dist/
 CLAUDE.md
 supabase-migration.sql
 .claude/
+squad-verification-migration.sql

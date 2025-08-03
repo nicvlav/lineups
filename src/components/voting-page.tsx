@@ -15,7 +15,7 @@ interface VoteData {
 }
 
 export default function VotingPage() {
-  const { user } = useAuth();
+  const { user, canVote, isVerified } = useAuth();
   const { players: playersRecord } = usePlayers();
   const players = Object.values(playersRecord);
   const [showVoting, setShowVoting] = useState(false);
@@ -136,9 +136,45 @@ export default function VotingPage() {
     );
   }
 
-  const unvotedPlayers = players.filter(player => !userVotes.has(player.id));
-  const votedPlayers = players.filter(player => userVotes.has(player.id));
-  const progressPercent = (votedPlayers.length / players.length) * 100;
+  if (!canVote || !isVerified) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <Vote className="h-12 w-12 mx-auto text-muted-foreground" />
+            <CardTitle>Squad Verification Required</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-muted-foreground mb-4">
+              You need to complete squad verification and player association to access voting features.
+            </p>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>• Join an authorized squad</p>
+              <p>• Associate with a player profile</p>
+              <p>• Complete verification process</p>
+            </div>
+            <Button className="mt-4" onClick={() => window.location.href = '/'}>
+              Complete Verification
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Filter out user's associated player from voting options
+  const eligiblePlayers = players.filter(player => {
+    const isAssociatedPlayer = user?.profile?.associated_player_id === player.id;
+    return !isAssociatedPlayer;
+  });
+  
+  const unvotedPlayers = eligiblePlayers.filter(player => !userVotes.has(player.id));
+  const votedPlayers = eligiblePlayers.filter(player => userVotes.has(player.id));
+  const progressPercent = eligiblePlayers.length > 0 ? (votedPlayers.length / eligiblePlayers.length) * 100 : 0;
+  
+  const associatedPlayer = user?.profile?.associated_player_id 
+    ? players.find(p => p.id === user.profile?.associated_player_id)
+    : null;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -158,11 +194,16 @@ export default function VotingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {votedPlayers.length}/{players.length}
+              {votedPlayers.length}/{eligiblePlayers.length}
             </div>
             <p className="text-xs text-muted-foreground">
               {progressPercent.toFixed(0)}% completed
             </p>
+            {associatedPlayer && (
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                Excluding {associatedPlayer.name} (your profile)
+              </p>
+            )}
           </CardContent>
         </Card>
 

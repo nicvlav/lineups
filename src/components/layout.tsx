@@ -6,6 +6,7 @@ import { isMobile } from 'react-device-detect'; // Use this to detect touch devi
 import { useAuth } from "@/context/auth-context";
 import { PlayersProvider } from "@/context/players-provider";
 import HeaderBar from "@/components/header-bar";
+import { SquadVerification } from "@/components/dialogs/squad-verification";
 import { useLocation } from 'react-router-dom';
 
 import Game from "@/components/game";
@@ -23,7 +24,7 @@ import AuthCallbackPage from "@/components/auth/callback";
 import DataDeletionPage from "@/components/data-deletion";
 
 const LayoutContent = () => {
-    const { canEdit } = useAuth();
+    const { canEdit, needsVerification, user } = useAuth();
     const location = useLocation();
 
     // Check if current route is an auth route
@@ -101,6 +102,15 @@ const LayoutContent = () => {
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </main>
+
+                {/* Squad verification dialog for users who need it */}
+                {user && needsVerification && !isAuthRoute && (
+                    <SquadVerification
+                        open={true}
+                        onClose={() => {}}
+                        mandatory={true}
+                    />
+                )}
             </DndProvider>
         </PlayersProvider>
     );

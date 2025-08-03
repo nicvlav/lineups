@@ -1,10 +1,12 @@
 import { ModeToggle } from "@/components/mode-toggle"
-import { Users, Home, Wand2, BookDashed, Vote, LogIn, LogOut, type LucideIcon } from "lucide-react";
+import { Users, Home, Wand2, BookDashed, Vote, LogIn, LogOut, User, type LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LAYOUT, GAP, ANIMATIONS } from "@/lib/design-tokens";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
+import { PlayerAssociation } from "@/components/dialogs/player-association";
+import { useState } from "react";
 
 interface HeaderBarProps {
     compact: boolean;
@@ -19,6 +21,7 @@ interface TabIconProps {
 
 const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
     const { user, signOut } = useAuth();
+    const [showPlayerAssociation, setShowPlayerAssociation] = useState(false);
     const iconSize = compact ? 16 : 20;
 
     const handleSignOut = async () => {
@@ -58,76 +61,102 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
     );
 
     return (
-        <header className="w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b-2 border-border">
-            <div className={cn(
-                "flex items-center w-full",
-                LAYOUT.header.height, // h-16
-                compact ? "px-4" : "px-4"
-            )}>
-                {/* Brand/Logo - Far left edge */}
-                <h1 className={cn(
-                    "font-bold text-foreground select-none tracking-tight",
-                    "bg-gradient-to-r from-muted/40 to-muted/20 rounded-xl",
-                    compact ? "text-lg px-3 py-1.5" : "text-xl px-4 py-2"
-                )}>
-                    LM
-                </h1>
-
-                {/* Navigation - Absolute center of screen */}
-                <div className="flex-1 flex justify-center">
-                    <nav 
-                        className={cn(
-                            "flex items-center justify-center",
-                            "bg-muted/10 rounded-2xl p-1",
-                            "backdrop-blur-sm",
-                            GAP.xs
-                        )} // gap-1
-                        role="navigation" 
-                        aria-label="Main navigation"
-                    >
-                        <TabIcon icon={Home} to="/" label="Home" />
-                        {canEdit && (
-                            <TabIcon icon={Users} to="/players" label="Players" />
-                        )}
-                        <TabIcon icon={BookDashed} to="/cards" label="Cards" />
-                        <TabIcon icon={Wand2} to="/generate" label="Generate Teams" />
-                        <TabIcon icon={Vote} to="/vote" label="Vote" />
-                    </nav>
-                </div>
-
-                {/* Actions - Far right edge */}
+        <>
+            <header className="w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b-2 border-border">
                 <div className={cn(
-                    "flex items-center gap-2",
-                    "bg-gradient-to-l from-muted/40 to-muted/20 rounded-xl",
-                    compact ? "p-1.5" : "p-2"
+                    "grid grid-cols-3 items-center w-full",
+                    "sm:grid-cols-3 grid-cols-[auto_1fr_auto]", // On mobile: auto-sized sides, flexible center
+                    LAYOUT.header.height, // h-16
+                    compact ? "px-4" : "px-4"
                 )}>
-                    {user ? (
-                        <Button
-                            variant="ghost"
-                            size={compact ? "sm" : "default"}
-                            onClick={handleSignOut}
-                            className="text-muted-foreground hover:text-foreground"
+                    {/* Brand/Logo - Left column */}
+                    <div className="flex justify-start">
+                        <h1 className={cn(
+                            "font-bold text-foreground select-none tracking-tight",
+                            "bg-gradient-to-r from-muted/40 to-muted/20 rounded-xl",
+                            compact ? "text-lg px-3 py-1.5" : "text-xl px-4 py-2"
+                        )}>
+                            LM
+                        </h1>
+                    </div>
+
+                    {/* Navigation - Center column (always centered) */}
+                    <div className="flex justify-center">
+                        <nav 
+                            className={cn(
+                                "flex items-center justify-center",
+                                "bg-muted/10 rounded-2xl p-1",
+                                "backdrop-blur-sm",
+                                GAP.xs
+                            )} // gap-1
+                            role="navigation" 
+                            aria-label="Main navigation"
                         >
-                            <LogOut className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
-                            {!compact && "Sign Out"}
-                        </Button>
-                    ) : (
-                        <Button
-                            asChild
-                            variant="ghost"
-                            size={compact ? "sm" : "default"}
-                            className="text-muted-foreground hover:text-foreground"
-                        >
-                            <NavLink to="/auth/sign-in">
-                                <LogIn className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
-                                {!compact && "Sign In"}
-                            </NavLink>
-                        </Button>
-                    )}
-                    <ModeToggle />
+                            <TabIcon icon={Home} to="/" label="Home" />
+                            {canEdit && (
+                                <TabIcon icon={Users} to="/players" label="Players" />
+                            )}
+                            <TabIcon icon={BookDashed} to="/cards" label="Cards" />
+                            <TabIcon icon={Wand2} to="/generate" label="Generate Teams" />
+                            <TabIcon icon={Vote} to="/vote" label="Vote" />
+                        </nav>
+                    </div>
+
+                    {/* Actions - Right column */}
+                    <div className="flex justify-end">
+                        <div className={cn(
+                            "flex items-center gap-2",
+                            "bg-gradient-to-l from-muted/40 to-muted/20 rounded-xl",
+                            compact ? "p-1.5" : "p-2"
+                        )}>
+                            {user ? (
+                                <>
+                                    <Button
+                                        variant="ghost"
+                                        size={compact ? "sm" : "default"}
+                                        onClick={() => setShowPlayerAssociation(true)}
+                                        className="text-muted-foreground hover:text-foreground"
+                                        title="Associate with player profile"
+                                    >
+                                        <User className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
+                                        {!compact && "Profile"}
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size={compact ? "sm" : "default"}
+                                        onClick={handleSignOut}
+                                        className="text-muted-foreground hover:text-foreground"
+                                    >
+                                        <LogOut className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
+                                        {!compact && "Sign Out"}
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button
+                                    asChild
+                                    variant="ghost"
+                                    size={compact ? "sm" : "default"}
+                                    className="text-muted-foreground hover:text-foreground"
+                                >
+                                    <NavLink to="/auth/sign-in">
+                                        <LogIn className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
+                                        {!compact && "Sign In"}
+                                    </NavLink>
+                                </Button>
+                            )}
+                            <ModeToggle />
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </header>
+            </header>
+            
+            {showPlayerAssociation && (
+                <PlayerAssociation
+                    open={showPlayerAssociation}
+                    onClose={() => setShowPlayerAssociation(false)}
+                />
+            )}
+        </>
     );
 };
 

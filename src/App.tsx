@@ -3,6 +3,7 @@ import { AuthProvider } from "@/context/auth-context";
 import { ThemeProvider } from "@/context/theme-provider"
 import { useEffect } from "react";
 import Layout from "@/components/layout.js";
+import { Toaster } from "sonner";
 
 const App = () => {
   const currentUrl = new URL(window.location.href);
@@ -24,6 +25,7 @@ const App = () => {
       <AuthProvider url={urlState}>
         <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
           <Layout />
+          <Toaster />
         </ThemeProvider>
       </AuthProvider>
 
