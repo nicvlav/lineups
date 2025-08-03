@@ -6,6 +6,7 @@ export interface Player {
     id: string;
     name: string;
     stats: PlayerStats;
+    avatar_url?: string; // OAuth profile picture URL
 }
 
 export type PlayerUpdate = Partial<Player>;

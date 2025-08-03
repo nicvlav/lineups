@@ -54,7 +54,6 @@ const CompactPlayerTable: React.FC<CompactPlayerTableProps> = ({ players, addPla
                 case StatCategoryNameMap["morale"]:
                 return CategorizedStats.morale;
             default:
-            case StatCategoryNameMap["attacking"]:
                 return CategorizedStats.attacking;
         }
     };

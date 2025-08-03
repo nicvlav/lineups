@@ -60,7 +60,7 @@ export function SquadVerification({ open, onClose, mandatory = false }: SquadVer
 
       toast.success("Squad verified! Now select your player profile.");
       setStep("player");
-    } catch (error) {
+    } catch {
       toast.error("Failed to validate squad");
     } finally {
       setLoading(false);
@@ -98,7 +98,7 @@ export function SquadVerification({ open, onClose, mandatory = false }: SquadVer
         toast.success("Successfully verified! You can now access voting features.");
         onClose();
       }
-    } catch (error) {
+    } catch {
       toast.error("An unexpected error occurred");
     } finally {
       setLoading(false);

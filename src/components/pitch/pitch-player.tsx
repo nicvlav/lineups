@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useDrag } from "react-dnd";
 import { User } from "lucide-react";
 import { ScoredGamePlayerWithThreat, getThreatColor } from "@/data/player-types";
+import { usePlayers } from "@/context/players-provider";
 // import Panel from "@/components/dialogs/panel"
 import PlayerDialog from "@/components/dialogs/player-dialog";
 
@@ -33,6 +34,10 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
   onPositionChange,
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { players } = usePlayers();
+  
+  // Get the full Player data (with avatar_url) from the players record
+  const fullPlayer = player.id ? players[player.id] : null;
 
   const getRelativePosition = (x: number, y: number) => ({
     x: Math.max(0, Math.min(1, x / containerWidth)),
@@ -112,17 +117,32 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 
 
         <div
-          className={`z-200 rounded-full border-3 shadow-md flex items-center justify-center bg-muted`}
+          className={`z-200 rounded-full border-3 shadow-md flex items-center justify-center bg-muted overflow-hidden`}
           style={{
             width: `${circleSize}px`,
             height: `${circleSize}px`,
             borderColor: getThreatColor(player.threatScore),
-            // backgroundColor:" #4c7df0",
             fontSize: `${Math.max(circleSize * 0.4, 14)}px`,
           }}
         >
           <HoverCardTrigger>
-            <User size={iconSize} />
+            {fullPlayer?.avatar_url ? (
+              <img 
+                src={fullPlayer.avatar_url} 
+                alt={name}
+                className="w-full h-full object-cover rounded-full"
+                onError={(e) => {
+                  // Fallback to User icon if image fails to load
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+            ) : (
+              <User size={iconSize} />
+            )}
+            {fullPlayer?.avatar_url && (
+              <User size={iconSize} className="hidden" />
+            )}
           </HoverCardTrigger>
         </div>
       </div>

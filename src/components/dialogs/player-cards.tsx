@@ -96,7 +96,7 @@ const PlayerCards = () => {
                 <Panel >
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                         {withScores.map((item) => (
-                            <PlayerCard key={item.player.id} playerName={item.player.name}
+                            <PlayerCard key={item.player.id} player={item.player} playerName={item.player.name}
                                 stats={item.player.stats} overall={item.overall}
                                 zoneFit={item.zoneFit} top3Positions={item.topPositions}
                                 averages={item.averages} />

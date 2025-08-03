@@ -2,12 +2,13 @@
 
 import React, { useState } from "react";
 import { StatCategory, StatsKey, statLabelMap, CategorizedStats } from "@/data/stat-types";
-import { ZoneAverages } from "@/data/player-types";
+import { ZoneAverages, Player } from "@/data/player-types";
 import { ZoneScores } from "@/data/position-types";
 import { PositionScoreList } from "@/components/dialogs/position-score-list";
 import Modal from "@/components/dialogs/modal";
 
 interface PlayerCardProps {
+    player: Player; // Full player object for avatar access
     playerName: string;
     overall: number;
     zoneFit: ZoneScores
@@ -17,6 +18,7 @@ interface PlayerCardProps {
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({
+    player,
     playerName,
     overall,
     zoneFit,
@@ -63,9 +65,35 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 onDoubleClick={handleOpenDialog}
             >
                 <div className="flex items-center w-full gap-2">
-                    {/* Badge */}
-                    <div className="bg-black text-white font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
-                        {overallRounded}
+                    {/* Avatar or Badge */}
+                    <div className="relative w-10 h-10 flex-shrink-0">
+                        {player.avatar_url ? (
+                            <>
+                                <img 
+                                    src={player.avatar_url} 
+                                    alt={playerName}
+                                    className="w-full h-full object-cover rounded-full shadow-lg"
+                                    onError={(e) => {
+                                        // Fallback to badge if image fails to load
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                    }}
+                                />
+                                <div className="hidden bg-black text-white font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
+                                    {overallRounded}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="bg-black text-white font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
+                                {overallRounded}
+                            </div>
+                        )}
+                        {/* Overall score overlay when avatar is present */}
+                        {player.avatar_url && (
+                            <div className="absolute -bottom-1 -right-1 bg-black text-white font-bold text-xs rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
+                                {overallRounded}
+                            </div>
+                        )}
                     </div>
 
                     {/* Name + Positions */}
