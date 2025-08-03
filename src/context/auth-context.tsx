@@ -46,6 +46,7 @@ interface AuthContextProps {
     updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
     // Session management
     signOut: () => Promise<{ error: AuthError | null }>;
+    forceSignOut: () => Promise<void>;
     clearUrlState: () => void;
     // Profile management
     updateAssociatedPlayer: (playerId: string | null) => Promise<{ error: AuthError | null }>;
@@ -84,7 +85,13 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                 } else if (mounted && session?.user) {
                     setSession(session);
                     const authUser = await transformUser(session.user);
-                    setUser(authUser);
+                    if (authUser === null) {
+                        // User was force signed out due to validation failure
+                        setSession(null);
+                        setUser(null);
+                    } else {
+                        setUser(authUser);
+                    }
                 } else if (mounted) {
                     setSession(session);
                     setUser(null);
@@ -120,23 +127,25 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                     if (session?.user) {
                         try {
                             const authUser = await transformUser(session.user);
-                            console.log('✅ User profile loaded:', {
-                                hasProfile: !!authUser.profile,
-                                isVerified: authUser.profile?.is_verified,
-                                squadId: authUser.profile?.squad_id,
-                                playerId: authUser.profile?.associated_player_id
-                            });
-                            setUser(authUser);
+                            if (authUser === null) {
+                                // User was force signed out due to validation failure
+                                console.log('🚨 User session invalidated - forcing sign out');
+                                setSession(null);
+                                setUser(null);
+                            } else {
+                                console.log('✅ User profile loaded:', {
+                                    hasProfile: !!authUser.profile,
+                                    isVerified: authUser.profile?.is_verified,
+                                    squadId: authUser.profile?.squad_id,
+                                    playerId: authUser.profile?.associated_player_id
+                                });
+                                setUser(authUser);
+                            }
                         } catch (error) {
                             console.error('❌ Failed to transform user:', error);
-                            // Still set user even if profile loading fails
-                            setUser({
-                                id: session.user.id,
-                                email: session.user.email || null,
-                                user_metadata: session.user.user_metadata,
-                                app_metadata: session.user.app_metadata,
-                                profile: undefined,
-                            });
+                            // Force sign out on any error
+                            setSession(null);
+                            setUser(null);
                         }
                     } else {
                         setUser(null);
@@ -187,8 +196,18 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
     }, [user, loading]);
 
     // Transform Supabase User to our AuthUser type
-    const transformUser = async (user: User): Promise<AuthUser> => {
+    const transformUser = async (user: User): Promise<AuthUser | null> => {
         try {
+            // First, verify the user actually exists in Supabase auth
+            const { data: currentUser, error: userError } = await supabase.auth.getUser();
+            
+            if (userError || !currentUser.user || currentUser.user.id !== user.id) {
+                console.warn('🚨 User session is stale - user no longer exists in auth');
+                // Force sign out if user doesn't exist
+                await supabase.auth.signOut();
+                return null;
+            }
+
             // Load user profile with associated player
             const { data: profile, error } = await supabase
                 .from('user_profiles')
@@ -199,22 +218,42 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             // If profile doesn't exist, try to create it
             if (error && error.code === 'PGRST116') {
                 console.log('Creating missing user profile for:', user.id);
-                const { data: newProfile } = await supabase
-                    .from('user_profiles')
-                    .insert({
-                        user_id: user.id,
-                        is_verified: false
-                    })
-                    .select()
-                    .single();
-                
-                return {
-                    id: user.id,
-                    email: user.email || null,
-                    user_metadata: user.user_metadata,
-                    app_metadata: user.app_metadata,
-                    profile: newProfile || undefined,
-                };
+                try {
+                    const { data: newProfile, error: createError } = await supabase
+                        .from('user_profiles')
+                        .insert({
+                            user_id: user.id,
+                            is_verified: false
+                        })
+                        .select()
+                        .single();
+                    
+                    if (createError) {
+                        console.error('Failed to create user profile:', createError);
+                        // If we can't create profile, force sign out
+                        await supabase.auth.signOut();
+                        return null;
+                    }
+                    
+                    return {
+                        id: user.id,
+                        email: user.email || null,
+                        user_metadata: user.user_metadata,
+                        app_metadata: user.app_metadata,
+                        profile: newProfile || undefined,
+                    };
+                } catch (profileError) {
+                    console.error('Exception creating profile:', profileError);
+                    await supabase.auth.signOut();
+                    return null;
+                }
+            }
+
+            if (error && error.code !== 'PGRST116') {
+                console.error('Database error loading profile:', error);
+                // For other database errors, force sign out
+                await supabase.auth.signOut();
+                return null;
             }
 
             return {
@@ -225,15 +264,10 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                 profile: profile || undefined,
             };
         } catch (error) {
-            console.error('Error loading user profile:', error);
-            // Return user without profile if there's an error
-            return {
-                id: user.id,
-                email: user.email || null,
-                user_metadata: user.user_metadata,
-                app_metadata: user.app_metadata,
-                profile: undefined,
-            };
+            console.error('Error transforming user:', error);
+            // On any unexpected error, force sign out to clear state
+            await supabase.auth.signOut();
+            return null;
         }
     };
 
@@ -340,6 +374,29 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             return { error };
         } catch (error) {
             return { error: error as AuthError };
+        }
+    };
+
+    const forceSignOut = async () => {
+        try {
+            // Clear all local state immediately
+            setUser(null);
+            setSession(null);
+            setCanEdit(false);
+            setCanVote(false);
+            setIsVerified(false);
+            setNeedsVerification(false);
+            
+            // Clear browser storage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Force sign out from Supabase
+            await supabase.auth.signOut();
+            
+            console.log('🔄 Force sign out completed - all state cleared');
+        } catch (error) {
+            console.error('Error during force sign out:', error);
         }
     };
 
@@ -496,6 +553,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             resetPassword,
             updatePassword,
             signOut,
+            forceSignOut,
             clearUrlState,
             updateAssociatedPlayer,
             verifySquadAndPlayer,

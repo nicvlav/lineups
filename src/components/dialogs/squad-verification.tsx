@@ -24,7 +24,7 @@ interface SquadVerificationProps {
 }
 
 export function SquadVerification({ open, onClose, mandatory = false }: SquadVerificationProps) {
-  const { verifySquadAndPlayer, getAvailableSquads } = useAuth();
+  const { verifySquadAndPlayer, getAvailableSquads, forceSignOut } = useAuth();
   const { players: playersRecord } = usePlayers();
   const players = Object.values(playersRecord);
   
@@ -106,6 +106,13 @@ export function SquadVerification({ open, onClose, mandatory = false }: SquadVer
 
   const canClose = !mandatory;
 
+  const handleForceSignOut = async () => {
+    if (confirm('This will sign you out and clear all cached data. Continue?')) {
+      await forceSignOut();
+      onClose();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={canClose ? onClose : undefined}>
       <DialogContent className="max-w-md" onPointerDownOutside={canClose ? undefined : (e) => e.preventDefault()}>
@@ -180,15 +187,29 @@ export function SquadVerification({ open, onClose, mandatory = false }: SquadVer
               </CardContent>
             </Card>
 
-            <div className="flex justify-end gap-2">
-              {canClose && (
-                <Button variant="outline" onClick={onClose} disabled={loading}>
-                  Cancel
+            <div className="flex justify-between gap-2">
+              <div>
+                {mandatory && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleForceSignOut}
+                    className="text-red-600 hover:text-red-700 dark:text-red-400"
+                  >
+                    Sign Out & Clear Cache
+                  </Button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {canClose && (
+                  <Button variant="outline" onClick={onClose} disabled={loading}>
+                    Cancel
+                  </Button>
+                )}
+                <Button onClick={handleSquadVerification} disabled={loading}>
+                  Continue to Player Selection
                 </Button>
-              )}
-              <Button onClick={handleSquadVerification} disabled={loading}>
-                Continue to Player Selection
-              </Button>
+              </div>
             </div>
           </div>
         )}
@@ -267,9 +288,21 @@ export function SquadVerification({ open, onClose, mandatory = false }: SquadVer
             </Card>
 
             <div className="flex justify-between gap-2">
-              <Button variant="outline" onClick={() => setStep("squad")} disabled={loading}>
-                Back
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep("squad")} disabled={loading}>
+                  Back
+                </Button>
+                {mandatory && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleForceSignOut}
+                    className="text-red-600 hover:text-red-700 dark:text-red-400"
+                  >
+                    Sign Out & Clear Cache
+                  </Button>
+                )}
+              </div>
               <Button onClick={handleComplete} disabled={loading}>
                 {loading ? "Completing..." : "Complete Verification"}
               </Button>

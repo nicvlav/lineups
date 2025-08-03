@@ -145,3 +145,4 @@ supabase-migration.sql
 .claude/
 squad-verification-migration.sql
 auth-fix-migration.sql
+auth-fix-safe.sql
