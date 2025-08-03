@@ -105,11 +105,39 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             async (event, session) => {
                 console.log('Auth state changed:', event, session?.user?.email);
                 
+                // Add debugging for Facebook auth issues
+                if (event === 'SIGNED_IN' && session?.user) {
+                    console.log('🔍 User signed in:', {
+                        id: session.user.id,
+                        email: session.user.email,
+                        provider: session.user.app_metadata?.provider,
+                        created_at: session.user.created_at
+                    });
+                }
+                
                 if (mounted) {
                     setSession(session);
                     if (session?.user) {
-                        const authUser = await transformUser(session.user);
-                        setUser(authUser);
+                        try {
+                            const authUser = await transformUser(session.user);
+                            console.log('✅ User profile loaded:', {
+                                hasProfile: !!authUser.profile,
+                                isVerified: authUser.profile?.is_verified,
+                                squadId: authUser.profile?.squad_id,
+                                playerId: authUser.profile?.associated_player_id
+                            });
+                            setUser(authUser);
+                        } catch (error) {
+                            console.error('❌ Failed to transform user:', error);
+                            // Still set user even if profile loading fails
+                            setUser({
+                                id: session.user.id,
+                                email: session.user.email || null,
+                                user_metadata: session.user.user_metadata,
+                                app_metadata: session.user.app_metadata,
+                                profile: undefined,
+                            });
+                        }
                     } else {
                         setUser(null);
                     }
@@ -117,6 +145,9 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                     // Handle different auth events
                     if (event === 'SIGNED_OUT') {
                         setCanEdit(false);
+                        setCanVote(false);
+                        setIsVerified(false);
+                        setNeedsVerification(false);
                     }
                 }
             }
@@ -157,20 +188,53 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
     // Transform Supabase User to our AuthUser type
     const transformUser = async (user: User): Promise<AuthUser> => {
-        // Load user profile with associated player
-        const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
+        try {
+            // Load user profile with associated player
+            const { data: profile, error } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
 
-        return {
-            id: user.id,
-            email: user.email || null,
-            user_metadata: user.user_metadata,
-            app_metadata: user.app_metadata,
-            profile: profile || undefined,
-        };
+            // If profile doesn't exist, try to create it
+            if (error && error.code === 'PGRST116') {
+                console.log('Creating missing user profile for:', user.id);
+                const { data: newProfile } = await supabase
+                    .from('user_profiles')
+                    .insert({
+                        user_id: user.id,
+                        is_verified: false
+                    })
+                    .select()
+                    .single();
+                
+                return {
+                    id: user.id,
+                    email: user.email || null,
+                    user_metadata: user.user_metadata,
+                    app_metadata: user.app_metadata,
+                    profile: newProfile || undefined,
+                };
+            }
+
+            return {
+                id: user.id,
+                email: user.email || null,
+                user_metadata: user.user_metadata,
+                app_metadata: user.app_metadata,
+                profile: profile || undefined,
+            };
+        } catch (error) {
+            console.error('Error loading user profile:', error);
+            // Return user without profile if there's an error
+            return {
+                id: user.id,
+                email: user.email || null,
+                user_metadata: user.user_metadata,
+                app_metadata: user.app_metadata,
+                profile: undefined,
+            };
+        }
     };
 
     // Auth methods
