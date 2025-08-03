@@ -50,6 +50,7 @@ interface AuthContextProps {
     clearUrlState: () => void;
     // Profile management
     updateAssociatedPlayer: (playerId: string | null) => Promise<{ error: AuthError | null }>;
+    validateSquad: (squadId: string) => Promise<{ valid: boolean; error?: string }>;
     verifySquadAndPlayer: (squadId: string, playerId: string | null, createNew?: boolean, newPlayerName?: string) => Promise<{ error: AuthError | null }>;
     getAvailableSquads: () => Promise<Squad[]>;
 }
@@ -229,6 +230,24 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                         .single();
                     
                     if (createError) {
+                        // If it's a duplicate key error, the profile already exists - that's fine
+                        if (createError.code === '23505') {
+                            console.log('Profile already exists (created elsewhere), fetching existing profile');
+                            const { data: existingProfile } = await supabase
+                                .from('user_profiles')
+                                .select('*')
+                                .eq('user_id', user.id)
+                                .single();
+                            
+                            return {
+                                id: user.id,
+                                email: user.email || null,
+                                user_metadata: user.user_metadata,
+                                app_metadata: user.app_metadata,
+                                profile: existingProfile || undefined,
+                            };
+                        }
+                        
                         console.error('Failed to create user profile:', createError);
                         // If we can't create profile, force sign out
                         await supabase.auth.signOut();
@@ -453,6 +472,28 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         }
     };
 
+    const validateSquad = async (squadId: string): Promise<{ valid: boolean; error?: string }> => {
+        try {
+            const { error } = await supabase
+                .from('squads')
+                .select('id')
+                .eq('id', squadId)
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    return { valid: false, error: 'Squad not found' };
+                }
+                throw error;
+            }
+
+            return { valid: true };
+        } catch (error) {
+            console.error('Error validating squad:', error);
+            return { valid: false, error: 'Failed to validate squad' };
+        }
+    };
+
     const verifySquadAndPlayer = async (
         squadId: string, 
         playerId: string | null, 
@@ -556,6 +597,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             forceSignOut,
             clearUrlState,
             updateAssociatedPlayer,
+            validateSquad,
             verifySquadAndPlayer,
             getAvailableSquads
         }}>

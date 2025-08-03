@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { usePlayers } from "@/context/players-provider";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shield, User, Users, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
-interface Squad {
-  id: string;
-  name: string;
-  description: string | null;
-}
+// Squad interface removed - manual entry only
 
 interface SquadVerificationProps {
   open: boolean;
@@ -24,12 +20,11 @@ interface SquadVerificationProps {
 }
 
 export function SquadVerification({ open, onClose, mandatory = false }: SquadVerificationProps) {
-  const { verifySquadAndPlayer, getAvailableSquads, forceSignOut } = useAuth();
+  const { validateSquad, verifySquadAndPlayer, forceSignOut } = useAuth();
   const { players: playersRecord } = usePlayers();
   const players = Object.values(playersRecord);
   
-  const [squads, setSquads] = useState<Squad[]>([]);
-  const [selectedSquadId, setSelectedSquadId] = useState<string>("");
+  // Removed squads state and selectedSquadId - force manual entry only
   const [squadIdInput, setSquadIdInput] = useState<string>("");
   const [playerChoice, setPlayerChoice] = useState<"existing" | "new">("existing");
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
@@ -37,37 +32,43 @@ export function SquadVerification({ open, onClose, mandatory = false }: SquadVer
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"squad" | "player">("squad");
 
-  useEffect(() => {
-    if (open) {
-      loadSquads();
-    }
-  }, [open]);
+  // No longer loading squads - manual entry only
 
-  const loadSquads = async () => {
-    const squadsList = await getAvailableSquads();
-    setSquads(squadsList);
-  };
-
-  const handleSquadVerification = () => {
-    const squadId = selectedSquadId || squadIdInput.trim();
+  const handleSquadVerification = async () => {
+    const squadId = squadIdInput.trim();
     
     if (!squadId) {
-      toast.error("Please select or enter a squad ID");
+      toast.error("Please enter a squad ID");
       return;
     }
 
-    // Check if the entered/selected squad ID is valid
-    const validSquad = squads.find(s => s.id === squadId);
-    if (!validSquad && !squadIdInput) {
-      toast.error("Invalid squad ID");
+    // Basic UUID format validation
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(squadId)) {
+      toast.error("Please enter a valid squad ID format");
       return;
     }
 
-    setStep("player");
+    setLoading(true);
+    try {
+      const result = await validateSquad(squadId);
+      
+      if (!result.valid) {
+        toast.error(result.error || "Invalid squad ID");
+        return;
+      }
+
+      toast.success("Squad verified! Now select your player profile.");
+      setStep("player");
+    } catch (error) {
+      toast.error("Failed to validate squad");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleComplete = async () => {
-    const squadId = selectedSquadId || squadIdInput.trim();
+    const squadId = squadIdInput.trim();
     const playerId = playerChoice === "existing" ? selectedPlayerId : null;
     const createNew = playerChoice === "new";
     const playerName = createNew ? newPlayerName.trim() : undefined;
@@ -135,47 +136,27 @@ export function SquadVerification({ open, onClose, mandatory = false }: SquadVer
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  Squad Selection
+                  Squad Verification
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Choose from available squads or enter your squad ID
+                  Enter your authorized squad ID to proceed
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {squads.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Available Squads:</Label>
-                    <Select value={selectedSquadId} onValueChange={setSelectedSquadId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a squad..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {squads.map(squad => (
-                          <SelectItem key={squad.id} value={squad.id}>
-                            <div className="flex flex-col items-start">
-                              <span className="font-medium">{squad.name}</span>
-                              {squad.description && (
-                                <span className="text-xs text-muted-foreground">{squad.description}</span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
                 <div className="space-y-2">
                   <Label htmlFor="squadId" className="text-xs font-medium">
-                    Or enter Squad ID:
+                    Enter Squad ID:
                   </Label>
                   <Input
                     id="squadId"
                     placeholder="00000000-0000-0000-0000-000000000000"
                     value={squadIdInput}
                     onChange={(e) => setSquadIdInput(e.target.value)}
-                    disabled={!!selectedSquadId}
+                    className="font-mono text-sm"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    You must obtain the squad ID from your team administrator
+                  </p>
                 </div>
 
                 <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg">

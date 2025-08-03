@@ -23,6 +23,9 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
     const { user, signOut } = useAuth();
     const [showPlayerAssociation, setShowPlayerAssociation] = useState(false);
     const iconSize = compact ? 16 : 20;
+    
+    // Detect staging environment
+    const isStaging = window.location.hostname.includes('staging');
 
     const handleSignOut = async () => {
         await signOut();
@@ -72,11 +75,13 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
                     {/* Brand/Logo - Left column */}
                     <div className="flex justify-start">
                         <h1 className={cn(
-                            "font-bold text-foreground select-none tracking-tight",
-                            "bg-gradient-to-r from-muted/40 to-muted/20 rounded-xl",
+                            "font-bold text-foreground select-none tracking-tight rounded-xl",
+                            isStaging 
+                                ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30" 
+                                : "bg-gradient-to-r from-muted/40 to-muted/20",
                             compact ? "text-lg px-3 py-1.5" : "text-xl px-4 py-2"
                         )}>
-                            LM
+                            {isStaging ? "LM 🚧" : "LM"}
                         </h1>
                     </div>
 

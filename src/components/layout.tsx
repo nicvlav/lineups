@@ -26,6 +26,9 @@ import DataDeletionPage from "@/components/data-deletion";
 const LayoutContent = () => {
     const { canEdit, needsVerification, user } = useAuth();
     const location = useLocation();
+    
+    // Detect if we're on staging
+    const isStaging = window.location.hostname.includes('staging');
 
     // Check if current route is an auth route
     const isAuthRoute = location.pathname.startsWith('/auth');
@@ -71,6 +74,13 @@ const LayoutContent = () => {
     return (
         <PlayersProvider>
             <DndProvider backend={backend} options={options}>
+                {/* Staging environment banner */}
+                {isStaging && (
+                    <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-center py-1 px-4 text-sm font-medium z-50 relative">
+                        🚧 STAGING ENVIRONMENT - For Testing Only 🚧
+                    </div>
+                )}
+                
                 {/* Conditionally show header - not on auth routes */}
                 {!isAuthRoute && (
                     <div className="sticky top-0 z-50">
