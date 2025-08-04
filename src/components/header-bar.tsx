@@ -1,5 +1,5 @@
 import { ModeToggle } from "@/components/mode-toggle"
-import { Users, Home, Wand2, BookDashed, Vote, LogIn, LogOut, User, type LucideIcon } from "lucide-react";
+import { Home, Wand2, BookDashed, Vote, LogIn, LogOut, User, type LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LAYOUT, GAP, ANIMATIONS } from "@/lib/design-tokens";
@@ -10,7 +10,6 @@ import { useState } from "react";
 
 interface HeaderBarProps {
     compact: boolean;
-    canEdit: boolean;
 }
 
 interface TabIconProps {
@@ -19,13 +18,16 @@ interface TabIconProps {
     label: string;
 }
 
-const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
+const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
     const { user, signOut } = useAuth();
     const [showPlayerAssociation, setShowPlayerAssociation] = useState(false);
     const iconSize = compact ? 16 : 20;
     
     // Detect staging environment
     const isStaging = window.location.hostname.includes('staging');
+    
+    // Only show Cards to me!
+    const showCards = user?.id === 'c0be95af-865c-4c45-b4ad-4e34c7c7e2c2'; 
 
     const handleSignOut = async () => {
         await signOut();
@@ -34,6 +36,10 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
     const TabIcon = ({ icon: Icon, to, label }: TabIconProps) => (
         <NavLink
             to={to}
+            onClick={() => {
+                console.log(`HeaderBar: Navigation clicked - ${label} to ${to}`);
+                console.time(`HeaderBar: Navigate to ${to}`);
+            }}
             className={({ isActive }) =>
                 cn(
                     "relative group inline-flex items-center justify-center",
@@ -98,10 +104,9 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact, canEdit }) => {
                             aria-label="Main navigation"
                         >
                             <TabIcon icon={Home} to="/" label="Home" />
-                            {canEdit && (
-                                <TabIcon icon={Users} to="/players" label="Players" />
+                            {showCards && (
+                                <TabIcon icon={BookDashed} to="/cards" label="Cards" />
                             )}
-                            <TabIcon icon={BookDashed} to="/cards" label="Cards" />
                             <TabIcon icon={Wand2} to="/generate" label="Generate Teams" />
                             <TabIcon icon={Vote} to="/vote" label="Vote" />
                         </nav>

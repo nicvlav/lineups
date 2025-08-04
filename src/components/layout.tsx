@@ -12,7 +12,6 @@ import { useLocation } from 'react-router-dom';
 import Game from "@/components/game";
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PlayerCards from "@/components/dialogs/player-cards";
-import PlayerTable from "@/components/dialogs/player-table";
 import TeamGenerator from "@/components/dialogs/team-generator";
 import VotingPage from "@/components/voting-page";
 import SignInPage from "@/components/auth/sign-in";
@@ -24,11 +23,13 @@ import AuthCallbackPage from "@/components/auth/callback";
 import DataDeletionPage from "@/components/data-deletion";
 
 const LayoutContent = () => {
-    const { canEdit, needsVerification, user } = useAuth();
+    const { needsVerification, user } = useAuth();
     const location = useLocation();
     
     // Detect if we're on staging
     const isStaging = window.location.hostname.includes('staging');
+    
+    const showCards = user?.id === 'c0be95af-865c-4c45-b4ad-4e34c7c7e2c2'; 
 
     // Check if current route is an auth route
     const isAuthRoute = location.pathname.startsWith('/auth');
@@ -84,7 +85,7 @@ const LayoutContent = () => {
                 {/* Conditionally show header - not on auth routes */}
                 {!isAuthRoute && (
                     <div className="sticky top-0 z-50">
-                        <HeaderBar compact={isCompact} canEdit={canEdit} />
+                        <HeaderBar compact={isCompact} />
                     </div>
                 )}
 
@@ -102,11 +103,16 @@ const LayoutContent = () => {
                         
                         {/* App routes */}
                         <Route index element={<Game isCompact={isCompact} playerSize={(isCompact ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 16} />} />
-                        {canEdit && <Route path="players" element={<PlayerTable isCompact={isCompact} />} />}
-                        {!canEdit && <Route path="players" element={<Navigate to="/" />} />}
-                        <Route path="cards" element={<PlayerCards />} />
+                        {showCards && <Route path="cards" element={<PlayerCards />} />}
+                        {!showCards && <Route path="cards" element={<Navigate to="/" />} />}
                         <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
-                        <Route path="vote" element={<VotingPage />} />
+                        <Route path="vote" element={
+                            (() => {
+                                console.log('Layout: VotingPage route rendered');
+                                console.time('Layout: VotingPage route render');
+                                return <VotingPage />;
+                            })()
+                        } />
                         
                         {/* Catch all - redirect to home */}
                         <Route path="*" element={<Navigate to="/" replace />} />

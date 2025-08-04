@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { usePlayers } from "@/context/players-provider";
-import { supabase } from "@/lib/supabase";
 import { PlayerVoting } from "@/components/dialogs/player-voting";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,89 +14,60 @@ interface VoteData {
 }
 
 export default function VotingPage() {
+  console.log('VotingPage: Component rendering/mounting');
+  console.time('VotingPage: Component lifecycle');
+  
   const { user, canVote, isVerified } = useAuth();
-  const { players: playersRecord } = usePlayers();
+  const { 
+    players: playersRecord, 
+    submitVote, 
+    getPendingVoteCount,
+    votingStats,
+    playersWithVotes,
+    userVotes,
+  } = usePlayers();
   const players = Object.values(playersRecord);
   const [showVoting, setShowVoting] = useState(false);
-  const [userVotes, setUserVotes] = useState<Map<string, any>>(new Map());
-  const [votingStats, setVotingStats] = useState<{
-    totalPlayers: number;
-    playersVoted: number;
-    totalVoters: number;
-  }>({ totalPlayers: 0, playersVoted: 0, totalVoters: 0 });
   const [loading, setLoading] = useState(true);
+
+  // Component lifecycle tracking
+  useEffect(() => {
+    console.log('VotingPage: Component mounted');
+    return () => {
+      console.log('VotingPage: Component unmounting');
+      console.timeEnd('VotingPage: Component lifecycle');
+    };
+  }, []);
 
   useEffect(() => {
     if (!user) return;
+
+    console.time('VotingPage: Load data');
+    console.log('VotingPage: All data comes from PlayersProvider cache - instant loading');
     
-    const loadUserVotes = async () => {
-      const { data, error } = await supabase
-        .from('player_votes')
-        .select('player_id, votes, created_at')
-        .eq('user_id', user.id);
+    // All data now comes from PlayersProvider - no queries needed!
+    setLoading(false);
+    console.timeEnd('VotingPage: Load data');
 
-      if (error) {
-        console.error('Error loading user votes:', error);
-        return;
-      }
-
-      const votesMap = new Map();
-      data?.forEach(vote => {
-        votesMap.set(vote.player_id, vote);
-      });
-      setUserVotes(votesMap);
-    };
-
-    const loadVotingStats = async () => {
-      const [playersResponse, votesResponse] = await Promise.all([
-        supabase.from('players').select('id, vote_count'),
-        supabase.from('player_votes').select('user_id')
-      ]);
-
-      if (playersResponse.data && votesResponse.data) {
-        const totalPlayers = playersResponse.data.length;
-        const playersVoted = playersResponse.data.filter((p: any) => p.vote_count > 0).length;
-        const totalVoters = new Set(votesResponse.data.map((v: any) => v.user_id)).size;
-        
-        setVotingStats({ totalPlayers, playersVoted, totalVoters });
-      }
-    };
-
-    Promise.all([loadUserVotes(), loadVotingStats()]).finally(() => {
-      setLoading(false);
-    });
   }, [user]);
 
   const handleVoteSubmit = async (voteData: VoteData) => {
-    if (!user) return;
+    console.log('handleVoteSubmit called with:', voteData.playerId);
+    
+    if (!user) {
+      console.log('No user, aborting vote submit');
+      return;
+    }
 
     try {
-      const { error } = await supabase
-        .from('player_votes')
-        .upsert({
-          user_id: user.id,
-          player_id: voteData.playerId,
-          votes: voteData.votes,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,player_id'
-        });
+      console.log('Calling submitVote from PlayersProvider...');
+      // Use centralized vote submission from PlayersProvider
+      await submitVote(voteData);
+      console.log('submitVote completed successfully');
 
-      if (error) throw error;
+      // All optimistic updates now handled by PlayersProvider
 
-      // Update local state
-      setUserVotes(prev => new Map(prev.set(voteData.playerId, {
-        player_id: voteData.playerId,
-        votes: voteData.votes,
-        created_at: new Date().toISOString()
-      })));
-
-      // Update voting stats
-      setVotingStats(prev => ({
-        ...prev,
-        playersVoted: Math.max(prev.playersVoted, userVotes.size + 1)
-      }));
-
+      console.log(`Vote submitted successfully for player ${voteData.playerId}`);
     } catch (error) {
       console.error('Error submitting vote:', error);
       throw error;
@@ -167,12 +137,13 @@ export default function VotingPage() {
     const isAssociatedPlayer = user?.profile?.associated_player_id === player.id;
     return !isAssociatedPlayer;
   });
-  
+
   const unvotedPlayers = eligiblePlayers.filter(player => !userVotes.has(player.id));
   const votedPlayers = eligiblePlayers.filter(player => userVotes.has(player.id));
   const progressPercent = eligiblePlayers.length > 0 ? (votedPlayers.length / eligiblePlayers.length) * 100 : 0;
-  
-  const associatedPlayer = user?.profile?.associated_player_id 
+  const pendingCount = getPendingVoteCount();
+
+  const associatedPlayer = user?.profile?.associated_player_id
     ? players.find(p => p.id === user.profile?.associated_player_id)
     : null;
 
@@ -181,7 +152,7 @@ export default function VotingPage() {
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold">Player Evaluation</h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          Help build fair team selections by rating players across key football skills. 
+          Help build fair team selections by rating players across key football skills.
           Your votes contribute to community-driven player statistics.
         </p>
       </div>
@@ -195,9 +166,15 @@ export default function VotingPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {votedPlayers.length}/{eligiblePlayers.length}
+              {pendingCount > 0 && (
+                <span className="text-xs text-orange-500 ml-2">
+                  (+{pendingCount} pending)
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               {progressPercent.toFixed(0)}% completed
+              {pendingCount > 0 && ' • Background sync active'}
             </p>
             {associatedPlayer && (
               <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
@@ -227,7 +204,7 @@ export default function VotingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {votingStats.playersVoted}/{votingStats.totalPlayers}
+              {playersWithVotes.size}/{votingStats.totalPlayers}
             </div>
             <p className="text-xs text-muted-foreground">
               have community ratings
@@ -246,11 +223,11 @@ export default function VotingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Rate players on a guided form covering all key football skills. 
+              Rate players on a guided form covering all key football skills.
               Each player takes about 2-3 minutes to evaluate thoroughly.
             </p>
             <div className="flex items-center gap-4">
-              <Button 
+              <Button
                 onClick={() => setShowVoting(true)}
                 disabled={unvotedPlayers.length === 0}
                 className="flex items-center gap-2"

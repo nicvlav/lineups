@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { User, UserCheck, RefreshCw, Facebook } from "lucide-react";
+import { User, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 
 interface PlayerAssociationProps {
@@ -16,14 +16,13 @@ interface PlayerAssociationProps {
 
 export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
   const { user, updateAssociatedPlayer } = useAuth();
-  const { players: playersRecord, updatePlayerAttributes } = usePlayers();
+  const { players: playersRecord } = usePlayers();
   const players = Object.values(playersRecord);
   
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(
     user?.profile?.associated_player_id || null
   );
   const [loading, setLoading] = useState(false);
-  const [syncingProfile, setSyncingProfile] = useState(false);
 
   const currentAssociatedPlayer = user?.profile?.associated_player_id 
     ? playersRecord[user.profile.associated_player_id]
@@ -34,25 +33,6 @@ export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
   const oauthName = user?.user_metadata?.full_name || user?.user_metadata?.name;
   const oauthAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
 
-  const handleSyncOAuthProfile = async () => {
-    if (!selectedPlayerId || !oauthName) {
-      toast.error("No player selected or OAuth name available");
-      return;
-    }
-
-    setSyncingProfile(true);
-    try {
-      updatePlayerAttributes(selectedPlayerId, { 
-        name: oauthName,
-        avatar_url: oauthAvatar || undefined
-      });
-      toast.success(`Updated player name to "${oauthName}"`);
-    } catch (error) {
-      toast.error("Failed to sync profile");
-    } finally {
-      setSyncingProfile(false);
-    }
-  };
 
   const handleSave = async () => {
     if (!selectedPlayerId) {
@@ -123,36 +103,6 @@ export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
             </Select>
           </div>
 
-          {/* OAuth Profile Sync */}
-          {selectedPlayerId && oauthProvider && (
-            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    {oauthProvider === 'facebook' && <Facebook className="h-4 w-4 text-blue-600" />}
-                    <span className="text-sm font-medium">Sync {oauthProvider} Profile</span>
-                  </div>
-                  {oauthName && (
-                    <p className="text-xs text-muted-foreground">
-                      Update player name to: "{oauthName}"
-                    </p>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSyncOAuthProfile}
-                  disabled={syncingProfile || !oauthName}
-                >
-                  {syncingProfile ? (
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3 w-3" />
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
 
           <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg">
             <p className="text-xs text-blue-700 dark:text-blue-300">

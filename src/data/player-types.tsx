@@ -7,9 +7,8 @@ export interface Player {
     name: string;
     stats: PlayerStats;
     avatar_url?: string; // OAuth profile picture URL
+    vote_count: number;
 }
-
-export type PlayerUpdate = Partial<Player>;
 
 // Local-only game-specific attributes
 export interface GamePlayer {
@@ -18,8 +17,6 @@ export interface GamePlayer {
     team: string;
     position: Point;
 }
-
-export type GamePlayerUpdate = Partial<GamePlayer>;
 
 export interface FilledGamePlayer extends GamePlayer {
     stats: PlayerStats;

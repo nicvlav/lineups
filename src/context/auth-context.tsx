@@ -31,7 +31,6 @@ interface AuthContextProps {
     user: AuthUser | null;
     session: Session | null;
     urlState: string | null;
-    canEdit: boolean;
     canVote: boolean;
     isVerified: boolean;
     needsVerification: boolean;
@@ -65,7 +64,6 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children, url }: AuthProviderProps) => {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [session, setSession] = useState<Session | null>(null);
-    const [canEdit, setCanEdit] = useState(false);
     const [canVote, setCanVote] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
     const [needsVerification, setNeedsVerification] = useState(false);
@@ -154,7 +152,6 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                     
                     // Handle different auth events
                     if (event === 'SIGNED_OUT') {
-                        setCanEdit(false);
                         setCanVote(false);
                         setIsVerified(false);
                         setNeedsVerification(false);
@@ -172,7 +169,6 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
     // Check permissions when user changes
     useEffect(() => {
         if (!user || loading) {
-            setCanEdit(false);
             setCanVote(false);
             setIsVerified(false);
             setNeedsVerification(false);
@@ -181,16 +177,14 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
         const profile = user.profile;
         
-        // Check if user is verified (has squad and player association)
-        const verified = !!(profile?.is_verified && profile?.squad_id && profile?.associated_player_id);
+        // Check if user is verified (has squad and either player association OR is admin with NULL associated_player_id)
+        const verified = !!(profile?.is_verified && profile?.squad_id && 
+            (profile?.associated_player_id || profile?.associated_player_id === null));
         setIsVerified(verified);
         
         // Check if user needs verification (signed in but not verified)
         const needsVerif = !verified;
         setNeedsVerification(needsVerif);
-        
-        // Can edit: all authenticated users
-        setCanEdit(true);
         
         // Can vote: only verified squad members with player association
         setCanVote(verified);
@@ -401,7 +395,6 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             // Clear all local state immediately
             setUser(null);
             setSession(null);
-            setCanEdit(false);
             setCanVote(false);
             setIsVerified(false);
             setNeedsVerification(false);
@@ -583,7 +576,6 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             user,
             session,
             urlState,
-            canEdit,
             canVote,
             isVerified,
             needsVerification,

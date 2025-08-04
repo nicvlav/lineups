@@ -1,7 +1,7 @@
 
 export type StatsKey =
     | "defensiveAwareness"
-    | "pressResistance"
+    | "composure"
     | "offTheBall"
     | "vision"
     | "firstTouch"
@@ -16,12 +16,13 @@ export type StatsKey =
     | "attackPositioning"
     | "longPassing"
     | "dribbling"
-    | "ballCarrying"
     | "interceptions"
     | "blocking"
     | "heading"
     | "aggression"
     | "attackingWorkrate"
+    | "longShots"
+    | "stamina"
     | "teamwork"
     | "positivity"
     | "willingToSwitch"
@@ -29,7 +30,7 @@ export type StatsKey =
 
 export const statKeys: StatsKey[] = [
     "defensiveAwareness",
-    "pressResistance",
+    "composure",
     "offTheBall",
     "vision",
     "firstTouch",
@@ -44,12 +45,13 @@ export const statKeys: StatsKey[] = [
     "attackPositioning",
     "longPassing",
     "dribbling",
-    "ballCarrying",
     "interceptions",
     "blocking",
     "heading",
     "aggression",
     "attackingWorkrate",
+    "longShots",
+    "stamina",
     "teamwork",
     "positivity",
     "willingToSwitch",
@@ -58,7 +60,7 @@ export const statKeys: StatsKey[] = [
 
 export const statLabelMap: Record<StatsKey, string> = {
     defensiveAwareness: "Defensive Awareness",
-    pressResistance: "Press Resistance",
+    composure: "Press Resistance",
     offTheBall: "Off the Ball Movement",
     vision: "Vision",
     firstTouch: "First Touch",
@@ -72,13 +74,14 @@ export const statLabelMap: Record<StatsKey, string> = {
     crossing: "Crossing",
     attackPositioning: "Attacking Positioning",
     longPassing: "Long Passing",
-    dribbling: "Dribbling (Close Control)",
-    ballCarrying: "Carrying (Progressive  Runs)",
+    dribbling: "Dribbling",
     interceptions: "Interceptions",
     blocking: "Blocking",
     heading: "Heading",
     aggression: "Aggression",
     attackingWorkrate: "Attacking Work Rate",
+    longShots: "Long Shots",
+    stamina: "Stamina",
     teamwork: "Teamwork",
     positivity: "Positivity",
     willingToSwitch: "Willing to Switch",
@@ -88,7 +91,7 @@ export const statLabelMap: Record<StatsKey, string> = {
 
 export const statShortLabelMap: Record<StatsKey, string> = {
     defensiveAwareness: "DAW",
-    pressResistance: "PRS",
+    composure: "CMP",
     offTheBall: "OTB",
     vision: "VIS",
     firstTouch: "FTC",
@@ -103,12 +106,13 @@ export const statShortLabelMap: Record<StatsKey, string> = {
     attackPositioning: "APO",
     longPassing: "LPA",
     dribbling: "DRI",
-    ballCarrying: "BCR",
     interceptions: "INT",
     blocking: "BLK",
     heading: "HDG",
     aggression: "AGR",
     attackingWorkrate: "AWR",
+    longShots: "LSH",
+    stamina: "STM",
     teamwork: "TMW",
     positivity: "POS",
     willingToSwitch: "WTS",
@@ -117,7 +121,7 @@ export const statShortLabelMap: Record<StatsKey, string> = {
 
 export const statColorsMap: Record<StatsKey, string> = {
     defensiveAwareness: "bg-orange-600",
-    pressResistance: "bg-yellow-500",
+    composure: "bg-yellow-500",
     offTheBall: "bg-orange-400",
     vision: "bg-yellow-600",
     firstTouch: "bg-indigo-500",
@@ -132,12 +136,13 @@ export const statColorsMap: Record<StatsKey, string> = {
     attackPositioning: "bg-rose-500",
     longPassing: "bg-cyan-500",
     dribbling: "bg-purple-500",
-    ballCarrying: "bg-teal-400",
     interceptions: "bg-indigo-400",
     blocking: "bg-blue-400",
     heading: "bg-violet-500",
     aggression: "bg-red-600",
     attackingWorkrate: "bg-amber-500",
+    longShots: "bg-orange-400",
+    stamina: "bg-yellow-400",
     teamwork: "bg-fuchsia-400",
     positivity: "bg-emerald-400",
     willingToSwitch: "bg-pink-400",
@@ -149,7 +154,7 @@ export type PlayerStats = Record<StatsKey, number>;
 export const defaultStatScores: PlayerStats = Object.fromEntries(
     ([
         "defensiveAwareness",
-        "pressResistance",
+        "composure",
         "offTheBall",
         "vision",
         "firstTouch",
@@ -164,17 +169,18 @@ export const defaultStatScores: PlayerStats = Object.fromEntries(
         "attackPositioning",
         "longPassing",
         "dribbling",
-        "ballCarrying",
         "interceptions",
         "blocking",
         "heading",
         "aggression",
         "attackingWorkrate",
+        "longShots",
+        "stamina",
         "teamwork",
         "positivity",
         "willingToSwitch",
         "communication",
-    ] as const).map((key) => [key, 50])
+    ] as const).map((key) => [key, 0])
 ) as PlayerStats;
 
 
@@ -207,6 +213,7 @@ export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
     ],
     attacking: [
         "finishing",
+        "longShots",
         "attackPositioning",
         "offTheBall",
         "attackingWorkrate",
@@ -219,10 +226,9 @@ export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
     ],
     dribbling: [
         "dribbling",
-        "ballCarrying",
         "agility",
         "firstTouch",
-        "pressResistance",
+        "composure",
     ],
     defending: [
         "defensiveAwareness",
@@ -235,6 +241,7 @@ export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
         "strength",
         "aggression",
         "heading",
+        "stamina",
     ],
     morale: [
         "teamwork",

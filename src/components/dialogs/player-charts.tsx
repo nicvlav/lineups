@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "@/context/theme-provider";
 import { StatCategory, StatCategoryNameMap, StatCategoryKeys } from "@/data/stat-types";
-import { Player, PlayerUpdate, getZoneAverages, ZoneAverages } from "@/data/player-types";
+import { Player, getZoneAverages, ZoneAverages } from "@/data/player-types";
 import { } from "lucide-react";
 import { Radar } from "react-chartjs-2";
 import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from "chart.js";
@@ -31,8 +31,6 @@ interface PlayerChartsProps {
 
     selectedPlayer2: string | null;
     setSelectedPlayer2: React.Dispatch<React.SetStateAction<string | null>>;
-
-    updatePlayerAttributes: (id: string, updates: PlayerUpdate) => void;
 }
 
 const PlayerCharts: React.FC<PlayerChartsProps> = ({
@@ -40,8 +38,7 @@ const PlayerCharts: React.FC<PlayerChartsProps> = ({
     selectedPlayer1,
     setSelectedPlayer1,
     selectedPlayer2,
-    setSelectedPlayer2,
-    updatePlayerAttributes }) => {
+    setSelectedPlayer2 }) => {
 
     const sortedPlayers = Object.values(players).sort((a, b) => {
         return a.name.localeCompare(b.name);
@@ -91,8 +88,6 @@ const PlayerCharts: React.FC<PlayerChartsProps> = ({
                                     <PlayerStatViewer
                                         player={chartPlayer1}
                                         playerStats={chartPlayer1Stats}
-                                        updatePlayerAttributes={updatePlayerAttributes}
-
                                     />
                                 </div>
                             </div>
@@ -106,7 +101,6 @@ const PlayerCharts: React.FC<PlayerChartsProps> = ({
                                     <PlayerStatViewer
                                         player={chartPlayer2}
                                         playerStats={chartPlayer2Stats}
-                                        updatePlayerAttributes={updatePlayerAttributes}
                                     />
                                 </div>
                             </div>
@@ -191,11 +185,10 @@ const PlayerPopover: React.FC<PlayerPopoverProps> = ({ players, selectedPlayerNa
 interface PlayerStatViewerProps {
     player: Player | null;
     playerStats: ZoneAverages | null;
-    updatePlayerAttributes: (id: string, updates: PlayerUpdate) => void;
 }
 
 const PlayerStatViewer: React.FC<PlayerStatViewerProps> = ({ player, playerStats }) => {
-    if (!player || !playerStats) return <p className="text-center">Select a player to edit stats.</p>;
+    if (!player || !playerStats) return <p className="text-center">Select a player to view stats.</p>;
 
     return (
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
