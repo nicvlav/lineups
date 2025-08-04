@@ -42,9 +42,6 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
 
   const categories: StatCategory[] = ["pace", "attacking", "passing", "dribbling", "defending", "physical", "morale"];
 
-  // Calculate max stats per category for consistent height
-  const maxStatsPerCategory = Math.max(...categories.map(cat => CategorizedStats[cat].length));
-
   // Session persistence functions
   const saveVotingSession = () => {
     if (!user) return;

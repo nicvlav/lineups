@@ -50,6 +50,8 @@ interface PlayersContextType {
     switchToRealPlayer: (oldPlayer: ScoredGamePlayerWithThreat, newID: string) => void;
     switchToNewPlayer: (oldPlayer: ScoredGamePlayerWithThreat, newName: string, guest: boolean) => void;
 
+    updateGamePlayerPosition: (gamePlayer: GamePlayer, newPosition: { x: number; y: number }) => void;
+
     applyFormation: (formation: Formation) => void;
     generateTeams: (filteredPlayers: Player[]) => void;
     rebalanceCurrentGame: () => void;
@@ -1125,6 +1127,23 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         return pendingVotesRef.current.size;
     };
 
+    // Update game player position (for drag-and-drop)
+    const updateGamePlayerPosition = (gamePlayer: GamePlayer, newPosition: { x: number; y: number }) => {
+        const playerId = gamePlayer.id;
+        if (!playerId) return;
+
+        setGamePlayers(prev => {
+            const updated = { ...prev };
+            if (updated[playerId]) {
+                updated[playerId] = {
+                    ...updated[playerId],
+                    position: newPosition
+                };
+            }
+            return updated;
+        });
+    };
+
     return (
         <PlayersContext.Provider value={{
             players,
@@ -1151,6 +1170,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             addNewGuestPlayerToGame,
             switchToRealPlayer,
             switchToNewPlayer,
+
+            updateGamePlayerPosition,
 
             applyFormation,
             clearGame,

@@ -28,12 +28,6 @@ export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
     ? playersRecord[user.profile.associated_player_id]
     : null;
 
-  // Get OAuth profile info
-  const oauthProvider = user?.user_metadata?.provider;
-  const oauthName = user?.user_metadata?.full_name || user?.user_metadata?.name;
-  const oauthAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
-
-
   const handleSave = async () => {
     if (!selectedPlayerId) {
       toast.error("Please select a player to associate with");

@@ -36,7 +36,7 @@ const getPlayerPosition = (player: ScoredGamePlayerWithThreat, playerSize: numbe
 
 const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, playerSize = 55 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { players, addExisitingPlayerToGame, updateGamePlayerAttributes } = usePlayers();
+  const { players, addExisitingPlayerToGame, updateGamePlayerPosition } = usePlayers();
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   // Update container size on mount, resize, and whenever the container might change
@@ -75,7 +75,7 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
 
   // Handle movement of existing player within the container
   const handlePlayerMove = (player: ScoredGamePlayerWithThreat, newX: number, newY: number) => {
-    updateGamePlayerAttributes(player, { position: { x: newX, y: newY } });
+    updateGamePlayerPosition(player, { x: newX, y: newY });
   };
 
   // Handle drop interactions
