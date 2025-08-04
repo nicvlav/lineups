@@ -5,7 +5,8 @@
       "WebFetch(domain:supabase.com)",
       "WebFetch(domain:github.com)",
       "Bash(bun add:*)",
-      "Bash(bun:*)"
+      "Bash(bun:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

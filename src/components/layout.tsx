@@ -6,7 +6,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/auth-context";
 import { PlayersProvider } from "@/context/players-provider";
 import HeaderBar from "@/components/header-bar";
-import { SquadVerification } from "@/components/dialogs/squad-verification";
+import { SquadIdVerification } from "@/components/dialogs/squad-id-verification";
+import { PlayerAssignment } from "@/components/dialogs/player-assignment";
 import { useLocation } from 'react-router-dom';
 
 import Game from "@/components/game";
@@ -126,13 +127,27 @@ const LayoutContent = () => {
                     </Routes>
                 </main>
 
-                {/* Squad verification dialog for users who need it */}
+                {/* Verification dialogs for users who need them */}
                 {user && needsVerification && !isAuthRoute && (
-                    <SquadVerification
-                        open={true}
-                        onClose={() => {}}
-                        mandatory={true}
-                    />
+                    <>
+                        {/* Step 1: Squad ID verification (if no squad_id) */}
+                        {!user.profile?.squad_id && (
+                            <SquadIdVerification
+                                open={true}
+                                onClose={() => {}}
+                                mandatory={true}
+                            />
+                        )}
+                        
+                        {/* Step 2: Player assignment (if has squad_id but not fully verified) */}
+                        {user.profile?.squad_id && !user.profile?.is_verified && (
+                            <PlayerAssignment
+                                open={true}
+                                onClose={() => {}}
+                                mandatory={true}
+                            />
+                        )}
+                    </>
                 )}
             </DndProvider>
         </PlayersProvider>

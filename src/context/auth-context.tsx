@@ -50,6 +50,8 @@ interface AuthContextProps {
     // Profile management
     updateAssociatedPlayer: (playerId: string | null) => Promise<{ error: AuthError | null }>;
     validateSquad: (squadId: string) => Promise<{ valid: boolean; error?: string }>;
+    verifySquad: (squadId: string) => Promise<{ error: AuthError | null }>;
+    assignPlayer: (playerId: string | null) => Promise<{ error: AuthError | null }>;
     verifySquadAndPlayer: (squadId: string, playerId: string | null, createNew?: boolean, newPlayerName?: string) => Promise<{ error: AuthError | null }>;
     getAvailableSquads: () => Promise<Squad[]>;
 }
@@ -191,17 +193,22 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
         const profile = user.profile;
         
-        // Check if user is verified (has squad and either player association OR is admin with NULL associated_player_id)
-        const verified = !!(profile?.is_verified && profile?.squad_id && 
-            (profile?.associated_player_id || profile?.associated_player_id === null));
-        setIsVerified(verified);
+        // Two-step verification process:
+        // Step 1: Has squad_id (squad verified)
+        // Step 2: Has associated_player_id AND is_verified = true (player assigned)
         
-        // Check if user needs verification (signed in but not verified)
-        const needsVerif = !verified;
+        const hasSquad = !!profile?.squad_id;
+        const hasPlayerAssignment = profile?.associated_player_id !== undefined; // null or string, but not undefined
+        const isFullyVerified = !!(profile?.is_verified && hasSquad && hasPlayerAssignment);
+        
+        setIsVerified(isFullyVerified);
+        
+        // User needs verification if they don't have a squad OR don't have player assignment
+        const needsVerif = !isFullyVerified;
         setNeedsVerification(needsVerif);
         
-        // Can vote: only verified squad members with player association
-        setCanVote(verified);
+        // Can vote: only fully verified users (squad + player assignment)
+        setCanVote(isFullyVerified);
     }, [user, loading]);
 
     // Transform Supabase User to our AuthUser type
@@ -525,6 +532,91 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         }
     };
 
+    const verifySquad = async (squadId: string) => {
+        if (!user) {
+            return { error: { message: 'User not authenticated' } as AuthError };
+        }
+
+        try {
+            // First validate the squad exists
+            const validation = await validateSquad(squadId);
+            if (!validation.valid) {
+                return { error: { message: validation.error || 'Invalid squad' } as AuthError };
+            }
+
+            // Update user profile with squad_id but keep is_verified = false until player assignment
+            const { error } = await supabase
+                .from('user_profiles')
+                .upsert({
+                    user_id: user.id,
+                    squad_id: squadId,
+                    is_verified: false, // Will be set to true after player assignment
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id'
+                });
+
+            if (error) throw error;
+
+            // Update local user state
+            setUser(prev => prev ? {
+                ...prev,
+                profile: {
+                    ...prev.profile!,
+                    squad_id: squadId,
+                    is_verified: false,
+                    updated_at: new Date().toISOString()
+                }
+            } : null);
+
+            return { error: null };
+        } catch (error) {
+            return { error: error as AuthError };
+        }
+    };
+
+    const assignPlayer = async (playerId: string | null) => {
+        if (!user) {
+            return { error: { message: 'User not authenticated' } as AuthError };
+        }
+
+        if (!user.profile?.squad_id) {
+            return { error: { message: 'Squad verification required first' } as AuthError };
+        }
+
+        try {
+            // Update user profile with player assignment and set is_verified = true
+            const { error } = await supabase
+                .from('user_profiles')
+                .upsert({
+                    user_id: user.id,
+                    squad_id: user.profile.squad_id, // Keep existing squad_id
+                    associated_player_id: playerId,
+                    is_verified: true, // Now fully verified
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id'
+                });
+
+            if (error) throw error;
+
+            // Update local user state
+            setUser(prev => prev ? {
+                ...prev,
+                profile: {
+                    ...prev.profile!,
+                    associated_player_id: playerId,
+                    is_verified: true,
+                    updated_at: new Date().toISOString()
+                }
+            } : null);
+
+            return { error: null };
+        } catch (error) {
+            return { error: error as AuthError };
+        }
+    };
+
     const verifySquadAndPlayer = async (
         squadId: string, 
         playerId: string | null, 
@@ -661,6 +753,8 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             clearUrlState,
             updateAssociatedPlayer,
             validateSquad,
+            verifySquad,
+            assignPlayer,
             verifySquadAndPlayer,
             getAvailableSquads
         }}>
