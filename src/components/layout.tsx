@@ -31,7 +31,7 @@ const LayoutContent = () => {
     // Detect if we're on staging
     const isStaging = window.location.hostname.includes('staging');
 
-    const showCards = user?.id === 'c0be95af-865c-4c45-b4ad-4e34c7c7e2c2';
+    const showCards = user?.id === '24115871-04fe-4111-b048-18f7e3e976fc';
 
     // Check if current route is an auth route
     const isAuthRoute = location.pathname.startsWith('/auth');

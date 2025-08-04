@@ -27,7 +27,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
     const isStaging = window.location.hostname.includes('staging');
     
     // Only show Cards to me!
-    const showCards = user?.id === 'c0be95af-865c-4c45-b4ad-4e34c7c7e2c2'; 
+    const showCards = user?.id === '24115871-04fe-4111-b048-18f7e3e976fc'; 
 
     const handleSignOut = async () => {
         await signOut();
