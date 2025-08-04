@@ -27,11 +27,11 @@ const LayoutContent = () => {
     const { needsVerification, user } = useAuth();
     const location = useLocation();
     const isMobile = useIsMobile();
-    
+
     // Detect if we're on staging
     const isStaging = window.location.hostname.includes('staging');
-    
-    const showCards = user?.id === 'c0be95af-865c-4c45-b4ad-4e34c7c7e2c2'; 
+
+    const showCards = user?.id === 'c0be95af-865c-4c45-b4ad-4e34c7c7e2c2';
 
     // Check if current route is an auth route
     const isAuthRoute = location.pathname.startsWith('/auth');
@@ -59,7 +59,7 @@ const LayoutContent = () => {
         return windowSize;
     };
 
-    const { width, height } = useWindowSize();
+    const { width } = useWindowSize();
 
     // Separate concerns: width-based responsive design vs touch device detection
     const isCompact = width < 768; // Responsive layout based on viewport width
@@ -84,7 +84,7 @@ const LayoutContent = () => {
                         🚧 STAGING ENVIRONMENT - For Testing Only 🚧
                     </div>
                 )}
-                
+
                 {/* Conditionally show header - not on auth routes */}
                 {!isAuthRoute && (
                     <div className="sticky top-0 z-50">
@@ -103,25 +103,16 @@ const LayoutContent = () => {
                         <Route path="auth/callback" element={<AuthCallbackPage />} />
                         <Route path="auth/debug" element={<AuthDebugPage />} />
                         <Route path="data-deletion" element={<DataDeletionPage />} />
-                        
+
                         {/* App routes */}
                         <Route index element={<Game isCompact={isCompact} playerSize={(() => {
-                            // More aggressive scaling for player sizes
-                            if (isCompact) {
-                                // Mobile/compact: scale more with width constraints
-                                return Math.min(height * 2, width * 0.12, 80) / 16;
-                            } else {
-                                // Desktop: more aggressive scaling between min width (768) and larger screens
-                                const minDesktopWidth = 768;
-                                const scaleFactor = Math.min(width / minDesktopWidth, 2.5); // Cap at 2.5x scaling
-                                return Math.min(height, width / 2) * scaleFactor / 16;
-                            }
+                            return isCompact ? (width < 400 ? 40 : 60) : 70;
                         })()} />} />
                         {showCards && <Route path="cards" element={<PlayerCards />} />}
                         {!showCards && <Route path="cards" element={<Navigate to="/" />} />}
                         <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
                         <Route path="vote" element={<VotingPage />} />
-                        
+
                         {/* Catch all - redirect to home */}
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
@@ -134,16 +125,16 @@ const LayoutContent = () => {
                         {!user.profile?.squad_id && (
                             <SquadIdVerification
                                 open={true}
-                                onClose={() => {}}
+                                onClose={() => { }}
                                 mandatory={true}
                             />
                         )}
-                        
+
                         {/* Step 2: Player assignment (if has squad_id but not fully verified) */}
                         {user.profile?.squad_id && !user.profile?.is_verified && (
                             <PlayerAssignment
                                 open={true}
-                                onClose={() => {}}
+                                onClose={() => { }}
                                 mandatory={true}
                             />
                         )}

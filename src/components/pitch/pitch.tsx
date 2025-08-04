@@ -34,7 +34,7 @@ const getPlayerPosition = (player: ScoredGamePlayerWithThreat, playerSize: numbe
   return { left, top };
 };
 
-const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, playerSize = 55 }) => {
+const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, playerSize }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { players, addExisitingPlayerToGame, updateGamePlayerPosition } = usePlayers();
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });

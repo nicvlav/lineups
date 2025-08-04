@@ -1,16 +1,10 @@
 import { useState } from "react";
 import { useDrag } from "react-dnd";
 import { User } from "lucide-react";
-import { ScoredGamePlayerWithThreat, getThreatColor } from "@/data/player-types";
+import { ScoredGamePlayerWithThreat } from "@/data/player-types";
 import { usePlayers } from "@/context/players-provider";
 // import Panel from "@/components/dialogs/panel"
 import PlayerDialog from "@/components/dialogs/player-dialog";
-
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card"
 
 interface PitchPlayerProps {
   player: ScoredGamePlayerWithThreat;
@@ -35,7 +29,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { players } = usePlayers();
-  
+
   // Get the full Player data (with avatar_url) from the players record
   const fullPlayer = player.id ? players[player.id] : null;
 
@@ -68,9 +62,16 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
     setIsDialogOpen(true);
   };
 
-  const circleSize = Math.max(playerSize * 0.8, 45);
-  const iconSize = Math.max(circleSize * 0.4, 20);
+  const circleSize = Math.max(playerSize * 0.8, 40);
+  const iconSize = circleSize * 0.4;
   const nameOffset = -(circleSize / 2);
+
+  const halfCircle = circleSize / 2;
+  const minLeft = halfCircle;
+  const maxLeft = containerWidth - halfCircle;
+
+  const minTop = halfCircle;
+  const maxTop = containerHeight - halfCircle;
 
   // Split name into words by spaces
   const words = name.trim().split(/\s+/); // split on any whitespace, ignoring multiple spaces
@@ -81,8 +82,11 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 
   const adjustedNameOffset = nameOffset - (numLines - 1) * 15;
 
+  const clampedLeft = Math.min(Math.max(initialLeft, minLeft), maxLeft);
+  const clampedTop = Math.min(Math.max(initialTop, minTop), maxTop);
+
   return (
-    <HoverCard>
+    <div>
       <div
         ref={(node) => {
           if (node) drag(node);
@@ -96,8 +100,8 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
           cursor-grab
         `}
         style={{
-          left: `${initialLeft}px`,
-          top: `${initialTop}px`,
+          left: `${clampedLeft}px`,
+          top: `${clampedTop}px`,
           transform: "translate(-50%, -50%)",
         }}
       >
@@ -121,14 +125,14 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
           style={{
             width: `${circleSize}px`,
             height: `${circleSize}px`,
-            borderColor: getThreatColor(player.threatScore),
+            borderColor: 'var(--color-bg-accent)',
             fontSize: `${Math.max(circleSize * 0.4, 14)}px`,
           }}
         >
-          <HoverCardTrigger>
+          <div>
             {fullPlayer?.avatar_url ? (
-              <img 
-                src={fullPlayer.avatar_url} 
+              <img
+                src={fullPlayer.avatar_url}
                 alt={name}
                 className="w-full h-full object-cover rounded-full"
                 onError={(e) => {
@@ -143,7 +147,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
             {fullPlayer?.avatar_url && (
               <User size={iconSize} className="hidden" />
             )}
-          </HoverCardTrigger>
+          </div>
         </div>
       </div>
 
@@ -152,17 +156,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
       />
-
-      <HoverCardContent>
-        {/* <div className="flex flex-col h-14 w-48 mx-auto">
-          <Panel> */}
-        <div>
-          <span className="flex">Threat Score: {(player.threatScore * 100).toFixed(1)}% </span>
-        </div>
-        {/* </Panel>
-        </div> */}
-      </HoverCardContent>
-    </HoverCard>
+    </div>
   );
 };
 
