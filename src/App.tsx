@@ -1,4 +1,5 @@
 
+import { SupabaseProvider } from "@/context/supabase-provider";
 import { AuthProvider } from "@/context/auth-context";
 import { ThemeProvider } from "@/context/theme-provider"
 import { useEffect } from "react";
@@ -20,16 +21,16 @@ const App = () => {
   }, [urlState]);
 
   return (
-
-    <div className="h-[100dvh] flex flex-col">
-      <AuthProvider url={urlState}>
-        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-          <Layout />
-          <Toaster />
-        </ThemeProvider>
-      </AuthProvider>
-
-    </div>
+    <SupabaseProvider>
+      <div className="h-[100dvh] flex flex-col">
+        <AuthProvider url={urlState}>
+          <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+            <Layout />
+            <Toaster />
+          </ThemeProvider>
+        </AuthProvider>
+      </div>
+    </SupabaseProvider>
   );
 };
 

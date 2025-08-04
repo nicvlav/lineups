@@ -107,7 +107,6 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
           setVotes(savedSession.partialVotes);
           setCompletedVotes(new Set(savedSession.completedVotes));
           setSessionRestored(true);
-          console.log('Voting session restored!');
           return;
         }
       }
@@ -187,7 +186,7 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
     if (randomizedPlayers.length > 0) {
       const initialVotes = {} as Record<StatsKey, number>;
       Object.keys(statLabelMap).forEach(key => {
-        initialVotes[key as StatsKey] = 5; // Default to middle value
+        initialVotes[key as StatsKey] = 5; // Default to middle value (now 5 out of 1-10)
       });
       setVotes(initialVotes);
     }
@@ -199,8 +198,8 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
 
   if (!currentPlayer || !user) return null;
 
-  const handleVoteChange = (statKey: StatsKey, value: number) => {
-    console.log(`Vote change: ${statKey} = ${value}`);
+  const handleVoteChange = (statKey: StatsKey, value: number, event?: React.MouseEvent) => {
+    event?.preventDefault();
     setVotes(prev => ({
       ...prev,
       [statKey]: value
@@ -208,10 +207,7 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
   };
 
   const handleNextCategory = () => {
-    console.log(`Next category clicked. Current: ${categoryIndex}, isSubmitting: ${isSubmitting}`);
-    
     if (isSubmitting) {
-      console.log('Already submitting, ignoring click');
       return;
     }
     
@@ -225,46 +221,33 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
   };
 
   const handleSubmitPlayerVotes = async () => {
-    if (!currentPlayer) {
-      console.log('No current player, aborting submit');
+    if (!currentPlayer || isSubmitting) {
       return;
     }
     
-    if (isSubmitting) {
-      console.log('Already submitting, aborting');
-      return;
-    }
-    
-    console.log(`Submitting votes for player: ${currentPlayer.name}`, votes);
     setIsSubmitting(true);
     
     try {
-      console.log('Calling onVoteComplete...');
       await onVoteComplete({
         playerId: currentPlayer.id,
         votes
       });
-      console.log('Vote submission successful');
       
       setCompletedVotes(prev => new Set([...prev, currentPlayer.id]));
       
       // Move to next player
       if (currentPlayerIndex < randomizedPlayers.length - 1) {
-        console.log('Moving to next player');
         setCurrentPlayerIndex(prev => prev + 1);
         setCategoryIndex(0);
         setCurrentCategory("pace");
       } else {
         // All players completed - clear session and close
-        console.log('All players completed, closing dialog');
         clearVotingSession();
         onClose();
       }
     } catch (error) {
       console.error('Error submitting votes:', error);
-      // Don't leave in submitting state on error
     } finally {
-      console.log('Setting isSubmitting to false');
       setIsSubmitting(false);
     }
   };
@@ -279,28 +262,28 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
         </Badge>
       </div>
       
-      <div className="grid grid-cols-11 gap-1">
-        {Array.from({ length: 11 }, (_, i) => (
+      <div className="grid grid-cols-10 gap-1">
+        {Array.from({ length: 10 }, (_, i) => (
           <button
-            key={i}
+            key={i + 1}
             type="button"
-            onClick={() => handleVoteChange(statKey, i)}
+            onClick={(e) => handleVoteChange(statKey, i + 1, e)}
             className={`
-              h-10 w-full rounded-md border-2 transition-all duration-200 text-xs font-medium
-              flex items-center justify-center
-              ${votes[statKey] === i 
-                ? 'border-primary bg-primary text-primary-foreground shadow-md scale-105' 
-                : 'border-muted bg-background hover:border-primary/50 hover:bg-muted hover:scale-102'
+              h-10 w-full rounded-md border-2 transition-all duration-150 text-xs font-medium
+              flex items-center justify-center touch-manipulation
+              ${votes[statKey] === i + 1 
+                ? 'border-primary bg-primary text-primary-foreground shadow-md' 
+                : 'border-muted bg-background hover:border-primary/50 hover:bg-muted'
               }
             `}
           >
-            {i}
+            {i + 1}
           </button>
         ))}
       </div>
       
       <div className="flex justify-between text-xs text-muted-foreground px-1">
-        <span>Poor (0-3)</span>
+        <span>Poor (1-3)</span>
         <span>Average (4-6)</span>
         <span>Excellent (7-10)</span>
       </div>
@@ -308,9 +291,9 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl h-[90vh] flex flex-col overflow-hidden">
-        <CardHeader className="flex-shrink-0 space-y-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-hidden">
+      <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <CardHeader className="flex-shrink-0 space-y-4 pb-4">
           <div className="flex justify-between items-start">
             <CardTitle className="text-xl">Player Evaluation</CardTitle>
             <Button variant="ghost" size="sm" onClick={onClose}>×</Button>
@@ -333,18 +316,18 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
           </div>
         </CardHeader>
 
-        <CardContent className="flex flex-col flex-1 min-h-0">
-          {/* Scrollable middle section */}
-          <div className="flex-1 overflow-y-auto py-2">
-            <div className="space-y-4">
+        <CardContent className="flex flex-col flex-1 min-h-0 px-6 py-0">
+          {/* Scrollable middle section with better spacing */}
+          <div className="flex-1 overflow-y-auto py-4 -mx-2 px-2">
+            <div className="space-y-6">
               {currentStats.map(statKey => (
                 <VoteSlider key={statKey} statKey={statKey} />
               ))}
             </div>
           </div>
 
-          {/* Fixed button at bottom */}
-          <div className="flex-shrink-0 pt-4 border-t mt-4">
+          {/* Fixed button at bottom with better spacing */}
+          <div className="flex-shrink-0 pt-4 pb-6 border-t mt-2">
             <Button 
               onClick={handleNextCategory}
               disabled={isSubmitting}

@@ -76,16 +76,50 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
         // Get initial session
         const getInitialSession = async () => {
+            // Check for mobile mode switch scenario
+            const fbDebug = localStorage.getItem('fb_auth_debug');
+            if (fbDebug) {
+                localStorage.removeItem('fb_auth_debug');
+            }
+            
             try {
+                // Since SupabaseProvider ensures Supabase is ready, we can call directly
                 const { data: { session }, error } = await supabase.auth.getSession();
                 
+                // Simple mobile recovery check - don't let this block the main flow
+                if (!session && !error) {
+                    try {
+                        // Quick check for mobile recovery tokens (non-blocking)
+                        const mobileRecovery = localStorage.getItem('mobile_session_recovery');
+                        if (mobileRecovery) {
+                            const recoveryData = JSON.parse(mobileRecovery);
+                            if (recoveryData.access_token && Date.now() - recoveryData.timestamp < 3600000) {
+                                // Quick session restore attempt
+                                const { data: recovered } = await supabase.auth.setSession({
+                                    access_token: recoveryData.access_token,
+                                    refresh_token: recoveryData.refresh_token || ''
+                                });
+                                if (recovered.session) {
+                                    localStorage.removeItem('mobile_session_recovery');
+                                }
+                            } else {
+                                localStorage.removeItem('mobile_session_recovery');
+                            }
+                        }
+                    } catch (recoveryError) {
+                        console.error('AUTH: Mobile recovery failed:', recoveryError);
+                        localStorage.removeItem('mobile_session_recovery');
+                    }
+                }
+                
                 if (error) {
-                    console.error('Error getting session:', error);
+                    console.error('AUTH: Error getting session:', error);
                 } else if (mounted && session?.user) {
                     setSession(session);
+                    
+                    // Since SupabaseProvider ensures connection is ready, transformUser should work reliably
                     const authUser = await transformUser(session.user);
                     if (authUser === null) {
-                        // User was force signed out due to validation failure
                         setSession(null);
                         setUser(null);
                     } else {
@@ -96,7 +130,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                     setUser(null);
                 }
             } catch (error) {
-                console.error('Failed to get initial session:', error);
+                console.error('AUTH: Failed to get initial session:', error);
             } finally {
                 if (mounted) {
                     setLoading(false);
@@ -109,17 +143,6 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                console.log('Auth state changed:', event, session?.user?.email);
-                
-                // Add debugging for Facebook auth issues
-                if (event === 'SIGNED_IN' && session?.user) {
-                    console.log('🔍 User signed in:', {
-                        id: session.user.id,
-                        email: session.user.email,
-                        provider: session.user.app_metadata?.provider,
-                        created_at: session.user.created_at
-                    });
-                }
                 
                 if (mounted) {
                     setSession(session);
@@ -127,22 +150,13 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                         try {
                             const authUser = await transformUser(session.user);
                             if (authUser === null) {
-                                // User was force signed out due to validation failure
-                                console.log('🚨 User session invalidated - forcing sign out');
                                 setSession(null);
                                 setUser(null);
                             } else {
-                                console.log('✅ User profile loaded:', {
-                                    hasProfile: !!authUser.profile,
-                                    isVerified: authUser.profile?.is_verified,
-                                    squadId: authUser.profile?.squad_id,
-                                    playerId: authUser.profile?.associated_player_id
-                                });
                                 setUser(authUser);
                             }
                         } catch (error) {
-                            console.error('❌ Failed to transform user:', error);
-                            // Force sign out on any error
+                            console.error('Failed to transform user:', error);
                             setSession(null);
                             setUser(null);
                         }
@@ -193,15 +207,8 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
     // Transform Supabase User to our AuthUser type
     const transformUser = async (user: User): Promise<AuthUser | null> => {
         try {
-            // First, verify the user actually exists in Supabase auth
-            const { data: currentUser, error: userError } = await supabase.auth.getUser();
-            
-            if (userError || !currentUser.user || currentUser.user.id !== user.id) {
-                console.warn('🚨 User session is stale - user no longer exists in auth');
-                // Force sign out if user doesn't exist
-                await supabase.auth.signOut();
-                return null;
-            }
+            // Since we have a valid session from getSession(), trust it
+            // The extra getUser() validation was causing false positives with 403 errors
 
             // Load user profile with associated player
             const { data: profile, error } = await supabase
@@ -243,9 +250,14 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                         }
                         
                         console.error('Failed to create user profile:', createError);
-                        // If we can't create profile, force sign out
-                        await supabase.auth.signOut();
-                        return null;
+                        // If we can't create profile, create user without profile
+                        return {
+                            id: user.id,
+                            email: user.email || null,
+                            user_metadata: user.user_metadata,
+                            app_metadata: user.app_metadata,
+                            profile: undefined,
+                        };
                     }
                     
                     return {
@@ -257,16 +269,28 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                     };
                 } catch (profileError) {
                     console.error('Exception creating profile:', profileError);
-                    await supabase.auth.signOut();
-                    return null;
+                    // Return user without profile instead of signing out
+                    return {
+                        id: user.id,
+                        email: user.email || null,
+                        user_metadata: user.user_metadata,
+                        app_metadata: user.app_metadata,
+                        profile: undefined,
+                    };
                 }
             }
 
             if (error && error.code !== 'PGRST116') {
                 console.error('Database error loading profile:', error);
-                // For other database errors, force sign out
-                await supabase.auth.signOut();
-                return null;
+                // For other database errors, still create user but without profile
+                // Don't force sign out unless it's critical
+                return {
+                    id: user.id,
+                    email: user.email || null,
+                    user_metadata: user.user_metadata,
+                    app_metadata: user.app_metadata,
+                    profile: undefined,
+                };
             }
 
             return {
@@ -278,9 +302,15 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             };
         } catch (error) {
             console.error('Error transforming user:', error);
-            // On any unexpected error, force sign out to clear state
-            await supabase.auth.signOut();
-            return null;
+            // On unexpected errors, create minimal user instead of force sign out
+            // This prevents unnecessary sign-outs due to temporary network issues
+            return {
+                id: user.id,
+                email: user.email || null,
+                user_metadata: user.user_metadata,
+                app_metadata: user.app_metadata,
+                profile: undefined,
+            };
         }
     };
 
@@ -316,21 +346,27 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
     const signInWithFacebook = async () => {
         try {
-            // Store debug info in localStorage to survive redirects
+            // Store debug info and mobile state to survive redirects
+            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const currentViewport = window.innerWidth;
+            
             localStorage.setItem('fb_auth_debug', JSON.stringify({
                 timestamp: new Date().toISOString(),
                 step: 'oauth_initiated',
-                url: window.location.href
+                url: window.location.href,
+                isMobileDevice,
+                currentViewport,
+                userAgent: navigator.userAgent
             }));
             
-            console.log('🚀 Starting Facebook OAuth...');
+            console.log('🚀 Starting Facebook OAuth...', { isMobileDevice, currentViewport });
             
             console.log('📞 Calling Supabase signInWithOAuth...');
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'facebook',
                 options: {
                     scopes: 'email',
-                    redirectTo: `${window.location.origin}/` // Go straight to home
+                    redirectTo: `${window.location.origin}/auth/callback` // Use callback for better debugging
                 }
             });
 
@@ -341,7 +377,9 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                 localStorage.setItem('fb_auth_debug', JSON.stringify({
                     timestamp: new Date().toISOString(),
                     step: 'oauth_error',
-                    error: error.message
+                    error: error.message,
+                    isMobileDevice,
+                    currentViewport
                 }));
             }
 
@@ -506,14 +544,35 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                     .from('players')
                     .insert({
                         name: newPlayerName.trim(),
-                        stats: {
-                            // Default stats for new player
-                            pace: 50, shooting: 50, passing: 50, dribbling: 50,
-                            defending: 50, physical: 50, finishing: 50, crossing: 50,
-                            free_kicks: 50, penalties: 50, technique: 50, aggression: 50,
-                            interceptions: 50, positioning: 50, vision: 50, composure: 50,
-                            ball_control: 50, reactions: 50
-                        }
+                        // Individual stat columns with default values (5/10 = 50/100)
+                        speed_avg: 5,
+                        vision_avg: 5,
+                        agility_avg: 5,
+                        heading_avg: 5,
+                        blocking_avg: 5,
+                        crossing_avg: 5,
+                        strength_avg: 5,
+                        stamina_avg: 5,
+                        tackling_avg: 5,
+                        teamwork_avg: 5,
+                        dribbling_avg: 5,
+                        finishing_avg: 5,
+                        long_shots_avg: 5,
+                        aggression_avg: 5,
+                        first_touch_avg: 5,
+                        off_the_ball_avg: 5,
+                        positivity_avg: 5,
+                        long_passing_avg: 5,
+                        short_passing_avg: 5,
+                        communication_avg: 5,
+                        interceptions_avg: 5,
+                        composure_avg: 5,
+                        willing_to_switch_avg: 5,
+                        attack_positioning_avg: 5,
+                        attacking_workrate_avg: 5,
+                        defensive_workrate_avg: 5,
+                        defensive_awareness_avg: 5,
+                        vote_count: 0
                     })
                     .select()
                     .single();
@@ -558,6 +617,18 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             return { error: error as AuthError };
         }
     };
+
+    // Add timeout failsafe for loading state
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            if (loading) {
+                console.warn('⚠️ Auth initialization timeout - forcing state');
+                setLoading(false);
+            }
+        }, 10000); // 10 second timeout
+
+        return () => clearTimeout(timeout);
+    }, [loading]);
 
     // Show loading screen while initializing
     if (loading) {

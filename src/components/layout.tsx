@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
-import { isMobile } from 'react-device-detect'; // Use this to detect touch devices
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/auth-context";
 import { PlayersProvider } from "@/context/players-provider";
 import HeaderBar from "@/components/header-bar";
@@ -25,6 +25,7 @@ import DataDeletionPage from "@/components/data-deletion";
 const LayoutContent = () => {
     const { needsVerification, user } = useAuth();
     const location = useLocation();
+    const isMobile = useIsMobile();
     
     // Detect if we're on staging
     const isStaging = window.location.hostname.includes('staging');
@@ -59,8 +60,9 @@ const LayoutContent = () => {
 
     const { width, height } = useWindowSize();
 
-    const isCompact = width < 768;
-    const backend = isMobile ? TouchBackend : HTML5Backend;
+    // Separate concerns: width-based responsive design vs touch device detection
+    const isCompact = width < 768; // Responsive layout based on viewport width
+    const backend = isMobile ? TouchBackend : HTML5Backend; // Touch events based on device capability
     const options = isMobile
         ? {
             enableMouseEvents: false, // Prevents conflicts
@@ -102,17 +104,22 @@ const LayoutContent = () => {
                         <Route path="data-deletion" element={<DataDeletionPage />} />
                         
                         {/* App routes */}
-                        <Route index element={<Game isCompact={isCompact} playerSize={(isCompact ? Math.min(height * 2, width) : Math.min(height, width / 2)) / 16} />} />
+                        <Route index element={<Game isCompact={isCompact} playerSize={(() => {
+                            // More aggressive scaling for player sizes
+                            if (isCompact) {
+                                // Mobile/compact: scale more with width constraints
+                                return Math.min(height * 2, width * 0.12, 80) / 16;
+                            } else {
+                                // Desktop: more aggressive scaling between min width (768) and larger screens
+                                const minDesktopWidth = 768;
+                                const scaleFactor = Math.min(width / minDesktopWidth, 2.5); // Cap at 2.5x scaling
+                                return Math.min(height, width / 2) * scaleFactor / 16;
+                            }
+                        })()} />} />
                         {showCards && <Route path="cards" element={<PlayerCards />} />}
                         {!showCards && <Route path="cards" element={<Navigate to="/" />} />}
                         <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
-                        <Route path="vote" element={
-                            (() => {
-                                console.log('Layout: VotingPage route rendered');
-                                console.time('Layout: VotingPage route render');
-                                return <VotingPage />;
-                            })()
-                        } />
+                        <Route path="vote" element={<VotingPage />} />
                         
                         {/* Catch all - redirect to home */}
                         <Route path="*" element={<Navigate to="/" replace />} />

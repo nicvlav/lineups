@@ -73,13 +73,46 @@ const initDB = async () => {
 };
 
 const getFromDB = async (key: string) => {
-    const db = await initDB();
-    return db.get(STORE_NAME, key);
+    try {
+        const db = await initDB();
+        return db.get(STORE_NAME, key);
+    } catch (error) {
+        console.error('💥 IndexedDB read error:', error);
+        // Clear corrupted IndexedDB
+        await clearCorruptedDB();
+        return null;
+    }
 };
 
 const saveToDB = async (key: string, value: string) => {
-    const db = await initDB();
-    await db.put(STORE_NAME, value, key);
+    try {
+        const db = await initDB();
+        await db.put(STORE_NAME, value, key);
+    } catch (error) {
+        console.error('💥 IndexedDB write error:', error);
+        // Clear corrupted IndexedDB
+        await clearCorruptedDB();
+    }
+};
+
+const clearCorruptedDB = async () => {
+    try {
+        console.log('🧹 Clearing corrupted IndexedDB...');
+        const db = await initDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        await tx.objectStore(STORE_NAME).clear();
+        await tx.done;
+        console.log('✅ IndexedDB cleared successfully');
+    } catch (error) {
+        console.error('❌ Failed to clear IndexedDB:', error);
+        // Last resort: delete the entire database
+        try {
+            await indexedDB.deleteDatabase(DB_NAME);
+            console.log('🗑️ IndexedDB database deleted');
+        } catch (deleteError) {
+            console.error('💥 Failed to delete IndexedDB:', deleteError);
+        }
+    }
 };
 
 interface PlayersProviderProps {
@@ -139,57 +172,50 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         setGamePlayers(updatedPlayers);
     };
 
-    const loadURLState = async () => {
-        if (loadingState.current || !supabase) return;
-
-        const freshPlayers = await fetchPlayers();
-        
-        // Initialize voting stats and user votes on first load
-        await initializeVotingStats();
-        await loadUserVotes();
-
-        if (!urlState) return;
-
-        const currentUrl = new URL(window.location.href);
-        const decoded = decodeStateFromURL(urlState);
-
-        loadingState.current = true;
-        if (decoded) {
-            await loadJSONGamePlayers(decoded.gamePlayers, freshPlayers);
-            currentUrl.searchParams.delete("state");
-            window.history.replaceState({}, "", currentUrl.toString());
+    // Unified initialization function to prevent race conditions
+    const initializeGameState = async () => {
+        if (loadingState.current || !supabase) {
+            return;
         }
-
-        clearUrlState();
-
-        loadingState.current = false;
-    };
-
-    const loadTabState = async () => {
-        if (!supabase || loadingState.current) return;
-
-        const freshPlayers = await fetchPlayers();
         
-        // Initialize voting stats and user votes on first load
-        await initializeVotingStats();
-        await loadUserVotes();
-        
-        const savedState = await getFromDB(tabKeyRef.current);
-
-        if (!savedState) return;
-
         loadingState.current = true;
-
+        
         try {
-            const parsedData = JSON.parse(savedState);
-            await loadJSONGamePlayers(parsedData.gamePlayers, freshPlayers);
-            console.log("Loaded from IndexedDB:");
+            // Initialize common dependencies first
+            const freshPlayers = await fetchPlayers();
+            await initializeVotingStats();
+            await loadUserVotes();
+
+            // Handle URL state first (takes precedence)
+            if (urlState) {
+                const currentUrl = new URL(window.location.href);
+                const decoded = decodeStateFromURL(urlState);
+                
+                if (decoded) {
+                    await loadJSONGamePlayers(decoded.gamePlayers, freshPlayers);
+                    currentUrl.searchParams.delete("state");
+                    window.history.replaceState({}, "", currentUrl.toString());
+                }
+                
+                clearUrlState();
+                return; // Skip IndexedDB load if URL state was processed
+            }
+
+            // Fall back to IndexedDB state
+            const savedState = await getFromDB(tabKeyRef.current);
+            if (savedState) {
+                try {
+                    const parsedData = JSON.parse(savedState);
+                    await loadJSONGamePlayers(parsedData.gamePlayers, freshPlayers);
+                } catch (error) {
+                    console.error('PLAYERS: Error loading from IndexedDB:', error);
+                }
+            }
         } catch (error) {
-
-            console.error("Error loading from IndexedDB:", error);
+            console.error('PLAYERS: Error during game state initialization:', error);
+        } finally {
+            loadingState.current = false;
         }
-
-        loadingState.current = false;
     };
 
     // Initialize voting stats on app launch
@@ -452,13 +478,23 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     // Real-time updates for players
     useEffect(() => {
         // Skip game state management on static routes
-        if (isStaticRoute) return;
-
-        if (urlState) {
-            loadURLState();
-        } else {
-            loadTabState();
+        if (isStaticRoute) {
+            return;
         }
+
+        // Use unified initialization with timeout failsafe and cache reset
+        const initTimeout = setTimeout(() => {
+            console.warn('PLAYERS: Game state initialization timeout - clearing cache...');
+            // Clear all caches and force reload
+            clearCorruptedDB();
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload();
+        }, 8000);
+
+        initializeGameState().finally(() => {
+            clearTimeout(initTimeout);
+        });
 
         // Create a channel for realtime subscriptions - listen to both players and vote aggregates
         const playerChannel = supabase?.channel('players_and_votes')
@@ -631,86 +667,124 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         return () => {
             if (supabase && playerChannel) supabase.removeChannel(playerChannel);
         };
-    }, [supabase]);
+    }, [supabase, location.pathname, isStaticRoute]);
 
 
+    // Remove duplicate URL state effect since it's handled in unified initialization
     useEffect(() => {
         // Skip URL state management on static routes
         if (isStaticRoute) return;
 
-        loadURLState();
+        // Only re-initialize if urlState changes and we have a new urlState
+        if (urlState && !loadingState.current) {
+            initializeGameState();
+        }
     }, [urlState, isStaticRoute]);
 
     const fetchPlayers = async (): Promise<Record<string, Player>> => {
-        if (!supabase) return {};
-
-        loadingState.current = true;
-
-        const { data, error } = await supabase
-            .from("players")
-            .select(`
-                id,
-                name,
-                avatar_url,
-                vote_count,
-                speed_avg,
-                vision_avg,
-                agility_avg,
-                heading_avg,
-                blocking_avg,
-                crossing_avg,
-                strength_avg,
-                stamina_avg,
-                tackling_avg,
-                teamwork_avg,
-                dribbling_avg,
-                finishing_avg,
-                long_shots_avg,
-                aggression_avg,
-                first_touch_avg,
-                off_the_ball_avg,
-                positivity_avg,
-                long_passing_avg,
-                short_passing_avg,
-                communication_avg,
-                interceptions_avg,
-                composure_avg,
-                willing_to_switch_avg,
-                attack_positioning_avg,
-                attacking_workrate_avg,
-                defensive_workrate_avg,
-                defensive_awareness_avg,
-                long_shots_avg,
-                stamina_avg,
-                created_at,
-                updated_at
-            `)
-            .order("name", { ascending: false });
-        if (error) {
-            console.error("Error fetching players:", error);
-            loadingState.current = false;
+        if (!supabase) {
+            console.log('📊 PLAYERS: No Supabase client available');
             return {};
         }
 
-        const playerRecord: Record<string, Player> = {};
-        (data || []).forEach(player => {
-            // Use community-voted stats if available, otherwise fall back to individual stat columns (0-10 scale converted to 0-100)
-            const effectiveStats = convertIndividualStatsToPlayerStats(player);
+        console.log('📊 PLAYERS: Starting player fetch...');
+        loadingState.current = true;
 
-            // console.log(effectiveStats);
+        try {
+            const { data, error } = await supabase
+                .from("players")
+                .select(`
+                    id,
+                    name,
+                    avatar_url,
+                    vote_count,
+                    speed_avg,
+                    vision_avg,
+                    agility_avg,
+                    heading_avg,
+                    blocking_avg,
+                    crossing_avg,
+                    strength_avg,
+                    stamina_avg,
+                    tackling_avg,
+                    teamwork_avg,
+                    dribbling_avg,
+                    finishing_avg,
+                    long_shots_avg,
+                    aggression_avg,
+                    first_touch_avg,
+                    off_the_ball_avg,
+                    positivity_avg,
+                    long_passing_avg,
+                    short_passing_avg,
+                    communication_avg,
+                    interceptions_avg,
+                    composure_avg,
+                    willing_to_switch_avg,
+                    attack_positioning_avg,
+                    attacking_workrate_avg,
+                    defensive_workrate_avg,
+                    defensive_awareness_avg,
+                    long_shots_avg,
+                    stamina_avg,
+                    created_at,
+                    updated_at
+                `)
+                .order("name", { ascending: false });
+                
+            if (error) {
+                console.error("❌ PLAYERS: Error fetching players:", error);
+                loadingState.current = false;
+                
+                // Check if it's a network/auth issue that might resolve with cache clear
+                if (error.code === 'PGRST301' || error.message.includes('JWT') || error.message.includes('network')) {
+                    console.log('🧹 PLAYERS: Network/auth error detected, clearing cache...');
+                    await clearCorruptedDB();
+                    localStorage.clear();
+                    sessionStorage.clear();
+                }
+                
+                return {};
+            }
 
-            playerRecord[player.id] = {
-                ...player,
-                stats: effectiveStats,
-                // Store aggregate info for reference
-                vote_count: player.vote_count?.vote_count || 0,
-            };
-        });
+            if (!data || data.length === 0) {
+                console.warn('⚠️ PLAYERS: No players found in database');
+                // This might indicate a database issue or permissions problem
+                return {};
+            }
 
-        setPlayers(playerRecord); // still set state for global use
+            console.log(`✅ PLAYERS: Fetched ${data.length} players successfully`);
 
-        loadingState.current = false;
-        return playerRecord; // return immediately for local use
+            const playerRecord: Record<string, Player> = {};
+            data.forEach(player => {
+                try {
+                    // Use community-voted stats if available, otherwise fall back to individual stat columns (0-10 scale converted to 0-100)
+                    const effectiveStats = convertIndividualStatsToPlayerStats(player);
+
+                    playerRecord[player.id] = {
+                        ...player,
+                        stats: effectiveStats,
+                        // Store aggregate info for reference
+                        vote_count: player.vote_count?.vote_count || 0,
+                    };
+                } catch (statError) {
+                    console.error(`❌ PLAYERS: Error processing player ${player.name}:`, statError);
+                }
+            });
+
+            setPlayers(playerRecord); // still set state for global use
+            console.log(`📊 PLAYERS: Player fetch complete, ${Object.keys(playerRecord).length} players processed`);
+
+            loadingState.current = false;
+            return playerRecord; // return immediately for local use
+        } catch (unexpectedError) {
+            console.error('💥 PLAYERS: Unexpected error during player fetch:', unexpectedError);
+            loadingState.current = false;
+            
+            // Clear cache on unexpected errors
+            await clearCorruptedDB();
+            return {};
+        }
     };
 
     // Convert aggregated averages to 0-100 stat scores
@@ -756,6 +830,39 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
     //     return communityStats;
     // };
+
+    // Convert PlayerStats (0-100) to individual stat columns (0-10) for database insert
+    const convertPlayerStatsToIndividualColumns = (stats: PlayerStats) => {
+        return {
+            speed_avg: Math.round(stats.speed / 10),
+            vision_avg: Math.round(stats.vision / 10),
+            agility_avg: Math.round(stats.agility / 10), 
+            heading_avg: Math.round(stats.heading / 10),
+            blocking_avg: Math.round(stats.blocking / 10),
+            crossing_avg: Math.round(stats.crossing / 10),
+            strength_avg: Math.round(stats.strength / 10), 
+            stamina_avg: Math.round(stats.stamina / 10),
+            tackling_avg: Math.round(stats.tackling / 10),
+            teamwork_avg: Math.round(stats.teamwork / 10),
+            dribbling_avg: Math.round(stats.dribbling / 10),
+            finishing_avg: Math.round(stats.finishing / 10),
+            long_shots_avg: Math.round(stats.longShots / 10),
+            aggression_avg: Math.round(stats.aggression / 10),
+            first_touch_avg: Math.round(stats.firstTouch / 10),
+            off_the_ball_avg: Math.round(stats.offTheBall / 10),
+            positivity_avg: Math.round(stats.positivity / 10),
+            long_passing_avg: Math.round(stats.longPassing / 10),
+            short_passing_avg: Math.round(stats.shortPassing / 10),
+            communication_avg: Math.round(stats.communication / 10),
+            interceptions_avg: Math.round(stats.interceptions / 10),
+            composure_avg: Math.round(stats.composure / 10),
+            willing_to_switch_avg: Math.round(stats.willingToSwitch / 10),
+            attack_positioning_avg: Math.round(stats.attackPositioning / 10),
+            attacking_workrate_avg: Math.round(stats.attackingWorkrate / 10),
+            defensive_workrate_avg: Math.round(stats.defensiveWorkrate / 10),
+            defensive_awareness_avg: Math.round(stats.defensiveAwareness / 10),
+        };
+    };
 
     // Convert individual player stat columns (0-10) to PlayerStats (0-100)
     const convertIndividualStatsToPlayerStats = (player: any): PlayerStats => {
@@ -830,16 +937,24 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         if (player.id != null && player.id in players) return;
 
+        const playerStats = player.stats ? player.stats : defaultStatScores;
         const newPlayer: Player = {
             id: player.id ? player.id : uuidv4(),
             name: player.name ? player.name : "Player Name",
             vote_count: 0,
-            // stats: player.stats ? player.stats : defaultStatScores,
-            stats: player.stats ? player.stats : defaultStatScores,
+            stats: playerStats,
         };
 
+        // Convert stats to individual columns for database
+        const individualColumns = convertPlayerStatsToIndividualColumns(playerStats);
+
         supabase.from('players')
-            .insert([newPlayer]).then(({ data, error }) => {
+            .insert([{
+                id: newPlayer.id,
+                name: newPlayer.name,
+                vote_count: 0,
+                ...individualColumns
+            }]).then(({ data, error }) => {
                 if (error) {
                     // Rollback local state if there's an error
                     console.error('Error adding player:', error.message);

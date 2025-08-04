@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/auth-context";
 import { usePlayers } from "@/context/players-provider";
 import { PlayerVoting } from "@/components/dialogs/player-voting";
@@ -15,7 +15,10 @@ interface VoteData {
 
 export default function VotingPage() {
   console.log('VotingPage: Component rendering/mounting');
-  console.time('VotingPage: Component lifecycle');
+  
+  // Use unique timer ID to avoid conflicts
+  const timerIdRef = useRef(`VotingPage: Component lifecycle - ${Date.now()}`);
+  console.time(timerIdRef.current);
   
   const { user, canVote, isVerified } = useAuth();
   const { 
@@ -35,19 +38,20 @@ export default function VotingPage() {
     console.log('VotingPage: Component mounted');
     return () => {
       console.log('VotingPage: Component unmounting');
-      console.timeEnd('VotingPage: Component lifecycle');
+      console.timeEnd(timerIdRef.current);
     };
   }, []);
 
   useEffect(() => {
     if (!user) return;
 
-    console.time('VotingPage: Load data');
+    const loadTimerId = `VotingPage: Load data - ${Date.now()}`;
+    console.time(loadTimerId);
     console.log('VotingPage: All data comes from PlayersProvider cache - instant loading');
     
     // All data now comes from PlayersProvider - no queries needed!
     setLoading(false);
-    console.timeEnd('VotingPage: Load data');
+    console.timeEnd(loadTimerId);
 
   }, [user]);
 

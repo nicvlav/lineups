@@ -38,7 +38,10 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
             to={to}
             onClick={() => {
                 console.log(`HeaderBar: Navigation clicked - ${label} to ${to}`);
-                console.time(`HeaderBar: Navigate to ${to}`);
+                // Use unique timer names with timestamp to avoid conflicts
+                const timerId = `HeaderBar: Navigate to ${to} - ${Date.now()}`;
+                console.time(timerId);
+                setTimeout(() => console.timeEnd(timerId), 100);
             }}
             className={({ isActive }) =>
                 cn(

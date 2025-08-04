@@ -14,12 +14,42 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        // Check Facebook auth debug info
+        const fbDebug = localStorage.getItem('fb_auth_debug');
+        
+        // Log mobile browser state and detect mode switching
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const currentViewport = window.innerWidth;
+        const isDesktopMode = currentViewport > 768 && isMobileDevice;
+        
+        // Mobile state detection for recovery logic
+
+        // Check if Facebook forced desktop mode on a mobile device
+        if (fbDebug) {
+          const debugInfo = JSON.parse(fbDebug);
+          const wasInitiallyMobile = debugInfo.isMobileDevice && debugInfo.currentViewport < 768;
+          const nowInDesktopMode = isDesktopMode;
+          
+          if (wasInitiallyMobile && nowInDesktopMode) {
+            // Store session tokens in localStorage for mobile mode recovery
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            const accessToken = hashParams.get('access_token');
+            const refreshToken = hashParams.get('refresh_token');
+            
+            if (accessToken) {
+              localStorage.setItem('mobile_session_recovery', JSON.stringify({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+                timestamp: Date.now(),
+                originalViewport: debugInfo.currentViewport
+              }));
+            }
+          }
+        }
+        
         // First, get the current URL hash and search params
         const urlParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        
-        console.log('🔗 URL search params:', urlParams.toString());
-        console.log('🔗 URL hash params:', hashParams.toString());
         
         // Check for errors first
         const authError = urlParams.get('error') || hashParams.get('error');
@@ -64,44 +94,43 @@ export default function AuthCallbackPage() {
           return;
         }
         
-        // Fallback: Handle the OAuth callback with URL parameters
-        const { data, error } = await supabase.auth.getSession();
+        // Fallback: Handle the OAuth callback with URL parameters or existing session
+        console.log('🔄 CALLBACK: About to call getSession in callback...');
+        
+        // Add timeout to getSession in callback too (mobile issue)
+        const callbackSessionPromise = supabase.auth.getSession();
+        const callbackTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('callback getSession timeout')), 2000)
+        );
+        
+        let sessionResult;
+        try {
+          sessionResult = await Promise.race([callbackSessionPromise, callbackTimeoutPromise]);
+        } catch (timeoutError) {
+          console.warn('⏰ CALLBACK: getSession timed out, assuming auth is already handled...');
+          // If getSession times out in callback, just redirect - auth context has already handled it
+          console.log('🏠 CALLBACK: Redirecting to home due to timeout...');
+          navigate('/', { replace: true });
+          return;
+        }
+        
+        const { data, error } = sessionResult as any;
+        console.log('📡 CALLBACK: getSession result:', { hasSession: !!data.session, error: error?.message });
         
         if (error) {
           console.error('Auth callback error:', error);
           setError(error.message);
         } else if (data.session) {
           console.log('Session found:', data.session.user.email);
+          console.log('🏠 CALLBACK: Redirecting to home from session found...');
           // Successfully authenticated, redirect to home
           navigate('/', { replace: true });
         } else {
-          console.log('No session found, checking for auth code...');
-          
-          // If no session but we have URL params, try to handle the callback
-          if (urlParams.has('code') || hashParams.has('access_token')) {
-            console.log('Found auth parameters, attempting to exchange...');
-            // The auth state change listener should pick this up
-            setTimeout(() => {
-              // Re-check session after a delay
-              supabase.auth.getSession().then(({ data: sessionData, error: sessionError }) => {
-                if (sessionError) {
-                  console.error('Session check error:', sessionError);
-                  setError(sessionError.message);
-                  setLoading(false);
-                } else if (sessionData.session) {
-                  console.log('Session found on retry:', sessionData.session.user.email);
-                  navigate('/', { replace: true });
-                } else {
-                  console.log('Still no session found');
-                  setError('Authentication failed - no session created');
-                  setLoading(false);
-                }
-              });
-            }, 2000);
-          } else {
-            setError('No authentication data received');
-            setLoading(false);
-          }
+          console.log('No session in callback, but user might already be signed in. Redirecting to home...');
+          console.log('🏠 CALLBACK: Redirecting to home from no session...');
+          // If we're here, the auth listener has likely already handled the session
+          // Just redirect to home and let the main app handle the auth state
+          navigate('/', { replace: true });
         }
       } catch (err) {
         console.error('Unexpected error:', err);
