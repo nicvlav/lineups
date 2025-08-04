@@ -121,11 +121,11 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 
 
         <div
-          className={`z-200 rounded-full border-3 shadow-md flex items-center justify-center bg-muted overflow-hidden`}
+          className={`z-200 rounded-full border-4 shadow-md flex items-center justify-center bg-muted overflow-hidden`}
           style={{
             width: `${circleSize}px`,
             height: `${circleSize}px`,
-            borderColor: 'var(--color-bg-accent)',
+            borderColor: 'var(--color-muted-foreground)',
             fontSize: `${Math.max(circleSize * 0.4, 14)}px`,
           }}
         >
