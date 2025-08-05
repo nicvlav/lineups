@@ -15,9 +15,9 @@ interface VoteData {
 
 export default function VotingPage() {
   const { user, canVote, isVerified } = useAuth();
-  const { 
-    players: playersRecord, 
-    submitVote, 
+  const {
+    players: playersRecord,
+    submitVote,
     getPendingVoteCount,
     votingStats,
     playersWithVotes,
@@ -36,7 +36,7 @@ export default function VotingPage() {
 
   useEffect(() => {
     if (!user) return;
-    
+
     // All data now comes from PlayersProvider - no queries needed!
     setLoading(false);
   }, [user]);
@@ -60,10 +60,10 @@ export default function VotingPage() {
     try {
       // Submit the vote
       await submitVote(voteData);
-      
+
       // Find next player to vote on
       const nextPlayer = getNextPlayerToVote();
-      
+
       if (nextPlayer) {
         setCurrentVotingPlayerId(nextPlayer);
         setCurrentVotingPlayer(nextPlayer);
@@ -152,12 +152,12 @@ export default function VotingPage() {
     : null;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold">Player Evaluation</h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          Help build fair team selections by rating players across key football skills.
-          Your votes contribute to community-driven player statistics.
+    <div className="flex flex-col h-full w-full overflow-hidden p-4 space-y-4">
+      {/* Section Header */}
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">Player Evaluation</h1>
+        <p className="text-muted-foreground">
+          Help build fair team selections by rating players. Your votes contribute to community-driven player statistics.
         </p>
       </div>
 
