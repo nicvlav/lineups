@@ -152,7 +152,7 @@ export default function VotingPage() {
     : null;
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden p-4 space-y-4">
+    <div className="flex flex-col h-full w-full overflow-y-auto p-4 space-y-4">
       {/* Section Header */}
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Player Evaluation</h1>
