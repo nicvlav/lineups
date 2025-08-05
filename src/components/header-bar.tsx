@@ -22,21 +22,22 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
     const { user, signOut } = useAuth();
     const [showPlayerAssociation, setShowPlayerAssociation] = useState(false);
     const iconSize = compact ? 16 : 20;
-    
+
     // Detect staging environment
     const isStaging = window.location.hostname.includes('staging');
-    
+
+    const canVote = user !== null;
     // Only show Cards to me!
-    const showCards = user?.id === '24115871-04fe-4111-b048-18f7e3e976fc'; 
+    const showCards = user?.id === '24115871-04fe-4111-b048-18f7e3e976fc';
 
     const handleSignOut = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         try {
             console.log('🚪 HEADER: Initiating sign out...');
             const result = await signOut();
-            
+
             if (result.error) {
                 console.error('HEADER: Sign out failed:', result.error);
                 // Still continue - auth context should have cleared local state
@@ -68,8 +69,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                     "hover:bg-accent/60 hover:text-accent-foreground hover:border-border/30",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     "active:scale-95 active:bg-accent/80", // Add press feedback
-                    isActive 
-                        ? "bg-gradient-to-br from-primary/90 to-primary text-primary-foreground shadow-lg border-primary/20 ring-1 ring-primary/30" 
+                    isActive
+                        ? "bg-gradient-to-br from-primary/90 to-primary text-primary-foreground shadow-lg border-primary/20 ring-1 ring-primary/30"
                         : "text-muted-foreground hover:text-foreground"
                 )
             }
@@ -101,8 +102,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                     <div className="flex justify-start">
                         <h1 className={cn(
                             "font-bold text-foreground select-none tracking-tight rounded-xl",
-                            isStaging 
-                                ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30" 
+                            isStaging
+                                ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30"
                                 : "bg-gradient-to-r from-muted/40 to-muted/20",
                             compact ? "text-lg px-3 py-1.5" : "text-xl px-4 py-2"
                         )}>
@@ -112,14 +113,14 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
 
                     {/* Navigation - Center column (always centered) */}
                     <div className="flex justify-center">
-                        <nav 
+                        <nav
                             className={cn(
                                 "flex items-center justify-center",
                                 "bg-muted/10 rounded-2xl p-1",
                                 "backdrop-blur-sm",
                                 GAP.xs
                             )} // gap-1
-                            role="navigation" 
+                            role="navigation"
                             aria-label="Main navigation"
                         >
                             <TabIcon icon={Home} to="/" label="Home" />
@@ -127,7 +128,10 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                                 <TabIcon icon={BookDashed} to="/cards" label="Cards" />
                             )}
                             <TabIcon icon={Wand2} to="/generate" label="Generate Teams" />
-                            <TabIcon icon={Vote} to="/vote" label="Vote" />
+                            {canVote && (
+                                <TabIcon icon={Vote} to="/vote" label="Vote" />
+                            )}
+
                         </nav>
                     </div>
 
@@ -178,7 +182,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                     </div>
                 </div>
             </header>
-            
+
             {showPlayerAssociation && (
                 <PlayerAssociation
                     open={showPlayerAssociation}

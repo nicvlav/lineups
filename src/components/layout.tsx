@@ -31,6 +31,7 @@ const LayoutContent = () => {
     // Detect if we're on staging
     const isStaging = window.location.hostname.includes('staging');
 
+    const canVote = user !== null;
     const showCards = user?.id === '24115871-04fe-4111-b048-18f7e3e976fc';
 
     // Check if current route is an auth route
@@ -111,7 +112,8 @@ const LayoutContent = () => {
                         {showCards && <Route path="cards" element={<PlayerCards />} />}
                         {!showCards && <Route path="cards" element={<Navigate to="/" />} />}
                         <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
-                        <Route path="vote" element={<VotingPage />} />
+                        {canVote && <Route path="vote" element={<VotingPage />} />}
+                        {!canVote && <Route path="vote" element={<Navigate to="/" />} />}
 
                         {/* Catch all - redirect to home */}
                         <Route path="*" element={<Navigate to="/" replace />} />
