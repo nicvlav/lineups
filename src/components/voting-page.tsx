@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { usePlayers } from "@/context/players-provider";
 import { PlayerVoting } from "@/components/dialogs/player-voting";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Vote, CheckCircle, Users, BarChart3 } from "lucide-react";
+import { Vote, CheckCircle, Users, BarChart3, RotateCcw, Edit3 } from "lucide-react";
 import { StatsKey } from "@/data/stat-types";
 
 interface VoteData {
@@ -14,12 +14,6 @@ interface VoteData {
 }
 
 export default function VotingPage() {
-  console.log('VotingPage: Component rendering/mounting');
-  
-  // Use unique timer ID to avoid conflicts
-  const timerIdRef = useRef(`VotingPage: Component lifecycle - ${Date.now()}`);
-  console.time(timerIdRef.current);
-  
   const { user, canVote, isVerified } = useAuth();
   const { 
     players: playersRecord, 
@@ -28,50 +22,56 @@ export default function VotingPage() {
     votingStats,
     playersWithVotes,
     userVotes,
+    resetVotingProgress,
+    votingSession,
+    setCurrentVotingPlayer,
+    getNextPlayerToVote,
   } = usePlayers();
   const players = Object.values(playersRecord);
   const [showVoting, setShowVoting] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
+  const [currentVotingPlayerId, setCurrentVotingPlayerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Component lifecycle tracking
-  useEffect(() => {
-    console.log('VotingPage: Component mounted');
-    return () => {
-      console.log('VotingPage: Component unmounting');
-      console.timeEnd(timerIdRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     if (!user) return;
-
-    const loadTimerId = `VotingPage: Load data - ${Date.now()}`;
-    console.time(loadTimerId);
-    console.log('VotingPage: All data comes from PlayersProvider cache - instant loading');
     
     // All data now comes from PlayersProvider - no queries needed!
     setLoading(false);
-    console.timeEnd(loadTimerId);
-
   }, [user]);
 
-  const handleVoteSubmit = async (voteData: VoteData) => {
-    console.log('handleVoteSubmit called with:', voteData.playerId);
-    
-    if (!user) {
-      console.log('No user, aborting vote submit');
-      return;
+  // Set initial voting player
+  useEffect(() => {
+    if (user && !loading) {
+      const currentPlayer = votingSession?.currentPlayerId || getNextPlayerToVote();
+      if (currentPlayer) {
+        setCurrentVotingPlayerId(currentPlayer);
+        if (currentPlayer !== votingSession?.currentPlayerId) {
+          setCurrentVotingPlayer(currentPlayer);
+        }
+      }
     }
+  }, [user, loading, votingSession, getNextPlayerToVote, setCurrentVotingPlayer]);
+
+  const handleVoteSubmit = async (voteData: VoteData) => {
+    if (!user) return;
 
     try {
-      console.log('Calling submitVote from PlayersProvider...');
-      // Use centralized vote submission from PlayersProvider
+      // Submit the vote
       await submitVote(voteData);
-      console.log('submitVote completed successfully');
-
-      // All optimistic updates now handled by PlayersProvider
-
-      console.log(`Vote submitted successfully for player ${voteData.playerId}`);
+      
+      // Find next player to vote on
+      const nextPlayer = getNextPlayerToVote();
+      
+      if (nextPlayer) {
+        setCurrentVotingPlayerId(nextPlayer);
+        setCurrentVotingPlayer(nextPlayer);
+      } else {
+        // No more players to vote on
+        setCurrentVotingPlayerId(null);
+        setShowVoting(false);
+      }
     } catch (error) {
       console.error('Error submitting vote:', error);
       throw error;
@@ -239,6 +239,18 @@ export default function VotingPage() {
                 <Vote className="h-4 w-4" />
                 {unvotedPlayers.length === 0 ? 'All Players Rated' : `Rate ${unvotedPlayers.length} Players`}
               </Button>
+              {votedPlayers.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetVotingProgress}
+                  className="flex items-center gap-2"
+                  title="Reset voting progress (keeps player order)"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Reset Progress
+                </Button>
+              )}
               {unvotedPlayers.length > 0 && (
                 <Badge variant="outline">
                   ~{Math.ceil(unvotedPlayers.length * 2.5)} min remaining
@@ -250,41 +262,71 @@ export default function VotingPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Your Recent Votes</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              Your Votes
+              <Badge variant="secondary">{votedPlayers.length}</Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {votedPlayers.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No votes submitted yet. Start voting to see your recent evaluations here.
+                No votes submitted yet. Start voting to see your evaluations here.
               </p>
             ) : (
-              <div className="space-y-2">
-                {votedPlayers.slice(0, 5).map(player => {
-                  const voteData = userVotes.get(player.id);
-                  const voteDate = new Date(voteData?.created_at).toLocaleDateString();
-                  return (
-                    <div key={player.id} className="flex justify-between items-center py-2 border-b">
-                      <span className="font-medium">{player.name}</span>
-                      <Badge variant="outline">{voteDate}</Badge>
-                    </div>
-                  );
-                })}
-                {votedPlayers.length > 5 && (
-                  <p className="text-xs text-muted-foreground">
-                    +{votedPlayers.length - 5} more votes
-                  </p>
-                )}
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {votedPlayers
+                  .sort((a, b) => {
+                    const aVote = userVotes.get(a.id);
+                    const bVote = userVotes.get(b.id);
+                    const aDate = new Date(aVote?.created_at || 0);
+                    const bDate = new Date(bVote?.created_at || 0);
+                    return bDate.getTime() - aDate.getTime(); // Most recent first
+                  })
+                  .map(player => {
+                    const voteData = userVotes.get(player.id);
+                    const voteDate = new Date(voteData?.created_at).toLocaleDateString();
+                    return (
+                      <div key={player.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                        <div className="flex-1">
+                          <span className="font-medium">{player.name}</span>
+                          <div className="text-xs text-muted-foreground">
+                            Voted on {voteDate}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingPlayer(player.id)}
+                          className="flex items-center gap-1 h-8 px-2"
+                          title={`Edit vote for ${player.name}`}
+                        >
+                          <Edit3 className="h-3 w-3" />
+                          Edit
+                        </Button>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {showVoting && unvotedPlayers.length > 0 && (
+      {showVoting && currentVotingPlayerId && playersRecord[currentVotingPlayerId] && (
         <PlayerVoting
-          players={unvotedPlayers}
+          player={playersRecord[currentVotingPlayerId]}
           onVoteComplete={handleVoteSubmit}
           onClose={() => setShowVoting(false)}
+        />
+      )}
+
+      {editingPlayer && playersRecord[editingPlayer] && (
+        <PlayerVoting
+          player={playersRecord[editingPlayer]}
+          onVoteComplete={handleVoteSubmit}
+          onClose={() => setEditingPlayer(null)}
+          isEditing={true}
+          existingVotes={userVotes.get(editingPlayer)}
         />
       )}
     </div>

@@ -29,8 +29,15 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
     // Only show Cards to me!
     const showCards = user?.id === '24115871-04fe-4111-b048-18f7e3e976fc'; 
 
-    const handleSignOut = async () => {
-        await signOut();
+    const handleSignOut = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        try {
+            await signOut();
+        } catch (error) {
+            console.error('Sign out error:', error);
+        }
     };
 
     const TabIcon = ({ icon: Icon, to, label }: TabIconProps) => (

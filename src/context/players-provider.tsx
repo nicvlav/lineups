@@ -23,6 +23,11 @@ interface VotingStats {
     totalVoters: number;
 }
 
+interface VotingSession {
+    currentPlayerId?: string; // Optional - just to remember which player we were on
+    timestamp: number;
+}
+
 interface PlayersContextType {
     players: Record<string, Player>;
     gamePlayers: Record<string, ScoredGamePlayerWithThreat>;
@@ -34,6 +39,20 @@ interface PlayersContextType {
     // User's personal votes (cached to avoid repeated queries)
     userVotes: Map<string, any>;
     loadUserVotes: () => Promise<void>;
+
+    // Voting session persistence (survives page refresh)
+    votingSession: VotingSession | null;
+    saveVotingSession: (session: VotingSession) => void;
+    loadVotingSession: () => VotingSession | null;
+    clearVotingSession: () => void;
+    resetVotingProgress: () => void;
+    setCurrentVotingPlayer: (playerId: string) => void;
+    getNextPlayerToVote: () => string | null;
+
+    // Pending vote management
+    addPendingVotedPlayer: (playerId: string) => void;
+    removePendingVotedPlayer: (playerId: string) => void;
+    clearPendingVotedPlayers: () => void;
 
     addPlayer: (player: Partial<Player>, onSuccess?: (player: Player) => void) => void;
     deletePlayer: (id: string) => void;
@@ -137,6 +156,13 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     // Cache user's personal votes to avoid repeated queries
     const [userVotes, setUserVotes] = useState<Map<string, any>>(new Map());
     const [userVotesLoaded, setUserVotesLoaded] = useState(false);
+    
+    // Voting session persistence
+    const [votingSession, setVotingSession] = useState<VotingSession | null>(null);
+    
+    // Track players with pending votes (just submitted but not yet in userVotes)
+    // Using ref for immediate synchronous access
+    const pendingVotedPlayersRef = useRef<Set<string>>(new Set());
 
     const loadingState = useRef(false);
     const tabKeyRef = useRef(sessionStorage.getItem("tabKey") || `tab-${crypto.randomUUID()}`);
@@ -147,6 +173,13 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const voteDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     sessionStorage.setItem("tabKey", tabKeyRef.current);
+
+    // Load voting session when user changes
+    useEffect(() => {
+        if (user && !votingSession) {
+            loadVotingSession();
+        }
+    }, [user]);
 
     const loadJSONGamePlayers = async (newGamePlayers: Record<string, GamePlayer>, freshLoadedPlayers: Record<string, Player>) => {
         if (!newGamePlayers) {
@@ -363,6 +396,9 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 try {
                     await submitVoteToDatabase(voteData);
                     pendingVotesRef.current.delete(playerId);
+                    
+                    // Remove from pending voted players since vote is now confirmed
+                    removePendingVotedPlayer(playerId);
                     
                     // Update playersWithVotes set optimistically
                     setPlayersWithVotes(prev => new Set([...prev, playerId]));
@@ -1221,25 +1257,145 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
     // Vote submission functions
     const submitVote = async (voteData: VoteData): Promise<void> => {
-        console.log('PlayersProvider submitVote called for player:', voteData.playerId);
-        
         try {
+            // Immediately add to pending voted players to exclude from next player selection
+            addPendingVotedPlayer(voteData.playerId);
+            
             // Add to pending queue
             pendingVotesRef.current.set(voteData.playerId, voteData);
-            console.log('Added to pending queue, queue size:', pendingVotesRef.current.size);
             
             // Use debounced processing to batch votes
             debounceVoteProcessing(1000); // Wait 1 second for more votes before processing
-            
-            console.log('Vote queued successfully');
         } catch (error) {
             console.error('Error queueing vote:', error);
-            throw error; // Only throw if there's an actual queueing error
+            throw error;
         }
     };
 
     const getPendingVoteCount = (): number => {
         return pendingVotesRef.current.size;
+    };
+
+    // Voting session persistence functions
+    const saveVotingSession = (session: VotingSession) => {
+        if (!user) return;
+        
+        try {
+            localStorage.setItem(`voting_session_${user.id}`, JSON.stringify(session));
+            setVotingSession(session);
+        } catch (error) {
+            console.error('Error saving voting session:', error);
+        }
+    };
+
+    const loadVotingSession = (): VotingSession | null => {
+        if (!user) return null;
+        
+        try {
+            const stored = localStorage.getItem(`voting_session_${user.id}`);
+            if (!stored) return null;
+            
+            const session: VotingSession = JSON.parse(stored);
+            
+            // Check if session is recent (within 24 hours)
+            if (Date.now() - session.timestamp > 24 * 60 * 60 * 1000) {
+                localStorage.removeItem(`voting_session_${user.id}`);
+                return null;
+            }
+            
+            setVotingSession(session);
+            return session;
+        } catch (error) {
+            console.error('Error loading voting session:', error);
+            return null;
+        }
+    };
+
+    const clearVotingSession = () => {
+        if (!user) return;
+        
+        try {
+            localStorage.removeItem(`voting_session_${user.id}`);
+            setVotingSession(null);
+        } catch (error) {
+            console.error('Error clearing voting session:', error);
+        }
+    };
+
+    const resetVotingProgress = () => {
+        if (!user) return;
+        
+        try {
+            // Clear current player selection
+            const resetSession: VotingSession = {
+                currentPlayerId: undefined,
+                timestamp: Date.now()
+            };
+            
+            localStorage.setItem(`voting_session_${user.id}`, JSON.stringify(resetSession));
+            setVotingSession(resetSession);
+        } catch (error) {
+            console.error('Error resetting voting progress:', error);
+        }
+    };
+
+    const setCurrentVotingPlayer = (playerId: string) => {
+        if (!user) return;
+        
+        try {
+            const session: VotingSession = {
+                currentPlayerId: playerId,
+                timestamp: Date.now()
+            };
+            
+            localStorage.setItem(`voting_session_${user.id}`, JSON.stringify(session));
+            setVotingSession(session);
+        } catch (error) {
+            console.error('Error setting current voting player:', error);
+        }
+    };
+
+    const getNextPlayerToVote = (): string | null => {
+        if (!user) return null;
+        
+        const allPlayers = Object.values(players);
+        
+        const eligiblePlayers = allPlayers.filter(player => {
+            const isAssociatedPlayer = user?.profile?.associated_player_id === player.id;
+            const hasUserVoted = userVotes.has(player.id);
+            const isPendingVote = pendingVotedPlayersRef.current.has(player.id);
+            return !isAssociatedPlayer && !hasUserVoted && !isPendingVote;
+        });
+
+        if (eligiblePlayers.length === 0) return null;
+
+        // Sort by vote count (ascending - lowest first), then randomize for equal counts
+        const sortedPlayers = eligiblePlayers.sort((a, b) => {
+            const voteCountA = a.vote_count || 0;
+            const voteCountB = b.vote_count || 0;
+            
+            if (voteCountA !== voteCountB) {
+                return voteCountA - voteCountB;
+            }
+            
+            // For players with equal vote counts, randomize their order
+            return Math.random() - 0.5;
+        });
+
+        return sortedPlayers[0].id;
+    };
+
+    // Manage pending voted players (just submitted but not yet reflected in userVotes)
+    const addPendingVotedPlayer = (playerId: string) => {
+        pendingVotedPlayersRef.current.add(playerId);
+    };
+
+    const removePendingVotedPlayer = (playerId: string) => {
+        pendingVotedPlayersRef.current.delete(playerId);
+    };
+
+    const clearPendingVotedPlayers = () => {
+        pendingVotedPlayersRef.current.clear();
     };
 
     // Update game player position (for drag-and-drop)
@@ -1271,6 +1427,20 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             // User's personal votes (cached to avoid repeated queries)
             userVotes,
             loadUserVotes,
+
+            // Voting session persistence (survives page refresh)
+            votingSession,
+            saveVotingSession,
+            loadVotingSession,
+            clearVotingSession,
+            resetVotingProgress,
+            setCurrentVotingPlayer,
+            getNextPlayerToVote,
+
+            // Pending vote management
+            addPendingVotedPlayer,
+            removePendingVotedPlayer,
+            clearPendingVotedPlayers,
 
             addPlayer,
             deletePlayer,

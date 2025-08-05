@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Save } from "lucide-react";
+import { Save, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { Player } from "@/data/player-types";
 import { StatsKey, statLabelMap, StatCategory, CategorizedStats, StatCategoryNameMap } from "@/data/stat-types";
@@ -14,189 +13,58 @@ interface VoteData {
 }
 
 interface PlayerVotingProps {
-  players: Player[];
+  player: Player;
   onVoteComplete: (voteData: VoteData) => Promise<void>;
   onClose: () => void;
+  isEditing?: boolean;
+  existingVotes?: any;
 }
 
-interface VotingSession {
-  currentPlayerIndex: number;
-  currentCategoryIndex: number;
-  currentCategory: StatCategory;
-  playerOrder: string[];
-  partialVotes: Record<StatsKey, number>;
-  completedVotes: string[];
-  timestamp: number;
-}
-
-export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingProps) {
+export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = false, existingVotes }: PlayerVotingProps) {
   const { user } = useAuth();
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  const [randomizedPlayers, setRandomizedPlayers] = useState<Player[]>([]);
   const [votes, setVotes] = useState<Record<StatsKey, number>>({} as Record<StatsKey, number>);
-  const [completedVotes, setCompletedVotes] = useState<Set<string>>(new Set());
   const [currentCategory, setCurrentCategory] = useState<StatCategory>("pace");
   const [categoryIndex, setCategoryIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sessionRestored, setSessionRestored] = useState(false);
 
   const categories: StatCategory[] = ["pace", "attacking", "passing", "dribbling", "defending", "physical", "morale"];
 
-  // Session persistence functions
-  const saveVotingSession = () => {
-    if (!user) return;
-    
-    const session: VotingSession = {
-      currentPlayerIndex,
-      currentCategoryIndex: categoryIndex,
-      currentCategory,
-      playerOrder: randomizedPlayers.map(p => p.id),
-      partialVotes: votes,
-      completedVotes: Array.from(completedVotes),
-      timestamp: Date.now()
-    };
-    
-    localStorage.setItem(`voting_session_${user.id}`, JSON.stringify(session));
-  };
-
-  const loadVotingSession = (): VotingSession | null => {
-    if (!user) return null;
-    
-    try {
-      const stored = localStorage.getItem(`voting_session_${user.id}`);
-      if (!stored) return null;
-      
-      const session: VotingSession = JSON.parse(stored);
-      
-      // Check if session is recent (within 24 hours)
-      if (Date.now() - session.timestamp > 24 * 60 * 60 * 1000) {
-        localStorage.removeItem(`voting_session_${user.id}`);
-        return null;
-      }
-      
-      return session;
-    } catch (error) {
-      console.error('Error loading voting session:', error);
-      return null;
-    }
-  };
-
-  const clearVotingSession = () => {
-    if (!user) return;
-    localStorage.removeItem(`voting_session_${user.id}`);
-  };
-
-  // Smart player ordering - favor players with lowest vote counts
+  // Initialize votes on mount
   useEffect(() => {
-    // Try to restore session first
-    if (!sessionRestored && user) {
-      const savedSession = loadVotingSession();
-      
-      if (savedSession) {
-        // Restore session state
-        const savedPlayers = savedSession.playerOrder
-          .map(id => players.find(p => p.id === id))
-          .filter((p): p is Player => p !== undefined);
-        
-        // Only restore if we have the same players
-        if (savedPlayers.length === savedSession.playerOrder.length) {
-          setRandomizedPlayers(savedPlayers);
-          setCurrentPlayerIndex(savedSession.currentPlayerIndex);
-          setCategoryIndex(savedSession.currentCategoryIndex);
-          setCurrentCategory(savedSession.currentCategory);
-          setVotes(savedSession.partialVotes);
-          setCompletedVotes(new Set(savedSession.completedVotes));
-          setSessionRestored(true);
-          return;
+    if (isEditing && existingVotes?.votes) {
+      try {
+        console.log('Existing votes data:', existingVotes.votes);
+        // Check if it's already an object or needs parsing
+        let existingVoteData;
+        if (typeof existingVotes.votes === 'string') {
+          existingVoteData = JSON.parse(existingVotes.votes);
+        } else {
+          existingVoteData = existingVotes.votes;
         }
+        setVotes(existingVoteData);
+      } catch (error) {
+        console.error('Error parsing existing votes:', error, 'Raw data:', existingVotes.votes);
+        // Fall back to defaults if parsing fails
+        const initialVotes = {} as Record<StatsKey, number>;
+        Object.keys(statLabelMap).forEach(key => {
+          initialVotes[key as StatsKey] = 5;
+        });
+        setVotes(initialVotes);
       }
-      
-      setSessionRestored(true);
-    }
-    // Don't reorder if we're already voting (preserves current position)
-    if (randomizedPlayers.length > 0 && currentPlayerIndex > 0) {
-      return;
-    }
-    
-    const smartOrdered = [...players].sort((a, b) => {
-      // Primary sort: vote count (ascending - lowest first)
-      const voteCountA = a.vote_count || 0;
-      const voteCountB = b.vote_count || 0;
-      
-      if (voteCountA !== voteCountB) {
-        return voteCountA - voteCountB;
-      }
-      
-      // Secondary sort: randomize players with same vote count
-      return Math.random() - 0.5;
-    });
-    
-    // Apply some randomization but keep the bias toward lower vote counts
-    const weightedRandom = smartOrdered.map((player, index) => ({
-      player,
-      // Higher weight for earlier positions (lower vote counts)
-      weight: Math.max(0.1, 1 - (index / smartOrdered.length))
-    }));
-    
-    // Shuffle with weights - players with lower vote counts more likely to stay near front
-    const finalOrder: Player[] = [];
-    const remaining = [...weightedRandom];
-    
-    while (remaining.length > 0) {
-      // Calculate cumulative weights
-      const totalWeight = remaining.reduce((sum, item) => sum + item.weight, 0);
-      let random = Math.random() * totalWeight;
-      
-      for (let i = 0; i < remaining.length; i++) {
-        random -= remaining[i].weight;
-        if (random <= 0) {
-          finalOrder.push(remaining[i].player);
-          remaining.splice(i, 1);
-          break;
-        }
-      }
-    }
-    
-    setRandomizedPlayers(finalOrder);
-  }, [players, currentPlayerIndex, randomizedPlayers.length]);
-
-  // Save session whenever state changes (with throttling to prevent excessive saves)
-  useEffect(() => {
-    if (sessionRestored && randomizedPlayers.length > 0) {
-      const timeoutId = setTimeout(() => {
-        saveVotingSession();
-      }, 500); // Debounce session saves
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [currentPlayerIndex, categoryIndex, currentCategory, votes, completedVotes, sessionRestored, randomizedPlayers.length]);
-
-  // Cleanup session when voting completes
-  useEffect(() => {
-    return () => {
-      // Only clear if we actually completed voting, not if component unmounts for other reasons
-      if (currentPlayerIndex >= randomizedPlayers.length - 1) {
-        clearVotingSession();
-      }
-    };
-  }, [currentPlayerIndex, randomizedPlayers.length]);
-
-  // Initialize votes for current player
-  useEffect(() => {
-    if (randomizedPlayers.length > 0) {
+    } else {
+      // Initialize with defaults
       const initialVotes = {} as Record<StatsKey, number>;
       Object.keys(statLabelMap).forEach(key => {
-        initialVotes[key as StatsKey] = 5; // Default to middle value (now 5 out of 1-10)
+        initialVotes[key as StatsKey] = 5;
       });
       setVotes(initialVotes);
     }
-  }, [currentPlayerIndex, randomizedPlayers]);
+  }, [isEditing, existingVotes]);
 
-  const currentPlayer = randomizedPlayers[currentPlayerIndex];
+
   const currentStats = CategorizedStats[currentCategory];
-  const progress = ((currentPlayerIndex) / randomizedPlayers.length) * 100;
 
-  if (!currentPlayer || !user) return null;
+  if (!player || !user) return null;
 
   const handleVoteChange = (statKey: StatsKey, value: number, event?: React.MouseEvent) => {
     event?.preventDefault();
@@ -204,6 +72,15 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
       ...prev,
       [statKey]: value
     }));
+  };
+
+  const handlePreviousCategory = () => {
+    if (isSubmitting || categoryIndex <= 0) {
+      return;
+    }
+    
+    setCategoryIndex(prev => prev - 1);
+    setCurrentCategory(categories[categoryIndex - 1]);
   };
 
   const handleNextCategory = () => {
@@ -221,7 +98,7 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
   };
 
   const handleSubmitPlayerVotes = async () => {
-    if (!currentPlayer || isSubmitting) {
+    if (!player || isSubmitting) {
       return;
     }
     
@@ -229,22 +106,12 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
     
     try {
       await onVoteComplete({
-        playerId: currentPlayer.id,
+        playerId: player.id,
         votes
       });
       
-      setCompletedVotes(prev => new Set([...prev, currentPlayer.id]));
-      
-      // Move to next player
-      if (currentPlayerIndex < randomizedPlayers.length - 1) {
-        setCurrentPlayerIndex(prev => prev + 1);
-        setCategoryIndex(0);
-        setCurrentCategory("pace");
-      } else {
-        // All players completed - clear session and close
-        clearVotingSession();
-        onClose();
-      }
+      // Always close after submission - parent will handle next player
+      onClose();
     } catch (error) {
       console.error('Error submitting votes:', error);
     } finally {
@@ -291,62 +158,72 @@ export function PlayerVoting({ players, onVoteComplete, onClose }: PlayerVotingP
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-hidden">
-      <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <CardHeader className="flex-shrink-0 space-y-4 pb-4">
-          <div className="flex justify-between items-start">
-            <CardTitle className="text-xl">Player Evaluation</CardTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>×</Button>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Progress: {currentPlayerIndex + 1} of {randomizedPlayers.length} players</span>
-              <span>{completedVotes.size} completed</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-          </div>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0 space-y-4">
+          <DialogTitle>
+            {isEditing ? 'Edit Player Evaluation' : 'Player Evaluation'}
+          </DialogTitle>
           
           <div className="bg-muted p-4 rounded-lg">
-            <h3 className="font-semibold text-lg">{currentPlayer.name}</h3>
+            <h3 className="font-semibold text-lg">{player.name}</h3>
             <p className="text-sm text-muted-foreground">
               Rating {StatCategoryNameMap[currentCategory]} skills 
               ({categoryIndex + 1} of {categories.length} categories)
             </p>
           </div>
-        </CardHeader>
+        </DialogHeader>
 
-        <CardContent className="flex flex-col flex-1 min-h-0 px-6 py-0">
+        <div className="flex flex-col flex-1 min-h-0">
           {/* Scrollable middle section with better spacing */}
-          <div className="flex-1 overflow-y-auto py-4 -mx-2 px-2">
-            <div className="space-y-6">
-              {currentStats.map(statKey => (
-                <VoteSlider key={statKey} statKey={statKey} />
-              ))}
-            </div>
+          <div className="flex-1 overflow-y-auto py-4 space-y-6">
+            {currentStats.map(statKey => (
+              <VoteSlider key={statKey} statKey={statKey} />
+            ))}
           </div>
 
           {/* Fixed button at bottom with better spacing */}
-          <div className="flex-shrink-0 pt-4 pb-6 border-t mt-2">
-            <Button 
-              onClick={handleNextCategory}
-              disabled={isSubmitting}
-              className="w-full flex items-center justify-center gap-2 h-12"
-            >
-              {isSubmitting ? (
-                "Saving..."
-              ) : categoryIndex < categories.length - 1 ? (
-                <>Next Category</>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Submit & Next Player
-                </>
-              )}
-            </Button>
+          <div className="flex-shrink-0 pt-4 border-t">
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={handlePreviousCategory}
+                disabled={isSubmitting || categoryIndex <= 0}
+                className="flex items-center justify-center gap-2 h-12"
+                title="Previous category"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </Button>
+              
+              <Button 
+                onClick={handleNextCategory}
+                disabled={isSubmitting}
+                className="flex-1 flex items-center justify-center gap-2 h-12"
+              >
+                {isSubmitting ? (
+                  "Saving..."
+                ) : categoryIndex < categories.length - 1 ? (
+                  <>
+                    Next Category
+                    <ChevronRight className="h-4 w-4" />
+                  </>
+                ) : isEditing ? (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Update Vote
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Submit & Next Player
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
