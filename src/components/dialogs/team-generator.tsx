@@ -62,8 +62,16 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isCompact }) => {
     const canGenerate = selectedPlayers.length >= 10 && selectedPlayers.length <= 24;
 
     return (
-        <div className="flex-1 min-h-0 w-full h-full p-4">
-            <div className="flex flex-col h-full">
+        <div className="flex-1 min-h-0 w-full h-full p-4 space-y-4">
+            <div className="flex flex-col h-full space-y-4">
+                {/* Section Header */}
+                <div className="space-y-2">
+                    <h1 className="text-2xl font-bold tracking-tight">Team Generator</h1>
+                    <p className="text-muted-foreground">
+                        Select players and generate balanced teams using intelligent algorithms
+                    </p>
+                </div>
+
                 <div className="flex-1 min-h-0 w-full">
                     <TeamGenerationTab
                         players={players}
@@ -74,14 +82,21 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = ({ isCompact }) => {
 
                 {/* Generate Button - Fixed at Bottom */}
                 <div className="flex-1 max-h-[40px]">
-                    <button
+                    <Button
                         onClick={handleGenerateTeams}
                         disabled={!canGenerate}
-                        className={`flex items-center justify-center h-full w-full rounded-lg font-medium transition-all duration-200 ${canGenerate ? 'bg-green-600 text-white cursor-pointer' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+                        size="lg"
+                        className={cn(
+                            "h-full w-full font-medium transition-all duration-200",
+                            canGenerate 
+                                ? "bg-primary hover:bg-primary/90 text-primary-foreground" 
+                                : "opacity-50 cursor-not-allowed",
+                            ANIMATIONS.transition.normal
+                        )}
                     >
                         <Wand2 size={18} className="mr-2" />
                         <span>Generate Two Teams</span>
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

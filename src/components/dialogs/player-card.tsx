@@ -57,10 +57,36 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
     const overallRounded = Math.round(overall);
 
+    // Ultra-modern borders-only accent system (2025 style)
+    const getPlayerAccent = (rating: number) => {
+        if (rating >= 80) return { 
+            border: 'border-l-4 border-l-emerald-400/60 border-r border-t border-b border-border/40', 
+            badge: 'bg-emerald-500 border-emerald-400' 
+        }; // Elite - left accent stripe
+        if (rating >= 70) return { 
+            border: 'border-l-4 border-l-blue-400/60 border-r border-t border-b border-border/40', 
+            badge: 'bg-blue-500 border-blue-400' 
+        }; // Good - left accent stripe
+        if (rating >= 60) return { 
+            border: 'border-l-4 border-l-amber-400/60 border-r border-t border-b border-border/40', 
+            badge: 'bg-amber-500 border-amber-400' 
+        }; // Average - left accent stripe
+        if (rating >= 50) return { 
+            border: 'border-l-4 border-l-orange-400/60 border-r border-t border-b border-border/40', 
+            badge: 'bg-orange-500 border-orange-400' 
+        }; // Below avg - left accent stripe
+        return { 
+            border: 'border border-border/30', 
+            badge: 'bg-slate-500 border-slate-400' 
+        }; // Poor - no accent
+    };
+
+    const accent = getPlayerAccent(overallRounded);
+
     return (
         <>
             <div
-                className="select-none flex flex-col items-center bg-gradient-to-b from-yellow-200 to-yellow-400 rounded-2xl text-black shadow-lg p-4 text-center cursor-pointer"
+                className={`select-none flex flex-col items-center bg-card/95 hover:bg-card hover:shadow-xl ${accent.border} transition-all duration-300 rounded-lg p-4 text-center cursor-pointer group hover:scale-[1.02] hover:-translate-y-1`}
                 onContextMenu={handleOpenDialog}
                 onDoubleClick={handleOpenDialog}
             >
@@ -79,31 +105,31 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                                         e.currentTarget.nextElementSibling?.classList.remove('hidden');
                                     }}
                                 />
-                                <div className="hidden bg-black text-white font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
+                                <div className={`hidden font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center border-2 text-white ${accent.badge}`}>
                                     {overallRounded}
                                 </div>
                             </>
                         ) : (
-                            <div className="bg-black text-white font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
+                            <div className={`font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center border-2 text-white ${accent.badge}`}>
                                 {overallRounded}
                             </div>
                         )}
                         {/* Overall score overlay when avatar is present */}
                         {player.avatar_url && (
-                            <div className="absolute -bottom-1 -right-1 bg-black text-white font-bold text-xs rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
+                            <div className={`absolute -bottom-1 -right-1 font-bold text-xs rounded-full w-5 h-5 flex items-center justify-center border border-background text-white ${accent.badge.split(' ')[0]}`}>
                                 {overallRounded}
                             </div>
                         )}
                     </div>
 
                     {/* Name + Positions */}
-                    <div className="flex flex-col items-start">
-                        <span className="font-bold text-lg text-left">{playerName}</span>
-                        <span className="text-xs text-gray-700">{top3Positions}</span>
+                    <div className="flex flex-col items-start flex-1 min-w-0">
+                        <span className="font-semibold text-base text-foreground truncate w-full text-left">{playerName}</span>
+                        <span className="text-xs text-muted-foreground">{top3Positions}</span>
                     </div>
                 </div>
 
-                <div className="mt-3 flex justify-center gap-2">
+                <div className="mt-4 flex justify-center gap-2">
                     {[
                         { label: "PAC", value: averages.pace },
                         { label: "ATT", value: averages.attacking },
@@ -111,15 +137,15 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                     ].map((stat) => (
                         <div
                             key={stat.label}
-                            className="flex flex-col items-center bg-white/30 px-3 py-2 rounded-lg shadow-md w-16"
+                            className="flex flex-col items-center bg-background/70 hover:bg-background/90 border border-border/30 hover:border-border/50 px-3 py-2 rounded-md transition-all duration-200 w-16"
                         >
-                            <span className="text-xs font-semibold">{stat.label}</span>
-                            <span className="font-bold">{stat.value}</span>
+                            <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
+                            <span className="font-semibold text-foreground">{stat.value}</span>
                         </div>
                     ))}
                 </div>
 
-                <div className="mt-3 flex justify-center gap-2">
+                <div className="mt-2 flex justify-center gap-2">
                     {[
                         { label: "DRI", value: averages.dribbling },
                         { label: "DEF", value: averages.defending },
@@ -127,10 +153,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                     ].map((stat) => (
                         <div
                             key={stat.label}
-                            className="flex flex-col items-center bg-white/30 px-3 py-2 rounded-lg shadow-md w-16"
+                            className="flex flex-col items-center bg-background/70 hover:bg-background/90 border border-border/30 hover:border-border/50 px-3 py-2 rounded-md transition-all duration-200 w-16"
                         >
-                            <span className="text-xs font-semibold">{stat.label}</span>
-                            <span className="font-bold">{stat.value}</span>
+                            <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
+                            <span className="font-semibold text-foreground">{stat.value}</span>
                         </div>
                     ))}
                 </div>

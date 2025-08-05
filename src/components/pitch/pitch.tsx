@@ -115,10 +115,10 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
   const combinedRef = mergeRefs(containerRef, drop as unknown as React.Ref<any>);
 
 
-  // Define base pitch styles
+  // Define enhanced pitch styles with better contrast and differentiation
   const pitchColor = team === 'A'
-    ? 'radial-gradient(ellipse at center, #3161a1, #1e3c61)'
-    : 'radial-gradient(ellipse at center, #89db46, #4d7a27)';
+    ? 'linear-gradient(135deg, hsl(200 100% 85%/0.15), hsl(200 100% 85%/0.08))' // Aqua blue tint - more contrast
+    : 'linear-gradient(135deg, hsl(84 100% 70%/0.15), hsl(84 100% 70%/0.08))'; // Lime green tint - more contrast
 
   return (
     <div
@@ -129,7 +129,8 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
         height: '100%',
         borderRadius: '8px',
         background: pitchColor,
-        boxShadow: 'inset 0 0 25px rgba(0, 0, 0, 0.5)',
+        border: '2px solid hsl(var(--border)/0.3)',
+        boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.1)',
         overflow: 'visible',
       }}
     >

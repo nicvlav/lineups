@@ -13,9 +13,9 @@ const Panel: React.FC<PanelProps> = ({ children }) => {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="flex-1 min-h-0 flex flex-col shadow-lg overflow-hidden"
+        className="flex-1 min-h-0 flex flex-col bg-muted/20 backdrop-blur-sm rounded-lg border border-border/20 shadow-lg overflow-hidden"
       >
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4">
           {children}
         </div>
       </motion.div>

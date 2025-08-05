@@ -107,7 +107,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
       >
         <div
           className={`
-    absolute text-white text-xs font-bold rounded-md  
+    absolute text-foreground drop-shadow-lg text-xs font-bold rounded-md  
     p pointer-events-none text-center flex flex-col
   `}
           style={{ top: `${adjustedNameOffset}px` }}
@@ -121,11 +121,14 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 
 
         <div
-          className={`z-200 rounded-full border-4 shadow-md flex items-center justify-center bg-muted overflow-hidden`}
+          className={`z-200 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden transition-all duration-200 ${
+            player.team === 'A' 
+              ? 'bg-cyan-400 border-cyan-500 text-white shadow-cyan-400/20' 
+              : 'bg-lime-400 border-lime-500 text-gray-900 shadow-lime-400/20'
+          }`}
           style={{
             width: `${circleSize}px`,
             height: `${circleSize}px`,
-            borderColor: 'var(--color-muted-foreground)',
             fontSize: `${Math.max(circleSize * 0.4, 14)}px`,
           }}
         >

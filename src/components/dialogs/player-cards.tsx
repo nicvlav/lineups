@@ -53,7 +53,15 @@ const PlayerCards = () => {
     const withScores = getSorted();
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden p-4">
+        <div className="flex flex-col h-full w-full overflow-hidden p-4 space-y-4">
+            {/* Section Header */}
+            <div className="space-y-2">
+                <h1 className="text-2xl font-bold tracking-tight">Player Database</h1>
+                <p className="text-muted-foreground">
+                    Browse and analyze player statistics, ratings, and positional fits
+                </p>
+            </div>
+
             {/* Search and Sorting */}
             <ActionBarTwoColumn
                 left={

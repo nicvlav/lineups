@@ -34,9 +34,18 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
         e.stopPropagation();
         
         try {
-            await signOut();
+            console.log('🚪 HEADER: Initiating sign out...');
+            const result = await signOut();
+            
+            if (result.error) {
+                console.error('HEADER: Sign out failed:', result.error);
+                // Still continue - auth context should have cleared local state
+            } else {
+                console.log('✅ HEADER: Sign out successful');
+            }
         } catch (error) {
-            console.error('Sign out error:', error);
+            console.error('HEADER: Unexpected sign out error:', error);
+            // Even if error, auth context should have cleared state
         }
     };
 
