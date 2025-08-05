@@ -1405,8 +1405,6 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             return Math.random() - 0.5;
         });
 
-        console.log("HHHHH", sortedPlayers);
-
         return sortedPlayers[0].id;
     };
 
