@@ -314,10 +314,23 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         console.time('PlayersProvider: Load user votes');
 
         try {
+            // First get the user profile ID
+            const { data: userProfile, error: profileError } = await supabase
+                .from('user_profiles')
+                .select('id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (profileError || !userProfile) {
+                console.error('PlayersProvider: User profile not found:', profileError);
+                return;
+            }
+
+            // Then get votes using the profile ID
             const { data, error } = await supabase
                 .from('player_votes')
                 .select('player_id, created_at, speed, vision, agility, heading, blocking, crossing, strength, tackling, teamwork, dribbling, finishing, aggression, first_touch, off_the_ball, positivity, long_passing, short_passing, communication, interceptions, composure, willing_to_switch, attack_positioning, attacking_workrate, defensive_workrate, defensive_awareness, long_shots, stamina')
-                .eq('voter_user_id', user.id);
+                .eq('voter_user_profile_id', userProfile.id);
 
             console.timeEnd('PlayersProvider: Load user votes');
 
@@ -469,8 +482,19 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         if (!user) throw new Error('User not authenticated');
 
+        // Get user profile ID first
+        const { data: userProfile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (profileError || !userProfile) {
+            throw new Error('User profile not found. Please complete verification first.');
+        }
+
         const dbVoteData: any = {
-            voter_user_id: user.id,
+            voter_user_profile_id: userProfile.id,
             player_id: voteData.playerId,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -495,7 +519,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         const upsertPromise = supabase
             .from('player_votes')
             .upsert(dbVoteData, {
-                onConflict: 'player_id,voter_user_id'
+                onConflict: 'player_id,voter_user_profile_id'
             });
         
         try {
@@ -732,7 +756,6 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 .select(`
                     id,
                     name,
-                    avatar_url,
                     vote_count,
                     speed_avg,
                     vision_avg,
@@ -801,7 +824,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                         ...player,
                         stats: effectiveStats,
                         // Store aggregate info for reference
-                        vote_count: player.vote_count?.vote_count || 0,
+                        vote_count: player.vote_count || 0,
                     };
                 } catch (statError) {
                     console.error(`❌ PLAYERS: Error processing player ${player.name}:`, statError);
@@ -1381,6 +1404,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             // For players with equal vote counts, randomize their order
             return Math.random() - 0.5;
         });
+
+        console.log("HHHHH", sortedPlayers);
 
         return sortedPlayers[0].id;
     };
