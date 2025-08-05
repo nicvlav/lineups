@@ -98,8 +98,11 @@ const getFromDB = async (key: string) => {
         return db.get(STORE_NAME, key);
     } catch (error) {
         console.error('💥 IndexedDB read error:', error);
-        // Clear corrupted IndexedDB
-        await clearCorruptedDB();
+        // Only clear if it's a corruption error, not a temporary issue
+        if (error instanceof Error && (error.name === 'InvalidStateError' || error.name === 'VersionError')) {
+            console.warn('IndexedDB corruption detected, clearing...');
+            await clearCorruptedDB();
+        }
         return null;
     }
 };
@@ -110,8 +113,11 @@ const saveToDB = async (key: string, value: string) => {
         await db.put(STORE_NAME, value, key);
     } catch (error) {
         console.error('💥 IndexedDB write error:', error);
-        // Clear corrupted IndexedDB
-        await clearCorruptedDB();
+        // Only clear if it's a corruption error, not a temporary issue
+        if (error instanceof Error && (error.name === 'InvalidStateError' || error.name === 'VersionError')) {
+            console.warn('IndexedDB corruption detected, clearing...');
+            await clearCorruptedDB();
+        }
     }
 };
 
@@ -166,25 +172,89 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const pendingVotedPlayersRef = useRef<Set<string>>(new Set());
 
     const loadingState = useRef(false);
-    const tabKeyRef = useRef(sessionStorage.getItem("tabKey") || `tab-${crypto.randomUUID()}`);
+    // Create unique tab key per browser tab (survives refresh but not tab sharing)
+    const getOrCreateTabKey = () => {
+        // First check sessionStorage for this specific tab
+        let tabKey = sessionStorage.getItem("tabKey");
+        
+        if (!tabKey) {
+            // Generate new unique key for this tab
+            tabKey = `tab-${crypto.randomUUID()}`;
+            sessionStorage.setItem("tabKey", tabKey);
+            
+            // Also store in localStorage with timestamp for cleanup (optional)
+            const tabRegistry = JSON.parse(localStorage.getItem("tabRegistry") || "{}");
+            tabRegistry[tabKey] = Date.now();
+            localStorage.setItem("tabRegistry", JSON.stringify(tabRegistry));
+            
+            console.log('🆕 PLAYERS: Created new tab key:', tabKey);
+        } else {
+            console.log('🔄 PLAYERS: Using existing tab key:', tabKey);
+        }
+        
+        return tabKey;
+    };
+    
+    const tabKeyRef = useRef(getOrCreateTabKey());
+    
+    // Optional: Clean up old tab data on startup (prevent IndexedDB bloat)
+    useEffect(() => {
+        const cleanupOldTabs = async () => {
+            try {
+                const tabRegistry = JSON.parse(localStorage.getItem("tabRegistry") || "{}");
+                const now = Date.now();
+                const oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000); // 1 week
+                
+                const activeTabKeys = Object.keys(tabRegistry);
+                const oldTabKeys = activeTabKeys.filter(key => tabRegistry[key] < oneWeekAgo);
+                
+                if (oldTabKeys.length > 0) {
+                    console.log(`🧹 PLAYERS: Cleaning up ${oldTabKeys.length} old tab keys from IndexedDB`);
+                    
+                    // Remove old tab data from IndexedDB
+                    const db = await initDB();
+                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    
+                    for (const oldKey of oldTabKeys) {
+                        await store.delete(oldKey);
+                        delete tabRegistry[oldKey];
+                    }
+                    
+                    await tx.done;
+                    localStorage.setItem("tabRegistry", JSON.stringify(tabRegistry));
+                }
+            } catch (error) {
+                console.error('PLAYERS: Error during tab cleanup:', error);
+            }
+        };
+        
+        // Run cleanup after a short delay to avoid blocking startup
+        setTimeout(cleanupOldTabs, 5000);
+    }, []);
 
     // Vote caching system
     const pendingVotesRef = useRef<Map<string, VoteData>>(new Map());
     const voteProcessingRef = useRef(false);
     const voteDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    sessionStorage.setItem("tabKey", tabKeyRef.current);
-
-    // Load voting session when user changes
+    // Load voting session when user changes, clear vote data on sign out
     useEffect(() => {
         if (user && !votingSession) {
             loadVotingSession();
+        } else if (!user) {
+            // User signed out - clear all vote-related state
+            setUserVotes(new Map());
+            setUserVotesLoaded(false);
+            setVotingSession(null);
+            pendingVotedPlayersRef.current.clear();
+            console.log('🗳️ PLAYERS: Cleared vote state on user sign out');
         }
-    }, [user]);
+    }, [user, votingSession]);
 
     const loadJSONGamePlayers = async (newGamePlayers: Record<string, GamePlayer>, freshLoadedPlayers: Record<string, Player>) => {
         if (!newGamePlayers) {
-            saveState({});
+            // Don't save empty state - this prevents overwriting existing game data during initialization
             setGamePlayers({});
             return;
         }
@@ -236,14 +306,18 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             }
 
             // Fall back to IndexedDB state
+            console.log('PLAYERS: Loading game state with tab key:', tabKeyRef.current);
             const savedState = await getFromDB(tabKeyRef.current);
             if (savedState) {
                 try {
                     const parsedData = JSON.parse(savedState);
+                    console.log('PLAYERS: Loaded game state from IndexedDB:', parsedData.gamePlayers ? Object.keys(parsedData.gamePlayers).length : 0, 'players');
                     await loadJSONGamePlayers(parsedData.gamePlayers, freshPlayers);
                 } catch (error) {
                     console.error('PLAYERS: Error loading from IndexedDB:', error);
                 }
+            } else {
+                console.log('PLAYERS: No saved game state found in IndexedDB');
             }
         } catch (error) {
             console.error('PLAYERS: Error during game state initialization:', error);
@@ -549,18 +623,11 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             return;
         }
 
-        // Use unified initialization with timeout failsafe and cache reset
-        const initTimeout = setTimeout(() => {
-            console.warn('PLAYERS: Game state initialization timeout - clearing cache...');
-            // Clear all caches and force reload
-            clearCorruptedDB();
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.reload();
-        }, 8000);
-
-        initializeGameState().finally(() => {
-            clearTimeout(initTimeout);
+        // Initialize game state without aggressive timeouts
+        initializeGameState().catch(error => {
+            console.error('PLAYERS: Game state initialization failed:', error);
+            // Don't reload - just log the error and continue
+            // Game state will be rebuilt on next user interaction
         });
 
         // Create a channel for realtime subscriptions - listen to both players and vote aggregates
@@ -853,8 +920,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             console.error('💥 PLAYERS: Unexpected error during player fetch:', unexpectedError);
             loadingState.current = false;
             
-            // Clear cache on unexpected errors
-            await clearCorruptedDB();
+            // Don't clear IndexedDB on unexpected errors - preserve game data
             return {};
         }
     };
@@ -992,7 +1058,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         // Skip auto-save on static routes
         if (isStaticRoute) return;
 
-        if (!loadingState.current) {
+        // Skip saving empty state during initial load - only save when we have actual players
+        if (!loadingState.current && Object.keys(gamePlayers).length > 0) {
             // console.log("Saving state from change:", gamePlayers);
             saveState(gamePlayers);
         }
@@ -1000,6 +1067,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
     const saveState = async (gamePlayersToSave: Record<string, ScoredGamePlayerWithThreat>) => {
         const stateObject = { gamePlayers: gamePlayersToSave };
+        console.log('PLAYERS: Saving game state with tab key:', tabKeyRef.current, 'players:', Object.keys(gamePlayersToSave).length);
         await saveToDB(tabKeyRef.current, JSON.stringify(stateObject));
     };
 

@@ -1,6 +1,26 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  ReactNode,
+} from 'react';
 import { supabase } from '@/lib/supabase';
 
+// ---- Shared Session Lock ----
+let sessionPromise: Promise<any> | null = null;
+
+const getSafeSession = () => {
+  if (!sessionPromise) {
+    sessionPromise = supabase.auth.getSession().finally(() => {
+      sessionPromise = null; // Reset so future calls are fresh
+    });
+  }
+  return sessionPromise;
+};
+
+// ---- Context Setup ----
 interface SupabaseContextType {
   isReady: boolean;
   supabaseClient: typeof supabase | null;
@@ -14,29 +34,27 @@ interface SupabaseProviderProps {
 
 export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) => {
   const [isReady, setIsReady] = useState(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    // Test Supabase connection
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     const testConnection = async () => {
       try {
-        // Simple test to ensure Supabase is responsive
-        const { error } = await supabase.auth.getSession();
-        
+        const { error } = await getSafeSession();
+
         if (error) {
           console.warn('SUPABASE: Connection test warning:', error.message);
         }
-        
-        // Even if there's an auth error, Supabase is still functional
-        setIsReady(true);
-        
       } catch (error) {
         console.error('SUPABASE: Connection test failed:', error);
-        // Still set ready to true to avoid infinite loading
+      } finally {
         setIsReady(true);
       }
     };
 
-    // Add a small delay to ensure DOM is ready
+    // Delay slightly to avoid race conditions with DOM or hydration
     setTimeout(testConnection, 100);
   }, []);
 

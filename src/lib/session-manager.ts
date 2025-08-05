@@ -17,11 +17,27 @@ const AUTH_STORAGE_KEYS = [
   'fb_auth_debug'
 ] as const;
 
+// Game data keys that should ALWAYS be preserved (work without auth)
+const GAME_DATA_KEYS = [
+  'GameDB', // IndexedDB database name
+  'gameState', // Game state storage
+  'tabKey', // Tab-specific game sessions (sessionStorage)
+  'tabRegistry', // Registry of active tabs for cleanup
+] as const;
+
 // User-specific keys that should be preserved (will be filtered by user ID)
 const USER_STORAGE_PATTERNS = [
   /^voting_session_/,
   /^user_profile_/,
-  /^auth_state_/
+  /^auth_state_/,
+  /^tab-/, // Tab keys for game sessions
+] as const;
+
+// Vote-related keys that should be cleared on sign out
+const VOTE_STORAGE_PATTERNS = [
+  /^voting_session_/,
+  /^user_votes_/,
+  /^vote_cache_/,
 ] as const;
 
 export interface SessionError {
@@ -172,11 +188,12 @@ export async function refreshSession(): Promise<SessionRefreshResult> {
 export async function clearCorruptedAppData(options: {
   preserveAuth?: boolean;
   preserveUserData?: boolean;
+  preserveGameData?: boolean;
   userId?: string;
 } = {}): Promise<void> {
-  const { preserveAuth = true, preserveUserData = true, userId } = options;
+  const { preserveAuth = true, preserveUserData = true, preserveGameData = true, userId } = options;
   
-  console.log('🧹 SESSION: Clearing corrupted app data...', { preserveAuth, preserveUserData, userId });
+  console.log('🧹 SESSION: Clearing corrupted app data...', { preserveAuth, preserveUserData, preserveGameData, userId });
   
   try {
     // Step 1: Collect keys to preserve
@@ -190,6 +207,19 @@ export async function clearCorruptedAppData(options: {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
+          keysToPreserve.add(key);
+        }
+      }
+    }
+
+    if (preserveGameData) {
+      // Add game data keys - these work without authentication
+      GAME_DATA_KEYS.forEach(key => keysToPreserve.add(key));
+      
+      // Add any tab-specific game data
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('tab-')) {
           keysToPreserve.add(key);
         }
       }
@@ -238,12 +268,69 @@ export async function clearCorruptedAppData(options: {
       }
     });
     
-    console.log(`✅ SESSION: Cleared ${clearedCount} localStorage keys, preserved ${keysToPreserve.size} auth/user keys`);
+    console.log(`✅ SESSION: Cleared ${clearedCount} localStorage keys, preserved ${keysToPreserve.size} important keys`);
+    
+    // Important: We intentionally DO NOT clear IndexedDB here
+    // Game data in IndexedDB should persist even during auth issues
+    // since it contains publicly visible player lineups that work without auth
     
   } catch (error) {
     console.error('SESSION: Error during selective cache clear:', error);
     // If selective clearing fails, don't fall back to nuclear clear
     throw error;
+  }
+}
+
+/**
+ * Clears all vote-related data on sign out
+ */
+export async function clearVoteData(userId?: string): Promise<void> {
+  console.log('🗳️ SESSION: Clearing vote data for user:', userId);
+  
+  try {
+    // Clear localStorage vote data
+    const localStorageKeys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) localStorageKeys.push(key);
+    }
+    
+    let clearedCount = 0;
+    localStorageKeys.forEach(key => {
+      // Clear vote-related patterns
+      const isVoteRelated = VOTE_STORAGE_PATTERNS.some(pattern => pattern.test(key));
+      
+      // Clear user-specific vote data if userId provided
+      const isUserSpecificVote = userId && key.includes(userId) && (
+        key.includes('voting_') || 
+        key.includes('vote_') ||
+        key.includes('player_votes')
+      );
+      
+      if (isVoteRelated || isUserSpecificVote) {
+        localStorage.removeItem(key);
+        clearedCount++;
+      }
+    });
+    
+    // Clear sessionStorage vote data
+    const sessionStorageKeys: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key) sessionStorageKeys.push(key);
+    }
+    
+    sessionStorageKeys.forEach(key => {
+      const isVoteRelated = VOTE_STORAGE_PATTERNS.some(pattern => pattern.test(key));
+      if (isVoteRelated) {
+        sessionStorage.removeItem(key);
+      }
+    });
+    
+    console.log(`✅ SESSION: Cleared ${clearedCount} vote-related keys`);
+    
+  } catch (error) {
+    console.error('SESSION: Error clearing vote data:', error);
   }
 }
 
@@ -285,17 +372,27 @@ export async function handleDatabaseError(error: any, context: string, userId?: 
         }
         
         // Refresh failed but might recover - clear app data and retry
-        await clearCorruptedAppData({ userId });
+        await clearCorruptedAppData({ 
+          preserveAuth: true,
+          preserveGameData: true, // Always preserve game data
+          userId 
+        });
         return { shouldRetry: true, shouldSignOut: false, retryAfter: refreshResult.retryAfter || 30 };
       }
       
       // Non-auth medium errors - clear app data and retry
-      await clearCorruptedAppData({ userId });
+      await clearCorruptedAppData({ 
+        preserveGameData: true, // Always preserve game data
+        userId 
+      });
       return { shouldRetry: true, shouldSignOut: false, retryAfter: 10 };
       
     case 'high':
       // Permission issues - clear app data but don't sign out
-      await clearCorruptedAppData({ userId });
+      await clearCorruptedAppData({ 
+        preserveGameData: true, // Always preserve game data
+        userId 
+      });
       return { shouldRetry: false, shouldSignOut: false };
       
     case 'critical':

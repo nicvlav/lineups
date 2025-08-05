@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { User, Session, AuthError } from "@supabase/supabase-js";
-import { refreshSession, checkSessionHealth, clearCorruptedAppData } from "@/lib/session-manager";
+import { refreshSession, checkSessionHealth, clearCorruptedAppData, clearVoteData } from "@/lib/session-manager";
 
 interface Squad {
     id: string;
@@ -431,9 +431,45 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
     const signOut = async () => {
         try {
-            const { error } = await supabase.auth.signOut();
+            console.log('🚪 AUTH: Starting sign out process...');
+            
+            // Clear vote data before signing out
+            await clearVoteData(user?.id);
+            
+            // Clear local state immediately to ensure UI updates
+            setUser(null);
+            setSession(null);
+            setCanVote(false);
+            setIsVerified(false);
+            setNeedsVerification(false);
+            
+            // Sign out from Supabase with timeout protection
+            console.log('🚪 AUTH: Calling supabase.auth.signOut()...');
+            const signOutPromise = supabase.auth.signOut();
+            const timeoutPromise = new Promise<{ error: AuthError }>((_, reject) =>
+                setTimeout(() => reject(new Error('Sign out timeout')), 10000)
+            );
+            
+            const { error } = await Promise.race([signOutPromise, timeoutPromise]);
+            
+            if (error) {
+                console.error('AUTH: Supabase sign out error:', error);
+                // Even if Supabase fails, we've cleared local state
+            } else {
+                console.log('✅ AUTH: Sign out completed successfully');
+            }
+            
             return { error };
         } catch (error) {
+            console.error('AUTH: Unexpected sign out error:', error);
+            
+            // Ensure local state is cleared even on errors
+            setUser(null);
+            setSession(null);
+            setCanVote(false);
+            setIsVerified(false);
+            setNeedsVerification(false);
+            
             return { error: error as AuthError };
         }
     };
@@ -447,10 +483,14 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             setIsVerified(false);
             setNeedsVerification(false);
             
+            // Clear vote data first
+            await clearVoteData(user?.id);
+            
             // Use modern targeted clearing instead of nuclear approach
             await clearCorruptedAppData({ 
                 preserveAuth: false, // We're signing out, so clear auth too
                 preserveUserData: false,
+                preserveGameData: true, // Always preserve game data - it works without auth
                 userId: user?.id 
             });
             
@@ -781,6 +821,12 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
         // Check session health every 5 minutes
         const healthCheckInterval = setInterval(async () => {
+            // Double-check user still exists (prevent race conditions during sign out)
+            if (!user) {
+                console.log('🔍 AUTH: Skipping health check - user signed out');
+                return;
+            }
+            
             console.log('🔍 AUTH: Proactive session health check...');
             const isHealthy = await refreshSessionIfNeeded();
             
@@ -791,14 +837,17 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
         // Initial health check after 30 seconds (avoid startup congestion)
         const initialCheck = setTimeout(async () => {
-            await refreshSessionIfNeeded();
+            // Double-check user still exists before health check
+            if (user) {
+                await refreshSessionIfNeeded();
+            }
         }, 30000);
 
         return () => {
             clearInterval(healthCheckInterval);
             clearTimeout(initialCheck);
         };
-    }, [user, loading, refreshSessionIfNeeded]);
+    }, [user, loading]); // Removed refreshSessionIfNeeded from dependencies
 
     // Show loading screen while initializing
     if (loading) {
