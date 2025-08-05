@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { User, Session, AuthError } from "@supabase/supabase-js";
+import { refreshSession, checkSessionHealth, clearCorruptedAppData } from "@/lib/session-manager";
 
 interface Squad {
     id: string;
@@ -46,6 +47,8 @@ interface AuthContextProps {
     // Session management
     signOut: () => Promise<{ error: AuthError | null }>;
     forceSignOut: () => Promise<void>;
+    refreshSessionIfNeeded: () => Promise<boolean>;
+    ensureValidSession: () => Promise<boolean>;
     clearUrlState: () => void;
     // Profile management
     updateAssociatedPlayer: (playerId: string | null) => Promise<{ error: AuthError | null }>;
@@ -444,9 +447,12 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             setIsVerified(false);
             setNeedsVerification(false);
             
-            // Clear browser storage
-            localStorage.clear();
-            sessionStorage.clear();
+            // Use modern targeted clearing instead of nuclear approach
+            await clearCorruptedAppData({ 
+                preserveAuth: false, // We're signing out, so clear auth too
+                preserveUserData: false,
+                userId: user?.id 
+            });
             
             // Force sign out from Supabase
             await supabase.auth.signOut();
@@ -455,6 +461,53 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         } catch (error) {
             console.error('Error during force sign out:', error);
         }
+    };
+
+    const refreshSessionIfNeeded = async (): Promise<boolean> => {
+        try {
+            const healthCheck = await checkSessionHealth();
+            
+            if (!healthCheck.isHealthy) {
+                console.log('🔄 AUTH: Session unhealthy, attempting recovery...');
+                
+                if (healthCheck.needsRefresh) {
+                    const refreshResult = await refreshSession();
+                    if (refreshResult.success) {
+                        console.log('✅ AUTH: Session refreshed successfully');
+                        return true;
+                    }
+                    
+                    if (refreshResult.shouldSignOut) {
+                        console.log('🚪 AUTH: Session refresh failed, signing out...');
+                        await forceSignOut();
+                        return false;
+                    }
+                }
+                
+                return false;
+            }
+            
+            if (healthCheck.needsRefresh) {
+                console.log('🔄 AUTH: Proactive token refresh...');
+                const refreshResult = await refreshSession();
+                return refreshResult.success;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('AUTH: Error checking session health:', error);
+            return false;
+        }
+    };
+
+    const ensureValidSession = async (): Promise<boolean> => {
+        if (!user || !session) {
+            console.warn('AUTH: No user or session available');
+            return false;
+        }
+
+        // Always refresh before critical operations
+        return await refreshSessionIfNeeded();
     };
 
     const clearUrlState = () => {
@@ -722,6 +775,31 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         return () => clearTimeout(timeout);
     }, [loading]);
 
+    // Proactive session health monitoring
+    useEffect(() => {
+        if (!user || loading) return;
+
+        // Check session health every 5 minutes
+        const healthCheckInterval = setInterval(async () => {
+            console.log('🔍 AUTH: Proactive session health check...');
+            const isHealthy = await refreshSessionIfNeeded();
+            
+            if (!isHealthy) {
+                console.warn('⚠️ AUTH: Session health check failed');
+            }
+        }, 5 * 60 * 1000); // 5 minutes
+
+        // Initial health check after 30 seconds (avoid startup congestion)
+        const initialCheck = setTimeout(async () => {
+            await refreshSessionIfNeeded();
+        }, 30000);
+
+        return () => {
+            clearInterval(healthCheckInterval);
+            clearTimeout(initialCheck);
+        };
+    }, [user, loading, refreshSessionIfNeeded]);
+
     // Show loading screen while initializing
     if (loading) {
         return (
@@ -750,6 +828,8 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             updatePassword,
             signOut,
             forceSignOut,
+            refreshSessionIfNeeded,
+            ensureValidSession,
             clearUrlState,
             updateAssociatedPlayer,
             validateSquad,

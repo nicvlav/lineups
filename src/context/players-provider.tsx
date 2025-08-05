@@ -3,6 +3,7 @@ import { useAuth } from "@/context/auth-context";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4, } from 'uuid';
+import { handleDatabaseError } from "@/lib/session-manager";
 
 import { openDB } from "idb";
 import { defaultStatScores, PlayerStats } from "@/data/stat-types";
@@ -139,7 +140,7 @@ interface PlayersProviderProps {
 }
 
 export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) => {
-    const { urlState, clearUrlState, user } = useAuth();
+    const { urlState, clearUrlState, user, ensureValidSession } = useAuth();
     const location = useLocation();
 
     // Routes that should NOT have game state management
@@ -482,6 +483,12 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         if (!user) throw new Error('User not authenticated');
 
+        // Ensure session is valid before critical database operation
+        const sessionValid = await ensureValidSession();
+        if (!sessionValid) {
+            throw new Error('Session invalid - please sign in again');
+        }
+
         // Get user profile ID first
         const { data: userProfile, error: profileError } = await supabase
             .from('user_profiles')
@@ -795,12 +802,18 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 console.error("❌ PLAYERS: Error fetching players:", error);
                 loadingState.current = false;
                 
-                // Check if it's a network/auth issue that might resolve with cache clear
-                if (error.code === 'PGRST301' || error.message.includes('JWT') || error.message.includes('network')) {
-                    console.log('🧹 PLAYERS: Network/auth error detected, clearing cache...');
-                    await clearCorruptedDB();
-                    localStorage.clear();
-                    sessionStorage.clear();
+                // Use intelligent error handling instead of aggressive clearing
+                const recovery = await handleDatabaseError(error, 'fetch players', user?.id);
+                
+                if (recovery.shouldSignOut) {
+                    console.log('🚪 PLAYERS: Critical error, signing out...');
+                    // Let auth context handle the sign out
+                    return {};
+                }
+                
+                if (recovery.shouldRetry) {
+                    console.log(`🔄 PLAYERS: Will retry fetching players in ${recovery.retryAfter || 5} seconds...`);
+                    // Could implement retry logic here if needed
                 }
                 
                 return {};
