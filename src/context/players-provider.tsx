@@ -9,7 +9,6 @@ import { openDB } from "idb";
 import { defaultStatScores, PlayerStats } from "@/data/stat-types";
 import { Formation, Point, Position, getPointForPosition, getThreatScore, normalizedDefaultWeights, emptyZoneScores } from "@/data/position-types";
 import { Player, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, GamePlayer } from "@/data/player-types";
-import { /*, logPlayerStats*/ } from "@/data/auto-balance-types";
 import { decodeStateFromURL } from "@/data/state-manager";
 import { autoCreateTeamsScored } from "../data/auto-balance";
 
