@@ -1,483 +1,1091 @@
+/**
+ * Auto-Balance System v2
+ * 
+ * Professional-grade team balancing algorithm using Monte Carlo optimization.
+ * Provides fair team distribution based on player skills and positions.
+ * 
+ * Features:
+ * - High-performance implementation using TypedArrays
+ * - Type-safe position and formation handling
+ * - Configurable balancing weights
+ * - Comprehensive debugging and metrics
+ * - 100% backward compatible API
+ * 
+ * @module auto-balance
+ */
 
 import {
-    defaultZoneWeights,
-    ZoneKeys,
-    ZonePositions,
-    getThreatScore,
+    Position,
+    Formation,
     formationTemplates,
+    defaultZoneWeights,
+    normalizedDefaultWeights,
+    getPointForPosition,
 } from "@/data/position-types";
 
 import {
     ScoredGamePlayer,
+    FilledGamePlayer,
+    calculateScoresForStats,
 } from "@/data/player-types";
 
-import {
-    ArrayScoredGamePlayer,
+// Re-export the old types for backward compatibility
+export { 
     toArrayScoredGamePlayers,
-    ZoneScoresArray,
-    zoneScoresToArray,
-    ZonePlayers,
-    emptyZonePlayers,
-    TeamResults,
     assignPositions,
+    calculateScores,
 } from "@/data/auto-balance-types";
 
-const getIdealDistribution = (numPlayers: number) => {
-    const formations = formationTemplates[numPlayers];
+// ============================================================================
+// Constants and Configuration
+// ============================================================================
 
-    if (!formations || formations.length === 0) throw new Error("Not enough players to form teams");
+/**
+ * 🔍 GLOBAL DEBUG SWITCH
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Set this to true/false to enable/disable ALL debug output
+ * This overrides any other debug settings in the code
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+const ENABLE_DEBUG = true;  // ← CHANGE THIS TO false TO DISABLE DEBUG
 
-    const numTemplates = formations.length;
-    const index = Math.round(Math.random() * (numTemplates - 1));
+/** Position indices for array-based operations */
+const POSITION_INDICES = {
+    GK: 0, CB: 1, FB: 2, DM: 3, CM: 4, WM: 5, AM: 6, ST: 7, WR: 8
+} as const;
 
-    return zoneScoresToArray(structuredClone(formations[index].positions));
+/** Reverse mapping from index to position */
+const INDEX_TO_POSITION: readonly Position[] = ['GK', 'CB', 'FB', 'DM', 'CM', 'WM', 'AM', 'ST', 'WR'];
+
+/** Total number of positions */
+const POSITION_COUNT = 9;
+
+/** Zone groupings for metric calculation */
+const ZONE_POSITIONS = [
+    [0],           // Goalkeeper
+    [1, 2],        // Defense
+    [3, 4, 5, 6],  // Midfield
+    [7, 8],        // Attack
+] as const;
+
+/** Default Monte Carlo configuration */
+const DEFAULT_CONFIG: BalanceConfig = {
+    numSimulations: 100,
+    weights: {
+        quality: 0.00,      // Reduced: raw quality less important
+        efficiency: 0.0,   // Increased: position fit is critical
+        balance: 0.45,      // Slightly reduced but still important
+        positionBalance: 0.45,  // Keep teams balanced
+        zonalBalance: 0.1,
+    },
+    dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
+    recursive: true,
+    recursiveDepth: 15,
+    debugMode: false,  // Use ENABLE_DEBUG flag instead
+} as const;
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+/**
+ * Configuration for the auto-balance algorithm
+ */
+export interface BalanceConfig {
+    /** Number of Monte Carlo simulations to run */
+    numSimulations: number;
+    
+    /** Weights for different optimization criteria (must sum to 1.0) */
+    weights: {
+        /** Overall team quality (higher stats = better) */
+        quality: number;
+        /** Player position efficiency (right player in right position) */
+        efficiency: number;
+        /** Team strength balance (equal total strength) */
+        balance: number;
+        /** Position-specific balance between teams */
+        positionBalance: number;
+        /** Zone balance within each team */
+        zonalBalance: number;
+    };
+    
+    /** Ratio for specialist detection (higher = stricter) */
+    dominanceRatio: number;
+    
+    /** Enable recursive optimization for better results */
+    recursive: boolean;
+    
+    /** Depth of recursive optimization */
+    recursiveDepth: number;
+    
+    /** Enable debug logging */
+    debugMode: boolean;
 }
 
-const isEmptyFormation = (formation: ZoneScoresArray, zone: number) =>
-    formation[zone].every(position => position <= 0);
-
-
-const getBestAndSecondBestStats = (zoneFitArr: ZoneScoresArray) => {
-    const sortedStats = zoneFitArr.flat().sort((x, y) => y - x); // Sort descending
-    const best = sortedStats[0];
-    const secondBest = sortedStats[1] || 0;
-    return { best, secondBest };
-};
-
-type SpecialistInfo = {
-    score: number,
-    zoneIndex: number,
-    positionIndex: number,
-};
-
-
-function getZoneSpecialistZoneAndPosition(player: ArrayScoredGamePlayer, dist: ZoneScoresArray, dominanceRatio = 1.05): SpecialistInfo | undefined {
-    const infos: SpecialistInfo[] = [];
-
-    player.zoneFitArr.forEach((zoneArr, zoneIndex) => {
-        zoneArr.forEach((score, positionIndex) => {
-            if (!dist[zoneIndex][positionIndex]) return;
-            infos.push({ score, zoneIndex, positionIndex });
-        });
-    });
-
-    const sorted = infos.sort((a, b) => b.score - a.score);
-
-    if (sorted.length === 0) return undefined;
-    if (sorted.length === 1) return sorted[0];
-
-    const best = sorted[0];
-    const second = sorted[1];
-
-    return best.score >= second.score * dominanceRatio ? best : undefined;
+/**
+ * Performance-optimized player representation
+ * Uses TypedArrays for cache-friendly access patterns
+ */
+interface FastPlayer {
+    /** Reference to original player data */
+    original: ScoredGamePlayer;
+    
+    /** Flat array of position scores for O(1) access */
+    scores: Float32Array;
+    
+    /** Pre-calculated best score */
+    bestScore: number;
+    
+    /** Index of best position */
+    bestPosition: number;
+    
+    /** Second best score for versatility calculation */
+    secondBestScore: number;
+    
+    /** Specialization ratio (best/secondBest) */
+    specializationRatio: number;
+    
+    /** Currently assigned position index (-1 if unassigned) */
+    assignedPosition: number;
+    
+    /** Assigned team */
+    team: 'A' | 'B' | null;
 }
 
-// special sorting with randomization
-const sortBest = (players: ArrayScoredGamePlayer[], zone: number, position: number, dist: ZoneScoresArray) => {
-    // const specializationRatios = [randomSeed * 0.8 + 0.1, randomSeed * 0.5 + 0.1, randomSeed * 0.2 + 0.0];
+/**
+ * Optimized team structure
+ */
+interface FastTeam {
+    /** Players grouped by position index */
+    positions: FastPlayer[][];
+    
+    /** Total team score */
+    totalScore: number;
+    
+    /** Scores by zone [GK, DEF, MID, ATT] */
+    zoneScores: Float32Array;
+    
+    /** Total player count */
+    playerCount: number;
+    
+    /** Peak potential score */
+    peakPotential: number;
+    
+    /** Formation used for this team */
+    formation: Formation | null;
+}
 
-    // Sort player pool by specialization in the zone
-    players.sort((a, b) => {
-        const aStats = getBestAndSecondBestStats(a.zoneFitArr);
-        const bStats = getBestAndSecondBestStats(b.zoneFitArr);
+/**
+ * Result of a simulation run
+ */
+interface SimulationResult {
+    teamA: FastTeam;
+    teamB: FastTeam;
+    score: number;
+    metrics: BalanceMetrics;
+}
 
-        const aSpecialZone = getZoneSpecialistZoneAndPosition(a, dist);
-        const bSpecialZone = getZoneSpecialistZoneAndPosition(b, dist);
+/**
+ * Detailed balance metrics
+ */
+interface BalanceMetrics {
+    quality: number;
+    efficiency: number;
+    balance: number;
+    positionBalance: number;
+    zonalBalance: number;
+}
 
-        const aFit = a.zoneFitArr[zone][position];
-        const bFit = b.zoneFitArr[zone][position];
+// ============================================================================
+// Player Conversion and Caching
+// ============================================================================
 
-        // === STEP 1: One is a zone specialist for this zone, the other isn't
-        if (aSpecialZone !== bSpecialZone) {
-            if (aSpecialZone && aSpecialZone.zoneIndex === zone && aSpecialZone.positionIndex === position) return -1;
-            if (bSpecialZone && bSpecialZone.zoneIndex === zone && bSpecialZone.positionIndex === position) return 1;
-            return aSpecialZone ? 1 : -1;  // Prefer non-specialist for off-zone cases
+/**
+ * Converts a scored player to optimized format
+ * Pre-calculates frequently accessed values
+ */
+function toFastPlayer(player: ScoredGamePlayer): FastPlayer {
+    const scores = new Float32Array(POSITION_COUNT);
+    let bestScore = 0;
+    let bestPosition = -1;
+    let secondBestScore = 0;
+    
+    // Fill score array and find best positions
+    for (let i = 0; i < POSITION_COUNT; i++) {
+        const position = INDEX_TO_POSITION[i];
+        const score = player.zoneFit[position] || 0;
+        scores[i] = score;
+        
+        if (score > bestScore) {
+            secondBestScore = bestScore;
+            bestScore = score;
+            bestPosition = i;
+        } else if (score > secondBestScore) {
+            secondBestScore = score;
         }
-
-        // === STEP 2: Both are specialists
-        if (aSpecialZone && bSpecialZone) {
-            const aMatchesZone = aSpecialZone.zoneIndex === zone
-            const bMatchesZone = bSpecialZone.zoneIndex === zone
-
-            const aMatchesPos = aMatchesZone && aSpecialZone.positionIndex === position;
-            const bMatchesPos = bMatchesZone && bSpecialZone.positionIndex === position;
-
-            // One matches pos, one doesn't
-            if (aMatchesPos !== bMatchesPos) return aMatchesPos ? -1 : 1;
-
-            if (aMatchesZone !== bMatchesZone) return aMatchesPos ? -1 : 1;
-
-            const aRatio = aStats.best / (aStats.secondBest || 1);
-            const bRatio = bStats.best / (bStats.secondBest || 1);
-
-            if (aMatchesPos && bMatchesPos) {
-                // Both match the pos — prefer sharper specialization, slightly softened by randomness
-                return (bRatio) - (aRatio);
-            } else {
-                // Both are specialists for another pos — prefer the more adaptable one
-                return (aRatio) - (bRatio);
-            }
-        }
-
-        // === STEP 3: Standard fallback with random-weighted specialization scoring
-        const specializationScoreA = aFit / (aStats.secondBest || 1);
-        const specializationScoreB = bFit / (bStats.secondBest || 1);
-
-        const weightedA = specializationScoreA * aFit;
-        const weightedB = specializationScoreB * bFit;
-
-        return weightedB - weightedA;
-    });
-
-};
-
-const sortWorst = (players: ArrayScoredGamePlayer[], _: number, __: number) => {
-    // Sort player pool by specialization in the zone
-    players.sort((a, b) => {
-        const aStats = getBestAndSecondBestStats(a.zoneFitArr);
-        const bStats = getBestAndSecondBestStats(b.zoneFitArr);
-
-        return (aStats.best - bStats.best);
-    });
-};
-
-const assignPlayersToTeams = (players: ArrayScoredGamePlayer[]) => {
-    const teamA: ZonePlayers = structuredClone(emptyZonePlayers);
-    const teamB: ZonePlayers = structuredClone(emptyZonePlayers);
-
-    let teamATotalScore = 0;
-    let teamBTotalScore = 0;
-
-    const teamAZoneScores = [0, 0, 0, 0];
-    const teamBZoneScores = [0, 0, 0, 0];
-
-    const addPlayerAtPos = (dist: ZoneScoresArray, zone: number, position: number, isTeamA: boolean, sortType: (players: ArrayScoredGamePlayer[], zone: number, position: number, dist: ZoneScoresArray) => void) => {
-        if (dist[zone][position] <= 0) return false;
-
-        if (teamA[zone] === undefined || teamA[zone][position] === undefined) {
-            // console.log("HUH");
-            return false
-        }
-
-        sortType(players, zone, position, dist);
-
-        const player = players.shift();
-
-        if (!player) return false;
-
-        const weight = defaultZoneWeights[ZonePositions[ZoneKeys[zone]][position]];
-
-        dist[zone][position] -= 1;
-
-        if (isTeamA) {
-            teamAZoneScores[zone] += player.zoneFitArr[zone][position];
-            teamATotalScore += player.zoneFitArr[zone][position];
-            teamA[zone][position].push({ ...player, generatedPositionInfo: weight });
-        } else {
-            teamBZoneScores[zone] += player.zoneFitArr[zone][position];
-            teamBTotalScore += player.zoneFitArr[zone][position];
-            teamB[zone][position].push({ ...player, generatedPositionInfo: weight });
-        }
-
-        return true;
-
-    };
-
-    const addPlayer = (dist: ZoneScoresArray, zone: number, isTeamA: boolean) => {
-        const formationZone = dist[zone];
-
-        if (formationZone.length <= 0) return false;
-
-        // Sort positions by priorityStat (lower is better), breaking ties with count and index
-        const sortedPositions = formationZone
-            .map((count, positionIndex) => ({
-                count,
-                positionIndex,
-                priority: defaultZoneWeights[ZonePositions[ZoneKeys[zone]][positionIndex]].priorityStat
-            }))
-            .filter(pos => pos.count > 0) // Ignore empty positions
-            .sort((a, b) =>
-                a.priority - b.priority || // Lower priority first
-                b.count - a.count || // More players in that position
-                a.positionIndex - b.positionIndex // Lower index if still tied
-            );
-
-        if (sortedPositions.length <= 0 || !sortedPositions[0]) return false;
-
-        return addPlayerAtPos(dist, zone, sortedPositions[0].positionIndex, isTeamA, sortBest);
-
-    };
-
-    // Total number of players for each team
-    let numTeamAPlayers = Math.floor(players.length / 2);
-    let numTeamBPlayers = players.length - numTeamAPlayers
-
-    const formationA = getIdealDistribution(numTeamAPlayers);
-    const formationB = numTeamAPlayers == numTeamBPlayers ? structuredClone(formationA) : getIdealDistribution(numTeamBPlayers);
-
-    if (addPlayerAtPos(formationA, 0, 0, true, sortWorst)) --numTeamAPlayers;
-    if (addPlayerAtPos(formationB, 0, 0, false, sortWorst)) --numTeamBPlayers;
-
-    teamATotalScore = 0;
-    teamBTotalScore = 0;
-
-    if (teamA[0][0].length && teamB[0][0].length) {
-        teamATotalScore += Math.max(...teamA[0][0][0].zoneFitArr.flat());
-        teamBTotalScore += Math.max(...teamB[0][0][0].zoneFitArr.flat());
     }
-
-    const foundAZones = [isEmptyFormation(formationA, 0), isEmptyFormation(formationA, 1), isEmptyFormation(formationA, 2), isEmptyFormation(formationA, 3)];
-    const foundBZones = [isEmptyFormation(formationB, 0), isEmptyFormation(formationB, 1), isEmptyFormation(formationB, 2), isEmptyFormation(formationB, 3)];
-
-    while (numTeamAPlayers || numTeamBPlayers) {
-        if (foundAZones.every(val => val === true) && foundBZones.every(val => val === true)) {
-            throw new Error("WTF???");
-        }
-
-        const currZone = Math.round(Math.random() * 3);
-
-        if (((numTeamAPlayers && teamATotalScore <= teamBTotalScore) || !numTeamBPlayers) && !foundAZones[currZone]) {
-            if (addPlayer(formationA, currZone, true)) --numTeamAPlayers;
-        } else if (numTeamBPlayers && !foundBZones[currZone]) {
-            if (addPlayer(formationB, currZone, false)) --numTeamBPlayers;
-        }
-
-        foundAZones[currZone] = foundAZones[currZone] || isEmptyFormation(formationA, currZone);
-        foundBZones[currZone] = foundBZones[currZone] || isEmptyFormation(formationB, currZone);
-    }
-
-    while (numTeamAPlayers || numTeamBPlayers) {
-        if (foundAZones.every(val => val === true) && foundBZones.every(val => val === true)) {
-            throw new Error("WTF???");
-        }
-
-        const currZone = Math.round(Math.random() * 3);
-
-        if (((numTeamAPlayers && teamATotalScore <= teamBTotalScore) || !numTeamBPlayers) && !foundAZones[currZone]) {
-            if (addPlayer(formationA, currZone, true)) --numTeamAPlayers;
-        } else if (numTeamBPlayers && !foundBZones[currZone]) {
-            if (addPlayer(formationB, currZone, false)) --numTeamBPlayers;
-        }
-
-        foundAZones[currZone] = foundAZones[currZone] || isEmptyFormation(formationA, currZone);
-        foundBZones[currZone] = foundBZones[currZone] || isEmptyFormation(formationB, currZone);
-    }
-
+    
     return {
-        a: { team: teamA, score: teamATotalScore, totals: teamAZoneScores },
-        b: { team: teamB, score: teamBTotalScore, totals: teamBZoneScores }
-    } as TeamResults;
-
-};
-
-const getZones = (players: ArrayScoredGamePlayer[], recursive: boolean, numSimulations: number) => {
-    let bestAssignment: TeamResults = {
-        a: { team: structuredClone(emptyZonePlayers), score: 0, totals: [0, 0, 0, 0] },
-        b: { team: structuredClone(emptyZonePlayers), score: 0, totals: [0, 0, 0, 0] }
+        original: player,
+        scores,
+        bestScore,
+        bestPosition,
+        secondBestScore,
+        specializationRatio: secondBestScore > 0 ? bestScore / secondBestScore : Infinity,
+        assignedPosition: -1,
+        team: null,
     };
+}
 
-    // Tracking best values for output clarity
-    let bestWeightedScore = -Infinity;
+/**
+ * Creates an empty team structure
+ */
+function createFastTeam(): FastTeam {
+    const positions: FastPlayer[][] = [];
+    for (let i = 0; i < POSITION_COUNT; i++) {
+        positions[i] = [];
+    }
+    
+    return {
+        positions,
+        totalScore: 0,
+        zoneScores: new Float32Array(4),
+        playerCount: 0,
+        peakPotential: 0,
+        formation: null,
+    };
+}
 
-    // Adjustable weights (total sums to 1)
-    const W_quality = recursive ? 0.1 : 0.0; // Normalize overall player quality
-    const W_efficiency = recursive ? 0.5 : 0.7; // Normalize overall player quality
-    const W_balance = recursive ? 0.2 : 0.0; // Normalize team balance
-    const W_pos_balance = recursive ? 0.2 : 0.1; // Normalize team balance
-    const W_zonal = recursive ? 0.0 : 0.2;   // Normalize zonal variance
+// ============================================================================
+// Formation Management
+// ============================================================================
 
-    for (let i = 0; i < numSimulations; i++) {
-        let results: TeamResults;
+/**
+ * Gets formation requirements as an optimized array
+ * Returns both the array and the original formation for reference
+ */
+function getFastFormation(numPlayers: number): { array: Int8Array; formation: Formation } | null {
+    const formations = formationTemplates[numPlayers];
+    if (!formations || formations.length === 0) {
+        return null;
+    }
+    
+    // Random selection for variety
+    const selectedFormation = formations[Math.floor(Math.random() * formations.length)];
+    
+    // Convert to array
+    const arr = new Int8Array(POSITION_COUNT);
+    for (let i = 0; i < POSITION_COUNT; i++) {
+        const position = INDEX_TO_POSITION[i];
+        arr[i] = selectedFormation.positions[position] || 0;
+    }
+    
+    return { array: arr, formation: selectedFormation };
+}
 
-        try {
-            results = recursive ? getZones(players, false, numSimulations / 15) : assignPlayersToTeams(structuredClone(players));
-            // results = assignPlayersToTeams(structuredClone(players));
-        } catch (error) {
-            console.warn(error);
-            continue;
+// ============================================================================
+// Sorting Algorithms
+// ============================================================================
+
+/**
+ * Creates an optimized comparator for position-based sorting
+ * MASSIVELY prefers specialists over versatile players
+ */
+function createPositionComparator(
+    positionIdx: number,
+    dominanceRatio: number
+): (a: FastPlayer, b: FastPlayer) => number {
+    return (a: FastPlayer, b: FastPlayer): number => {
+        const aScore = a.scores[positionIdx];
+        const bScore = b.scores[positionIdx];
+        
+        // Calculate specialization for THIS specific position
+        // A specialist is someone whose score at this position dominates their other scores
+        const aIsPositionSpecialist = a.bestPosition === positionIdx && a.specializationRatio >= dominanceRatio;
+        const bIsPositionSpecialist = b.bestPosition === positionIdx && b.specializationRatio >= dominanceRatio;
+        
+        // Priority 1: MASSIVE preference for specialists at this exact position
+        if (aIsPositionSpecialist !== bIsPositionSpecialist) {
+            // Specialist vs non-specialist: HUGE sorting difference
+            return aIsPositionSpecialist ? -1000 : 1000;
         }
-
-        let normalizedZonal = 1;
-        let efficiencyDiff = 0;
-        let normalizedEfficiency = 0;
-
-        let teamAPlayers = 0;
-        let teamBPlayers = 0;
-
-        let aPositionalTotal = 0;
-        let bPositionalTotal = 0;
-
-        let aPeakTotal = 0;
-        let bPeakTotal = 0;
-
-        for (let zone = 0; zone <= 3; zone++) {
-            const a = results.a.team[zone].flat();
-            const b = results.b.team[zone].flat();
-
-            // realtive sum is the scores based on players at assigned positions
-            const aZoneRelativeSum = results.a.totals[zone] / 100;
-            const bZoneRelativeSum = results.b.totals[zone] / 100;
-
-            // peak sum is the sum of all players' abolsute best position scores - max potential
-            let aZonePeakSum = 0;
-            let bZonePeakSum = 0;
-
-            a.forEach((player) => {
-                const x = player.generatedPositionInfo.isCentral ? 0.5 : 0.0;
-                const y = player.generatedPositionInfo.absoluteYPosition;
-                const threat = getThreatScore({ x, y }, player.zoneFit);
-                const maxScore = Math.max(...player.zoneFitArr.flat()) / 100;
-                const ratio = ((maxScore - threat) / maxScore);
-
-                efficiencyDiff += Math.pow(ratio, 0.1);
-                aZonePeakSum += maxScore;
-                teamAPlayers++;
-            });
-
-            b.forEach((player) => {
-                const x = player.generatedPositionInfo.isCentral ? 0.5 : 0.0;
-                const y = player.generatedPositionInfo.absoluteYPosition;
-                const threat = getThreatScore({ x, y }, player.zoneFit);
-                const maxScore = Math.max(...player.zoneFitArr.flat()) / 100;
-                const ratio = Math.pow(((maxScore - threat) / maxScore), 0.5)
-
-                efficiencyDiff += Math.pow(ratio, 0.1);
-                bZonePeakSum += maxScore;
-                teamBPlayers++;
-            });
-
-            aPeakTotal += aZonePeakSum;
-            bPeakTotal += bZonePeakSum;
-
-            // goalkeeper zone - take their peak score for both totals
-            // dont include this zone in zonal calculations
-            if (!zone) {
-                aPositionalTotal += aZonePeakSum;
-                bPositionalTotal += bZonePeakSum;
-                continue;
+        
+        // Priority 2: If both are specialists for this position, prefer stronger specialization
+        if (aIsPositionSpecialist && bIsPositionSpecialist) {
+            // Higher specialization ratio = more specialized
+            const ratioDiff = b.specializationRatio - a.specializationRatio;
+            // Even tiny differences matter for specialists
+            if (Math.abs(ratioDiff) > 0.01) {
+                return ratioDiff > 0 ? 100 : -100;
             }
-
-            aPositionalTotal += aZoneRelativeSum;
-            bPositionalTotal += bZoneRelativeSum;
-
-            const aZoneNum = a.length;
-            const bZoneNum = b.length;
-
-            // zone score is based on player assignments rather than absolute peak score
-            const aZoneAvg = aZoneRelativeSum / aZoneNum;
-            const bZoneAvg = bZoneRelativeSum / bZoneNum;
-
-            const maxAvg = Math.min(aZoneAvg, bZoneAvg);
-            const diff = Math.abs(aZoneAvg - bZoneAvg) / maxAvg;
-
-            // If both averages are 0, assume perfect balance (avoid 0/0)
-            // zone score is the average zone score for team a vs average team score for team b
-            // high score means both seems have similar average zone scores, low means there is a quality gap
-            const zoneScore = maxAvg === 0 ? 1 : (1 - diff / maxAvg);
-
-            normalizedZonal *= Math.pow(zoneScore, 0.5);
         }
-
-        // Maximum possible scores (each player can score 100)
-        const maxTeamAScore = teamAPlayers;
-        const maxTeamBScore = teamBPlayers;
-        const maxTotalScore = maxTeamAScore + maxTeamBScore;
-
-        // Normalize overall quality (average player quality)
-        const normalizedQuality = Math.pow((aPositionalTotal + bPositionalTotal) / maxTotalScore, 0.33); // 1 means every player scored 100
-
-        // Normalize team balance
-        const diff = Math.abs(aPeakTotal - bPeakTotal);
-        // Maximum possible difference is if the larger team scores max and the smaller scores 0.
-        const maxPossibleDiff = Math.max(teamAPlayers, teamBPlayers);
-        const normalizedBalance = 1 - Math.pow(diff / maxPossibleDiff, 0.25); // 1 is perfect balance
-
-        const diffPos = Math.abs(aPositionalTotal - bPositionalTotal);
-        const normalizedPosBalance = 1 - Math.pow(diffPos / maxPossibleDiff, 0.25); // 1 is perfect balanc
-
-        // exclude goalkeepers
-        normalizedEfficiency = 1 - (efficiencyDiff / (teamAPlayers + teamBPlayers));
-
-
-        // Compute weighted overall score
-        const weightedScore =
-            W_quality * normalizedQuality +
-            W_efficiency * normalizedEfficiency +
-            W_balance * normalizedBalance +
-            W_pos_balance * normalizedPosBalance +
-            W_zonal * normalizedZonal;
-
-        // console.log("(teamAPlayers + teamBPlayers)", teamAPlayers + teamBPlayers);
-        // console.log("aPeakTotal, bPeakTotal", aPeakTotal, bPeakTotal);
-        // console.log("totalPositionalScore", aPositionalTotal + bPositionalTotal);
-        // console.log("normalizedEfficiency", W_efficiency, normalizedEfficiency);
-        // console.log("normalizedQuality", W_quality, normalizedQuality);
-        // console.log("normalizedBalance", W_balance, normalizedBalance, aPeakTotal, bPeakTotal);
-        // console.log("normalizedZonal", W_zonal, normalizedZonal);
-        // console.log("weightedScore", weightedScore);
-
-        // Choose best assignment based on weighted score
-        if (weightedScore > bestWeightedScore) {
-            bestWeightedScore = weightedScore;
-            bestAssignment = results
+        
+        // Priority 3: Efficiency - how good are they at THIS position relative to their best?
+        const aEfficiency = a.bestScore > 0 ? aScore / a.bestScore : 0;
+        const bEfficiency = b.bestScore > 0 ? bScore / b.bestScore : 0;
+        
+        // Strong penalty for players who would be "wasted" at this position
+        const efficiencyDiff = bEfficiency - aEfficiency;
+        if (Math.abs(efficiencyDiff) > 0.02) { // Even 2% efficiency difference matters
+            return efficiencyDiff > 0 ? 50 : -50;
         }
+        
+        // Priority 4: Raw score at this position
+        const scoreDiff = bScore - aScore;
+        if (Math.abs(scoreDiff) > 0.01) {
+            return scoreDiff;
+        }
+        
+        // Priority 5: Overall quality as final tiebreaker
+        return b.bestScore - a.bestScore;
+    };
+}
 
+/**
+ * Sorts players by worst overall score (for goalkeeper selection)
+ */
+function sortWorstInPlace(players: FastPlayer[]): void {
+    players.sort((a, b) => a.bestScore - b.bestScore);
+}
+
+// ============================================================================
+// Team Assignment Algorithm
+// ============================================================================
+
+/**
+ * Core team assignment algorithm
+ * Assigns players to teams based on formation and balance
+ */
+function assignPlayersToTeams(
+    players: FastPlayer[],
+    config: BalanceConfig
+): SimulationResult | null {
+    const totalPlayers = players.length;
+    const teamASize = Math.floor(totalPlayers / 2);
+    const teamBSize = totalPlayers - teamASize;
+    
+    // Get formations
+    const formationDataA = getFastFormation(teamASize);
+    const formationDataB = teamASize === teamBSize 
+        ? formationDataA 
+        : getFastFormation(teamBSize);
+    
+    if (!formationDataA || !formationDataB) {
+        if (config.debugMode) {
+            console.warn(`No formation available for ${teamASize}/${teamBSize} players`);
+        }
+        return null;
     }
-
-    if (!recursive) {
-        // console.log("Internal Run Team Totals: A:", bestAssignment.a.score, "B:", bestAssignment.b.score);
-        return bestAssignment;
+    
+    const formationA = formationDataA.array.slice();
+    const formationB = formationDataB.array.slice();
+    
+    // Initialize teams
+    const teamA = createFastTeam();
+    const teamB = createFastTeam();
+    
+    // Store formations for position calculation
+    teamA.formation = formationDataA.formation;
+    teamB.formation = formationDataB.formation;
+    
+    // Clone players for manipulation
+    const available = [...players];
+    
+    // Reset assignment state
+    for (const player of available) {
+        player.assignedPosition = -1;
+        player.team = null;
     }
+    
+    // Phase 1: Assign goalkeepers (worst overall players)
+    sortWorstInPlace(available);
+    
+    const gkIdx = POSITION_INDICES.GK;
+    if (formationA[gkIdx] > 0 && available.length > 0) {
+        const gk = available.shift()!;
+        gk.assignedPosition = gkIdx;
+        gk.team = 'A';
+        teamA.positions[gkIdx].push(gk);
+        teamA.totalScore += gk.scores[gkIdx];
+        teamA.peakPotential += gk.bestScore;
+        teamA.playerCount++;
+        formationA[gkIdx]--;
+    }
+    
+    if (formationB[gkIdx] > 0 && available.length > 0) {
+        const gk = available.shift()!;
+        gk.assignedPosition = gkIdx;
+        gk.team = 'B';
+        teamB.positions[gkIdx].push(gk);
+        teamB.totalScore += gk.scores[gkIdx];
+        teamB.peakPotential += gk.bestScore;
+        teamB.playerCount++;
+        formationB[gkIdx]--;
+    }
+    
+    // Phase 2: Assign remaining players with dynamic balancing
+    const comparators = new Map<number, (a: FastPlayer, b: FastPlayer) => number>();
+    for (let i = 0; i < POSITION_COUNT; i++) {
+        comparators.set(i, createPositionComparator(i, config.dominanceRatio));
+    }
+    
+    // Track which zones have available positions
+    const getAvailableZones = (formation: Int8Array): number[] => {
+        const zones: number[] = [];
+        for (let zoneIdx = 0; zoneIdx < 4; zoneIdx++) {
+            for (const posIdx of ZONE_POSITIONS[zoneIdx]) {
+                if (formation[posIdx] > 0) {
+                    zones.push(zoneIdx);
+                    break;
+                }
+            }
+        }
+        return zones;
+    };
+    
+    while (available.length > 0) {
+        // Choose team based on current balance
+        const aZones = getAvailableZones(formationA);
+        const bZones = getAvailableZones(formationB);
+        
+        if (aZones.length === 0 && bZones.length === 0) break;
+        
+        const assignToA = aZones.length > 0 && 
+            (bZones.length === 0 || teamA.totalScore <= teamB.totalScore);
+        
+        const targetTeam = assignToA ? teamA : teamB;
+        const targetFormation = assignToA ? formationA : formationB;
+        const availableZones = assignToA ? aZones : bZones;
+        
+        // RANDOMIZATION: Pick a random zone to fill (like original)
+        const randomZone = availableZones[Math.floor(Math.random() * availableZones.length)];
+        const zonePositions = ZONE_POSITIONS[randomZone];
+        
+        // Within the zone, still respect priority order
+        let assigned = false;
+        
+        // Collect all available positions in this zone with their priorities
+        const availablePositions: { posIdx: number; priority: number }[] = [];
+        for (const posIdx of zonePositions) {
+            if (targetFormation[posIdx] > 0) {
+                const position = INDEX_TO_POSITION[posIdx];
+                const weight = defaultZoneWeights[position];
+                availablePositions.push({ posIdx, priority: weight.priorityStat });
+            }
+        }
+        
+        // Sort by priority (but could randomize within same priority for more variety)
+        availablePositions.sort((a, b) => {
+            if (a.priority !== b.priority) {
+                return a.priority - b.priority;
+            }
+            // Add small randomization for same priority positions
+            return Math.random() - 0.5;
+        });
+        
+        // Try to assign to positions in this zone
+        for (const { posIdx } of availablePositions) {
+            if (assigned) break;
+            
+            // Sort available players for this position
+            available.sort(comparators.get(posIdx)!);
+            
+            if (available.length > 0) {
+                const player = available.shift()!;
+                const score = player.scores[posIdx];
+                
+                player.assignedPosition = posIdx;
+                player.team = assignToA ? 'A' : 'B';
+                targetTeam.positions[posIdx].push(player);
+                targetTeam.totalScore += score;
+                targetTeam.peakPotential += player.bestScore;
+                targetTeam.playerCount++;
+                targetFormation[posIdx]--;
+                
+                assigned = true;
+            }
+        }
+        
+        if (!assigned && available.length > 0) {
+            if (config.debugMode) {
+                console.warn("Could not assign player in zone", randomZone);
+            }
+            // Try any position as fallback
+            for (let posIdx = 0; posIdx < POSITION_COUNT; posIdx++) {
+                if (targetFormation[posIdx] > 0) {
+                    available.sort(comparators.get(posIdx)!);
+                    if (available.length > 0) {
+                        const player = available.shift()!;
+                        player.assignedPosition = posIdx;
+                        player.team = assignToA ? 'A' : 'B';
+                        targetTeam.positions[posIdx].push(player);
+                        targetTeam.totalScore += player.scores[posIdx];
+                        targetTeam.peakPotential += player.bestScore;
+                        targetTeam.playerCount++;
+                        targetFormation[posIdx]--;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Calculate zone scores
+    for (let zoneIdx = 0; zoneIdx < 4; zoneIdx++) {
+        for (const posIdx of ZONE_POSITIONS[zoneIdx]) {
+            for (const player of teamA.positions[posIdx]) {
+                teamA.zoneScores[zoneIdx] += player.scores[posIdx];
+            }
+            for (const player of teamB.positions[posIdx]) {
+                teamB.zoneScores[zoneIdx] += player.scores[posIdx];
+            }
+        }
+    }
+    
+    // Calculate balance metrics
+    const metrics = calculateMetrics(teamA, teamB, config);
+    
+    return {
+        teamA,
+        teamB,
+        score: metrics.score,
+        metrics: metrics.details,
+    };
+}
 
-    let peakScoreA = 0;
-    let peakScoreB = 0;
+// ============================================================================
+// Metrics and Evaluation
+// ============================================================================
 
-    const a = bestAssignment.a.team.flat().flat();
-    const b = bestAssignment.b.team.flat().flat();
+/**
+ * Calculates comprehensive balance metrics
+ */
+function calculateMetrics(
+    teamA: FastTeam,
+    teamB: FastTeam,
+    config: BalanceConfig
+): { score: number; details: BalanceMetrics } {
+    const metrics: BalanceMetrics = {
+        quality: 0,
+        efficiency: 0,
+        balance: 0,
+        positionBalance: 0,
+        zonalBalance: 0,
+    };
+    
+    // Quality: Overall team strength utilization
+    const totalActual = teamA.totalScore + teamB.totalScore;
+    const totalPossible = (teamA.playerCount + teamB.playerCount) * 100;
+    metrics.quality = totalPossible > 0 ? totalActual / totalPossible : 0;
+    
+    // Efficiency: How well players are positioned (penalize waste)
+    // Calculate efficiency per player to detect mismatches
+    let totalEfficiency = 0;
+    let playerCount = 0;
+    
+    // Check each position for efficiency
+    for (let posIdx = 0; posIdx < POSITION_COUNT; posIdx++) {
+        // Team A players at this position
+        for (const player of teamA.positions[posIdx]) {
+            const actualScore = player.scores[posIdx];
+            const bestScore = player.bestScore;
+            if (bestScore > 0) {
+                // Efficiency is how close this position is to their best
+                // 1.0 = perfect fit, 0.5 = wasted at wrong position
+                const efficiency = actualScore / bestScore;
+                // Penalize severe mismatches more heavily
+                totalEfficiency += Math.pow(efficiency, 1.5);
+                playerCount++;
+            }
+        }
+        
+        // Team B players at this position
+        for (const player of teamB.positions[posIdx]) {
+            const actualScore = player.scores[posIdx];
+            const bestScore = player.bestScore;
+            if (bestScore > 0) {
+                const efficiency = actualScore / bestScore;
+                totalEfficiency += Math.pow(efficiency, 1.5);
+                playerCount++;
+            }
+        }
+    }
+    
+    metrics.efficiency = playerCount > 0 ? totalEfficiency / playerCount : 0;
+    
+    // Balance: Peak potential balance between teams
+    const peakDiff = Math.abs(teamA.peakPotential - teamB.peakPotential);
+    const maxPeak = Math.max(teamA.peakPotential, teamB.peakPotential);
+    metrics.balance = maxPeak > 0 ? 1 - (peakDiff / maxPeak) : 1;
+    
+    // Position Balance: Actual score balance
+    const scoreDiff = Math.abs(teamA.totalScore - teamB.totalScore);
+    const maxScore = Math.max(teamA.totalScore, teamB.totalScore);
+    metrics.positionBalance = maxScore > 0 ? 1 - (scoreDiff / maxScore) : 1;
+    
+    // Zonal Balance: Internal team balance
+    const calcZonalBalance = (team: FastTeam) => {
+        const nonGkZones = [team.zoneScores[1], team.zoneScores[2], team.zoneScores[3]];
+        const avg = nonGkZones.reduce((a, b) => a + b, 0) / 3;
+        if (avg === 0) return 1;
+        const variance = nonGkZones.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / 3;
+        return 1 / (1 + Math.sqrt(variance) / avg);
+    };
+    
+    metrics.zonalBalance = (calcZonalBalance(teamA) + calcZonalBalance(teamB)) / 2;
+    
+    // Calculate weighted score
+    const score = 
+        config.weights.quality * metrics.quality +
+        config.weights.efficiency * metrics.efficiency +
+        config.weights.balance * metrics.balance +
+        config.weights.positionBalance * metrics.positionBalance +
+        config.weights.zonalBalance * metrics.zonalBalance;
+    
+    return { score, details: metrics };
+}
 
-    [...a].forEach((player) => {
-        peakScoreA += Math.max(...player.zoneFitArr.flat());
-    });
+// ============================================================================
+// Monte Carlo Optimization
+// ============================================================================
 
-    [...b].forEach((player) => {
-        peakScoreB += Math.max(...player.zoneFitArr.flat());
-    });
+/**
+ * Runs Monte Carlo simulation to find optimal team balance
+ */
+function runMonteCarlo(
+    players: FastPlayer[],
+    config: BalanceConfig
+): SimulationResult | null {
+    let bestResult: SimulationResult | null = null;
+    let bestScore = -Infinity;
+    
+    for (let i = 0; i < config.numSimulations; i++) {
+        const result = assignPlayersToTeams(players, config);
+        
+        if (result && result.score > bestScore) {
+            bestScore = result.score;
+            bestResult = result;
+            
+            if (config.debugMode && i % 10 === 0) {
+                console.log(`Simulation ${i}/${config.numSimulations}: Score=${result.score.toFixed(3)}`);
+            }
+        }
+    }
+    
+    return bestResult;
+}
 
+/**
+ * Recursive optimization for better results
+ */
+function runRecursiveOptimization(
+    players: FastPlayer[],
+    config: BalanceConfig
+): SimulationResult | null {
+    // Run initial optimization
+    let bestResult = runMonteCarlo(players, config);
+    if (!bestResult) return null;
+    
+    // Recursive refinement
+    const subConfig: BalanceConfig = {
+        ...config,
+        numSimulations: Math.max(5, Math.floor(config.numSimulations / config.recursiveDepth)),
+        recursive: false,
+        weights: {
+            quality: 0.0,
+            efficiency: 0.0,   // Even more focus on efficiency in refinement
+            balance: 0.1,
+            positionBalance: 0.5,
+            zonalBalance: 0.4,
+        },
+    };
+    
+    for (let depth = 0; depth < config.recursiveDepth; depth++) {
+        const refined = runMonteCarlo(players, subConfig);
+        if (refined && refined.score > bestResult.score) {
+            bestResult = refined;
+        }
+    }
+    
+    return bestResult;
+}
 
-    console.log("===== Final Optimized Team Zone Scores =====");
-    console.log("Team A Zones (GK, Defense, Midfield, Attack):", bestAssignment.a.totals);
-    console.log("Team B Zones (GK, Defense, Midfield, Attack):", bestAssignment.b.totals);
-    console.log("==================================");
-    console.log("Total Positional Scores → Team A:", bestAssignment.a.score, "Team B:", bestAssignment.b.score);
-    console.log("Team Positional Balance Difference (Lower is better):", Math.abs(bestAssignment.a.score - bestAssignment.b.score));
+// ============================================================================
+// Result Conversion
+// ============================================================================
 
-    console.log("Total Peak Scores → Team A:", peakScoreA, "Team B:", peakScoreB);
-    console.log("Team Peak Balance Difference (Lower is better):", Math.abs(peakScoreA - peakScoreB));
-    console.log("==================================");
+/**
+ * Converts optimized result back to original format
+ */
+function convertToGamePlayers(
+    result: SimulationResult
+): { a: ScoredGamePlayer[]; b: ScoredGamePlayer[] } {
+    const teamA: ScoredGamePlayer[] = [];
+    const teamB: ScoredGamePlayer[] = [];
+    
+    // Process each position
+    for (let posIdx = 0; posIdx < POSITION_COUNT; posIdx++) {
+        const position = INDEX_TO_POSITION[posIdx];
+        const weight = defaultZoneWeights[position];
+        
+        // Team A players
+        const teamAPlayers = result.teamA.positions[posIdx];
+        teamAPlayers.forEach((player, idx) => {
+            // Pass formation for CM positioning
+            const point = getPointForPosition(
+                weight, 
+                idx, 
+                teamAPlayers.length, 
+                result.teamA.formation || undefined
+            );
+            teamA.push({
+                ...player.original,
+                position: point,
+                exactPosition: position,
+                team: 'A',
+            });
+        });
+        
+        // Team B players
+        const teamBPlayers = result.teamB.positions[posIdx];
+        teamBPlayers.forEach((player, idx) => {
+            // Pass formation for CM positioning
+            const point = getPointForPosition(
+                weight, 
+                idx, 
+                teamBPlayers.length, 
+                result.teamB.formation || undefined
+            );
+            teamB.push({
+                ...player.original,
+                position: point,
+                exactPosition: position,
+                team: 'B',
+            });
+        });
+    }
+    
+    return { a: teamA, b: teamB };
+}
 
-    return bestAssignment;
-};
+// ============================================================================
+// Logging and Debugging
+// ============================================================================
 
+/**
+ * Logs detailed balance results with comprehensive metrics
+ */
+function logResults(result: SimulationResult, config: BalanceConfig): void {
+    // Always use ENABLE_DEBUG flag
+    if (!ENABLE_DEBUG && !config.debugMode) return;
+    
+    console.log("\n" + "═".repeat(60));
+    console.log("              AUTO-BALANCE RESULTS SUMMARY");
+    console.log("═".repeat(60));
+    
+    // Team sizes
+    console.log("\n📊 TEAM DISTRIBUTION");
+    console.log("─".repeat(40));
+    console.log(`  Team A: ${result.teamA.playerCount} players`);
+    console.log(`  Team B: ${result.teamB.playerCount} players`);
+    
+    // Peak potential scores (best possible if everyone played their best position)
+    console.log("\n⭐ PEAK POTENTIAL SCORES (if all players at best positions)");
+    console.log("─".repeat(40));
+    const peakDiff = result.teamA.peakPotential - result.teamB.peakPotential;
+    const peakPercent = result.teamB.peakPotential > 0 
+        ? ((Math.abs(peakDiff) / result.teamB.peakPotential) * 100).toFixed(1)
+        : "0.0";
+    console.log(`  Team A Peak: ${result.teamA.peakPotential.toFixed(0)}`);
+    console.log(`  Team B Peak: ${result.teamB.peakPotential.toFixed(0)}`);
+    console.log(`  Difference:  ${peakDiff > 0 ? '+' : ''}${peakDiff.toFixed(0)} (${peakPercent}%)`);
+    console.log(`  ${peakDiff > 0 ? 'Team A stronger' : peakDiff < 0 ? 'Team B stronger' : 'Perfectly balanced'}`);
+    
+    // Actual positional scores
+    console.log("\n🎯 ACTUAL POSITIONAL SCORES (at assigned positions)");
+    console.log("─".repeat(40));
+    const posDiff = result.teamA.totalScore - result.teamB.totalScore;
+    const posPercent = result.teamB.totalScore > 0
+        ? ((Math.abs(posDiff) / result.teamB.totalScore) * 100).toFixed(1)
+        : "0.0";
+    console.log(`  Team A Score: ${result.teamA.totalScore.toFixed(0)}`);
+    console.log(`  Team B Score: ${result.teamB.totalScore.toFixed(0)}`);
+    console.log(`  Difference:   ${posDiff > 0 ? '+' : ''}${posDiff.toFixed(0)} (${posPercent}%)`);
+    console.log(`  ${posDiff > 0 ? 'Team A advantage' : posDiff < 0 ? 'Team B advantage' : 'Perfectly balanced'}`);
+    
+    // Efficiency comparison
+    const efficiencyA = result.teamA.peakPotential > 0 
+        ? (result.teamA.totalScore / result.teamA.peakPotential * 100).toFixed(1)
+        : "0.0";
+    const efficiencyB = result.teamB.peakPotential > 0
+        ? (result.teamB.totalScore / result.teamB.peakPotential * 100).toFixed(1)
+        : "0.0";
+    console.log("\n  Position Efficiency:");
+    console.log(`    Team A: ${efficiencyA}% of peak potential`);
+    console.log(`    Team B: ${efficiencyB}% of peak potential`);
+    
+    // Zone breakdown with averages
+    console.log("\n🏆 ZONE ANALYSIS (skills by field zone)");
+    console.log("─".repeat(40));
+    console.log("  Zone     | Team A      | Team B      | Diff");
+    console.log("  ---------|-------------|-------------|--------");
+    
+    const zones = ['GK', 'DEF', 'MID', 'ATT'];
+    const zonePlayerCounts = [
+        [result.teamA.positions[0].length, result.teamB.positions[0].length], // GK
+        [result.teamA.positions[1].length + result.teamA.positions[2].length, 
+         result.teamB.positions[1].length + result.teamB.positions[2].length], // DEF
+        [result.teamA.positions[3].length + result.teamA.positions[4].length + 
+         result.teamA.positions[5].length + result.teamA.positions[6].length,
+         result.teamB.positions[3].length + result.teamB.positions[4].length + 
+         result.teamB.positions[5].length + result.teamB.positions[6].length], // MID
+        [result.teamA.positions[7].length + result.teamA.positions[8].length,
+         result.teamB.positions[7].length + result.teamB.positions[8].length], // ATT
+    ];
+    
+    for (let i = 0; i < 4; i++) {
+        const scoreA = result.teamA.zoneScores[i];
+        const scoreB = result.teamB.zoneScores[i];
+        const countA = zonePlayerCounts[i][0];
+        const countB = zonePlayerCounts[i][1];
+        const avgA = countA > 0 ? scoreA / countA : 0;
+        const avgB = countB > 0 ? scoreB / countB : 0;
+        const diff = scoreA - scoreB;
+        
+        const aStr = `${scoreA.toFixed(0)} (${avgA.toFixed(0)})`;
+        const bStr = `${scoreB.toFixed(0)} (${avgB.toFixed(0)})`;
+        const diffStr = `${diff > 0 ? '+' : ''}${diff.toFixed(0)}`;
+        
+        console.log(`  ${zones[i].padEnd(8)} | ${aStr.padEnd(11)} | ${bStr.padEnd(11)} | ${diffStr}`);
+    }
+    console.log("\n  Format: Total (Average per player)");
+    
+    // Overall zone balance
+    const totalZoneA = Array.from(result.teamA.zoneScores).reduce((a, b) => a + b, 0);
+    const totalZoneB = Array.from(result.teamB.zoneScores).reduce((a, b) => a + b, 0);
+    const totalDiff = totalZoneA - totalZoneB;
+    console.log("\n  Zone Totals:");
+    console.log(`    Team A: ${totalZoneA.toFixed(0)}`);
+    console.log(`    Team B: ${totalZoneB.toFixed(0)}`);
+    console.log(`    Difference: ${totalDiff > 0 ? '+' : ''}${totalDiff.toFixed(0)}`);
+    
+    console.log("\nBalance Metrics:");
+    console.log(`  Quality:          ${(result.metrics.quality * 100).toFixed(1)}%`);
+    console.log(`  Efficiency:       ${(result.metrics.efficiency * 100).toFixed(1)}%`);
+    console.log(`  Team Balance:     ${(result.metrics.balance * 100).toFixed(1)}%`);
+    console.log(`  Position Balance: ${(result.metrics.positionBalance * 100).toFixed(1)}%`);
+    console.log(`  Zonal Balance:    ${(result.metrics.zonalBalance * 100).toFixed(1)}%`);
+    console.log(`  Overall Score:    ${result.score.toFixed(3)}`);
+    
+    // Show position assignments to debug mismatches
+    if (config.debugMode) {
+        console.log("\nPosition Assignments:");
+        for (let posIdx = 0; posIdx < POSITION_COUNT; posIdx++) {
+            const position = INDEX_TO_POSITION[posIdx];
+            const teamAPlayers = result.teamA.positions[posIdx];
+            const teamBPlayers = result.teamB.positions[posIdx];
+            
+            if (teamAPlayers.length > 0) {
+                console.log(`  ${position} (Team A):`);
+                for (const player of teamAPlayers) {
+                    const efficiency = player.bestScore > 0 ? player.scores[posIdx] / player.bestScore : 0;
+                    const bestPos = INDEX_TO_POSITION[player.bestPosition];
+                    const isSpecialist = player.bestPosition === posIdx && player.specializationRatio >= config.dominanceRatio;
+                    console.log(`    Score: ${player.scores[posIdx].toFixed(0)}, ` +
+                        `Best: ${player.bestScore.toFixed(0)} @ ${bestPos}, ` +
+                        `Eff: ${(efficiency * 100).toFixed(0)}%, ` +
+                        `${isSpecialist ? '⭐ SPECIALIST' : ''}`);
+                }
+            }
+            
+            if (teamBPlayers.length > 0) {
+                console.log(`  ${position} (Team B):`);
+                for (const player of teamBPlayers) {
+                    const efficiency = player.bestScore > 0 ? player.scores[posIdx] / player.bestScore : 0;
+                    const bestPos = INDEX_TO_POSITION[player.bestPosition];
+                    const isSpecialist = player.bestPosition === posIdx && player.specializationRatio >= config.dominanceRatio;
+                    console.log(`    Score: ${player.scores[posIdx].toFixed(0)}, ` +
+                        `Best: ${player.bestScore.toFixed(0)} @ ${bestPos}, ` +
+                        `Eff: ${(efficiency * 100).toFixed(0)}%, ` +
+                        `${isSpecialist ? '⭐ SPECIALIST' : ''}`);
+                }
+            }
+        }
+    }
+    
+    // Summary
+    console.log("\n" + "═".repeat(60));
+    
+    // Need to recalculate posDiff here since it's in function scope
+    const actualPosDiff = Math.abs(result.teamA.totalScore - result.teamB.totalScore);
+    const overallBalance = actualPosDiff < 50 ? "⭐ EXCELLENT" 
+        : actualPosDiff < 100 ? "✅ GOOD" 
+        : actualPosDiff < 200 ? "⚠️ ACCEPTABLE" 
+        : "❌ NEEDS IMPROVEMENT";
+    
+    console.log("SUMMARY:", result.teamA.playerCount > result.teamB.playerCount 
+        ? "Team A has more players" 
+        : result.teamB.playerCount > result.teamA.playerCount
+        ? "Team B has more players"
+        : "Teams have equal players");
+    console.log("Balance Quality:", overallBalance);
+    console.log("═".repeat(60));
+}
 
-const generateBalancedTeams = (scoredPlayers: ScoredGamePlayer[]) => {
-    if (scoredPlayers.length < 2) return { a: [], b: [] };
+// ============================================================================
+// Public API
+// ============================================================================
 
-    const teams = getZones(toArrayScoredGamePlayers(scoredPlayers), true, 100);
+/**
+ * Main entry point for team auto-balancing
+ * 
+ * @param players - Array of scored players to balance
+ * @param debugMode - Enable debug logging
+ * @returns Balanced teams with assigned positions
+ * @throws Error if player count is invalid
+ * 
+ * @example
+ * ```typescript
+ * const teams = autoCreateTeamsScored(players);
+ * console.log(`Team A: ${teams.a.length} players`);
+ * console.log(`Team B: ${teams.b.length} players`);
+ * ```
+ */
+export function autoCreateTeamsScored(
+    players: ScoredGamePlayer[],
+    debugMode: boolean = false
+): { a: ScoredGamePlayer[]; b: ScoredGamePlayer[] } {
+    // Validate input
+    if (players.length < 10) {
+        throw new Error("Not enough players to form teams (minimum: 10)");
+    }
+    if (players.length > 24) {
+        throw new Error("Too many players to form teams (maximum: 24)");
+    }
+    
+    // Convert to optimized format
+    const fastPlayers = players.map(toFastPlayer);
+    
+    // Configure algorithm - ENABLE_DEBUG overrides everything
+    const config: BalanceConfig = {
+        ...DEFAULT_CONFIG,
+        debugMode: ENABLE_DEBUG || debugMode,
+    };
+    
+    if (config.debugMode) {
+        console.log("\n🔍 DEBUG MODE ENABLED (set ENABLE_DEBUG to false to disable)");
+        console.log(`Running auto-balance for ${players.length} players...`);
+    }
+    
+    // Run optimization
+    const result = config.recursive 
+        ? runRecursiveOptimization(fastPlayers, config)
+        : runMonteCarlo(fastPlayers, config);
+    
+    if (!result) {
+        throw new Error("Failed to balance teams - no valid formation found");
+    }
+    
+    // Log results if debugging
+    logResults(result, config);
+    
+    // Convert and return
+    return convertToGamePlayers(result);
+}
 
-    // Assign positions for both teams
-    const positionsA = assignPositions(teams.a.team, "A");
-    const positionsB = assignPositions(teams.b.team, "B");
+/**
+ * Convenience wrapper for filled game players
+ * 
+ * @param players - Array of players with stats
+ * @param debugMode - Enable debug logging
+ * @returns Balanced teams with assigned positions
+ */
+export function autoCreateTeamsFilled(
+    players: FilledGamePlayer[],
+    debugMode: boolean = false
+): { a: ScoredGamePlayer[]; b: ScoredGamePlayer[] } {
+    const scoredPlayers = players.map(player => ({
+        ...player,
+        zoneFit: calculateScoresForStats(player.stats, normalizedDefaultWeights),
+    })) as ScoredGamePlayer[];
+    
+    return autoCreateTeamsScored(scoredPlayers, debugMode);
+}
 
-    return { a: positionsA, b: positionsB };
-};
+/**
+ * Advanced API with custom configuration
+ * 
+ * @param players - Array of scored players
+ * @param customConfig - Custom balance configuration
+ * @returns Balanced teams with detailed metrics
+ */
+export function autoBalanceWithConfig(
+    players: ScoredGamePlayer[],
+    customConfig: Partial<BalanceConfig> = {}
+): {
+    teams: { a: ScoredGamePlayer[]; b: ScoredGamePlayer[] };
+    metrics: BalanceMetrics;
+} {
+    // Validate input
+    if (players.length < 10 || players.length > 24) {
+        throw new Error(`Invalid player count: ${players.length} (must be 10-24)`);
+    }
+    
+    // Merge with defaults
+    const config: BalanceConfig = {
+        ...DEFAULT_CONFIG,
+        ...customConfig,
+        weights: {
+            ...DEFAULT_CONFIG.weights,
+            ...customConfig.weights,
+        },
+    };
+    
+    // Validate weights sum to 1
+    const weightSum = Object.values(config.weights).reduce((a, b) => a + b, 0);
+    if (Math.abs(weightSum - 1.0) > 0.01) {
+        throw new Error(`Weights must sum to 1.0 (current: ${weightSum})`);
+    }
+    
+    // Convert and optimize
+    const fastPlayers = players.map(toFastPlayer);
+    const result = config.recursive 
+        ? runRecursiveOptimization(fastPlayers, config)
+        : runMonteCarlo(fastPlayers, config);
+    
+    if (!result) {
+        throw new Error("Failed to balance teams");
+    }
+    
+    logResults(result, config);
+    
+    return {
+        teams: convertToGamePlayers(result),
+        metrics: result.metrics,
+    };
+}
 
+/**
+ * Gets available formations for a player count
+ * 
+ * @param playerCount - Number of players
+ * @returns Available formation templates
+ */
+export function getAvailableFormations(playerCount: number): Formation[] {
+    return formationTemplates[playerCount] || [];
+}
 
-export const autoCreateTeamsScored = (players: ScoredGamePlayer[]) => {
-    if (players.length < 10) throw new Error("Not enough players to form teams");
-    if (players.length > 24) throw new Error("Too many players to form teams");
-    return generateBalancedTeams(players);
-};
-
-// export const autoCreateTeamsFilled = (players: FilledGamePlayer[], attributeWeights: Weighting) => {
-//     return autoCreateTeamsScored(calculateScores(players, normalizedDefaultWeights));
-// };
+/**
+ * Validates if auto-balance is possible for given player count
+ * 
+ * @param playerCount - Number of players to check
+ * @returns Whether balancing is possible
+ */
+export function canAutoBalance(playerCount: number): boolean {
+    if (playerCount < 10 || playerCount > 24) return false;
+    
+    const teamSize1 = Math.floor(playerCount / 2);
+    const teamSize2 = playerCount - teamSize1;
+    
+    return !!(formationTemplates[teamSize1]?.length && formationTemplates[teamSize2]?.length);
+}
