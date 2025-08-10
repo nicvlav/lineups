@@ -165,7 +165,7 @@ export const defaultZoneWeights: Weighting = {
             communication: 0,
         },
         isCentral: true,
-        absoluteYPosition: 0.7,
+        absoluteYPosition: 0.675,
         priorityStat: 1,
     },
 
@@ -279,7 +279,7 @@ export const defaultZoneWeights: Weighting = {
             communication: 0,
         },
         isCentral: true,
-        absoluteYPosition: 0.4,
+        absoluteYPosition: 0.45,
         priorityStat: 3,
     },
 
@@ -317,7 +317,7 @@ export const defaultZoneWeights: Weighting = {
             communication: 0,
         },
         isCentral: false,
-        absoluteYPosition: 0.35,
+        absoluteYPosition: 0.4,
         priorityStat: 4,
     },
 
@@ -355,7 +355,7 @@ export const defaultZoneWeights: Weighting = {
             communication: 0,
         },
         isCentral: true,
-        absoluteYPosition: 0.3,
+        absoluteYPosition: 0.325,
         priorityStat: 2,
     },
 
@@ -394,7 +394,7 @@ export const defaultZoneWeights: Weighting = {
         },
 
         isCentral: true,
-        absoluteYPosition: 0.15,
+        absoluteYPosition: 0.175,
         priorityStat: 1,
     },
 
@@ -433,7 +433,7 @@ export const defaultZoneWeights: Weighting = {
         },
 
         isCentral: false,
-        absoluteYPosition: 0.175,
+        absoluteYPosition: 0.2,
         priorityStat: 2,
     },
 } as const;
@@ -467,6 +467,10 @@ export const formationTemplates: Record<number, Formation[]> = {
             name: "3-2-1",
             positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 0, AM: 1, ST: 1, WR: 0 }
         },
+        {
+            name: "3-2-1-1 (CM+AM)",
+            positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 1, WM: 0, AM: 1, ST: 1, WR: 0 }
+        },
     ],
     8: [
         {
@@ -477,62 +481,78 @@ export const formationTemplates: Record<number, Formation[]> = {
             name: "2-4-1",
             positions: { GK: 1, CB: 2, FB: 0, DM: 1, CM: 0, WM: 2, AM: 1, ST: 1, WR: 0 }
         },
+        {
+            name: "2-2-2-1 (DM+CM)",
+            positions: { GK: 1, CB: 2, FB: 0, DM: 1, CM: 1, WM: 0, AM: 0, ST: 2, WR: 0 }
+        },
     ],
     9: [
         {
-            name: "3-3-2",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 0, AM: 2, ST: 2, WR: 0 }
+            name: "3-3-2-1",
+            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 2, WM: 0, AM: 0, ST: 1, WR: 2 }
         },
         {
             name: "3-4-1",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 2, AM: 1, ST: 1, WR: 0 }
+            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 3, WM: 0, AM: 0, ST: 1, WR: 0 }
+        },
+        {
+            name: "3-3-2",
+            positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 2, WM: 0, AM: 1, ST: 2, WR: 0 }
         },
     ],
     10: [
-        // {
-        //     name: "4-4-1",
-        //     positions: { GK: 1, CB: 2, FB: 2, DM: 0, CM: 0, WM: 2, AM: 2, ST: 1, WR: 0 }
-        // },
+        {
+            name: "3-5-1",
+            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 2, WM: 2, AM: 0, ST: 1, WR: 0 }
+        },
+        {
+            name: "3-4-2",
+            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 3, WM: 0, AM: 0, ST: 2, WR: 0 }
+        },
         {
             name: "3-3-3",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 0, AM: 2, ST: 1, WR: 2 }
+            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 2, WM: 0, AM: 0, ST: 1, WR: 2 }
         },
     ],
     11: [
         // {
+        //     name: "4-3-3",
+        //     positions: { GK: 1, CB: 2, FB: 2, DM: 1, CM: 2, WM: 0, AM: 0, ST: 1, WR: 2 }
+        // },
+        // {
         //     name: "4-3-3 (2)",
         //     positions: { GK: 1, CB: 2, FB: 2, DM: 0, CM: 2, WM: 0, AM: 1, ST: 1, WR: 2 }
         // },
+        // {
+        //     name: "4-4-2",
+        //     positions: { GK: 1, CB: 2, FB: 2, DM: 0, CM: 2, WM: 2, AM: 0, ST: 2, WR: 0 }
+        // },
+        {
+            name: "3-4-3 (CM)",
+            positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 3, WM: 0, AM: 1, ST: 1, WR: 2 }
+        },
         {
             name: "3-5-2",
             positions: { GK: 1, CB: 3, FB: 0, DM: 2, CM: 0, WM: 2, AM: 1, ST: 2, WR: 0 }
         },
         {
-            name: "3-4-3",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 0, AM: 3, ST: 1, WR: 2 }
+            name: "3-3-4",
+            positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 2, WM: 0, AM: 1, ST: 2, WR: 2 }
         },
-        // {
-        //     name: "3-3-4",
-        //     positions: { GK: 1, CB: 3, FB: 0, DM: 2, CM: 0, WM: 0, AM: 1, ST: 2, WR: 2 }
-        // },
-        // {
-        //     name: " 4-1-2-1-2",
-        //     positions: { GK: 1, CB: 2, FB: 2, DM: 1, CM: 0, WM: 2, AM: 1, ST: 2, WR: 0 }
-        // },
     ],
     12: [
-        // {
-        //     name: "4-3-4",
-        //     positions: { GK: 1, CB: 2, FB: 2, DM: 1, CM: 0, WM: 0, AM: 2, ST: 2, WR: 2 }
-        // },
         {
-            name: "3-5-3(2)",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 2, AM: 2, ST: 1, WR: 2 }
+            name: "3-6-2",
+            positions: { GK: 1, CB: 3, FB: 0, DM: 2, CM: 2, WM: 2, AM: 0, ST: 2, WR: 0 }
         },
-        // {
-        //     name: "3-4-4",
-        //     positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 0, AM: 3, ST: 2, WR: 2 }
-        // },
+        {
+            name: "3-5-3",
+            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 2, WM: 2, AM: 0, ST: 1, WR: 2 }
+        },
+        {
+            name: "3-4-4",
+            positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 3, WM: 0, AM: 1, ST: 2, WR: 2 }
+        },
     ],
 } as const;
 
@@ -629,10 +649,39 @@ const filterByVerticalProximity = (positions: PositionWeightingAndIndex[], y: nu
     return filteredPositions;
 };
 
-export const getPointForPosition = (position: PositionWeighting, positionIndex: number, numPositionentries: number) => {
+export const getPointForPosition = (position: PositionWeighting, positionIndex: number, numPositionentries: number, formation?: Formation) => {
+    let yPosition = position.absoluteYPosition;
+
+    // Special CM positioning logic when formation is provided
+    if (formation && position.shortName === "CM") {
+        const hasDM = formation.positions.DM > 0;
+        const hasAM = formation.positions.AM > 0;
+        const hasCM = formation.positions.CM > 0;
+
+        // Count total central midfield positions (not including WM which is wide)
+        const centralMidCount = (hasDM ? 1 : 0) + (hasAM ? 1 : 0) + (hasCM ? 1 : 0);
+
+        if (centralMidCount === 1) {
+            // Solo CM (no other central mids): use ideal center position
+            yPosition = 0.45;
+        } else if (hasDM && hasAM) {
+            // Should not happen according to rules, but fallback to default
+            yPosition = position.absoluteYPosition;
+        } else if (hasDM && !hasAM) {
+            // CM + DM: shift CM toward attack to avoid overlap with DM (0.5 -> 0.45)
+            yPosition = 0.35;
+        } else if (hasAM && !hasDM) {
+            // CM + AM: shift CM toward defense to avoid overlap with AM (0.5 -> 0.55) 
+            yPosition = 0.5;
+        } else {
+            // Fallback to default
+            yPosition = position.absoluteYPosition;
+        }
+    }
+
     return {
         x: getXForPlayerPosition(position, positionIndex, numPositionentries),
-        y: position.absoluteYPosition
+        y: yPosition
     } as Point;
 };
 

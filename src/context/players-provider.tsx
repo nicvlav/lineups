@@ -1268,7 +1268,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 // key is a string
                 // value is of type 'unknown' by default — you can cast it
                 const player = teamPlayers.shift();
-                const position = getPointForPosition(normalizedDefaultWeights[key as Position], i, value);
+                const position = getPointForPosition(normalizedDefaultWeights[key as Position], i, value, formation);
 
                 if (player) {
                     const exactPosition = key as Position; // Set exact position for formations
