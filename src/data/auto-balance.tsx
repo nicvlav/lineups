@@ -68,15 +68,21 @@ const ZONE_POSITIONS = [
     [7, 8],        // Attack
 ] as const;
 
+/** Position categorization for attack/defense balance */
+const POSITION_CATEGORIES = {
+    defensive: [0, 1, 2, 3] as readonly number[], // GK, CB, FB, DM - defensive minded
+    neutral: [4, 5] as readonly number[],         // CM, WM - balanced midfield
+    attacking: [6, 7, 8] as readonly number[],    // AM, ST, WR - attack minded
+} as const;
+
 /** Default Monte Carlo configuration */
 const DEFAULT_CONFIG: BalanceConfig = {
     numSimulations: 100,
     weights: {
-        quality: 0.00,      // Reduced: raw quality less important
-        efficiency: 0.0,   // Increased: position fit is critical
-        balance: 0.45,      // Slightly reduced but still important
-        positionBalance: 0.45,  // Keep teams balanced
-        zonalBalance: 0.1,
+        balance: 0.3,           // Peak skill balance
+        positionBalance: 0.3,   // Actual score balance
+        zonalBalance: 0.1,      // Zone balance within teams
+        attackDefenseBalance: 0.3, // NEW: Attack vs Defense balance between teams
     },
     dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
     recursive: true,
@@ -97,16 +103,14 @@ export interface BalanceConfig {
     
     /** Weights for different optimization criteria (must sum to 1.0) */
     weights: {
-        /** Overall team quality (higher stats = better) */
-        quality: number;
-        /** Player position efficiency (right player in right position) */
-        efficiency: number;
         /** Team strength balance (equal total strength) */
         balance: number;
         /** Position-specific balance between teams */
         positionBalance: number;
         /** Zone balance within each team */
         zonalBalance: number;
+        /** Attack vs Defense balance between teams */
+        attackDefenseBalance: number;
     };
     
     /** Ratio for specialist detection (higher = stricter) */
@@ -173,6 +177,11 @@ interface FastTeam {
     
     /** Formation used for this team */
     formation: Formation | null;
+    
+    /** Attack/Defense scores for balance calculation */
+    defensiveScore: number;
+    neutralScore: number;
+    attackingScore: number;
 }
 
 /**
@@ -189,11 +198,10 @@ interface SimulationResult {
  * Detailed balance metrics
  */
 interface BalanceMetrics {
-    quality: number;
-    efficiency: number;
     balance: number;
     positionBalance: number;
     zonalBalance: number;
+    attackDefenseBalance: number;
 }
 
 // ============================================================================
@@ -253,6 +261,9 @@ function createFastTeam(): FastTeam {
         playerCount: 0,
         peakPotential: 0,
         formation: null,
+        defensiveScore: 0,
+        neutralScore: 0,
+        attackingScore: 0,
     };
 }
 
@@ -530,14 +541,34 @@ function assignPlayersToTeams(
         }
     }
     
-    // Calculate zone scores
+    // Calculate zone scores and attack/defense scores
     for (let zoneIdx = 0; zoneIdx < 4; zoneIdx++) {
         for (const posIdx of ZONE_POSITIONS[zoneIdx]) {
             for (const player of teamA.positions[posIdx]) {
-                teamA.zoneScores[zoneIdx] += player.scores[posIdx];
+                const score = player.scores[posIdx];
+                teamA.zoneScores[zoneIdx] += score;
+                
+                // Track attack/defense scores
+                if (POSITION_CATEGORIES.defensive.includes(posIdx)) {
+                    teamA.defensiveScore += score;
+                } else if (POSITION_CATEGORIES.neutral.includes(posIdx)) {
+                    teamA.neutralScore += score;
+                } else if (POSITION_CATEGORIES.attacking.includes(posIdx)) {
+                    teamA.attackingScore += score;
+                }
             }
             for (const player of teamB.positions[posIdx]) {
-                teamB.zoneScores[zoneIdx] += player.scores[posIdx];
+                const score = player.scores[posIdx];
+                teamB.zoneScores[zoneIdx] += score;
+                
+                // Track attack/defense scores
+                if (POSITION_CATEGORIES.defensive.includes(posIdx)) {
+                    teamB.defensiveScore += score;
+                } else if (POSITION_CATEGORIES.neutral.includes(posIdx)) {
+                    teamB.neutralScore += score;
+                } else if (POSITION_CATEGORIES.attacking.includes(posIdx)) {
+                    teamB.attackingScore += score;
+                }
             }
         }
     }
@@ -566,52 +597,11 @@ function calculateMetrics(
     config: BalanceConfig
 ): { score: number; details: BalanceMetrics } {
     const metrics: BalanceMetrics = {
-        quality: 0,
-        efficiency: 0,
         balance: 0,
         positionBalance: 0,
         zonalBalance: 0,
+        attackDefenseBalance: 0,
     };
-    
-    // Quality: Overall team strength utilization
-    const totalActual = teamA.totalScore + teamB.totalScore;
-    const totalPossible = (teamA.playerCount + teamB.playerCount) * 100;
-    metrics.quality = totalPossible > 0 ? totalActual / totalPossible : 0;
-    
-    // Efficiency: How well players are positioned (penalize waste)
-    // Calculate efficiency per player to detect mismatches
-    let totalEfficiency = 0;
-    let playerCount = 0;
-    
-    // Check each position for efficiency
-    for (let posIdx = 0; posIdx < POSITION_COUNT; posIdx++) {
-        // Team A players at this position
-        for (const player of teamA.positions[posIdx]) {
-            const actualScore = player.scores[posIdx];
-            const bestScore = player.bestScore;
-            if (bestScore > 0) {
-                // Efficiency is how close this position is to their best
-                // 1.0 = perfect fit, 0.5 = wasted at wrong position
-                const efficiency = actualScore / bestScore;
-                // Penalize severe mismatches more heavily
-                totalEfficiency += Math.pow(efficiency, 1.5);
-                playerCount++;
-            }
-        }
-        
-        // Team B players at this position
-        for (const player of teamB.positions[posIdx]) {
-            const actualScore = player.scores[posIdx];
-            const bestScore = player.bestScore;
-            if (bestScore > 0) {
-                const efficiency = actualScore / bestScore;
-                totalEfficiency += Math.pow(efficiency, 1.5);
-                playerCount++;
-            }
-        }
-    }
-    
-    metrics.efficiency = playerCount > 0 ? totalEfficiency / playerCount : 0;
     
     // Balance: Peak potential balance between teams
     const peakDiff = Math.abs(teamA.peakPotential - teamB.peakPotential);
@@ -634,13 +624,62 @@ function calculateMetrics(
     
     metrics.zonalBalance = (calcZonalBalance(teamA) + calcZonalBalance(teamB)) / 2;
     
+    // Attack/Defense Balance: Equal distribution of attacking and defensive talent
+    // This prevents scenarios where one team gets all defenders and the other all attackers
+    const calcAttackDefenseBalance = () => {
+        // Calculate percentage of total score in each category for each team
+        const teamATotalCat = teamA.defensiveScore + teamA.neutralScore + teamA.attackingScore;
+        const teamBTotalCat = teamB.defensiveScore + teamB.neutralScore + teamB.attackingScore;
+        
+        if (teamATotalCat === 0 || teamBTotalCat === 0) return 0;
+        
+        // Get percentages for each category
+        const teamADefPct = teamA.defensiveScore / teamATotalCat;
+        const teamANeuPct = teamA.neutralScore / teamATotalCat;
+        const teamAAttPct = teamA.attackingScore / teamATotalCat;
+        
+        const teamBDefPct = teamB.defensiveScore / teamBTotalCat;
+        const teamBNeuPct = teamB.neutralScore / teamBTotalCat;
+        const teamBAttPct = teamB.attackingScore / teamBTotalCat;
+        
+        // Calculate balance for each category (1 = perfect balance, 0 = total imbalance)
+        const defBalance = 1 - Math.abs(teamADefPct - teamBDefPct);
+        const neuBalance = 1 - Math.abs(teamANeuPct - teamBNeuPct);
+        const attBalance = 1 - Math.abs(teamAAttPct - teamBAttPct);
+        
+        // AGGRESSIVE SCALING: Use power function to harshly penalize imbalances
+        // Using exponent of 0.4 (between square root 0.5 and cube root 0.33)
+        const AGGRESSION_EXPONENT = 0.4;
+        
+        // Calculate absolute differences with aggressive scaling
+        const defAbsDiff = Math.abs(teamA.defensiveScore - teamB.defensiveScore);
+        const attAbsDiff = Math.abs(teamA.attackingScore - teamB.attackingScore);
+        const neuAbsDiff = Math.abs(teamA.neutralScore - teamB.neutralScore);
+        
+        const maxDef = Math.max(teamA.defensiveScore, teamB.defensiveScore, 1);
+        const maxAtt = Math.max(teamA.attackingScore, teamB.attackingScore, 1);
+        const maxNeu = Math.max(teamA.neutralScore, teamB.neutralScore, 1);
+        
+        // Apply aggressive power scaling: small differences get amplified
+        // Example: 6/378 = 0.016 becomes 0.126 with exponent 0.4
+        const defAbsBalance = 1 - Math.pow(defAbsDiff / maxDef, AGGRESSION_EXPONENT);
+        const attAbsBalance = 1 - Math.pow(attAbsDiff / maxAtt, AGGRESSION_EXPONENT);
+        const neuAbsBalance = 1 - Math.pow(neuAbsDiff / maxNeu, AGGRESSION_EXPONENT);
+        
+        // Combine percentage and absolute balance with aggressive absolute weighting
+        // Increased absolute balance weights to emphasize the aggressive scaling
+        return (defBalance * 0.2 + neuBalance * 0.05 + attBalance * 0.2 + 
+                defAbsBalance * 0.25 + attAbsBalance * 0.25 + neuAbsBalance * 0.05);
+    };
+    
+    metrics.attackDefenseBalance = calcAttackDefenseBalance();
+    
     // Calculate weighted score
     const score = 
-        config.weights.quality * metrics.quality +
-        config.weights.efficiency * metrics.efficiency +
         config.weights.balance * metrics.balance +
         config.weights.positionBalance * metrics.positionBalance +
-        config.weights.zonalBalance * metrics.zonalBalance;
+        config.weights.zonalBalance * metrics.zonalBalance +
+        config.weights.attackDefenseBalance * metrics.attackDefenseBalance;
     
     return { score, details: metrics };
 }
@@ -692,11 +731,10 @@ function runRecursiveOptimization(
         numSimulations: Math.max(5, Math.floor(config.numSimulations / config.recursiveDepth)),
         recursive: false,
         weights: {
-            quality: 0.0,
-            efficiency: 0.0,   // Even more focus on efficiency in refinement
             balance: 0.1,
-            positionBalance: 0.5,
-            zonalBalance: 0.4,
+            positionBalance: 0.3,
+            zonalBalance: 0.2,
+            attackDefenseBalance: 0.4,  // Focus on attack/defense balance in refinement
         },
     };
     
@@ -869,13 +907,62 @@ function logResults(result: SimulationResult, config: BalanceConfig): void {
     console.log(`    Team B: ${totalZoneB.toFixed(0)}`);
     console.log(`    Difference: ${totalDiff > 0 ? '+' : ''}${totalDiff.toFixed(0)}`);
     
+    // Attack/Defense Analysis
+    console.log("\n⚔️ ATTACK/DEFENSE DISTRIBUTION");
+    console.log("─".repeat(40));
+    console.log("  Category  | Team A      | Team B      | Diff");
+    console.log("  ----------|-------------|-------------|--------");
+    
+    const categories = [
+        { name: 'Defense', a: result.teamA.defensiveScore, b: result.teamB.defensiveScore },
+        { name: 'Neutral', a: result.teamA.neutralScore, b: result.teamB.neutralScore },
+        { name: 'Attack', a: result.teamA.attackingScore, b: result.teamB.attackingScore },
+    ];
+    
+    for (const cat of categories) {
+        const diff = cat.a - cat.b;
+        const aStr = cat.a.toFixed(0);
+        const bStr = cat.b.toFixed(0);
+        const diffStr = `${diff > 0 ? '+' : ''}${diff.toFixed(0)}`;
+        console.log(`  ${cat.name.padEnd(9)} | ${aStr.padEnd(11)} | ${bStr.padEnd(11)} | ${diffStr}`);
+    }
+    
+    // Calculate and display percentage distribution
+    const teamATotal = result.teamA.defensiveScore + result.teamA.neutralScore + result.teamA.attackingScore;
+    const teamBTotal = result.teamB.defensiveScore + result.teamB.neutralScore + result.teamB.attackingScore;
+    
+    if (teamATotal > 0 && teamBTotal > 0) {
+        console.log("\n  Percentage Distribution:");
+        console.log(`    Team A: Def ${(result.teamA.defensiveScore/teamATotal*100).toFixed(0)}% | Neu ${(result.teamA.neutralScore/teamATotal*100).toFixed(0)}% | Att ${(result.teamA.attackingScore/teamATotal*100).toFixed(0)}%`);
+        console.log(`    Team B: Def ${(result.teamB.defensiveScore/teamBTotal*100).toFixed(0)}% | Neu ${(result.teamB.neutralScore/teamBTotal*100).toFixed(0)}% | Att ${(result.teamB.attackingScore/teamBTotal*100).toFixed(0)}%`);
+        
+        // Show impact of aggressive scaling
+        const defDiff = Math.abs(result.teamA.defensiveScore - result.teamB.defensiveScore);
+        const attDiff = Math.abs(result.teamA.attackingScore - result.teamB.attackingScore);
+        const maxDef = Math.max(result.teamA.defensiveScore, result.teamB.defensiveScore, 1);
+        const maxAtt = Math.max(result.teamA.attackingScore, result.teamB.attackingScore, 1);
+        
+        if (defDiff > 0 || attDiff > 0) {
+            console.log("\n  Balance Impact (with aggressive scaling ^0.4):");
+            if (defDiff > 0) {
+                const linearPenalty = defDiff / maxDef;
+                const aggressivePenalty = Math.pow(linearPenalty, 0.4);
+                console.log(`    Defense: ${(linearPenalty * 100).toFixed(1)}% diff → ${(aggressivePenalty * 100).toFixed(1)}% penalty`);
+            }
+            if (attDiff > 0) {
+                const linearPenalty = attDiff / maxAtt;
+                const aggressivePenalty = Math.pow(linearPenalty, 0.4);
+                console.log(`    Attack:  ${(linearPenalty * 100).toFixed(1)}% diff → ${(aggressivePenalty * 100).toFixed(1)}% penalty`);
+            }
+        }
+    }
+    
     console.log("\nBalance Metrics:");
-    console.log(`  Quality:          ${(result.metrics.quality * 100).toFixed(1)}%`);
-    console.log(`  Efficiency:       ${(result.metrics.efficiency * 100).toFixed(1)}%`);
-    console.log(`  Team Balance:     ${(result.metrics.balance * 100).toFixed(1)}%`);
-    console.log(`  Position Balance: ${(result.metrics.positionBalance * 100).toFixed(1)}%`);
-    console.log(`  Zonal Balance:    ${(result.metrics.zonalBalance * 100).toFixed(1)}%`);
-    console.log(`  Overall Score:    ${result.score.toFixed(3)}`);
+    console.log(`  Team Balance:        ${(result.metrics.balance * 100).toFixed(1)}%`);
+    console.log(`  Position Balance:    ${(result.metrics.positionBalance * 100).toFixed(1)}%`);
+    console.log(`  Zonal Balance:       ${(result.metrics.zonalBalance * 100).toFixed(1)}%`);
+    console.log(`  Attack/Def Balance:  ${(result.metrics.attackDefenseBalance * 100).toFixed(1)}%`);
+    console.log(`  Overall Score:       ${result.score.toFixed(3)}`);
     
     // Show position assignments to debug mismatches
     if (config.debugMode) {
@@ -1041,10 +1128,13 @@ export function autoBalanceWithConfig(
         },
     };
     
-    // Validate weights sum to 1
+    // Normalize weights to sum to 1
     const weightSum = Object.values(config.weights).reduce((a, b) => a + b, 0);
-    if (Math.abs(weightSum - 1.0) > 0.01) {
-        throw new Error(`Weights must sum to 1.0 (current: ${weightSum})`);
+    if (weightSum > 0) {
+        // Auto-normalize weights if they don't sum to 1
+        Object.keys(config.weights).forEach(key => {
+            config.weights[key as keyof typeof config.weights] /= weightSum;
+        });
     }
     
     // Convert and optimize
