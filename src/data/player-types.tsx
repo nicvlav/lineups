@@ -16,6 +16,7 @@ export interface GamePlayer {
     guest_name: string | null; // non null if a temporary guest player
     team: string;
     position: Point;
+    exactPosition?: Position | null; // Optional exact position for direct threat scoring
 }
 
 export interface FilledGamePlayer extends GamePlayer {
@@ -26,6 +27,23 @@ export interface ScoredGamePlayer extends GamePlayer {
 }
 
 export interface ScoredGamePlayerWithThreat extends ScoredGamePlayer {
+    threatScore: number;
+}
+
+// Specialized positioned game player for formation/auto-balancing
+export interface PositionedGamePlayer extends GamePlayer {
+    exactPosition: Position; // Always has exact position for formation purposes
+}
+
+export interface PositionedFilledGamePlayer extends PositionedGamePlayer {
+    stats: PlayerStats;
+}
+
+export interface PositionedScoredGamePlayer extends PositionedGamePlayer {
+    zoneFit: ZoneScores;
+}
+
+export interface PositionedScoredGamePlayerWithThreat extends PositionedScoredGamePlayer {
     threatScore: number;
 }
 

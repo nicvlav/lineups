@@ -267,7 +267,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
                 const realPlayer = freshLoadedPlayers[value.id];
                 const zoneFit = calculateScoresForStats(realPlayer.stats, normalizedDefaultWeights);
-                const threatScore = getThreatScore(value.position, zoneFit);
+                const threatScore = getThreatScore(value.position, zoneFit, value.exactPosition);
 
                 return [key, { ...value, zoneFit, threatScore }];
             })
@@ -1139,7 +1139,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                     ...newGamePlayers[player.id],
                     team,
                     position,
-                    threatScore: getThreatScore(position, newGamePlayers[player.id].zoneFit)
+                    threatScore: getThreatScore(position, newGamePlayers[player.id].zoneFit, newGamePlayers[player.id].exactPosition)
                 };
                 return newGamePlayers;
             });
@@ -1160,7 +1160,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 guest_name: null,
                 position,
                 zoneFit,
-                threatScore: getThreatScore(position, zoneFit)
+                threatScore: getThreatScore(position, zoneFit, null)
             };
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
@@ -1203,8 +1203,8 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
-                newGamePlayers[oldPlayer.id] = { ...oldPlayer, team: newPlayer.team, position: newPlayer.position, threatScore: getThreatScore(newPlayer.position, oldPlayer.zoneFit) };
-                newGamePlayers[newID] = { ...newPlayer, team: oldPlayer.team, position: oldPlayer.position, threatScore: getThreatScore(oldPlayer.position, newPlayer.zoneFit) };
+                newGamePlayers[oldPlayer.id] = { ...oldPlayer, team: newPlayer.team, position: newPlayer.position, threatScore: getThreatScore(newPlayer.position, oldPlayer.zoneFit, oldPlayer.exactPosition) };
+                newGamePlayers[newID] = { ...newPlayer, team: oldPlayer.team, position: oldPlayer.position, threatScore: getThreatScore(oldPlayer.position, newPlayer.zoneFit, newPlayer.exactPosition) };
                 return newGamePlayers;
             });
         } else {
@@ -1212,7 +1212,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
                 const zoneFit = calculateScoresForStats(newPlayer.stats, normalizedDefaultWeights);
-                newGamePlayers[newID] = { id: newPlayer.id, guest_name: null, team: oldPlayer.team, position: oldPlayer.position, zoneFit, threatScore: getThreatScore(oldPlayer.position, zoneFit) };
+                newGamePlayers[newID] = { id: newPlayer.id, guest_name: null, team: oldPlayer.team, position: oldPlayer.position, zoneFit, threatScore: getThreatScore(oldPlayer.position, zoneFit, oldPlayer.exactPosition) };
                 delete newGamePlayers[oldPlayer.id];
                 return newGamePlayers;
             });
@@ -1247,7 +1247,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 guest_name: null,
                 position: oldPlayer.position,
                 zoneFit,
-                threatScore: getThreatScore(oldPlayer.position, zoneFit)
+                threatScore: getThreatScore(oldPlayer.position, zoneFit, oldPlayer.exactPosition)
             };
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
@@ -1271,21 +1271,27 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 const position = getPointForPosition(normalizedDefaultWeights[key as Position], i, value);
 
                 if (player) {
+                    const exactPosition = key as Position; // Set exact position for formations
+                    const threatScore = getThreatScore(position, player.zoneFit, exactPosition);
                     newTeamPlayers[player.id] = {
                         ...player,
                         team,
-                        position
+                        position,
+                        exactPosition,
+                        threatScore
                     }
                 } else {
                     const newID = uuidv4();
                     const zoneFit = structuredClone(emptyZoneScores);
+                    const exactPosition = key as Position;
                     newTeamPlayers[newID] = {
                         id: newID,
                         guest_name: "[Player]",
                         team,
                         position,
                         zoneFit,
-                        threatScore: getThreatScore(position, zoneFit)
+                        exactPosition,
+                        threatScore: getThreatScore(position, zoneFit, exactPosition)
                     }
                 }
             }
@@ -1320,10 +1326,10 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         const playerRecord: Record<string, ScoredGamePlayerWithThreat> = {};
         teamA.forEach(player => {
-            playerRecord[player.id] = { ...player, threatScore: getThreatScore(player.position, player.zoneFit) };
+            playerRecord[player.id] = { ...player, threatScore: getThreatScore(player.position, player.zoneFit, player.exactPosition) };
         });
         teamB.forEach(player => {
-            playerRecord[player.id] = { ...player, threatScore: getThreatScore(player.position, player.zoneFit) };
+            playerRecord[player.id] = { ...player, threatScore: getThreatScore(player.position, player.zoneFit, player.exactPosition) };
         });
 
         setGamePlayers(playerRecord);

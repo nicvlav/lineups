@@ -668,7 +668,12 @@ const getProximityPositions = (point: Point) => {
 };
 
 
-export const getThreatScore = (point: Point, playerScores: ZoneScores) => {
+export const getThreatScore = (point: Point, playerScores: ZoneScores, exactPosition?: Position | null) => {
+    // If we have an exact position, return the score for that position directly
+    if (exactPosition) {
+        return playerScores[exactPosition] / 100;
+    }
+
     const proximityPositions = getProximityPositions(point);
 
     // Normalize weights to sum to 1
