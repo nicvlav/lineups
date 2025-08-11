@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDrag } from "react-dnd";
 import { User } from "lucide-react";
 import { ScoredGamePlayerWithThreat } from "@/data/player-types";
 import { usePlayers } from "@/context/players-provider";
+import { usePitchAnimation } from "@/context/pitch-animation-context";
 // import Panel from "@/components/dialogs/panel"
 import PlayerDialog from "@/components/dialogs/player-dialog";
 
@@ -29,6 +30,9 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { players } = usePlayers();
+  const { shouldAnimate, animationSource } = usePitchAnimation();
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const previousPositionRef = useRef({ left: initialLeft, top: initialTop });
 
   // Get the full Player data (with avatar_url) from the players record
   const fullPlayer = player.id ? players[player.id] : null;
@@ -85,6 +89,41 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
   const clampedLeft = Math.min(Math.max(initialLeft, minLeft), maxLeft);
   const clampedTop = Math.min(Math.max(initialTop, minTop), maxTop);
 
+  // Track if position actually changed (not just a re-render)
+  useEffect(() => {
+    const positionChanged = 
+      Math.abs(previousPositionRef.current.left - clampedLeft) > 1 ||
+      Math.abs(previousPositionRef.current.top - clampedTop) > 1;
+    
+    if (positionChanged && shouldAnimate && !hasAnimated) {
+      // Position changed and we should animate
+      setHasAnimated(true);
+      previousPositionRef.current = { left: clampedLeft, top: clampedTop };
+    } else if (!shouldAnimate) {
+      // Reset animation state when animations are turned off
+      setHasAnimated(false);
+      previousPositionRef.current = { left: clampedLeft, top: clampedTop };
+    }
+  }, [clampedLeft, clampedTop, shouldAnimate, hasAnimated]);
+
+  // Calculate animation delay based on player index (staggered effect)
+  const getAnimationDelay = () => {
+    if (!shouldAnimate || !hasAnimated) return 0;
+    
+    // Use player ID to generate a consistent but pseudo-random delay
+    const hashCode = (player.id || '').split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    const baseDelay = animationSource === 'formation' ? 20 : 10;
+    const maxDelay = animationSource === 'formation' ? 300 : 200;
+    return Math.abs(hashCode) % maxDelay + baseDelay;
+  };
+
+  const animationDelay = getAnimationDelay();
+  const shouldPlayAnimation = shouldAnimate && hasAnimated && !isDragging;
+
   return (
     <div>
       <div
@@ -95,14 +134,17 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
         onDoubleClick={handleOpenDialog}
         className={`
           absolute flex flex-col items-center touch-none z-0
-          transition-all duration-300
           ${isDragging ? "opacity-50" : "opacity-100"}
           cursor-grab
+          ${shouldPlayAnimation ? 'transition-all duration-500' : 'transition-all duration-300'}
         `}
         style={{
           left: `${clampedLeft}px`,
           top: `${clampedTop}px`,
           transform: "translate(-50%, -50%)",
+          ...(shouldPlayAnimation ? {
+            animation: `pitchPlayerEntry 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${animationDelay}ms both`,
+          } : {}),
         }}
       >
         <div

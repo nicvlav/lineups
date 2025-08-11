@@ -5,6 +5,7 @@ import { TouchBackend } from 'react-dnd-touch-backend';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/auth-context";
 import { PlayersProvider } from "@/context/players-provider";
+import { PitchAnimationProvider } from "@/context/pitch-animation-context";
 import HeaderBar from "@/components/header-bar";
 import { SquadIdVerification } from "@/components/dialogs/squad-id-verification";
 import { PlayerAssignment } from "@/components/dialogs/player-assignment";
@@ -77,8 +78,9 @@ const LayoutContent = () => {
         : {}; // No extra options for desktop
 
     return (
-        <PlayersProvider>
-            <DndProvider backend={backend} options={options}>
+        <PitchAnimationProvider>
+            <PlayersProvider>
+                <DndProvider backend={backend} options={options}>
                 {/* Staging environment banner */}
                 {isStaging && (
                     <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-center py-1 px-4 text-sm font-medium z-50 relative">
@@ -142,8 +144,9 @@ const LayoutContent = () => {
                         )}
                     </>
                 )}
-            </DndProvider>
-        </PlayersProvider>
+                </DndProvider>
+            </PlayersProvider>
+        </PitchAnimationProvider>
     );
 };
 

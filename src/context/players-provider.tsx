@@ -1,5 +1,6 @@
 import React, { ReactNode, createContext, useContext, useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/auth-context";
+import { usePitchAnimation } from "@/context/pitch-animation-context";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4, } from 'uuid';
@@ -147,6 +148,7 @@ interface PlayersProviderProps {
 
 export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) => {
     const { urlState, clearUrlState, user, ensureValidSession } = useAuth();
+    const { triggerAnimation } = usePitchAnimation();
     const location = useLocation();
 
     // Routes that should NOT have game state management
@@ -1356,6 +1358,9 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         const teamA = applyFormationToTeam("A", formation);
         const teamB = applyFormationToTeam("B", formation);
 
+        // Trigger animation for formation changes
+        triggerAnimation('formation');
+
         // Ensure a new reference and trigger state update
         setGamePlayers({ ...teamA, ...teamB });
     };
@@ -1381,6 +1386,9 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         teamB.forEach(player => {
             playerRecord[player.id] = { ...player, threatScore: getThreatScore(player.position, player.zoneFit, player.exactPosition) };
         });
+
+        // Trigger animation for team generation
+        triggerAnimation('generation');
 
         setGamePlayers(playerRecord);
     };
