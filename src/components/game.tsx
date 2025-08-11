@@ -8,6 +8,7 @@ import FormationSelector from "@/components/formation-selector"
 import { cn } from "@/lib/utils";
 import { ANIMATIONS } from "@/lib/design-tokens";
 import { ActionBarTwoColumn } from "@/components/ui/action-bar";
+import { toast } from "sonner";
 
 // import { Separator } from "@/components/ui/separator"
 
@@ -19,9 +20,21 @@ interface GameProps {
 const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
     const { clearGame, gamePlayers } = usePlayers();
 
-    const handleShare = () => {
-        const shareUrl = encodeStateToURL(gamePlayers);
-        navigator.clipboard.writeText(shareUrl).then(() => alert("Shareable link copied!"));
+    const handleShare = async () => {
+        try {
+            const shareUrl = encodeStateToURL(gamePlayers);
+            await navigator.clipboard.writeText(shareUrl);
+            toast.success("Link copied to clipboard!", {
+                description: "Share this link to let others see your lineup",
+                duration: 3000,
+                icon: '🔗'
+            });
+        } catch (error) {
+            toast.error("Failed to copy link", {
+                description: "Please try again",
+                duration: 3000
+            });
+        }
     };
 
     return (

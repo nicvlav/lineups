@@ -3,6 +3,7 @@ import { useAuth } from "@/context/auth-context";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4, } from 'uuid';
+import { toast } from "sonner";
 import { handleDatabaseError } from "@/lib/session-manager";
 
 import { openDB } from "idb";
@@ -232,10 +233,18 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         setTimeout(cleanupOldTabs, 5000);
     }, []);
 
-    // Vote caching system
-    const pendingVotesRef = useRef<Map<string, VoteData>>(new Map());
+    // Modern vote queue system with retry logic
+    const pendingVotesRef = useRef<Map<string, {
+        data: VoteData;
+        retryCount: number;
+        lastAttempt: number;
+        status: 'pending' | 'processing' | 'failed';
+        toastId?: string | number; // Track toast ID for dismissal
+    }>>(new Map());
     const voteProcessingRef = useRef(false);
     const voteDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const MAX_RETRY_ATTEMPTS = 3;
+    const BASE_RETRY_DELAY = 1000; // Start with 1 second, exponential backoff
 
     // Load voting session when user changes, clear vote data on sign out
     useEffect(() => {
@@ -360,21 +369,15 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         }
     };
 
-    // Debounced vote processing
-    const debounceVoteProcessing = (delay = 1000) => {
-        console.log(`debounceVoteProcessing called with delay ${delay}ms, queue size:`, pendingVotesRef.current.size);
-        
+    // Modern debounced vote processing with exponential backoff
+    const debounceVoteProcessing = (delay = 500) => {
         if (voteDebounceTimeoutRef.current) {
-            console.log('Clearing existing vote processing timeout');
             clearTimeout(voteDebounceTimeoutRef.current);
         }
         
         voteDebounceTimeoutRef.current = setTimeout(() => {
-            console.log('Vote processing timeout triggered');
             processVoteQueue();
         }, delay);
-        
-        console.log('Vote processing scheduled for', delay, 'ms from now');
     };
 
     // Load user's personal votes (cached in provider to avoid repeated queries)
@@ -463,61 +466,109 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         }
     };
 
-    // Vote processing function
+    // Modern vote processing with retry logic and toast feedback
     const processVoteQueue = async () => {
-        console.log('processVoteQueue called, processing:', voteProcessingRef.current, 'pending:', pendingVotesRef.current.size);
-        
         if (voteProcessingRef.current || pendingVotesRef.current.size === 0) {
-            console.log('Skipping queue processing - already running or empty queue');
             return;
         }
         
-        console.log('Starting vote queue processing');
         voteProcessingRef.current = true;
+        const now = Date.now();
         
         try {
-            const votesToProcess = Array.from(pendingVotesRef.current.entries());
+            const votesToProcess = Array.from(pendingVotesRef.current.entries())
+                .filter(([_, vote]) => {
+                    // Process pending votes or retry failed ones with exponential backoff
+                    if (vote.status === 'pending') return true;
+                    if (vote.status === 'failed' && vote.retryCount < MAX_RETRY_ATTEMPTS) {
+                        const retryDelay = BASE_RETRY_DELAY * Math.pow(2, vote.retryCount);
+                        return now - vote.lastAttempt >= retryDelay;
+                    }
+                    return false;
+                });
             
-            for (const [playerId, voteData] of votesToProcess) {
-                console.log(`Processing vote for player ${playerId}`);
+            for (const [playerId, voteEntry] of votesToProcess) {
+                const player = players[playerId];
+                voteEntry.status = 'processing';
+                
                 try {
-                    await submitVoteToDatabase(voteData);
+                    await submitVoteToDatabase(voteEntry.data);
+                    
+                    // Success! Remove from queue and update UI
+                    // Dismiss the loading toast if it exists
+                    if (voteEntry.toastId) {
+                        toast.dismiss(voteEntry.toastId);
+                    }
+                    
                     pendingVotesRef.current.delete(playerId);
-                    
-                    // Remove from pending voted players since vote is now confirmed
                     removePendingVotedPlayer(playerId);
-                    
-                    // Update playersWithVotes set optimistically
                     setPlayersWithVotes(prev => new Set([...prev, playerId]));
                     
-                    // Update cached user votes optimistically
+                    // Update cached votes with success state
                     setUserVotes(prev => new Map(prev.set(playerId, {
                         player_id: playerId,
-                        votes: voteData.votes,
+                        votes: voteEntry.data.votes,
                         created_at: new Date().toISOString(),
-                        isPending: false // Mark as successfully processed
+                        isPending: false
                     })));
                     
-                    console.log(`Successfully submitted vote for player ${playerId}`);
+                    // Show success toast
+                    toast.success(`Vote submitted for ${player?.name || 'player'}`, {
+                        duration: 2000,
+                        icon: '✅'
+                    });
+                    
                 } catch (error) {
-                    console.error(`Failed to submit vote for player ${playerId}:`, error);
-                    // Keep in queue for retry
+                    // Handle failure with retry logic
+                    voteEntry.status = 'failed';
+                    voteEntry.retryCount++;
+                    voteEntry.lastAttempt = now;
+                    
+                    if (voteEntry.retryCount >= MAX_RETRY_ATTEMPTS) {
+                        // Max retries reached, show error and remove from queue
+                        // Dismiss the loading toast if it exists
+                        if (voteEntry.toastId) {
+                            toast.dismiss(voteEntry.toastId);
+                        }
+                        
+                        pendingVotesRef.current.delete(playerId);
+                        removePendingVotedPlayer(playerId);
+                        
+                        // Rollback optimistic update
+                        setUserVotes(prev => {
+                            const updated = new Map(prev);
+                            updated.delete(playerId);
+                            return updated;
+                        });
+                        
+                        toast.error(`Failed to submit vote for ${player?.name || 'player'}`, {
+                            description: 'Please try again later',
+                            duration: 4000,
+                            icon: '❌'
+                        });
+                    } else {
+                        // Will retry automatically - update the toast
+                        if (voteEntry.toastId) {
+                            toast.dismiss(voteEntry.toastId);
+                        }
+                        voteEntry.toastId = toast.loading(`Retrying vote for ${player?.name || 'player'}...`, {
+                            duration: 1500,
+                            icon: '🔄'
+                        });
+                    }
                 }
             }
-        } catch (error) {
-            console.error('Error in processVoteQueue:', error);
         } finally {
-            // Always reset the processing flag
             voteProcessingRef.current = false;
-            console.log('Queue processing completed, remaining votes:', pendingVotesRef.current.size);
-        }
-        
-        // If there are still votes pending, schedule another debounced processing
-        if (pendingVotesRef.current.size > 0) {
-            console.log(`Scheduling retry for ${pendingVotesRef.current.size} remaining votes`);
-            debounceVoteProcessing(3000); // Retry after 3 seconds
-        } else {
-            console.log('All votes processed successfully!');
+            
+            // Schedule retry for any remaining failed votes
+            const hasFailedVotes = Array.from(pendingVotesRef.current.values())
+                .some(v => v.status === 'failed' && v.retryCount < MAX_RETRY_ATTEMPTS);
+            
+            if (hasFailedVotes) {
+                const nextRetryDelay = BASE_RETRY_DELAY * 2;
+                debounceVoteProcessing(nextRetryDelay);
+            }
         }
     };
 
@@ -1370,13 +1421,37 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             // Immediately add to pending voted players to exclude from next player selection
             addPendingVotedPlayer(voteData.playerId);
             
-            // Add to pending queue
-            pendingVotesRef.current.set(voteData.playerId, voteData);
+            // Show pending toast and store its ID
+            const player = players[voteData.playerId];
+            const toastId = toast.loading(`Submitting vote for ${player?.name || 'player'}...`, {
+                icon: '⏳'
+            });
             
-            // Use debounced processing to batch votes
-            debounceVoteProcessing(1000); // Wait 1 second for more votes before processing
+            // Add to pending queue with retry metadata and toast ID
+            pendingVotesRef.current.set(voteData.playerId, {
+                data: voteData,
+                retryCount: 0,
+                lastAttempt: Date.now(),
+                status: 'pending',
+                toastId: toastId
+            });
+            
+            // Optimistic UI update - show vote as submitted immediately
+            setUserVotes(prev => new Map(prev.set(voteData.playerId, {
+                player_id: voteData.playerId,
+                votes: voteData.votes,
+                created_at: new Date().toISOString(),
+                isPending: true // Mark as pending until confirmed
+            })));
+            
+            // Use faster debounced processing for better UX
+            debounceVoteProcessing(500); // Process quickly for responsiveness
         } catch (error) {
             console.error('Error queueing vote:', error);
+            toast.error('Failed to queue vote', {
+                description: 'Please try again',
+                duration: 3000
+            });
             throw error;
         }
     };
