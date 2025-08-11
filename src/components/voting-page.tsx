@@ -149,19 +149,21 @@ export default function VotingPage() {
     : null;
 
   return (
-    <div className="flex flex-col h-full w-full overflow-y-auto p-4 space-y-6">
-      {/* Section Header */}
-      <div className="space-y-2">
+    <div className="flex flex-col h-full w-full overflow-hidden">
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {/* Section Header */}
+        <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Player Evaluation</h1>
         <p className="text-muted-foreground">
           Help build fair team selections by rating players. Your votes contribute to community-driven player statistics.
         </p>
       </div>
 
-      {/* Unified Header Bar - Fixed height to match Cards and Generator */}
-      <div className="flex items-center justify-between h-10">
-        <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-xl">
-          <div className="flex items-center gap-4 text-sm px-3 py-1">
+        {/* Unified Header Bar - Fixed height to match Cards and Generator */}
+        <div className="flex items-center justify-between min-h-10">
+        <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-xl overflow-x-auto">
+          <div className="flex items-center gap-4 text-sm px-3 py-1 whitespace-nowrap">
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">
@@ -179,10 +181,10 @@ export default function VotingPage() {
         </div>
       </div>
 
-      {/* Cute Start Voting Panel */}
-      <Card className="mb-6">
+        {/* Cute Start Voting Panel */}
+        <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Vote className="w-6 h-6 text-primary" />
@@ -204,7 +206,7 @@ export default function VotingPage() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 justify-end sm:justify-start">
               <Button
                 onClick={() => setShowVoting(true)}
                 disabled={unvotedPlayers.length === 0}
@@ -229,8 +231,7 @@ export default function VotingPage() {
         </CardContent>
       </Card>
 
-      {/* Clean History Panel */}
-      <div className="flex-1 overflow-hidden">
+        {/* Clean History Panel */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -244,7 +245,7 @@ export default function VotingPage() {
                 No votes submitted yet. Click "Start Voting" above to begin rating players.
               </p>
             ) : (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+              <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                 {votedPlayers
                   .sort((a, b) => {
                     const aVote = userVotes.get(a.id);

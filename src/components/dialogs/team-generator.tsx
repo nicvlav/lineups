@@ -233,11 +233,6 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                         canGenerate && "animate-pulse"
                     )} />
                     Generate Balanced Teams
-                    {canGenerate && (
-                        <Badge variant="secondary" className="ml-2 bg-white/20 text-white border-0">
-                            {selectedPlayers.length} players
-                        </Badge>
-                    )}
                 </Button>
             </div>
         </div>

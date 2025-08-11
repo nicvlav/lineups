@@ -33,7 +33,7 @@ const PlayerStatsRankings = () => {
     const getTopCategories = (averages: any) => {
         const categoryLabels: Record<string, string> = {
             pace: "PAC",
-            attacking: "ATT", 
+            attacking: "ATT",
             passing: "PAS",
             dribbling: "DRI",
             defending: "DEF",
@@ -149,7 +149,7 @@ const PlayerStatsRankings = () => {
             border: 'border-l-4 border-l-amber-600/80 border-r border-t border-b border-border/40',
             bg: 'bg-gradient-to-r from-amber-600/10 to-orange-500/10'
         };
-        
+
         // Use shared coloring system for others
         const accent = getPlayerAccent(score);
         return {
@@ -169,7 +169,7 @@ const PlayerStatsRankings = () => {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="flex flex-col h-full">
             {/* Controls */}
             <ActionBarTwoColumn
                 left={
@@ -210,7 +210,7 @@ const PlayerStatsRankings = () => {
                     {rankings.map((ranking, index) => {
                         const rank = index + 1;
                         const accent = getRankAccent(rank, ranking.score);
-                        
+
                         return (
                             <div
                                 key={ranking.player.id}
@@ -232,8 +232,8 @@ const PlayerStatsRankings = () => {
                                             {/* Avatar */}
                                             <div className="relative w-10 h-10 flex-shrink-0">
                                                 {ranking.player.avatar_url ? (
-                                                    <img 
-                                                        src={ranking.player.avatar_url} 
+                                                    <img
+                                                        src={ranking.player.avatar_url}
                                                         alt={ranking.player.name}
                                                         className="w-full h-full object-cover rounded-full shadow-lg border-2 border-background"
                                                     />
@@ -280,18 +280,18 @@ const PlayerStatsRankings = () => {
                                                 {ranking.score}
                                             </div>
                                             <div className="text-[10px] text-muted-foreground font-medium">
-                                                {selectedPosition === "overall" ? "OVR" : 
-                                                 selectedPosition === "total_average" ? "AVG" : 
-                                                 PositionLabels[selectedPosition as Position]?.split(" ").map(w => w[0]).join("")}
+                                                {selectedPosition === "overall" ? "OVR" :
+                                                    selectedPosition === "total_average" ? "AVG" :
+                                                        PositionLabels[selectedPosition as Position]?.split(" ").map(w => w[0]).join("")}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         );
-                        })}
-                    </div>
-                </Panel>
+                    })}
+                </div>
+            </Panel>
 
             {/* Shared Player Stats Modal */}
             {selectedPlayer && (
