@@ -5,7 +5,7 @@ import { PlayerVoting } from "@/components/dialogs/player-voting";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Vote, CheckCircle, Users, BarChart3, RotateCcw, Edit3 } from "lucide-react";
+import { Vote, CheckCircle, Users, RotateCcw, Edit3 } from "lucide-react";
 import { StatsKey } from "@/data/stat-types";
 
 interface VoteData {
@@ -18,9 +18,7 @@ export default function VotingPage() {
   const {
     players: playersRecord,
     submitVote,
-    getPendingVoteCount,
     votingStats,
-    playersWithVotes,
     userVotes,
     resetVotingProgress,
     votingSession,
@@ -82,7 +80,7 @@ export default function VotingPage() {
     return (
       <div className="flex justify-center items-center h-full">
         <div className="text-center space-y-4">
-          <BarChart3 className="h-12 w-12 animate-pulse mx-auto text-muted-foreground" />
+          <Vote className="h-12 w-12 animate-pulse mx-auto text-muted-foreground" />
           <p className="text-muted-foreground">Loading voting data...</p>
         </div>
       </div>
@@ -145,14 +143,13 @@ export default function VotingPage() {
   const unvotedPlayers = eligiblePlayers.filter(player => !userVotes.has(player.id));
   const votedPlayers = eligiblePlayers.filter(player => userVotes.has(player.id));
   const progressPercent = eligiblePlayers.length > 0 ? (votedPlayers.length / eligiblePlayers.length) * 100 : 0;
-  const pendingCount = getPendingVoteCount();
 
   const associatedPlayer = user?.profile?.associated_player_id
     ? players.find(p => p.id === user.profile?.associated_player_id)
     : null;
 
   return (
-    <div className="flex flex-col h-full w-full overflow-y-auto p-4 space-y-4">
+    <div className="flex flex-col h-full w-full overflow-y-auto p-4 space-y-6">
       {/* Section Header */}
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Player Evaluation</h1>
@@ -161,119 +158,93 @@ export default function VotingPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Your Progress</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {votedPlayers.length}/{eligiblePlayers.length}
-              {pendingCount > 0 && (
-                <span className="text-xs text-orange-500 ml-2">
-                  (+{pendingCount} pending)
-                </span>
-              )}
+      {/* Unified Header Bar - Fixed height to match Cards and Generator */}
+      <div className="flex items-center justify-between h-10">
+        <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-xl">
+          <div className="flex items-center gap-4 text-sm px-3 py-1">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">
+                {votedPlayers.length}/{eligiblePlayers.length} rated
+              </span>
+              <span className="text-muted-foreground">
+                ({progressPercent.toFixed(0)}% complete)
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {progressPercent.toFixed(0)}% completed
-              {pendingCount > 0 && ' • Background sync active'}
-            </p>
-            {associatedPlayer && (
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                Excluding {associatedPlayer.name} (your profile)
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Community Voters</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{votingStats.totalVoters}</div>
-            <p className="text-xs text-muted-foreground">
-              total participants
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Players Rated</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {playersWithVotes.size}/{votingStats.totalPlayers}
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Users className="h-4 w-4" />
+              <span>{votingStats.totalVoters} voters</span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              have community ratings
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Vote className="h-5 w-5" />
-              Start Voting
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Rate players on a guided form covering all key football skills.
-              Each player takes about 2-3 minutes to evaluate thoroughly.
-            </p>
+      {/* Cute Start Voting Panel */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Vote className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">
+                  {unvotedPlayers.length === 0 ? 'All Done!' : 'Ready to Vote?'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {unvotedPlayers.length === 0 
+                    ? `Great job! You've rated all ${eligiblePlayers.length} players.`
+                    : `${unvotedPlayers.length} players remaining • ~${Math.ceil(unvotedPlayers.length * 2.5)} min`
+                  }
+                </p>
+                {associatedPlayer && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    Excluding {associatedPlayer.name} (your profile)
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
               <Button
                 onClick={() => setShowVoting(true)}
                 disabled={unvotedPlayers.length === 0}
                 className="flex items-center gap-2"
               >
                 <Vote className="h-4 w-4" />
-                {unvotedPlayers.length === 0 ? 'All Players Rated' : `Rate ${unvotedPlayers.length} Players`}
+                {unvotedPlayers.length === 0 ? 'Complete!' : 'Start Voting'}
               </Button>
               {votedPlayers.length > 0 && (
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={resetVotingProgress}
                   className="flex items-center gap-2"
                   title="Reset voting progress (keeps player order)"
                 >
-                  <RotateCcw className="h-3 w-3" />
-                  Reset Progress
+                  <RotateCcw className="h-4 w-4" />
+                  Reset
                 </Button>
               )}
-              {unvotedPlayers.length > 0 && (
-                <Badge variant="outline">
-                  ~{Math.ceil(unvotedPlayers.length * 2.5)} min remaining
-                </Badge>
-              )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Clean History Panel */}
+      <div className="flex-1 overflow-hidden">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              Your Votes
+              Your Vote History
               <Badge variant="secondary">{votedPlayers.length}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {votedPlayers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No votes submitted yet. Start voting to see your evaluations here.
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No votes submitted yet. Click "Start Voting" above to begin rating players.
               </p>
             ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="space-y-2 max-h-96 overflow-y-auto">
                 {votedPlayers
                   .sort((a, b) => {
                     const aVote = userVotes.get(a.id);
@@ -286,7 +257,7 @@ export default function VotingPage() {
                     const voteData = userVotes.get(player.id);
                     const voteDate = new Date(voteData?.created_at).toLocaleDateString();
                     return (
-                      <div key={player.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                      <div key={player.id} className="flex justify-between items-center py-3 border-b last:border-b-0">
                         <div className="flex-1">
                           <span className="font-medium">{player.name}</span>
                           <div className="text-xs text-muted-foreground">

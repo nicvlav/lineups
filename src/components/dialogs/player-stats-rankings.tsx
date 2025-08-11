@@ -170,17 +170,6 @@ const PlayerStatsRankings = () => {
 
     return (
         <div className="space-y-6">
-            {/* Section Header */}
-            <div className="space-y-2">
-                <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                    Player Rankings & Statistics
-                </h2>
-                <p className="text-muted-foreground text-sm">
-                    Top performers by position and overall stats
-                </p>
-            </div>
-
             {/* Controls */}
             <ActionBarTwoColumn
                 left={
@@ -209,6 +198,7 @@ const PlayerStatsRankings = () => {
                             <SelectItem value="15">Top 15</SelectItem>
                             <SelectItem value="20">Top 20</SelectItem>
                             <SelectItem value="25">Top 25</SelectItem>
+                            <SelectItem value="50">Top 50</SelectItem>
                         </SelectContent>
                     </Select>
                 }
@@ -299,9 +289,9 @@ const PlayerStatsRankings = () => {
                                 </div>
                             </div>
                         );
-                    })}
-                </div>
-            </Panel>
+                        })}
+                    </div>
+                </Panel>
 
             {/* Shared Player Stats Modal */}
             {selectedPlayer && (

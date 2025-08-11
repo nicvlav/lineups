@@ -26,7 +26,7 @@ const PlayerCards = () => {
         const topScores = getTopPositions(scores);
 
         return {
-            player, overall:Math.max(...topScores.map((t) => t.score)),
+            player, overall: Math.max(...topScores.map((t) => t.score)),
             zoneFit: scores, topPositions: topScores.slice(0, 3).map((t) => t.position).join(", "),
             averages: getZoneAverages(player)
         }
@@ -58,32 +58,32 @@ const PlayerCards = () => {
     return (
         <div className="flex flex-col h-full w-full overflow-hidden p-4 space-y-6">
             {/* Section Header */}
-            <div className="space-y-3">
+            <div className="space-y-2">
                 <h1 className="text-2xl font-bold tracking-tight">Player Database</h1>
                 <p className="text-muted-foreground">
                     Browse and analyze player statistics, ratings, and positional fits
                 </p>
-                
-                {/* Tab Navigation */}
-                <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-xl w-fit">
+            </div>
+
+            {/* Tab Navigation - Fixed height to match Generator */}
+            <div className="flex items-center justify-between h-10">
+                <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-xl">
                     <button
                         onClick={() => setActiveTab("cards")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            activeTab === "cards"
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === "cards"
                                 ? "bg-background text-foreground shadow-sm border border-border/40"
                                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                        }`}
+                            }`}
                     >
                         <SquareUser className="w-4 h-4" />
                         Player Cards
                     </button>
                     <button
                         onClick={() => setActiveTab("leaderboard")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            activeTab === "leaderboard"
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === "leaderboard"
                                 ? "bg-background text-foreground shadow-sm border border-border/40"
                                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                        }`}
+                            }`}
                     >
                         <TrendingUp className="w-4 h-4" />
                         Leaderboard
@@ -94,62 +94,57 @@ const PlayerCards = () => {
             {/* Tab Content */}
             <div className="flex-1 overflow-hidden">
                 {activeTab === "cards" ? (
-                    <div className="flex flex-col h-full space-y-4">
-                        {/* Search and Sorting */}
-                        <ActionBarTwoColumn
-                            left={
-                                <Input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search players..."
-                                    className="w-full max-w-sm"
-                                />
-                            }
-                            right={
-                                <Select onValueChange={setSortingMode}>
-                                    <SelectTrigger className="w-40">
-                                        <SelectValue placeholder="Sort by">{sortingMode}</SelectValue>
-                                    </SelectTrigger>
-
-                                    <SelectContent>
-                                        <SelectItem key={overallSortValue} value={overallSortValue}>
-                                            {overallSortValue}
-                                        </SelectItem>
-                                        <SelectItem key={alphabeticalSortValue} value={alphabeticalSortValue}>
-                                            {alphabeticalSortValue}
-                                        </SelectItem>
-
-                                        {Object.entries(StatCategoryNameMap)
-                                            .filter(([category]) => category !== "morale")
-                                            .map(([key, name]) => (
-                                                <SelectItem key={key} value={name}>
-                                                    {name}
-                                                </SelectItem>
-                                            ))}
-                                    </SelectContent>
-                                </Select>
-                            }
-                        />
-
-                        {/* Player Cards Panel */}
-                        <div className="flex-1 overflow-y-auto">
-                            <Panel>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-                                    {withScores.map((item) => (
-                                        <PlayerCard key={item.player.id} player={item.player} playerName={item.player.name}
-                                            stats={item.player.stats} overall={item.overall}
-                                            zoneFit={item.zoneFit} top3Positions={item.topPositions}
-                                            averages={item.averages} />
-                                    ))}
-                                </div>
-                            </Panel>
+                    <Panel>
+                        {/* Search and Sorting Controls - Now inside Panel to scroll away */}
+                        <div className="pb-4">
+                            <ActionBarTwoColumn
+                                variant="default"
+                                left={
+                                    <Input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Search players..."
+                                        className="w-full max-w-sm"
+                                    />
+                                }
+                                right={
+                                    <Select onValueChange={setSortingMode}>
+                                        <SelectTrigger className="w-40 h-9">
+                                            <SelectValue placeholder="Sort by">{sortingMode}</SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem key={overallSortValue} value={overallSortValue}>
+                                                {overallSortValue}
+                                            </SelectItem>
+                                            <SelectItem key={alphabeticalSortValue} value={alphabeticalSortValue}>
+                                                {alphabeticalSortValue}
+                                            </SelectItem>
+                                            {Object.entries(StatCategoryNameMap)
+                                                .filter(([category]) => category !== "morale")
+                                                .map(([key, name]) => (
+                                                    <SelectItem key={key} value={name}>
+                                                        {name}
+                                                    </SelectItem>
+                                                ))}
+                                        </SelectContent>
+                                    </Select>
+                                }
+                            />
                         </div>
-                    </div>
+                        
+                        {/* Player Cards Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                            {withScores.map((item) => (
+                                <PlayerCard key={item.player.id} player={item.player} playerName={item.player.name}
+                                    stats={item.player.stats} overall={item.overall}
+                                    zoneFit={item.zoneFit} top3Positions={item.topPositions}
+                                    averages={item.averages} />
+                            ))}
+                        </div>
+                    </Panel>
                 ) : (
-                    <div className="h-full overflow-y-auto">
-                        <PlayerStatsRankings />
-                    </div>
+                    <PlayerStatsRankings />
                 )}
             </div>
         </div>
