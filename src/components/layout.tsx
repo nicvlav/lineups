@@ -3,26 +3,26 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/context/auth-context";
-import { PlayersProvider } from "@/context/players-provider";
-import { PitchAnimationProvider } from "@/context/pitch-animation-context";
+import { useAuth } from "@/contexts/auth-context";
+import { PlayersProvider } from "@/contexts/players-provider";
+import { PitchAnimationProvider } from "@/contexts/pitch-animation-context";
 import HeaderBar from "@/components/header-bar";
-import { SquadIdVerification } from "@/components/dialogs/squad-id-verification";
-import { PlayerAssignment } from "@/components/dialogs/player-assignment";
+import { SquadIdVerification } from "@/components/game/squad-id-verification";
+import { PlayerAssignment } from "@/components/players/player-assignment";
 import { useLocation } from 'react-router-dom';
 
-import Game from "@/components/game";
+import Game from "@/components/game/game";
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import PlayerCards from "@/components/dialogs/player-cards";
-import TeamGenerator from "@/components/dialogs/team-generator";
-import VotingPage from "@/components/voting-page";
+import PlayerCards from "@/components/players/player-cards";
+import TeamGenerator from "@/components/game/team-generator";
+import VotingPage from "@/components/voting/voting-page";
 import SignInPage from "@/components/auth/sign-in";
 import SignUpPage from "@/components/auth/sign-up";
 import ResetPasswordPage from "@/components/auth/reset-password";
 import UpdatePasswordPage from "@/components/auth/update-password";
 import AuthDebugPage from "@/components/auth/debug";
 import AuthCallbackPage from "@/components/auth/callback";
-import DataDeletionPage from "@/components/data-deletion";
+import DataDeletionPage from "@/components/auth/data-deletion";
 
 const LayoutContent = () => {
     const { needsVerification, user } = useAuth();

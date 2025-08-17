@@ -1,7 +1,7 @@
 
-import { SupabaseProvider } from "@/context/supabase-provider";
-import { AuthProvider } from "@/context/auth-context";
-import { ThemeProvider } from "@/context/theme-provider"
+import { SupabaseProvider } from "@/contexts/supabase-provider";
+import { AuthProvider } from "@/contexts/auth-context";
+import { ThemeProvider } from "@/contexts/theme-provider"
 import { useEffect } from "react";
 import Layout from "@/components/layout.js";
 import { Toaster } from "sonner";
