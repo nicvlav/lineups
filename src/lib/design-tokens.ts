@@ -15,6 +15,16 @@ export const SPACING = {
   '3xl': 'space-x-16', // 64px
 } as const;
 
+export const SPACING_Y = {
+  xs: 'space-y-1',     // 4px
+  sm: 'space-y-2',     // 8px
+  md: 'space-y-4',     // 16px
+  lg: 'space-y-6',     // 24px
+  xl: 'space-y-8',     // 32px
+  '2xl': 'space-y-12', // 48px
+  '3xl': 'space-y-16', // 64px
+} as const;
+
 export const GAP = {
   xs: 'gap-1',     // 4px
   sm: 'gap-2',     // 8px
@@ -33,6 +43,26 @@ export const PADDING = {
   xl: 'p-8',     // 32px
   '2xl': 'p-12', // 48px
   '3xl': 'p-16', // 64px
+} as const;
+
+export const PADDING_X = {
+  xs: 'px-1',     // 4px
+  sm: 'px-2',     // 8px
+  md: 'px-4',     // 16px
+  lg: 'px-6',     // 24px
+  xl: 'px-8',     // 32px
+  '2xl': 'px-12', // 48px
+  '3xl': 'px-16', // 64px
+} as const;
+
+export const PADDING_Y = {
+  xs: 'py-1',     // 4px
+  sm: 'py-2',     // 8px
+  md: 'py-4',     // 16px
+  lg: 'py-6',     // 24px
+  xl: 'py-8',     // 32px
+  '2xl': 'py-12', // 48px
+  '3xl': 'py-16', // 64px
 } as const;
 
 export const MARGIN = {
@@ -54,9 +84,11 @@ export const SIZES = {
     xl: 'size-10', // 40px
   },
   button: {
+    xs: 'h-7',     // 28px
     sm: 'h-8',     // 32px
-    md: 'h-10',    // 40px
-    lg: 'h-12',    // 48px
+    md: 'h-9',     // 36px (default)
+    lg: 'h-10',    // 40px
+    xl: 'h-12',    // 48px
   },
   input: {
     sm: 'h-8',     // 32px

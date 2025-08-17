@@ -2,6 +2,7 @@ import * as React from "react"
 import * as SeparatorPrimitive from "@radix-ui/react-separator"
 
 import { cn } from "@/lib/utils/cn"
+import { COMPONENT_TOKENS } from "@/lib/design-tokens/component-tokens"
 
 function Separator({
   className,
@@ -15,7 +16,10 @@ function Separator({
       decorative={decorative}
       orientation={orientation}
       className={cn(
-        "bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
+        "bg-border shrink-0",
+        orientation === "horizontal" 
+          ? COMPONENT_TOKENS.separator.horizontal 
+          : COMPONENT_TOKENS.separator.vertical,
         className
       )}
       {...props}

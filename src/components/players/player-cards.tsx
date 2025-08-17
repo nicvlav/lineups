@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input";
 import Panel from "@/components/panel";
 import { ActionBarTwoColumn } from "@/components/ui/action-bar";
 import { SquareUser, TrendingUp } from "lucide-react";
+import { PAGE_LAYOUT } from "@/lib/design-tokens/page-tokens";
+import { GAP, PADDING, SIZES } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils/cn";
 
 const PlayerCards = () => {
     const { players, } = usePlayers();
@@ -56,43 +59,49 @@ const PlayerCards = () => {
     const withScores = getSorted();
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden p-4 space-y-6">
+        <div className={PAGE_LAYOUT.container}>
             {/* Section Header */}
-            <div className="space-y-2">
-                <h1 className="text-2xl font-bold tracking-tight">Player Database</h1>
-                <p className="text-muted-foreground">
+            <div className={PAGE_LAYOUT.header.wrapper}>
+                <h1 className={PAGE_LAYOUT.header.title}>Player Database</h1>
+                <p className={PAGE_LAYOUT.header.description}>
                     Browse and analyze player statistics, ratings, and positional fits
                 </p>
             </div>
 
             {/* Tab Navigation - Fixed height to match Generator */}
-            <div className="flex items-center justify-between h-10">
-                <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-xl">
+            <div className={cn("flex items-center justify-between", PAGE_LAYOUT.actionBar.wrapper)}>
+                <div className={cn("flex items-center bg-muted/20 rounded-xl", GAP.xs, PADDING.xs)}>
                     <button
                         onClick={() => setActiveTab("cards")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === "cards"
+                        className={cn(
+                            "flex items-center rounded-lg text-sm font-medium transition-all duration-200",
+                            GAP.sm, PADDING.sm,
+                            activeTab === "cards"
                                 ? "bg-background text-foreground shadow-sm border border-border/40"
                                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                            }`}
+                            )}
                     >
-                        <SquareUser className="w-4 h-4" />
+                        <SquareUser className={SIZES.icon.xs} />
                         Player Cards
                     </button>
                     <button
                         onClick={() => setActiveTab("leaderboard")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === "leaderboard"
+                        className={cn(
+                            "flex items-center rounded-lg text-sm font-medium transition-all duration-200",
+                            GAP.sm, PADDING.sm,
+                            activeTab === "leaderboard"
                                 ? "bg-background text-foreground shadow-sm border border-border/40"
                                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                            }`}
+                            )}
                     >
-                        <TrendingUp className="w-4 h-4" />
+                        <TrendingUp className={SIZES.icon.xs} />
                         Leaderboard
                     </button>
                 </div>
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 overflow-hidden">
+            <div className={PAGE_LAYOUT.content.wrapper}>
                 {activeTab === "cards" ? (
                     <Panel>
                         {/* Search and Sorting Controls - Now inside Panel to scroll away */}
@@ -134,7 +143,7 @@ const PlayerCards = () => {
                         </div>
                         
                         {/* Player Cards Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                        <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5", GAP.sm)}>
                             {withScores.map((item) => (
                                 <PlayerCard key={item.player.id} player={item.player} playerName={item.player.name}
                                     stats={item.player.stats} overall={item.overall}

@@ -1,18 +1,31 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils/cn"
+import { RADIUS, SHADOWS, ANIMATIONS } from "@/lib/design-tokens"
+import { COMPONENT_TOKENS } from "@/lib/design-tokens/component-tokens"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  cn(
+    "inline-flex items-center border font-semibold",
+    "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+    COMPONENT_TOKENS.badge.padding.default,  // px-2.5 py-0.5
+    COMPONENT_TOKENS.badge.text.default,      // text-xs
+    RADIUS.md,                                // rounded-md
+    ANIMATIONS.transition.fast                // transition-colors
+  ),
   {
     variants: {
       variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
+        default: cn(
+          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+          SHADOWS.sm
+        ),
         secondary:
           "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
+        destructive: cn(
+          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+          SHADOWS.sm
+        ),
         outline: "text-foreground",
       },
     },

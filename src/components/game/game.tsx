@@ -6,6 +6,9 @@ import { encodeStateToURL } from "@/lib/utils/state-manager";
 import FormationSelector from "@/components/game/formation-selector"
 import { ActionBarTwoColumn } from "@/components/ui/action-bar";
 import { toast } from "sonner";
+import { PAGE_LAYOUT } from "@/lib/design-tokens/page-tokens";
+import { GAP, SIZES } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils/cn";
 
 interface GameProps {
     isCompact: boolean;
@@ -33,20 +36,20 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
     };
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden p-4 space-y-4">
+        <div className={cn(PAGE_LAYOUT.container, "space-y-4")}>
             {/* Action Bar - Consistent with other pages */}
-            <div className="h-10">
+            <div className={PAGE_LAYOUT.actionBar.wrapper}>
                 <ActionBarTwoColumn
                     left={<FormationSelector />}
                     right={
-                        <div className="flex gap-2">
+                        <div className={cn("flex", GAP.sm)}>
                             <Button 
                                 variant="ghost"
                                 size="sm"
                                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={clearGame}
                             >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className={SIZES.icon.xs} />
                                 <span className="hidden sm:inline ml-2">Clear</span>
                             </Button>
 
@@ -55,7 +58,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                                 size="sm"
                                 onClick={handleShare}
                             >
-                                <Share className="h-4 w-4" />
+                                <Share className={SIZES.icon.xs} />
                                 <span className="hidden sm:inline ml-2">Share</span>
                             </Button>
                         </div>
@@ -64,14 +67,14 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
             </div>
 
             {/* Game Area - Clean layout */}
-            <div className="flex-1 overflow-hidden">
+            <div className={PAGE_LAYOUT.content.wrapper}>
                 {isCompact ? (
-                    <div className="flex flex-col h-full gap-4">
+                    <div className={cn("flex flex-col h-full", GAP.md)}>
                         <TeamArea team="A" playerSize={playerSize} />
                         <TeamArea team="B" playerSize={playerSize} />
                     </div>
                 ) : (
-                    <div className="flex h-full gap-4">
+                    <div className={cn("flex h-full", GAP.md)}>
                         <TeamArea team="A" playerSize={playerSize} />
                         <TeamArea team="B" playerSize={playerSize} />
                     </div>

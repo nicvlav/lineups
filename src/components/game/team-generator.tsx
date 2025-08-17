@@ -4,7 +4,8 @@ import { Users, Wand2, CheckCircle2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import { ANIMATIONS, GAP } from "@/lib/design-tokens";
+import { ANIMATIONS, GAP, SIZES, SPACING_Y } from "@/lib/design-tokens";
+import { PAGE_LAYOUT } from "@/lib/design-tokens/page-tokens";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -103,23 +104,23 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
     const allSelected = selectedPlayers.length === playersArr.length;
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden p-4 space-y-6">
+        <div className={PAGE_LAYOUT.container}>
             {/* Header - Consistent with other pages */}
-            <div className="space-y-2">
-                <h1 className="text-2xl font-bold tracking-tight">Team Generator</h1>
-                <p className="text-muted-foreground">
+            <div className={PAGE_LAYOUT.header.wrapper}>
+                <h1 className={PAGE_LAYOUT.header.title}>Team Generator</h1>
+                <p className={PAGE_LAYOUT.header.description}>
                     Select players to create perfectly balanced teams
                 </p>
             </div>
 
             {/* Status Bar - Consistent height */}
-            <div className="h-10">
+            <div className={PAGE_LAYOUT.actionBar.wrapper}>
                 <ActionBarSingle>
                     <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-3">
                             <Badge 
                                 variant={canGenerate ? "default" : "secondary"}
-                                className="h-7 px-3 gap-1.5"
+                                className={cn("h-7 px-3", GAP.xs)}
                             >
                                 <Users className="h-3.5 w-3.5" />
                                 {selectedPlayers.length}/{playersArr.length} selected
@@ -145,7 +146,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                 <>Clear All</>
                             ) : (
                                 <>
-                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    <CheckCircle2 className={cn(SIZES.icon.xs, "mr-1")} />
                                     Select All
                                 </>
                             )}
@@ -172,7 +173,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                                     key={player.id}
                                                     onClick={() => togglePlayer(player.id)}
                                                     className={cn(
-                                                        "group flex items-center gap-3 p-3 rounded-lg",
+                                                        "group flex items-center p-3 rounded-lg", GAP.sm,
                                                         "border cursor-pointer select-none",
                                                         "transition-all duration-200",
                                                         selectedPlayers.includes(player.id) 
@@ -194,7 +195,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                                         {player.name}
                                                     </span>
                                                     {selectedPlayers.includes(player.id) && (
-                                                        <CheckCircle2 className="h-4 w-4 text-primary opacity-60" />
+                                                        <CheckCircle2 className={cn(SIZES.icon.xs, "text-primary opacity-60")} />
                                                     )}
                                                 </div>
                                             ))}
@@ -203,8 +204,8 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                 </div>
                             ) : (
                                 <div className="flex items-center justify-center h-full">
-                                    <div className="text-center space-y-2">
-                                        <Users className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                                    <div className={cn("text-center", SPACING_Y.sm)}>
+                                        <Users className={cn(SIZES.button.xl, "w-12 mx-auto text-muted-foreground/50")} />
                                         <p className="text-muted-foreground">No players available</p>
                                         <p className="text-xs text-muted-foreground">Add players to get started</p>
                                     </div>
@@ -221,12 +222,12 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                     disabled={!canGenerate}
                     size="lg"
                 className={cn(
-                    "w-full h-12 font-semibold",
+                    "w-full font-semibold",
                     !canGenerate && "opacity-50"
                 )}
                 >
                     <Wand2 className={cn(
-                        "mr-2 h-5 w-5",
+                        SIZES.icon.sm, "mr-2",
                         canGenerate && "animate-pulse"
                     )} />
                 Generate Balanced Teams

@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils/cn';
-import { GAP, ANIMATIONS } from '@/lib/design-tokens';
+import { GAP, PADDING, RADIUS, SHADOWS, ANIMATIONS } from '@/lib/design-tokens';
 
 interface ActionBarProps {
   children: React.ReactNode;
@@ -32,10 +32,12 @@ export const ActionBar: React.FC<ActionBarProps> = ({
     <div className={cn(
       "flex items-center w-full",
       "bg-gradient-to-r from-muted/10 via-muted/5 to-muted/10",
-      "border border-border/50 rounded-2xl shadow-md backdrop-blur-sm",
+      "border border-border/50 backdrop-blur-sm",
       "dark:border-border/80 dark:shadow-lg dark:shadow-black/20",
-      variant === 'compact' ? "p-2 h-12" : "p-3 h-14",
-      "mb-4",
+      RADIUS.xl,        // rounded-2xl -> rounded-xl
+      SHADOWS.md,       // shadow-md
+      variant === 'compact' ? PADDING.sm : PADDING.sm,
+      variant === 'compact' ? "h-12" : "h-14",
       ANIMATIONS.transition.normal,
       className
     )}>
@@ -86,10 +88,12 @@ export const ActionBarGroup: React.FC<ActionBarGroupProps> = ({
 
   return (
     <div className={cn(
-      "inline-flex items-center rounded-xl border",
-      "p-1.5 shadow-sm",
+      "inline-flex items-center border",
+      RADIUS.xl,        // rounded-xl
+      "p-1.5",         // Custom value for precise spacing
+      SHADOWS.sm,       // shadow-sm
       variantClasses[variant],
-      GAP.xs, // gap-1
+      GAP.xs,           // gap-1
       ANIMATIONS.transition.normal,
       className
     )}>
@@ -168,9 +172,9 @@ export const ActionBarFlex: React.FC<{
 }> = ({ children, variant = 'default', spacing = 'md', className }) => {
   const spacingClasses = {
     none: 'gap-0',
-    sm: 'gap-2',
-    md: 'gap-4',
-    lg: 'gap-6'
+    sm: GAP.sm,
+    md: GAP.md,
+    lg: GAP.lg
   };
 
   return (

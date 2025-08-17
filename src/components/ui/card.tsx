@@ -1,15 +1,20 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils/cn"
+import { GAP, PADDING_Y, PADDING_X, RADIUS, SHADOWS } from "@/lib/design-tokens"
 
 const cardVariants = cva(
-  "bg-card text-card-foreground flex flex-col rounded-xl border shadow-sm",
+  cn(
+    "bg-card text-card-foreground flex flex-col border",
+    RADIUS.xl,        // rounded-xl
+    SHADOWS.sm        // shadow-sm
+  ),
   {
     variants: {
       size: {
-        sm: "gap-4 py-4",
-        default: "gap-6 py-6",
-        lg: "gap-8 py-8",
+        sm: cn(GAP.md, PADDING_Y.md),        // gap-4 py-4
+        default: cn(GAP.lg, PADDING_Y.lg),   // gap-6 py-6
+        lg: cn(GAP.xl, PADDING_Y.xl),        // gap-8 py-8
       },
       variant: {
         default: "border-border",
@@ -41,9 +46,9 @@ function Card({ className, size, variant, ...props }: CardProps) {
 const cardHeaderVariants = cva("flex flex-col", {
   variants: {
     size: {
-      sm: "gap-1 px-4",
-      default: "gap-1.5 px-6",
-      lg: "gap-2 px-8",
+      sm: cn(GAP.xs, PADDING_X.md),           // gap-1 px-4
+      default: cn("gap-1.5", PADDING_X.lg),     // gap-1.5 px-6
+      lg: cn(GAP.sm, PADDING_X.xl),             // gap-2 px-8
     },
   },
   defaultVariants: {
@@ -88,9 +93,9 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
 const cardContentVariants = cva("", {
   variants: {
     size: {
-      sm: "px-4",
-      default: "px-6",
-      lg: "px-8",
+      sm: PADDING_X.md,      // px-4
+      default: PADDING_X.lg,  // px-6 (from COMPONENT_TOKENS.card.padding.content)
+      lg: PADDING_X.xl,      // px-8
     },
   },
   defaultVariants: {
@@ -115,9 +120,9 @@ function CardContent({ className, size, ...props }: CardContentProps) {
 const cardFooterVariants = cva("flex items-center", {
   variants: {
     size: {
-      sm: "px-4",
-      default: "px-6",
-      lg: "px-8",
+      sm: PADDING_X.md,      // px-4
+      default: PADDING_X.lg,  // px-6 (from COMPONENT_TOKENS.card.padding.footer)
+      lg: PADDING_X.xl,      // px-8
     },
   },
   defaultVariants: {

@@ -8,6 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Eye, EyeOff, Mail, Lock, LogIn, Facebook, AlertCircle, Loader2 } from 'lucide-react';
+import { PAGE_LAYOUT } from '@/lib/design-tokens/page-tokens';
+import { PADDING, SPACING_Y, SIZES } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils/cn';
 
 export default function SignInPage() {
   const navigate = useNavigate();
@@ -79,8 +82,8 @@ export default function SignInPage() {
   if (user) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+        <div className={cn("text-center", SPACING_Y.md)}>
+          <Loader2 className={cn(SIZES.icon.lg, "animate-spin mx-auto")} />
           <p className="text-muted-foreground">Redirecting...</p>
         </div>
       </div>
@@ -88,24 +91,24 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className={cn("min-h-screen flex items-center justify-center bg-background", PADDING.md)}>
+      <div className={cn("w-full max-w-md", SPACING_Y.lg)}>
         {/* Header */}
-        <div className="text-center space-y-2">
+        <div className={cn("text-center", PAGE_LAYOUT.header.wrapper)}>
           <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
-          <p className="text-muted-foreground">
+          <p className={PAGE_LAYOUT.header.description}>
             Sign in to your account to continue
           </p>
         </div>
 
         <Card>
-          <CardHeader className="space-y-1">
+          <CardHeader className={SPACING_Y.xs}>
             <CardTitle className="text-2xl text-center">Sign in</CardTitle>
             <CardDescription className="text-center">
               Choose your preferred sign in method
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className={SPACING_Y.md}>
             {/* Facebook OAuth Button */}
             <Button
               onClick={handleFacebookAuth}
@@ -115,9 +118,9 @@ export default function SignInPage() {
               size="lg"
             >
               {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className={cn("mr-2 animate-spin", SIZES.icon.xs)} />
               ) : (
-                <Facebook className="mr-2 h-4 w-4" />
+                <Facebook className={cn("mr-2", SIZES.icon.xs)} />
               )}
               Continue with Facebook
             </Button>
@@ -127,7 +130,7 @@ export default function SignInPage() {
                 <Separator className="w-full" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
+                <span className={cn("bg-background text-muted-foreground", PADDING.sm)}>
                   Or continue with email
                 </span>
               </div>
@@ -136,17 +139,17 @@ export default function SignInPage() {
             {/* Error Alert */}
             {error && (
               <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircle className={SIZES.icon.xs} />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
             {/* Email Form */}
-            <form onSubmit={handleEmailAuth} className="space-y-4">
-              <div className="space-y-2">
+            <form onSubmit={handleEmailAuth} className={SPACING_Y.md}>
+              <div className={SPACING_Y.sm}>
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Mail className={cn("absolute left-3 top-3 text-muted-foreground", SIZES.icon.xs)} />
                   <Input
                     id="email"
                     type="email"
@@ -160,10 +163,10 @@ export default function SignInPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className={SPACING_Y.sm}>
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Lock className={cn("absolute left-3 top-3 text-muted-foreground", SIZES.icon.xs)} />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
@@ -183,9 +186,9 @@ export default function SignInPage() {
                     disabled={loading}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className={SIZES.icon.xs} />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className={SIZES.icon.xs} />
                     )}
                   </Button>
                 </div>
@@ -207,9 +210,9 @@ export default function SignInPage() {
                 disabled={loading}
               >
                 {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className={cn("mr-2 animate-spin", SIZES.icon.xs)} />
                 ) : (
-                  <LogIn className="mr-2 h-4 w-4" />
+                  <LogIn className={cn("mr-2", SIZES.icon.xs)} />
                 )}
                 Sign in
               </Button>

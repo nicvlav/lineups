@@ -7,6 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Vote, CheckCircle, Users, RotateCcw, Edit3 } from "lucide-react";
 import { StatsKey } from "@/lib/types/stat-types";
+import { PAGE_LAYOUT } from "@/lib/design-tokens/page-tokens";
+import { cn } from "@/lib/utils/cn";
+import { SPACING_Y, SIZES, GAP, PADDING, PADDING_X, PADDING_Y } from "@/lib/design-tokens";
 
 interface VoteData {
   playerId: string;
@@ -78,10 +81,10 @@ export default function VotingPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-full">
-        <div className="text-center space-y-4">
-          <Vote className="h-12 w-12 animate-pulse mx-auto text-muted-foreground" />
-          <p className="text-muted-foreground">Loading voting data...</p>
+      <div className={PAGE_LAYOUT.loadingState.wrapper}>
+        <div className={cn("text-center", SPACING_Y.md)}>
+          <Vote className={cn(SIZES.button.xl, "w-12 animate-pulse mx-auto text-muted-foreground")} />
+          <p className={PAGE_LAYOUT.loadingState.text}>Loading voting data...</p>
         </div>
       </div>
     );
@@ -92,7 +95,7 @@ export default function VotingPage() {
       <div className="flex justify-center items-center h-full">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <Vote className="h-12 w-12 mx-auto text-muted-foreground" />
+            <Vote className={cn(SIZES.button.xl, "w-12 mx-auto text-muted-foreground")} />
             <CardTitle>Sign In Required</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -113,14 +116,14 @@ export default function VotingPage() {
       <div className="flex justify-center items-center h-full">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <Vote className="h-12 w-12 mx-auto text-muted-foreground" />
+            <Vote className={cn(SIZES.button.xl, "w-12 mx-auto text-muted-foreground")} />
             <CardTitle>Squad Verification Required</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-muted-foreground mb-4">
               You need to complete squad verification and player association to access voting features.
             </p>
-            <div className="space-y-2 text-sm text-muted-foreground">
+            <div className={cn(SPACING_Y.sm, "text-sm text-muted-foreground")}>
               <p>• Join an authorized squad</p>
               <p>• Associate with a player profile</p>
               <p>• Complete verification process</p>
@@ -149,21 +152,21 @@ export default function VotingPage() {
     : null;
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden p-4 space-y-6">
+    <div className={PAGE_LAYOUT.container}>
       {/* Header - Consistent with other pages */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">Player Voting</h1>
-        <p className="text-muted-foreground">
+      <div className={PAGE_LAYOUT.header.wrapper}>
+        <h1 className={PAGE_LAYOUT.header.title}>Player Voting</h1>
+        <p className={PAGE_LAYOUT.header.description}>
           Rate player skills to help create balanced teams
         </p>
       </div>
 
       {/* Status Bar - Consistent height */}
-      <div className="h-10 flex items-center">
-        <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-xl overflow-x-auto">
-          <div className="flex items-center gap-4 text-sm px-3 py-1 whitespace-nowrap">
+      <div className={cn(PAGE_LAYOUT.actionBar.wrapper, "flex items-center")}>
+        <div className={cn("flex items-center bg-muted/20 rounded-xl overflow-x-auto", GAP.xs, PADDING.xs)}>
+          <div className={cn("flex items-center text-sm whitespace-nowrap", GAP.md, PADDING_X.sm, PADDING_Y.xs)}>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              <CheckCircle className={cn(SIZES.icon.xs, "text-muted-foreground")} />
               <span className="font-medium">
                 {votedPlayers.length}/{eligiblePlayers.length} rated
               </span>
@@ -172,7 +175,7 @@ export default function VotingPage() {
               </span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Users className="h-4 w-4" />
+              <Users className={SIZES.icon.xs} />
               <span>{votingStats.totalVoters} voters</span>
             </div>
           </div>
@@ -180,14 +183,14 @@ export default function VotingPage() {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto space-y-6">
+      <div className={cn("flex-1 overflow-y-auto", SPACING_Y.lg)}>
         {/* Start Voting Panel */}
         <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Vote className="w-6 h-6 text-primary" />
+          <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between", GAP.md)}>
+            <div className={cn("flex items-center", GAP.md)}>
+              <div className={cn("rounded-full bg-primary/10 flex items-center justify-center", SIZES.button.xl, "w-12")}>
+                <Vote className={cn(SIZES.icon.md, "text-primary")} />
               </div>
               <div>
                 <h3 className="font-semibold text-lg">
@@ -206,23 +209,23 @@ export default function VotingPage() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2 justify-end sm:justify-start">
+            <div className={cn("flex items-center justify-end sm:justify-start", GAP.sm)}>
               <Button
                 onClick={() => setShowVoting(true)}
                 disabled={unvotedPlayers.length === 0}
-                className="flex items-center gap-2"
+                className={cn("flex items-center", GAP.sm)}
               >
-                <Vote className="h-4 w-4" />
+                <Vote className={SIZES.icon.xs} />
                 {unvotedPlayers.length === 0 ? 'Complete!' : 'Start Voting'}
               </Button>
               {votedPlayers.length > 0 && (
                 <Button
                   variant="outline"
                   onClick={resetVotingProgress}
-                  className="flex items-center gap-2"
+                  className={cn("flex items-center", GAP.sm)}
                   title="Reset voting progress (keeps player order)"
                 >
-                  <RotateCcw className="h-4 w-4" />
+                  <RotateCcw className={SIZES.icon.xs} />
                   Reset
                 </Button>
               )}
@@ -245,7 +248,7 @@ export default function VotingPage() {
                 No votes submitted yet. Click "Start Voting" above to begin rating players.
               </p>
             ) : (
-              <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+              <div className={cn("max-h-[40vh] overflow-y-auto", SPACING_Y.sm)}>
                 {votedPlayers
                   .sort((a, b) => {
                     const aVote = userVotes.get(a.id);
@@ -269,7 +272,7 @@ export default function VotingPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setEditingPlayer(player.id)}
-                          className="flex items-center gap-1 h-8 px-2"
+                          className={cn("flex items-center h-8 px-2", GAP.xs)}
                           title={`Edit vote for ${player.name}`}
                         >
                           <Edit3 className="h-3 w-3" />
