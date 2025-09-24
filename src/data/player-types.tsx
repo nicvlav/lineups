@@ -24,6 +24,7 @@ export interface FilledGamePlayer extends GamePlayer {
 }
 export interface ScoredGamePlayer extends GamePlayer {
     zoneFit: ZoneScores;
+    stats?: PlayerStats; // Optional for backward compatibility
 }
 
 export interface ScoredGamePlayerWithThreat extends ScoredGamePlayer {

@@ -23,6 +23,10 @@ import { createFastTeam, createPositionComparator, sortWorstInPlace } from "./ut
 /**
  * Core team assignment algorithm
  * Assigns players to teams based on formation and balance
+ * Basically the most important function for this website's concept
+ * 
+ * Disgustingly long function... 
+ * Really need to improve the readability of this one and break it up into smaller functions
  */
 export function assignPlayersToTeams(
     players: FastPlayer[],
@@ -92,6 +96,8 @@ export function assignPlayersToTeams(
     }
     
     // Phase 2: Assign remaining players with dynamic balancing
+    // first pre-build comparitors for each position
+    // might simplfiy this to one generic sort method.. 
     const comparators = new Map<number, (a: FastPlayer, b: FastPlayer) => number>();
     for (let i = 0; i < POSITION_COUNT; i++) {
         comparators.set(i, createPositionComparator(i, config.dominanceRatio));
@@ -207,11 +213,19 @@ export function assignPlayersToTeams(
                 
                 // Track attack/defense scores
                 if (POSITION_CATEGORIES.defensive.includes(posIdx)) {
-                    teamA.defensiveScore += score;
+                    teamA.defensiveScore +=  player.bestScore;
                 } else if (POSITION_CATEGORIES.neutral.includes(posIdx)) {
-                    teamA.neutralScore += score;
+                    teamA.neutralScore += player.bestScore;
                 } else if (POSITION_CATEGORIES.attacking.includes(posIdx)) {
-                    teamA.attackingScore += score;
+                    teamA.attackingScore +=  player.bestScore;
+                }
+
+                // Track energy scores (stamina + work rates)
+                const stats = player.original.stats;
+                if (stats) {
+                    teamA.staminaScore += stats.stamina;
+                    teamA.attackWorkRateScore += stats.attackingWorkrate;
+                    teamA.defensiveWorkRateScore += stats.defensiveWorkrate;
                 }
             }
             for (const player of teamB.positions[posIdx]) {
@@ -225,6 +239,14 @@ export function assignPlayersToTeams(
                     teamB.neutralScore += score;
                 } else if (POSITION_CATEGORIES.attacking.includes(posIdx)) {
                     teamB.attackingScore += score;
+                }
+
+                // Track energy scores (stamina + work rates)
+                const stats = player.original.stats;
+                if (stats) {
+                    teamB.staminaScore += stats.stamina;
+                    teamB.attackWorkRateScore += stats.attackingWorkrate;
+                    teamB.defensiveWorkRateScore += stats.defensiveWorkrate;
                 }
             }
         }
@@ -281,13 +303,14 @@ export function runRecursiveOptimization(
     // Recursive refinement
     const subConfig: BalanceConfig = {
         ...config,
-        numSimulations: Math.max(5, Math.floor(config.numSimulations / config.recursiveDepth)),
+        numSimulations: Math.max(5, Math.floor(config.numSimulations / 10)),
         recursive: false,
         weights: {
-            balance: 0.1,
-            positionBalance: 0.4,
+            balance: 0.0,
+            positionBalance: 0.1,
             zonalBalance: 0.1,
-            attackDefenseBalance: 0.4,  // Focus on attack/defense balance in refinement
+            attackDefenseBalance: 0.2,  // Focus on attack/defense balance in refinement
+            energy: 0.6,  // Don't focus on energy balance in refinement
         },
     };
     

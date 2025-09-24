@@ -1404,19 +1404,25 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                 team: "A",
                 position: position,
                 zoneFit: zoneFit,
-                threatScore: 0
+                threatScore: 0,
+                stats: player.stats
             } as ScoredGamePlayerWithThreat;
         }));
     };
 
     const rebalanceCurrentGame = async () => {
-        // Filter players in the current game
+        // Filter players in the current game and ensure they have stats
         const filteredPlayers: ScoredGamePlayerWithThreat[] = [];
 
         Object.entries(gamePlayers).forEach(([id, player]) => {
             if (!(id in players)) return;
 
-            filteredPlayers.push(player);
+            // Ensure stats are populated from the players record
+            const playerWithStats = {
+                ...player,
+                stats: players[id].stats
+            };
+            filteredPlayers.push(playerWithStats);
         });
 
         // Call generateTeams with the filtered players

@@ -26,6 +26,8 @@ export interface BalanceConfig {
         zonalBalance: number;
         /** Attack vs Defense balance between teams */
         attackDefenseBalance: number;
+        /** Energy balance (stamina + work rates) between teams */
+        energy: number;
     };
     
     /** Ratio for specialist detection (higher = stricter) */
@@ -97,6 +99,11 @@ export interface FastTeam {
     defensiveScore: number;
     neutralScore: number;
     attackingScore: number;
+
+    /** Energy scores for energy balance calculation */
+    staminaScore: number;
+    attackWorkRateScore: number;
+    defensiveWorkRateScore: number;
 }
 
 /**
@@ -117,4 +124,5 @@ export interface BalanceMetrics {
     positionBalance: number;
     zonalBalance: number;
     attackDefenseBalance: number;
+    energy: number;
 }

@@ -49,15 +49,16 @@ export const AGGRESSION_EXPONENT = 0.4;
 
 /** Default Monte Carlo configuration */
 export const DEFAULT_CONFIG: BalanceConfig = {
-    numSimulations: 100,
+    numSimulations: 500,
     weights: {
         balance: 0.7,           // Peak skill balance
         positionBalance: 0.1,   // Actual score balance
         zonalBalance: 0.1,      // Zone balance within teams
         attackDefenseBalance: 0.1, // Attack vs Defense balance between teams
+        energy: 0,              // Energy balance (stamina + work rates) between teams
     },
     dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
     recursive: true,
-    recursiveDepth: 15,
+    recursiveDepth: 25,
     debugMode: false,  // Use ENABLE_DEBUG flag instead
 } as const;

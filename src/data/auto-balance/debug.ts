@@ -10,6 +10,57 @@ import type { SimulationResult, BalanceConfig } from "./types";
 import { ENABLE_DEBUG, INDEX_TO_POSITION, POSITION_COUNT, AGGRESSION_EXPONENT } from "./constants";
 
 /**
+ * Debug helper functions that replicate the energy balance calculations
+ */
+function calculateWorkRateBalanceWithCancellationDebug(
+    teamAAttack: number, teamBAttack: number,
+    teamADefense: number, teamBDefense: number
+): number {
+    const totalAttack = teamAAttack + teamBAttack;
+    const totalDefense = teamADefense + teamBDefense;
+
+    if (totalAttack === 0 && totalDefense === 0) return 1;
+
+    const attackDiff = Math.abs(teamAAttack - teamBAttack);
+    const defenseDiff = Math.abs(teamADefense - teamBDefense);
+
+    const attackBalance = totalAttack > 0 ? 1 - (attackDiff / totalAttack) : 1;
+    const defenseBalance = totalDefense > 0 ? 1 - (defenseDiff / totalDefense) : 1;
+
+    const attackBalanceCurved = Math.pow(attackBalance, 3);
+    const defenseBalanceCurved = Math.pow(defenseBalance, 3);
+
+    const signedAttackDiff = teamAAttack - teamBAttack;
+    const signedDefenseDiff = teamADefense - teamBDefense;
+    const cancellationBonus = (signedAttackDiff * signedDefenseDiff) < 0 ? 1.05 : 1.0;
+
+    return Math.sqrt(attackBalanceCurved * defenseBalanceCurved) * Math.min(cancellationBonus, 1.0);
+}
+
+function calculateStaminaBalanceWithCompensationDebug(
+    teamAStamina: number, teamBStamina: number,
+    teamATotalWorkRate: number, teamBTotalWorkRate: number
+): number {
+    const totalStamina = teamAStamina + teamBStamina;
+    const totalWorkRate = teamATotalWorkRate + teamBTotalWorkRate;
+
+    if (totalStamina === 0) return 1;
+
+    const rawStaminaDiff = Math.abs(teamAStamina - teamBStamina);
+    const rawStaminaPercent = rawStaminaDiff / totalStamina;
+
+    let compensationFactor = 1.0;
+    if (totalWorkRate > 0) {
+        const workRateDiff = Math.abs(teamATotalWorkRate - teamBTotalWorkRate);
+        const workRatePercent = workRateDiff / totalWorkRate;
+        compensationFactor = 1.0 - (workRatePercent * 0.15);
+    }
+
+    const adjustedPercent = rawStaminaPercent * compensationFactor;
+    return Math.pow(1 - adjustedPercent, 4);
+}
+
+/**
  * Logs detailed balance results with comprehensive metrics
  */
 export function logResults(result: SimulationResult, config: BalanceConfig): void {
@@ -155,12 +206,86 @@ export function logResults(result: SimulationResult, config: BalanceConfig): voi
             }
         }
     }
-    
+
+    // Energy Analysis
+    console.log("\n⚡ ENERGY ANALYSIS (stamina + work rates)");
+    console.log("─".repeat(40));
+    console.log("  Component | Team A      | Team B      | Diff");
+    console.log("  ----------|-------------|-------------|--------");
+
+    const energyComponents = [
+        { name: 'Stamina', a: result.teamA.staminaScore, b: result.teamB.staminaScore },
+        { name: 'Att Work', a: result.teamA.attackWorkRateScore, b: result.teamB.attackWorkRateScore },
+        { name: 'Def Work', a: result.teamA.defensiveWorkRateScore, b: result.teamB.defensiveWorkRateScore },
+    ];
+
+    for (const comp of energyComponents) {
+        const diff = comp.a - comp.b;
+        const aStr = comp.a.toFixed(0);
+        const bStr = comp.b.toFixed(0);
+        const diffStr = `${diff > 0 ? '+' : ''}${diff.toFixed(0)}`;
+        console.log(`  ${comp.name.padEnd(9)} | ${aStr.padEnd(11)} | ${bStr.padEnd(11)} | ${diffStr}`);
+    }
+
+    // Calculate individual component balances and show the multiplicative effect
+    const staminaTotal = result.teamA.staminaScore + result.teamB.staminaScore;
+    const attackWorkTotal = result.teamA.attackWorkRateScore + result.teamB.attackWorkRateScore;
+    const defenseWorkTotal = result.teamA.defensiveWorkRateScore + result.teamB.defensiveWorkRateScore;
+
+    if (staminaTotal > 0 || attackWorkTotal > 0 || defenseWorkTotal > 0) {
+        console.log("\n  Smart Energy Balance Calculation:");
+
+        // Calculate work rate differences and cancellation
+        const attackDiff = result.teamA.attackWorkRateScore - result.teamB.attackWorkRateScore;
+        const defenseDiff = result.teamA.defensiveWorkRateScore - result.teamB.defensiveWorkRateScore;
+        const netWorkRateImbalance = Math.abs(attackDiff - defenseDiff);
+        const maxWorkRateImbalance = Math.abs(attackDiff) + Math.abs(defenseDiff);
+
+        console.log(`    Attack Work Diff:    ${attackDiff > 0 ? '+' : ''}${attackDiff.toFixed(0)} (Team ${attackDiff > 0 ? 'A' : 'B'} stronger)`);
+        console.log(`    Defense Work Diff:   ${defenseDiff > 0 ? '+' : ''}${defenseDiff.toFixed(0)} (Team ${defenseDiff > 0 ? 'A' : 'B'} stronger)`);
+
+        if (maxWorkRateImbalance > 0) {
+            const cancellationPercent = (1 - netWorkRateImbalance / maxWorkRateImbalance) * 100;
+            console.log(`    Cancellation Effect: ${cancellationPercent.toFixed(1)}% (opposite imbalances partially cancel)`);
+        }
+
+        // Calculate using the smart system
+        const workRateBalance = calculateWorkRateBalanceWithCancellationDebug(
+            result.teamA.attackWorkRateScore, result.teamB.attackWorkRateScore,
+            result.teamA.defensiveWorkRateScore, result.teamB.defensiveWorkRateScore
+        );
+
+        const staminaBalance = calculateStaminaBalanceWithCompensationDebug(
+            result.teamA.staminaScore, result.teamB.staminaScore,
+            result.teamA.attackWorkRateScore + result.teamA.defensiveWorkRateScore,
+            result.teamB.attackWorkRateScore + result.teamB.defensiveWorkRateScore
+        );
+
+        const overallEnergyBalance = staminaBalance * workRateBalance;
+
+        // Show linear comparisons for reference
+        const staminaLinear = 1 - (Math.abs(result.teamA.staminaScore - result.teamB.staminaScore) / staminaTotal);
+
+        console.log("\n  Final Balance Scores:");
+
+        // Calculate individual work rate balances for detailed display
+        const attackLinear = attackWorkTotal > 0 ? 1 - (Math.abs(attackDiff) / attackWorkTotal) : 1;
+        const defenseLinear = defenseWorkTotal > 0 ? 1 - (Math.abs(defenseDiff) / defenseWorkTotal) : 1;
+
+        console.log(`    Attack Work Balance: ${(Math.pow(attackLinear, 1.8) * 100).toFixed(1)}% (vs linear: ${(attackLinear * 100).toFixed(1)}%) [MODERATE CURVE 1.8]`);
+        console.log(`    Defense Work Balance:${(Math.pow(defenseLinear, 1.8) * 100).toFixed(1)}% (vs linear: ${(defenseLinear * 100).toFixed(1)}%) [MODERATE CURVE 1.8]`);
+        console.log(`    Combined Work Rate:  ${(workRateBalance * 100).toFixed(1)}% (geometric mean + 5% cancellation bonus)`);
+        console.log(`    Stamina Balance:     ${(staminaBalance * 100).toFixed(1)}% (vs linear: ${(staminaLinear * 100).toFixed(1)}%) [MODERATE CURVE 2.5 + compensation]`);
+        console.log(`    Overall Energy:      ${(overallEnergyBalance * 100).toFixed(1)}% (multiplicative)`);
+        console.log("    Note: Curves emphasize minimizing absolute differences");
+    }
+
     console.log("\nBalance Metrics:");
     console.log(`  Team Balance:        ${(result.metrics.balance * 100).toFixed(1)}%`);
     console.log(`  Position Balance:    ${(result.metrics.positionBalance * 100).toFixed(1)}%`);
     console.log(`  Zonal Balance:       ${(result.metrics.zonalBalance * 100).toFixed(1)}%`);
     console.log(`  Attack/Def Balance:  ${(result.metrics.attackDefenseBalance * 100).toFixed(1)}%`);
+    console.log(`  Energy Balance:      ${(result.metrics.energy * 100).toFixed(1)}%`);
     console.log(`  Overall Score:       ${result.score.toFixed(3)}`);
     
     // Show position assignments to debug mismatches

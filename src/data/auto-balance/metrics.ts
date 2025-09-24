@@ -10,7 +10,99 @@ import type { FastTeam, BalanceConfig, BalanceMetrics } from "./types";
 import { AGGRESSION_EXPONENT } from "./constants";
 
 /**
+ * Calculates energy balance between teams
+ * Uses smart system that considers work rate cancellation and stamina compensation
+ */
+function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam): number {
+    // Calculate work rate balance with cancellation logic
+    const workRateBalance = calculateWorkRateBalanceWithCancellation(
+        teamA.attackWorkRateScore, teamB.attackWorkRateScore,
+        teamA.defensiveWorkRateScore, teamB.defensiveWorkRateScore
+    );
+
+    // Calculate stamina balance with compensation for work rate imbalances
+    const staminaBalance = calculateStaminaBalanceWithCompensation(
+        teamA.staminaScore, teamB.staminaScore,
+        teamA.attackWorkRateScore + teamA.defensiveWorkRateScore,
+        teamB.attackWorkRateScore + teamB.defensiveWorkRateScore
+    );
+
+    // Multiply for final energy score
+    return staminaBalance * workRateBalance;
+}
+
+/**
+ * Calculates work rate balance emphasizing minimal differences with some cancellation
+ * Teams with opposite work rate imbalances should partially cancel out
+ */
+function calculateWorkRateBalanceWithCancellation(
+    teamAAttack: number, teamBAttack: number,
+    teamADefense: number, teamBDefense: number
+): number {
+    const totalAttack = teamAAttack + teamBAttack;
+    const totalDefense = teamADefense + teamBDefense;
+
+    if (totalAttack === 0 && totalDefense === 0) return 1;
+
+    // Calculate individual differences (emphasize raw differences)
+    const attackDiff = Math.abs(teamAAttack - teamBAttack);
+    const defenseDiff = Math.abs(teamADefense - teamBDefense);
+
+    // Calculate balance for each component individually first
+    const attackBalance = totalAttack > 0 ? 1 - (attackDiff / totalAttack) : 1;
+    const defenseBalance = totalDefense > 0 ? 1 - (defenseDiff / totalDefense) : 1;
+
+    // Apply moderate curve to each component (exponent 1.8 = moderately punitive)
+    // Linear 96.7% becomes ~93%, Linear 98.6% becomes ~97%
+    const attackBalanceCurved = Math.pow(attackBalance, 3);
+    const defenseBalanceCurved = Math.pow(defenseBalance, 3);
+
+    // Combine with slight cancellation bonus for opposite imbalances
+    const signedAttackDiff = teamAAttack - teamBAttack;
+    const signedDefenseDiff = teamADefense - teamBDefense;
+    const cancellationBonus = (signedAttackDiff * signedDefenseDiff) < 0 ? 1.05 : 1.0; // 5% bonus for opposite signs
+
+    // Take geometric mean of the two components with cancellation bonus
+    return Math.sqrt(attackBalanceCurved * defenseBalanceCurved) * Math.min(cancellationBonus, 1.0);
+}
+
+/**
+ * Calculates stamina balance emphasizing minimal differences with work rate compensation
+ * Teams with lower total work rates should have higher stamina to compensate
+ */
+function calculateStaminaBalanceWithCompensation(
+    teamAStamina: number, teamBStamina: number,
+    teamATotalWorkRate: number, teamBTotalWorkRate: number
+): number {
+    const totalStamina = teamAStamina + teamBStamina;
+    const totalWorkRate = teamATotalWorkRate + teamBTotalWorkRate;
+
+    if (totalStamina === 0) return 1;
+
+    // Calculate raw stamina difference (emphasize minimizing absolute differences)
+    const rawStaminaDiff = Math.abs(teamAStamina - teamBStamina);
+    const rawStaminaPercent = rawStaminaDiff / totalStamina;
+
+    // Calculate work rate compensation factor
+    // Team with lower work rate should be allowed slightly higher stamina
+    let compensationFactor = 1.0;
+    if (totalWorkRate > 0) {
+        const workRateDiff = Math.abs(teamATotalWorkRate - teamBTotalWorkRate);
+        const workRatePercent = workRateDiff / totalWorkRate;
+        // Reduce penalty by up to 15% based on work rate imbalance (less compensation)
+        compensationFactor = 1.0 - (workRatePercent * 0.15);
+    }
+
+    // Apply compensation and then moderate curve (exponent 2.5 = moderately harsh)
+    const adjustedPercent = rawStaminaPercent * compensationFactor;
+    // Linear 99.4% becomes ~92%, Linear 95% becomes ~84%
+    return Math.pow(1 - adjustedPercent, 4);
+}
+
+/**
  * Calculates comprehensive balance metrics
+ * A well balanced team needs to meet a bunch of criteria
+ * Which can include : overall player skill on each team, how suitable each player is to their position, etc
  */
 export function calculateMetrics(
     teamA: FastTeam,
@@ -22,6 +114,7 @@ export function calculateMetrics(
         positionBalance: 0,
         zonalBalance: 0,
         attackDefenseBalance: 0,
+        energy: 0,
     };
     
     // Balance: Peak potential balance between teams
@@ -93,13 +186,17 @@ export function calculateMetrics(
     };
     
     metrics.attackDefenseBalance = calcAttackDefenseBalance();
-    
+
+    // Energy Balance: Equal distribution of stamina and work rates between teams
+    metrics.energy = calculateEnergyBalance(teamA, teamB);
+
     // Calculate weighted score
-    const score = 
+    const score =
         config.weights.balance * metrics.balance +
         config.weights.positionBalance * metrics.positionBalance +
         config.weights.zonalBalance * metrics.zonalBalance +
-        config.weights.attackDefenseBalance * metrics.attackDefenseBalance;
+        config.weights.attackDefenseBalance * metrics.attackDefenseBalance +
+        config.weights.energy * metrics.energy;
     
     return { score, details: metrics };
 }

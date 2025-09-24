@@ -66,6 +66,9 @@ export function createFastTeam(): FastTeam {
         defensiveScore: 0,
         neutralScore: 0,
         attackingScore: 0,
+        staminaScore: 0,
+        attackWorkRateScore: 0,
+        defensiveWorkRateScore: 0,
     };
 }
 
