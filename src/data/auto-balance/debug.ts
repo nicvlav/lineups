@@ -57,7 +57,23 @@ function calculateStaminaBalanceWithCompensationDebug(
     }
 
     const adjustedPercent = rawStaminaPercent * compensationFactor;
-    return Math.pow(1 - adjustedPercent, 4);
+    return Math.pow(1 - adjustedPercent, 5);
+}
+
+function calculateDirectionalImbalancePenaltyDebug(staminaDiff: number, attackDiff: number, defenseDiff: number): number {
+    const teamAFavors = [staminaDiff > 0, attackDiff > 0, defenseDiff > 0].filter(Boolean).length;
+    const teamBFavors = [staminaDiff < 0, attackDiff < 0, defenseDiff < 0].filter(Boolean).length;
+    const maxFavors = Math.max(teamAFavors, teamBFavors);
+
+    if (staminaDiff === 0 && attackDiff === 0 && defenseDiff === 0) return 1.0;
+
+    switch (maxFavors) {
+        case 0:
+        case 1: return 1.0;
+        case 2: return 0.85;
+        case 3: return 0.50;
+        default: return 1.0;
+    }
 }
 
 /**
@@ -235,19 +251,32 @@ export function logResults(result: SimulationResult, config: BalanceConfig): voi
     if (staminaTotal > 0 || attackWorkTotal > 0 || defenseWorkTotal > 0) {
         console.log("\n  Smart Energy Balance Calculation:");
 
-        // Calculate work rate differences and cancellation
+        // Calculate differences for directional analysis
+        const staminaDiff = result.teamA.staminaScore - result.teamB.staminaScore;
         const attackDiff = result.teamA.attackWorkRateScore - result.teamB.attackWorkRateScore;
         const defenseDiff = result.teamA.defensiveWorkRateScore - result.teamB.defensiveWorkRateScore;
-        const netWorkRateImbalance = Math.abs(attackDiff - defenseDiff);
-        const maxWorkRateImbalance = Math.abs(attackDiff) + Math.abs(defenseDiff);
 
+        console.log(`    Stamina Diff:        ${staminaDiff > 0 ? '+' : ''}${staminaDiff.toFixed(0)} (Team ${staminaDiff > 0 ? 'A' : 'B'} stronger)`);
         console.log(`    Attack Work Diff:    ${attackDiff > 0 ? '+' : ''}${attackDiff.toFixed(0)} (Team ${attackDiff > 0 ? 'A' : 'B'} stronger)`);
         console.log(`    Defense Work Diff:   ${defenseDiff > 0 ? '+' : ''}${defenseDiff.toFixed(0)} (Team ${defenseDiff > 0 ? 'A' : 'B'} stronger)`);
 
-        if (maxWorkRateImbalance > 0) {
-            const cancellationPercent = (1 - netWorkRateImbalance / maxWorkRateImbalance) * 100;
-            console.log(`    Cancellation Effect: ${cancellationPercent.toFixed(1)}% (opposite imbalances partially cancel)`);
+        // Analyze directional clustering
+        const teamAFavors = [staminaDiff > 0, attackDiff > 0, defenseDiff > 0].filter(Boolean).length;
+        const teamBFavors = [staminaDiff < 0, attackDiff < 0, defenseDiff < 0].filter(Boolean).length;
+        const maxFavors = Math.max(teamAFavors, teamBFavors);
+
+        console.log(`\n  Directional Analysis:`);
+        console.log(`    Team A favored in:   ${teamAFavors}/3 components`);
+        console.log(`    Team B favored in:   ${teamBFavors}/3 components`);
+
+        let penaltyText = "";
+        switch (maxFavors) {
+            case 0:
+            case 1: penaltyText = "No penalty (balanced)"; break;
+            case 2: penaltyText = "15% penalty (2 components favor same team)"; break;
+            case 3: penaltyText = "50% penalty (ALL components favor same team!) 🚨"; break;
         }
+        console.log(`    Directional Penalty: ${penaltyText}`);
 
         // Calculate using the smart system
         const workRateBalance = calculateWorkRateBalanceWithCancellationDebug(
@@ -261,23 +290,23 @@ export function logResults(result: SimulationResult, config: BalanceConfig): voi
             result.teamB.attackWorkRateScore + result.teamB.defensiveWorkRateScore
         );
 
-        const overallEnergyBalance = staminaBalance * workRateBalance;
+        const directionalPenalty = calculateDirectionalImbalancePenaltyDebug(staminaDiff, attackDiff, defenseDiff);
+        const baseEnergyBalance = staminaBalance * workRateBalance;
+        const finalEnergyBalance = baseEnergyBalance * directionalPenalty;
 
         // Show linear comparisons for reference
-        const staminaLinear = 1 - (Math.abs(result.teamA.staminaScore - result.teamB.staminaScore) / staminaTotal);
-
-        console.log("\n  Final Balance Scores:");
-
-        // Calculate individual work rate balances for detailed display
+        const staminaLinear = 1 - (Math.abs(staminaDiff) / staminaTotal);
         const attackLinear = attackWorkTotal > 0 ? 1 - (Math.abs(attackDiff) / attackWorkTotal) : 1;
         const defenseLinear = defenseWorkTotal > 0 ? 1 - (Math.abs(defenseDiff) / defenseWorkTotal) : 1;
 
-        console.log(`    Attack Work Balance: ${(Math.pow(attackLinear, 1.8) * 100).toFixed(1)}% (vs linear: ${(attackLinear * 100).toFixed(1)}%) [MODERATE CURVE 1.8]`);
-        console.log(`    Defense Work Balance:${(Math.pow(defenseLinear, 1.8) * 100).toFixed(1)}% (vs linear: ${(defenseLinear * 100).toFixed(1)}%) [MODERATE CURVE 1.8]`);
-        console.log(`    Combined Work Rate:  ${(workRateBalance * 100).toFixed(1)}% (geometric mean + 5% cancellation bonus)`);
-        console.log(`    Stamina Balance:     ${(staminaBalance * 100).toFixed(1)}% (vs linear: ${(staminaLinear * 100).toFixed(1)}%) [MODERATE CURVE 2.5 + compensation]`);
-        console.log(`    Overall Energy:      ${(overallEnergyBalance * 100).toFixed(1)}% (multiplicative)`);
-        console.log("    Note: Curves emphasize minimizing absolute differences");
+        console.log("\n  Component Balance Scores:");
+        console.log(`    Stamina Balance:     ${(staminaBalance * 100).toFixed(1)}% (vs linear: ${(staminaLinear * 100).toFixed(1)}%)`);
+        console.log(`    Work Rate Balance:   ${(workRateBalance * 100).toFixed(1)}% (attack: ${(Math.pow(attackLinear, 3) * 100).toFixed(1)}%, defense: ${(Math.pow(defenseLinear, 3) * 100).toFixed(1)}%)`);
+
+        console.log("\n  Final Energy Calculation:");
+        console.log(`    Base Energy Score:   ${(baseEnergyBalance * 100).toFixed(1)}% (stamina × work rate)`);
+        console.log(`    Directional Penalty: ×${directionalPenalty.toFixed(2)} (${(directionalPenalty * 100).toFixed(0)}%)`);
+        console.log(`    FINAL ENERGY SCORE:  ${(finalEnergyBalance * 100).toFixed(1)}%`);
     }
 
     console.log("\nBalance Metrics:");

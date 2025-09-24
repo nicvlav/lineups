@@ -11,24 +11,55 @@ import { AGGRESSION_EXPONENT } from "./constants";
 
 /**
  * Calculates energy balance between teams
- * Uses smart system that considers work rate cancellation and stamina compensation
+ * Uses smart system that heavily penalizes directional imbalances
  */
 function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam): number {
-    // Calculate work rate balance with cancellation logic
-    const workRateBalance = calculateWorkRateBalanceWithCancellation(
-        teamA.attackWorkRateScore, teamB.attackWorkRateScore,
-        teamA.defensiveWorkRateScore, teamB.defensiveWorkRateScore
-    );
+    // Calculate individual component differences
+    const staminaDiff = teamA.staminaScore - teamB.staminaScore;
+    const attackDiff = teamA.attackWorkRateScore - teamB.attackWorkRateScore;
+    const defenseDiff = teamA.defensiveWorkRateScore - teamB.defensiveWorkRateScore;
 
-    // Calculate stamina balance with compensation for work rate imbalances
+    // Calculate base balance for each component
     const staminaBalance = calculateStaminaBalanceWithCompensation(
         teamA.staminaScore, teamB.staminaScore,
         teamA.attackWorkRateScore + teamA.defensiveWorkRateScore,
         teamB.attackWorkRateScore + teamB.defensiveWorkRateScore
     );
 
-    // Multiply for final energy score
-    return staminaBalance * workRateBalance;
+    const workRateBalance = calculateWorkRateBalanceWithCancellation(
+        teamA.attackWorkRateScore, teamB.attackWorkRateScore,
+        teamA.defensiveWorkRateScore, teamB.defensiveWorkRateScore
+    );
+
+    // Calculate directional imbalance penalty
+    const directionalPenalty = calculateDirectionalImbalancePenalty(staminaDiff, attackDiff, defenseDiff);
+
+    // Apply directional penalty to the combined score
+    return (staminaBalance * workRateBalance) * directionalPenalty;
+}
+
+/**
+ * Calculates penalty for when all components favor the same team
+ * The more components that favor one team, the harsher the penalty
+ */
+function calculateDirectionalImbalancePenalty(staminaDiff: number, attackDiff: number, defenseDiff: number): number {
+    // Count how many components favor each team
+    const teamAFavors = [staminaDiff > 0, attackDiff > 0, defenseDiff > 0].filter(Boolean).length;
+    const teamBFavors = [staminaDiff < 0, attackDiff < 0, defenseDiff < 0].filter(Boolean).length;
+
+    const maxFavors = Math.max(teamAFavors, teamBFavors);
+
+    // No penalty if perfectly balanced (all diffs = 0)
+    if (staminaDiff === 0 && attackDiff === 0 && defenseDiff === 0) return 1.0;
+
+    // Calculate penalty based on directional clustering
+    switch (maxFavors) {
+        case 0: // Impossible case
+        case 1: return 1.0;      // Only 1 component favors a team = no penalty
+        case 2: return 0.85;     // 2 components favor same team = 15% penalty
+        case 3: return 0.50;     // All 3 components favor same team = 50% penalty (HARSH!)
+        default: return 1.0;
+    }
 }
 
 /**
@@ -96,7 +127,7 @@ function calculateStaminaBalanceWithCompensation(
     // Apply compensation and then moderate curve (exponent 2.5 = moderately harsh)
     const adjustedPercent = rawStaminaPercent * compensationFactor;
     // Linear 99.4% becomes ~92%, Linear 95% becomes ~84%
-    return Math.pow(1 - adjustedPercent, 4);
+    return Math.pow(1 - adjustedPercent, 5);
 }
 
 /**

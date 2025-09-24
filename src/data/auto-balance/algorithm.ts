@@ -303,7 +303,7 @@ export function runRecursiveOptimization(
     // Recursive refinement
     const subConfig: BalanceConfig = {
         ...config,
-        numSimulations: Math.max(5, Math.floor(config.numSimulations / 10)),
+        numSimulations: 250,
         recursive: false,
         weights: {
             balance: 0.0,
