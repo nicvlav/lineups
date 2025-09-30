@@ -545,10 +545,10 @@ export const formationTemplates: Record<number, Formation[]> = {
             name: "3-5-3",
             positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 2, WM: 2, AM: 0, ST: 1, WR: 2 }
         },
-        {
-            name: "3-4-4",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 2, CM: 0, WM: 0, AM: 2, ST: 2, WR: 2 }
-        },
+        // {
+        //     name: "3-4-4",
+        //     positions: { GK: 1, CB: 3, FB: 0, DM: 2, CM: 0, WM: 0, AM: 2, ST: 2, WR: 2 }
+        // },
     ],
 } as const;
 
