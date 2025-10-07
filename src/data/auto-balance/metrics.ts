@@ -152,7 +152,7 @@ export function calculateMetrics(
     const peakDiff = Math.abs(teamA.peakPotential - teamB.peakPotential);
     const maxPeak = Math.max(teamA.peakPotential, teamB.peakPotential);
     const rawBalance = maxPeak > 0 ? 1 - (peakDiff / maxPeak) : 1;
-    metrics.balance = Math.pow(rawBalance, 3); // Steepen curve: 0.95→0.857, 0.90→0.729
+    metrics.balance = Math.pow(rawBalance, 2); // Steepen curve: 0.95→0.857, 0.90→0.729
     
     // Position Balance: Actual score balance
     const scoreDiff = Math.abs(teamA.totalScore - teamB.totalScore);
