@@ -51,11 +51,11 @@ export const AGGRESSION_EXPONENT = 0.4;
 export const DEFAULT_CONFIG: BalanceConfig = {
     numSimulations: 500,
     weights: {
-        balance: 0.7,           // Peak skill balance
-        positionBalance: 0.0,   // Actual score balance
+        balance: 0.6,           // Peak skill balance
+        positionBalance: 0.05,   // Actual score balance
         zonalBalance: 0.1,      // Zone balance within teams
-        attackDefenseBalance: 0.1, // Attack vs Defense balance between teams
-        energy: 0.1,              // Energy balance (stamina + work rates) between teams
+        attackDefenseBalance: 0.125, // Attack vs Defense balance between teams
+        energy: 0.125,              // Energy balance (stamina + work rates) between teams
     },
     dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
     recursive: true,
