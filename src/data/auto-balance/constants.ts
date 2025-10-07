@@ -52,8 +52,8 @@ export const DEFAULT_CONFIG: BalanceConfig = {
     numSimulations: 500,
     weights: {
         balance: 0.7,           // Peak skill balance
-        positionBalance: 0.05,   // Actual score balance
-        zonalBalance: 0.05,      // Zone balance within teams
+        positionBalance: 0.0,   // Actual score balance
+        zonalBalance: 0.1,      // Zone balance within teams
         attackDefenseBalance: 0.0, // Attack vs Defense balance between teams
         energy: 0.2,              // Energy balance (stamina + work rates) between teams
     },
