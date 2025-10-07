@@ -51,9 +51,9 @@ export const AGGRESSION_EXPONENT = 0.4;
 export const DEFAULT_CONFIG: BalanceConfig = {
     numSimulations: 500,
     weights: {
-        balance: 0.6,           // Peak skill balance
+        balance: 0.5,           // Peak skill balance
         positionBalance: 0.2,   // Actual score balance
-        zonalBalance: 0.1,      // Zone balance within teams
+        zonalBalance: 0.2,      // Zone balance within teams
         attackDefenseBalance: 0.0, // Attack vs Defense balance between teams
         energy: 0.1,              // Energy balance (stamina + work rates) between teams
     },
