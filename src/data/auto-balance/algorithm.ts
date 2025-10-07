@@ -303,14 +303,14 @@ export function runRecursiveOptimization(
     // Recursive refinement
     const subConfig: BalanceConfig = {
         ...config,
-        numSimulations: 250,
+        numSimulations: 500,
         recursive: false,
         weights: {
-            balance: 0.0,
-            positionBalance: 0.1,
-            zonalBalance: 0.1,
-            attackDefenseBalance: 0.2,  // Focus on attack/defense balance in refinement
-            energy: 0.6,  // Don't focus on energy balance in refinement
+            balance: 0.2,
+            positionBalance: 0.25,
+            zonalBalance: 0.25,
+            attackDefenseBalance: 0.0,  // Focus on attack/defense balance in refinement
+            energy: 0.3,  // Don't focus on energy balance in refinement
         },
     };
     
