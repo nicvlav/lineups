@@ -53,9 +53,9 @@ export const DEFAULT_CONFIG: BalanceConfig = {
     weights: {
         balance: 0.7,           // Peak skill balance
         positionBalance: 0.05,   // Actual score balance
-        zonalBalance: 0.1,      // Zone balance within teams
+        zonalBalance: 0.05,      // Zone balance within teams
         attackDefenseBalance: 0.0, // Attack vs Defense balance between teams
-        energy: 0.1,              // Energy balance (stamina + work rates) between teams
+        energy: 0.2,              // Energy balance (stamina + work rates) between teams
     },
     dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
     recursive: true,
