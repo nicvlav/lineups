@@ -307,10 +307,10 @@ export function runRecursiveOptimization(
         recursive: false,
         weights: {
             balance: 0.0,
-            positionBalance: 0.2,
+            positionBalance: 0.1,
             zonalBalance: 0.3,
             attackDefenseBalance: 0.0,  // Focus on attack/defense balance in refinement
-            energy: 0.5,  // Don't focus on energy balance in refinement
+            energy: 0.6,  // Don't focus on energy balance in refinement
         },
     };
     
