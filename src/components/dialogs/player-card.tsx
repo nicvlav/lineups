@@ -48,8 +48,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                     <div className="relative w-10 h-10 flex-shrink-0">
                         {player.avatar_url ? (
                             <>
-                                <img 
-                                    src={player.avatar_url} 
+                                <img
+                                    src={player.avatar_url}
                                     alt={playerName}
                                     className="w-full h-full object-cover rounded-full shadow-lg"
                                     onError={(e) => {
@@ -86,12 +86,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                     {[
                         { label: "TEC", value: averages.technical },
                         { label: "TAC", value: averages.tactical },
-                        { label: "PHY", value: averages.physical },
                         { label: "MEN", value: averages.mental },
+                        { label: "PHY", value: averages.physical },
                     ].map((stat) => (
                         <div
                             key={stat.label}
-                            className="flex flex-col items-center bg-background/70 hover:bg-background/90 border border-border/30 hover:border-border/50 px-3 py-2 rounded-md transition-all duration-200 w-16"
+                            className="flex flex-col items-center bg-background/70 hover:bg-background/90 border border-border/30 hover:border-border/50 px-3 py-2 rounded-md transition-all duration-200 w-10"
                         >
                             <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
                             <span className="font-semibold text-foreground">{Math.round(stat.value)}</span>

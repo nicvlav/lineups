@@ -27,7 +27,7 @@ export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = fals
   const [categoryIndex, setCategoryIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const categories: StatCategory[] = ["technical", "tactical", "physical", "mental"];
+  const categories: StatCategory[] = ["technical", "tactical", "mental", "physical"];
 
   // Initialize votes on mount
   useEffect(() => {

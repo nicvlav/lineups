@@ -209,7 +209,6 @@ export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
         "dribbling",
         "technique",
         "finishing",
-        "heading",
         "longShots",
     ],
     tactical: [
@@ -222,12 +221,6 @@ export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
         "tackling",
         "workrate",
     ],
-    physical: [
-        "speed",
-        "strength",
-        "agility",
-        "stamina",
-    ],
     mental: [
         "composure",
         "concentration",
@@ -236,5 +229,12 @@ export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
         "teamwork",
         "aggression",
         "flair",
+    ],
+    physical: [
+        "speed",
+        "strength",
+        "agility",
+        "stamina",
+        "heading"
     ],
 } as const;
