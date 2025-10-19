@@ -408,7 +408,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             // Then get votes using the profile ID
             const { data, error } = await supabase
                 .from('player_votes')
-                .select('player_id, created_at, speed, vision, agility, heading, blocking, crossing, strength, tackling, teamwork, dribbling, finishing, aggression, first_touch, off_the_ball, positivity, long_passing, short_passing, communication, interceptions, composure, willing_to_switch, attack_positioning, attacking_workrate, defensive_workrate, defensive_awareness, long_shots, stamina')
+                .select('player_id, created_at, anticipation, composure, off_the_ball, vision, first_touch, passing, tackling, finishing, speed, strength, agility, workrate, crossing, positioning, technique, dribbling, decisions, marking, heading, aggression, flair, long_shots, stamina, teamwork, determination, leadership, concentration')
                 .eq('voter_user_profile_id', userProfile.id);
 
             console.timeEnd('PlayersProvider: Load user votes');
@@ -424,33 +424,33 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             data?.forEach(voteRow => {
                 // Convert database columns back to frontend format
                 const votes: Record<string, number> = {
-                    speed: voteRow.speed || 0,
-                    vision: voteRow.vision || 0,
-                    agility: voteRow.agility || 0,
-                    heading: voteRow.heading || 0,
-                    blocking: voteRow.blocking || 0,
-                    crossing: voteRow.crossing || 0,
-                    strength: voteRow.strength || 0,
-                    tackling: voteRow.tackling || 0,
-                    teamwork: voteRow.teamwork || 0,
-                    dribbling: voteRow.dribbling || 0,
-                    finishing: voteRow.finishing || 0,
-                    aggression: voteRow.aggression || 0,
-                    firstTouch: voteRow.first_touch || 0,
-                    offTheBall: voteRow.off_the_ball || 0,
-                    positivity: voteRow.positivity || 0,
-                    longPassing: voteRow.long_passing || 0,
-                    shortPassing: voteRow.short_passing || 0,
-                    communication: voteRow.communication || 0,
-                    interceptions: voteRow.interceptions || 0,
+                    anticipation: voteRow.anticipation || 0,
                     composure: voteRow.composure || 0,
-                    willingToSwitch: voteRow.willing_to_switch || 0,
-                    attackPositioning: voteRow.attack_positioning || 0,
-                    attackingWorkrate: voteRow.attacking_workrate || 0,
-                    defensiveWorkrate: voteRow.defensive_workrate || 0,
-                    defensiveAwareness: voteRow.defensive_awareness || 0,
+                    offTheBall: voteRow.off_the_ball || 0,
+                    vision: voteRow.vision || 0,
+                    firstTouch: voteRow.first_touch || 0,
+                    passing: voteRow.passing || 0,
+                    tackling: voteRow.tackling || 0,
+                    finishing: voteRow.finishing || 0,
+                    speed: voteRow.speed || 0,
+                    strength: voteRow.strength || 0,
+                    agility: voteRow.agility || 0,
+                    workrate: voteRow.workrate || 0,
+                    crossing: voteRow.crossing || 0,
+                    positioning: voteRow.positioning || 0,
+                    technique: voteRow.technique || 0,
+                    dribbling: voteRow.dribbling || 0,
+                    decisions: voteRow.decisions || 0,
+                    marking: voteRow.marking || 0,
+                    heading: voteRow.heading || 0,
+                    aggression: voteRow.aggression || 0,
+                    flair: voteRow.flair || 0,
                     longShots: voteRow.long_shots || 0,
-                    stamina: voteRow.stamina || 0
+                    stamina: voteRow.stamina || 0,
+                    teamwork: voteRow.teamwork || 0,
+                    determination: voteRow.determination || 0,
+                    leadership: voteRow.leadership || 0,
+                    concentration: voteRow.concentration || 0
                 };
 
                 votesMap.set(voteRow.player_id, {
@@ -578,33 +578,33 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const submitVoteToDatabase = async (voteData: VoteData) => {
         console.log('submitVoteToDatabase called for player:', voteData.playerId);
         const statMapping: Record<string, string> = {
-            speed: 'speed',
-            vision: 'vision',
-            agility: 'agility',
-            heading: 'heading',
-            blocking: 'blocking',
-            crossing: 'crossing',
-            strength: 'strength',
-            tackling: 'tackling',
-            teamwork: 'teamwork',
-            dribbling: 'dribbling',
-            finishing: 'finishing',
-            aggression: 'aggression',
-            firstTouch: 'first_touch',
-            offTheBall: 'off_the_ball',
-            positivity: 'positivity',
-            longPassing: 'long_passing',
-            shortPassing: 'short_passing',
-            communication: 'communication',
-            interceptions: 'interceptions',
+            anticipation: 'anticipation',
             composure: 'composure',
-            willingToSwitch: 'willing_to_switch',
-            attackPositioning: 'attack_positioning',
-            attackingWorkrate: 'attacking_workrate',
-            defensiveWorkrate: 'defensive_workrate',
-            defensiveAwareness: 'defensive_awareness',
+            offTheBall: 'off_the_ball',
+            vision: 'vision',
+            firstTouch: 'first_touch',
+            passing: 'passing',
+            tackling: 'tackling',
+            finishing: 'finishing',
+            speed: 'speed',
+            strength: 'strength',
+            agility: 'agility',
+            workrate: 'workrate',
+            crossing: 'crossing',
+            positioning: 'positioning',
+            technique: 'technique',
+            dribbling: 'dribbling',
+            decisions: 'decisions',
+            marking: 'marking',
+            heading: 'heading',
+            aggression: 'aggression',
+            flair: 'flair',
             longShots: 'long_shots',
-            stamina: 'stamina'
+            stamina: 'stamina',
+            teamwork: 'teamwork',
+            determination: 'determination',
+            leadership: 'leadership',
+            concentration: 'concentration'
         };
 
         if (!user) throw new Error('User not authenticated');
@@ -633,7 +633,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             updated_at: new Date().toISOString()
         };
 
-        // Map each stat to its database column
+        // Map each stat to its database column, filtering out any old/unknown stats
         for (const [frontendKey, dbColumn] of Object.entries(statMapping)) {
             const voteValue = voteData.votes[frontendKey];
             if (typeof voteValue === 'number') {
@@ -641,28 +641,48 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             }
         }
 
+        // Log warning if vote data contains unknown stats (migration cleanup)
+        const unknownStats = Object.keys(voteData.votes).filter(key => !(key in statMapping));
+        if (unknownStats.length > 0) {
+            console.warn('Vote contains unknown stats (old schema):', unknownStats, '- these will be ignored');
+        }
+
         // Always do upsert to handle both insert and update cases
-        console.log('Calling supabase upsert...');
-        
-        // Add timeout to prevent hanging (increased for batch processing)
-        const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Database operation timed out')), 30000)
-        );
-        
+        console.log('Calling supabase upsert with data:', dbVoteData);
+        console.time('submitVoteToDatabase');
+
+        // Add timeout to prevent hanging (reduced to 10 seconds for faster feedback)
+        let timeoutId: NodeJS.Timeout;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(() => {
+                console.error('❌ Vote submission timed out after 10 seconds');
+                reject(new Error('Database operation timed out after 10 seconds'));
+            }, 10000);
+        });
+
         const upsertPromise = supabase
             .from('player_votes')
             .upsert(dbVoteData, {
                 onConflict: 'player_id,voter_user_profile_id'
             });
-        
+
         try {
-            const { error } = await Promise.race([upsertPromise, timeoutPromise]);
-            console.log('Supabase upsert completed, error:', error);
-            
-            if (error) throw error;
+            const { data, error } = await Promise.race([upsertPromise, timeoutPromise]);
+            clearTimeout(timeoutId!); // Clear timeout on success
+            console.timeEnd('submitVoteToDatabase');
+            console.log('✅ Supabase upsert completed, error:', error, 'data:', data);
+
+            if (error) {
+                console.error('❌ Database error during upsert:', error);
+                throw error;
+            }
+
+            console.log('✅ Vote successfully submitted to database');
         } catch (err) {
+            clearTimeout(timeoutId!); // Clear timeout on error too
+            console.timeEnd('submitVoteToDatabase');
             // Handle both timeout errors and database errors
-            console.error('Vote submission error:', err);
+            console.error('❌ Vote submission error:', err);
             throw err;
         }
     };
@@ -883,39 +903,37 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                     id,
                     name,
                     vote_count,
-                    speed_avg,
-                    vision_avg,
-                    agility_avg,
-                    heading_avg,
-                    blocking_avg,
-                    crossing_avg,
-                    strength_avg,
-                    stamina_avg,
-                    tackling_avg,
-                    teamwork_avg,
-                    dribbling_avg,
-                    finishing_avg,
-                    long_shots_avg,
-                    aggression_avg,
-                    first_touch_avg,
-                    off_the_ball_avg,
-                    positivity_avg,
-                    long_passing_avg,
-                    short_passing_avg,
-                    communication_avg,
-                    interceptions_avg,
+                    anticipation_avg,
                     composure_avg,
-                    willing_to_switch_avg,
-                    attack_positioning_avg,
-                    attacking_workrate_avg,
-                    defensive_workrate_avg,
-                    defensive_awareness_avg,
+                    off_the_ball_avg,
+                    vision_avg,
+                    first_touch_avg,
+                    passing_avg,
+                    tackling_avg,
+                    finishing_avg,
+                    speed_avg,
+                    strength_avg,
+                    agility_avg,
+                    workrate_avg,
+                    crossing_avg,
+                    positioning_avg,
+                    technique_avg,
+                    dribbling_avg,
+                    decisions_avg,
+                    marking_avg,
+                    heading_avg,
+                    aggression_avg,
+                    flair_avg,
                     long_shots_avg,
                     stamina_avg,
+                    teamwork_avg,
+                    determination_avg,
+                    leadership_avg,
+                    concentration_avg,
                     created_at,
                     updated_at
                 `)
-                .order("name", { ascending: false });
+                .order("name", { ascending: false});
                 
             if (error) {
                 console.error("❌ PLAYERS: Error fetching players:", error);
@@ -1024,33 +1042,33 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     // Convert PlayerStats (0-100) to individual stat columns (0-10) for database insert
     const convertPlayerStatsToIndividualColumns = (stats: PlayerStats) => {
         return {
-            speed_avg: Math.round(stats.speed / 10),
-            vision_avg: Math.round(stats.vision / 10),
-            agility_avg: Math.round(stats.agility / 10), 
-            heading_avg: Math.round(stats.heading / 10),
-            blocking_avg: Math.round(stats.blocking / 10),
-            crossing_avg: Math.round(stats.crossing / 10),
-            strength_avg: Math.round(stats.strength / 10), 
-            stamina_avg: Math.round(stats.stamina / 10),
-            tackling_avg: Math.round(stats.tackling / 10),
-            teamwork_avg: Math.round(stats.teamwork / 10),
-            dribbling_avg: Math.round(stats.dribbling / 10),
-            finishing_avg: Math.round(stats.finishing / 10),
-            long_shots_avg: Math.round(stats.longShots / 10),
-            aggression_avg: Math.round(stats.aggression / 10),
-            first_touch_avg: Math.round(stats.firstTouch / 10),
-            off_the_ball_avg: Math.round(stats.offTheBall / 10),
-            positivity_avg: Math.round(stats.positivity / 10),
-            long_passing_avg: Math.round(stats.longPassing / 10),
-            short_passing_avg: Math.round(stats.shortPassing / 10),
-            communication_avg: Math.round(stats.communication / 10),
-            interceptions_avg: Math.round(stats.interceptions / 10),
+            anticipation_avg: Math.round(stats.anticipation / 10),
             composure_avg: Math.round(stats.composure / 10),
-            willing_to_switch_avg: Math.round(stats.willingToSwitch / 10),
-            attack_positioning_avg: Math.round(stats.attackPositioning / 10),
-            attacking_workrate_avg: Math.round(stats.attackingWorkrate / 10),
-            defensive_workrate_avg: Math.round(stats.defensiveWorkrate / 10),
-            defensive_awareness_avg: Math.round(stats.defensiveAwareness / 10),
+            off_the_ball_avg: Math.round(stats.offTheBall / 10),
+            vision_avg: Math.round(stats.vision / 10),
+            first_touch_avg: Math.round(stats.firstTouch / 10),
+            passing_avg: Math.round(stats.passing / 10),
+            tackling_avg: Math.round(stats.tackling / 10),
+            finishing_avg: Math.round(stats.finishing / 10),
+            speed_avg: Math.round(stats.speed / 10),
+            strength_avg: Math.round(stats.strength / 10),
+            agility_avg: Math.round(stats.agility / 10),
+            workrate_avg: Math.round(stats.workrate / 10),
+            crossing_avg: Math.round(stats.crossing / 10),
+            positioning_avg: Math.round(stats.positioning / 10),
+            technique_avg: Math.round(stats.technique / 10),
+            dribbling_avg: Math.round(stats.dribbling / 10),
+            decisions_avg: Math.round(stats.decisions / 10),
+            marking_avg: Math.round(stats.marking / 10),
+            heading_avg: Math.round(stats.heading / 10),
+            aggression_avg: Math.round(stats.aggression / 10),
+            flair_avg: Math.round(stats.flair / 10),
+            long_shots_avg: Math.round(stats.longShots / 10),
+            stamina_avg: Math.round(stats.stamina / 10),
+            teamwork_avg: Math.round(stats.teamwork / 10),
+            determination_avg: Math.round(stats.determination / 10),
+            leadership_avg: Math.round(stats.leadership / 10),
+            concentration_avg: Math.round(stats.concentration / 10),
         };
     };
 
@@ -1060,33 +1078,33 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
 
         // Map database AGGREGATE column names to stat keys and convert 0-10 to 0-100 scale
         const statMapping: Record<string, keyof PlayerStats> = {
-            speed_avg: 'speed',
-            vision_avg: 'vision',
-            agility_avg: 'agility',
-            heading_avg: 'heading',
-            blocking_avg: 'blocking',
-            crossing_avg: 'crossing',
-            strength_avg: 'strength',
-            tackling_avg: 'tackling',
-            teamwork_avg: 'teamwork',
-            dribbling_avg: 'dribbling',
-            finishing_avg: 'finishing',
-            aggression_avg: 'aggression',
-            first_touch_avg: 'firstTouch',
-            off_the_ball_avg: 'offTheBall',
-            positivity_avg: 'positivity',
-            long_passing_avg: 'longPassing',
-            short_passing_avg: 'shortPassing',
-            communication_avg: 'communication',
-            interceptions_avg: 'interceptions',
+            anticipation_avg: 'anticipation',
             composure_avg: 'composure',
-            willing_to_switch_avg: 'willingToSwitch',
-            attack_positioning_avg: 'attackPositioning',
-            attacking_workrate_avg: 'attackingWorkrate',
-            defensive_workrate_avg: 'defensiveWorkrate',
-            defensive_awareness_avg: 'defensiveAwareness',
+            off_the_ball_avg: 'offTheBall',
+            vision_avg: 'vision',
+            first_touch_avg: 'firstTouch',
+            passing_avg: 'passing',
+            tackling_avg: 'tackling',
+            finishing_avg: 'finishing',
+            speed_avg: 'speed',
+            strength_avg: 'strength',
+            agility_avg: 'agility',
+            workrate_avg: 'workrate',
+            crossing_avg: 'crossing',
+            positioning_avg: 'positioning',
+            technique_avg: 'technique',
+            dribbling_avg: 'dribbling',
+            decisions_avg: 'decisions',
+            marking_avg: 'marking',
+            heading_avg: 'heading',
+            aggression_avg: 'aggression',
+            flair_avg: 'flair',
             long_shots_avg: 'longShots',
-            stamina_avg: 'stamina'
+            stamina_avg: 'stamina',
+            teamwork_avg: 'teamwork',
+            determination_avg: 'determination',
+            leadership_avg: 'leadership',
+            concentration_avg: 'concentration'
         };
 
         for (const [dbColumn, statKey] of Object.entries(statMapping)) {

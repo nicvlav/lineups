@@ -32,8 +32,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         setOpen(true);
     };
 
-
-
     const overallRounded = Math.round(overall); // Round to whole number
 
     const accent = getPlayerAccent(overallRounded);
@@ -60,7 +58,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                                         e.currentTarget.nextElementSibling?.classList.remove('hidden');
                                     }}
                                 />
-                                <div className={`hidden font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center border-2 text-white ${accent.badge}`}>
+                                <div className={`font-bold text-xl rounded-full w-10 h-10 flex items-center justify-center border-2 text-white ${accent.badge}`}>
                                     {overallRounded}
                                 </div>
                             </>
@@ -86,9 +84,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
                 <div className="mt-4 flex justify-center gap-2">
                     {[
-                        { label: "PAC", value: averages.pace },
-                        { label: "ATT", value: averages.attacking },
-                        { label: "PAS", value: averages.passing },
+                        { label: "TEC", value: averages.technical },
+                        { label: "TAC", value: averages.tactical },
+                        { label: "PHY", value: averages.physical },
+                        { label: "MEN", value: averages.mental },
                     ].map((stat) => (
                         <div
                             key={stat.label}
@@ -100,21 +99,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                     ))}
                 </div>
 
-                <div className="mt-2 flex justify-center gap-2">
-                    {[
-                        { label: "DRI", value: averages.dribbling },
-                        { label: "DEF", value: averages.defending },
-                        { label: "PHY", value: averages.physical },
-                    ].map((stat) => (
-                        <div
-                            key={stat.label}
-                            className="flex flex-col items-center bg-background/70 hover:bg-background/90 border border-border/30 hover:border-border/50 px-3 py-2 rounded-md transition-all duration-200 w-16"
-                        >
-                            <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
-                            <span className="font-semibold text-foreground">{Math.round(stat.value)}</span>
-                        </div>
-                    ))}
-                </div>
             </div>
 
             {/* Shared Player Stats Modal */}

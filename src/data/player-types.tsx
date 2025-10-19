@@ -143,13 +143,10 @@ export function getTopPositions(zoneFit: ZoneScores): PositionAndScore[] {
 
 export function getZoneAverages(player: Player): ZoneAverages {
     const result: ZoneAverages = {
-        pace: 0,
-        attacking: 0,
-        passing: 0,
-        dribbling: 0,
-        defending: 0,
+        technical: 0,
+        tactical: 0,
         physical: 0,
-        morale: 0,
+        mental: 0,
     };
 
     for (const [zone, stats] of Object.entries(CategorizedStats)) {

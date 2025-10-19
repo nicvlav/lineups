@@ -1,252 +1,240 @@
 
 export type StatsKey =
-    | "defensiveAwareness"
+    | "anticipation"
     | "composure"
     | "offTheBall"
     | "vision"
     | "firstTouch"
-    | "shortPassing"
+    | "passing"
     | "tackling"
     | "finishing"
     | "speed"
     | "strength"
     | "agility"
-    | "defensiveWorkrate"
+    | "workrate"
     | "crossing"
-    | "attackPositioning"
-    | "longPassing"
+    | "positioning"
+    | "technique"
     | "dribbling"
-    | "interceptions"
-    | "blocking"
+    | "decisions"
+    | "marking"
     | "heading"
     | "aggression"
-    | "attackingWorkrate"
+    | "flair"
     | "longShots"
     | "stamina"
     | "teamwork"
-    | "positivity"
-    | "willingToSwitch"
-    | "communication";
+    | "determination"
+    | "leadership"
+    | "concentration";
 
 export const statKeys: StatsKey[] = [
-    "defensiveAwareness",
+    "anticipation",
     "composure",
     "offTheBall",
     "vision",
     "firstTouch",
-    "shortPassing",
+    "passing",
     "tackling",
     "finishing",
     "speed",
     "strength",
     "agility",
-    "defensiveWorkrate",
+    "workrate",
     "crossing",
-    "attackPositioning",
-    "longPassing",
+    "positioning",
+    "technique",
     "dribbling",
-    "interceptions",
-    "blocking",
+    "decisions",
+    "marking",
     "heading",
     "aggression",
-    "attackingWorkrate",
+    "flair",
     "longShots",
     "stamina",
     "teamwork",
-    "positivity",
-    "willingToSwitch",
-    "communication"
+    "determination",
+    "leadership",
+    "concentration"
 ] as const;
 
 export const statLabelMap: Record<StatsKey, string> = {
-    defensiveAwareness: "Defensive Awareness",
+    anticipation: "Anticipation",
     composure: "Composure",
-    offTheBall: "Off the Ball Movement",
+    offTheBall: "Off the Ball",
     vision: "Vision",
     firstTouch: "First Touch",
-    shortPassing: "Short Passing",
+    passing: "Passing",
     tackling: "Tackling",
     finishing: "Finishing",
     speed: "Speed",
     strength: "Strength",
     agility: "Agility",
-    defensiveWorkrate: "Defensive Work Rate",
+    workrate: "Work Rate",
     crossing: "Crossing",
-    attackPositioning: "Attacking Positioning",
-    longPassing: "Long Passing",
+    positioning: "Positioning",
+    technique: "Technique",
     dribbling: "Dribbling",
-    interceptions: "Interceptions",
-    blocking: "Blocking",
+    decisions: "Decisions",
+    marking: "Marking",
     heading: "Heading",
     aggression: "Aggression",
-    attackingWorkrate: "Attacking Work Rate",
+    flair: "Flair",
     longShots: "Long Shots",
     stamina: "Stamina",
     teamwork: "Teamwork",
-    positivity: "Positivity",
-    willingToSwitch: "Willing to Switch",
-    communication: "Communication",
+    determination: "Determination",
+    leadership: "Leadership",
+    concentration: "Concentration",
 } as const;
 
 
 export const statShortLabelMap: Record<StatsKey, string> = {
-    defensiveAwareness: "DAW",
+    anticipation: "ANT",
     composure: "CMP",
     offTheBall: "OTB",
     vision: "VIS",
     firstTouch: "FTC",
-    shortPassing: "PAS",
+    passing: "PAS",
     tackling: "TAC",
     finishing: "FIN",
     speed: "SPD",
     strength: "STR",
     agility: "AGI",
-    defensiveWorkrate: "DWR",
+    workrate: "WOR",
     crossing: "CRS",
-    attackPositioning: "APO",
-    longPassing: "LPA",
+    positioning: "POS",
+    technique: "TEC",
     dribbling: "DRI",
-    interceptions: "INT",
-    blocking: "BLK",
+    decisions: "DEC",
+    marking: "MAR",
     heading: "HDG",
     aggression: "AGR",
-    attackingWorkrate: "AWR",
+    flair: "FLA",
     longShots: "LSH",
-    stamina: "STM",
-    teamwork: "TMW",
-    positivity: "POS",
-    willingToSwitch: "WTS",
-    communication: "COM",
+    stamina: "STA",
+    teamwork: "TEA",
+    determination: "DET",
+    leadership: "LEA",
+    concentration: "CON",
 } as const;
 
 export const statColorsMap: Record<StatsKey, string> = {
-    defensiveAwareness: "bg-orange-600",
+    anticipation: "bg-orange-600",
     composure: "bg-yellow-500",
     offTheBall: "bg-orange-400",
     vision: "bg-yellow-600",
     firstTouch: "bg-indigo-500",
-    shortPassing: "bg-pink-500",
+    passing: "bg-pink-500",
     tackling: "bg-blue-600",
     finishing: "bg-red-500",
     speed: "bg-emerald-500",
     strength: "bg-green-600",
     agility: "bg-lime-500",
-    defensiveWorkrate: "bg-green-400",
+    workrate: "bg-green-400",
     crossing: "bg-sky-400",
-    attackPositioning: "bg-rose-500",
-    longPassing: "bg-cyan-500",
+    positioning: "bg-rose-500",
+    technique: "bg-purple-400",
     dribbling: "bg-purple-500",
-    interceptions: "bg-indigo-400",
-    blocking: "bg-blue-400",
+    decisions: "bg-indigo-400",
+    marking: "bg-blue-400",
     heading: "bg-violet-500",
     aggression: "bg-red-600",
-    attackingWorkrate: "bg-amber-500",
+    flair: "bg-amber-500",
     longShots: "bg-orange-400",
     stamina: "bg-yellow-400",
     teamwork: "bg-fuchsia-400",
-    positivity: "bg-emerald-400",
-    willingToSwitch: "bg-pink-400",
-    communication: "bg-yellow-400",
+    determination: "bg-emerald-400",
+    leadership: "bg-pink-400",
+    concentration: "bg-cyan-400",
 } as const;
 
 export type PlayerStats = Record<StatsKey, number>;
 
 export const defaultStatScores: PlayerStats = Object.fromEntries(
     ([
-        "defensiveAwareness",
+        "anticipation",
         "composure",
         "offTheBall",
         "vision",
         "firstTouch",
-        "shortPassing",
+        "passing",
         "tackling",
         "finishing",
         "speed",
         "strength",
         "agility",
-        "defensiveWorkrate",
+        "workrate",
         "crossing",
-        "attackPositioning",
-        "longPassing",
+        "positioning",
+        "technique",
         "dribbling",
-        "interceptions",
-        "blocking",
+        "decisions",
+        "marking",
         "heading",
         "aggression",
-        "attackingWorkrate",
+        "flair",
         "longShots",
         "stamina",
         "teamwork",
-        "positivity",
-        "willingToSwitch",
-        "communication",
+        "determination",
+        "leadership",
+        "concentration",
     ] as const).map((key) => [key, 0])
 ) as PlayerStats;
 
 
-export type StatCategory = 'pace' | 'attacking' | 'passing' | "dribbling" | "defending" | "physical" | "morale";
+export type StatCategory = 'technical' | 'tactical' | 'physical' | "mental";
 
 export const StatCategoryKeys: StatCategory[] = [
-    "pace",
-    "attacking",
-    "passing",
-    "dribbling",
-    "defending",
+    "technical",
+    "tactical",
     "physical",
-    "morale"
+    "mental"
 ] as const;
 
 export const StatCategoryNameMap: Record<StatCategory, string> = {
-    pace: "Pace",
-    attacking: "Attacking",
-    passing: "Passing",
-    dribbling: "Dribbling",
-    defending: "Defending",
+    technical: "Technical",
+    tactical: "Tactical",
     physical: "Physical",
-    morale: "Morale",
+    mental: "Mental",
 } as const;
 
 
 export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
-    pace: [
-        "speed",
-    ],
-    attacking: [
-        "finishing",
-        "longShots",
-        "attackPositioning",
-        "offTheBall",
-        "attackingWorkrate",
-    ],
-    passing: [
-        "shortPassing",
-        "longPassing",
-        "vision",
-        "crossing",
-    ],
-    dribbling: [
-        "dribbling",
-        "agility",
+    technical: [
+        "passing",
         "firstTouch",
-        "composure",
+        "crossing",
+        "dribbling",
+        "technique",
+        "finishing",
+        "heading",
+        "longShots",
     ],
-    defending: [
-        "defensiveAwareness",
+    tactical: [
+        "anticipation",
+        "vision",
+        "positioning",
+        "offTheBall",
+        "decisions",
+        "marking",
         "tackling",
-        "interceptions",
-        "blocking",
-        "defensiveWorkrate",
+        "workrate",
     ],
     physical: [
+        "speed",
         "strength",
-        "aggression",
-        "heading",
+        "agility",
         "stamina",
     ],
-    morale: [
+    mental: [
+        "composure",
+        "concentration",
+        "determination",
+        "leadership",
         "teamwork",
-        "positivity",
-        "willingToSwitch",
-        "communication",
+        "aggression",
+        "flair",
     ],
 } as const;

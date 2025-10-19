@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { usePlayers } from "@/context/players-provider";
-import { CategorizedStats } from "@/data/stat-types";
 import { getZoneAverages, calculateScoresForStats, getTopPositions } from "@/data/player-types";
 import { normalizedDefaultWeights, PositionLabels, Position, positionKeys } from "@/data/position-types";
 import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
@@ -29,19 +28,16 @@ const PlayerStatsRankings = () => {
     const [topCount, setTopCount] = useState<number>(10);
     const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
 
-    // Get player's top 3 categories (excluding morale)
+    // Get player's top 3 categories
     const getTopCategories = (averages: any) => {
         const categoryLabels: Record<string, string> = {
-            pace: "PAC",
-            attacking: "ATT",
-            passing: "PAS",
-            dribbling: "DRI",
-            defending: "DEF",
-            physical: "PHY"
+            technical: "TEC",
+            tactical: "TAC",
+            physical: "PHY",
+            mental: "MEN"
         };
 
         return Object.entries(averages)
-            .filter(([category]) => category !== "morale")
             .sort(([, a], [, b]) => (b as number) - (a as number))
             .slice(0, 3)
             .map(([category, value]) => ({
@@ -57,11 +53,8 @@ const PlayerStatsRankings = () => {
         const topScores = getTopPositions(scores);
         const averages = getZoneAverages(player);
 
-        // Calculate overall average excluding morale (total stats average)
-        const nonMoraleValues = Object.entries(player.stats)
-            .filter(([key]) => !CategorizedStats.morale.includes(key as any))
-            .map(([_, value]) => value);
-        const totalStatsAverage = nonMoraleValues.reduce((sum, v) => sum + v, 0) / (nonMoraleValues.length || 1);
+        // Calculate overall average (total stats average)
+        const totalStatsAverage = Object.values(player.stats).reduce((sum, v) => sum + v, 0) / Object.values(player.stats).length;
 
         // Get top 3 categories for this player
         const topCategories = getTopCategories(averages);
@@ -305,7 +298,7 @@ const PlayerStatsRankings = () => {
                     }}
                     top3Positions={playersWithStats.find(p => p.player.id === selectedPlayer.id)?.topPositions ?? ""}
                     averages={playersWithStats.find(p => p.player.id === selectedPlayer.id)?.averages ?? {
-                        pace: 0, attacking: 0, passing: 0, dribbling: 0, defending: 0, physical: 0, morale: 0
+                        technical: 0, tactical: 0, physical: 0, mental: 0
                     }}
                     stats={selectedPlayer.stats}
                 />

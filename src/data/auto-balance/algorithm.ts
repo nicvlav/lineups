@@ -220,12 +220,12 @@ export function assignPlayersToTeams(
                     teamA.attackingScore +=  player.bestScore;
                 }
 
-                // Track energy scores (stamina + work rates)
+                // Track energy scores (stamina + work rate)
                 const stats = player.original.stats;
                 if (stats) {
                     teamA.staminaScore += stats.stamina;
-                    teamA.attackWorkRateScore += stats.attackingWorkrate;
-                    teamA.defensiveWorkRateScore += stats.defensiveWorkrate;
+                    teamA.attackWorkRateScore += stats.workrate;    // workrate replaces both work rates
+                    teamA.defensiveWorkRateScore += stats.workrate; // workrate replaces both work rates
                 }
             }
             for (const player of teamB.positions[posIdx]) {
@@ -241,12 +241,12 @@ export function assignPlayersToTeams(
                     teamB.attackingScore += score;
                 }
 
-                // Track energy scores (stamina + work rates)
+                // Track energy scores (stamina + work rate)
                 const stats = player.original.stats;
                 if (stats) {
                     teamB.staminaScore += stats.stamina;
-                    teamB.attackWorkRateScore += stats.attackingWorkrate;
-                    teamB.defensiveWorkRateScore += stats.defensiveWorkrate;
+                    teamB.attackWorkRateScore += stats.workrate;    // workrate replaces both work rates
+                    teamB.defensiveWorkRateScore += stats.workrate; // workrate replaces both work rates
                 }
             }
         }

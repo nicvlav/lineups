@@ -65,16 +65,12 @@ const SharedPlayerStatsModal: React.FC<SharedPlayerStatsModalProps> = ({
 }) => {
     if (!player) return null;
 
-    // Collect all morale stat keys
-    const moraleKeys = CategorizedStats.morale;
-
     // Get only non-morale values
-    const nonMoraleValues = Object.entries(stats)
-        .filter(([key]) => !moraleKeys.includes(key as StatsKey))
+    const values = Object.entries(stats)
         .map(([_, value]) => value);
 
-    const allStatAverage = nonMoraleValues.reduce((sum, v) => sum + v, 0) /
-        (nonMoraleValues.length || 1);
+    const allStatAverage = values.reduce((sum, v) => sum + v, 0) /
+        (values.length || 1);
 
     const overallRounded = Math.round(overall); // Round to whole number
 
