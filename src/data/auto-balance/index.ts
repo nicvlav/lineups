@@ -24,7 +24,6 @@ import { normalizedDefaultWeights } from "@/data/position-types";
 import type { BalanceConfig, BalanceMetrics } from "./types";
 import { ENABLE_DEBUG, DEFAULT_CONFIG } from "./constants";
 import { toFastPlayer } from "./utils";
-import { logResults } from "./debug";
 import { 
     runMonteCarlo, 
     runRecursiveOptimization, 
@@ -94,7 +93,7 @@ export function autoCreateTeamsScored(
     }
     
     // Log results if debugging
-    logResults(result, config);
+    // logResults(result, config);
     
     // Convert and return
     return convertToGamePlayers(result);
@@ -170,7 +169,7 @@ export function autoBalanceWithConfig(
         throw new Error("Failed to balance teams");
     }
     
-    logResults(result, config);
+    // logResults(result, config);
     
     return {
         teams: convertToGamePlayers(result),
