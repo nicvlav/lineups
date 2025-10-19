@@ -10,35 +10,46 @@ import type { Formation } from "@/data/position-types";
 import type { ScoredGamePlayer } from "@/data/player-types";
 
 /**
+ * Balance metrics for evaluating team balance quality
+ *
+ * Each metric is a score from 0 (completely imbalanced) to 1 (perfectly balanced)
+ */
+export interface BalanceMetrics {
+    /** Overall team strength balance (comparing peak potential between teams) */
+    overallStrengthBalance: number;
+
+    /** Positional score balance (comparing actual assigned scores between teams) */
+    positionalScoreBalance: number;
+
+    /** Zonal distribution balance (evenness of zone distribution within each team) */
+    zonalDistributionBalance: number;
+
+    /** Energy balance (stamina and work rate balance between teams) */
+    energyBalance: number;
+
+    /** Creativity balance (vision, passing, and teamwork balance between teams) */
+    creativityBalance: number;
+}
+
+/**
  * Configuration for the auto-balance algorithm
  */
 export interface BalanceConfig {
     /** Number of Monte Carlo simulations to run */
     numSimulations: number;
-    
+
     /** Weights for different optimization criteria (must sum to 1.0) */
-    weights: {
-        /** Team strength balance (equal total strength) */
-        balance: number;
-        /** Position-specific balance between teams */
-        positionBalance: number;
-        /** Zone balance within each team */
-        zonalBalance: number;
-        /** Attack vs Defense balance between teams */
-        attackDefenseBalance: number;
-        /** Energy balance (stamina + work rates) between teams */
-        energy: number;
-    };
-    
+    weights: BalanceMetrics;
+
     /** Ratio for specialist detection (higher = stricter) */
     dominanceRatio: number;
-    
+
     /** Enable recursive optimization for better results */
     recursive: boolean;
-    
+
     /** Depth of recursive optimization */
     recursiveDepth: number;
-    
+
     /** Enable debug logging */
     debugMode: boolean;
 }
@@ -50,25 +61,25 @@ export interface BalanceConfig {
 export interface FastPlayer {
     /** Reference to original player data */
     original: ScoredGamePlayer;
-    
+
     /** Flat array of position scores for O(1) access */
     scores: Float32Array;
-    
+
     /** Pre-calculated best score */
     bestScore: number;
-    
+
     /** Index of best position */
     bestPosition: number;
-    
+
     /** Second best score for versatility calculation */
     secondBestScore: number;
-    
+
     /** Specialization ratio (best/secondBest) */
     specializationRatio: number;
-    
+
     /** Currently assigned position index (-1 if unassigned) */
     assignedPosition: number;
-    
+
     /** Assigned team */
     team: 'A' | 'B' | null;
 }
@@ -79,31 +90,33 @@ export interface FastPlayer {
 export interface FastTeam {
     /** Players grouped by position index */
     positions: FastPlayer[][];
-    
+
     /** Total team score */
     totalScore: number;
-    
+
     /** Scores by zone [GK, DEF, MID, ATT] */
     zoneScores: Float32Array;
-    
+
+    /** Peak cores by zone [GK, DEF, MID, ATT] */
+    zonePeakScores: Float32Array;
+
     /** Total player count */
     playerCount: number;
-    
+
     /** Peak potential score */
     peakPotential: number;
-    
+
     /** Formation used for this team */
     formation: Formation | null;
-    
-    /** Attack/Defense scores for balance calculation */
-    defensiveScore: number;
-    neutralScore: number;
-    attackingScore: number;
 
-    /** Energy scores for energy balance calculation */
+    /** Stamina score for energy balance calculation */
     staminaScore: number;
-    attackWorkRateScore: number;
-    defensiveWorkRateScore: number;
+
+    /** Workrate score for energy balance calculation */
+    workrateScore: number;
+
+    /** Creativity score for creativity balance calculation */
+    creativityScore: number;
 }
 
 /**
@@ -116,13 +129,3 @@ export interface SimulationResult {
     metrics: BalanceMetrics;
 }
 
-/**
- * Detailed balance metrics
- */
-export interface BalanceMetrics {
-    balance: number;
-    positionBalance: number;
-    zonalBalance: number;
-    attackDefenseBalance: number;
-    energy: number;
-}

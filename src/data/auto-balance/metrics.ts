@@ -7,228 +7,244 @@
  */
 
 import type { FastTeam, BalanceConfig, BalanceMetrics } from "./types";
-import { AGGRESSION_EXPONENT } from "./constants";
-
-/**
- * Calculates energy balance between teams
- * Uses smart system that heavily penalizes directional imbalances
- */
-function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam): number {
-    // Calculate individual component differences
-    const staminaDiff = teamA.staminaScore - teamB.staminaScore;
-    const attackDiff = teamA.attackWorkRateScore - teamB.attackWorkRateScore;
-    const defenseDiff = teamA.defensiveWorkRateScore - teamB.defensiveWorkRateScore;
-
-    // Calculate base balance for each component
-    const staminaBalance = calculateStaminaBalanceWithCompensation(
-        teamA.staminaScore, teamB.staminaScore,
-        teamA.attackWorkRateScore + teamA.defensiveWorkRateScore,
-        teamB.attackWorkRateScore + teamB.defensiveWorkRateScore
-    );
-
-    const workRateBalance = calculateWorkRateBalanceWithCancellation(
-        teamA.attackWorkRateScore, teamB.attackWorkRateScore,
-        teamA.defensiveWorkRateScore, teamB.defensiveWorkRateScore
-    );
-
-    // Calculate directional imbalance penalty
-    const directionalPenalty = calculateDirectionalImbalancePenalty(staminaDiff, attackDiff, defenseDiff);
-
-    // Apply directional penalty to the combined score
-    return (staminaBalance * workRateBalance) * directionalPenalty;
-}
 
 /**
  * Calculates penalty for when all components favor the same team
  * The more components that favor one team, the harsher the penalty
  */
-function calculateDirectionalImbalancePenalty(staminaDiff: number, attackDiff: number, defenseDiff: number): number {
-    // Count how many components favor each team
-    const teamAFavors = [staminaDiff > 0, attackDiff > 0, defenseDiff > 0].filter(Boolean).length;
-    const teamBFavors = [staminaDiff < 0, attackDiff < 0, defenseDiff < 0].filter(Boolean).length;
+function calculateDirectionalImbalancePenalty(staminaDiff: number, workRateDiff: number): number {
+    let staminaDirection = 0;
+    let workRateDirection = 0;
 
-    const maxFavors = Math.max(teamAFavors, teamBFavors);
+    if (staminaDiff != 0) staminaDirection = staminaDiff > 0 ? 1 : -1;
+    if (staminaDiff != 0) workRateDirection = workRateDiff > 0 ? 1 : -1;
 
-    // No penalty if perfectly balanced (all diffs = 0)
-    if (staminaDiff === 0 && attackDiff === 0 && defenseDiff === 0) return 1.0;
+    // this can range from 0 - 2
+    const maxFavors = Math.abs(staminaDirection + workRateDirection);
 
-    // Calculate penalty based on directional clustering
-    switch (maxFavors) {
-        case 0: // Impossible case
-        case 1: return 1.0;      // Only 1 component favors a team = no penalty
-        case 2: return 0.85;     // 2 components favor same team = 15% penalty
-        case 3: return 0.50;     // All 3 components favor same team = 50% penalty (HARSH!)
-        default: return 1.0;
-    }
+    return 1.0 - (maxFavors * 0.25);
 }
 
 /**
- * Calculates work rate balance emphasizing minimal differences with some cancellation
- * Teams with opposite work rate imbalances should partially cancel out
+ * Calculate difference ratio
+ * 
+ * Any time we have two values to compare for a balance ratio
+ * We can use this - where 1.0 means perfectly even and 0.0 means the opposite
  */
-function calculateWorkRateBalanceWithCancellation(
-    teamAAttack: number, teamBAttack: number,
-    teamADefense: number, teamBDefense: number
-): number {
-    const totalAttack = teamAAttack + teamBAttack;
-    const totalDefense = teamADefense + teamBDefense;
+function calculateBasicDifferenceRatio(a: number, b: number): number {
+    const maxValue = Math.max(a, b);
 
-    if (totalAttack === 0 && totalDefense === 0) return 1;
+    if (maxValue === 0) return 1;
 
-    // Calculate individual differences (emphasize raw differences)
-    const attackDiff = Math.abs(teamAAttack - teamBAttack);
-    const defenseDiff = Math.abs(teamADefense - teamBDefense);
-
-    // Calculate balance for each component individually first
-    const attackBalance = totalAttack > 0 ? 1 - (attackDiff / totalAttack) : 1;
-    const defenseBalance = totalDefense > 0 ? 1 - (defenseDiff / totalDefense) : 1;
-
-    // Apply moderate curve to each component (exponent 1.8 = moderately punitive)
-    // Linear 96.7% becomes ~93%, Linear 98.6% becomes ~97%
-    const attackBalanceCurved = Math.pow(attackBalance, 3);
-    const defenseBalanceCurved = Math.pow(defenseBalance, 3);
-
-    // Combine with slight cancellation bonus for opposite imbalances
-    const signedAttackDiff = teamAAttack - teamBAttack;
-    const signedDefenseDiff = teamADefense - teamBDefense;
-    const cancellationBonus = (signedAttackDiff * signedDefenseDiff) < 0 ? 1.05 : 1.0; // 5% bonus for opposite signs
-
-    // Take geometric mean of the two components with cancellation bonus
-    return Math.sqrt(attackBalanceCurved * defenseBalanceCurved) * Math.min(cancellationBonus, 1.0);
+    const differenceRatio = Math.abs(a - b) / maxValue;
+    return 1 - differenceRatio;
 }
 
 /**
- * Calculates stamina balance emphasizing minimal differences with work rate compensation
- * Teams with lower total work rates should have higher stamina to compensate
+ * Calculates energy balance between teams
+ * Uses smart system that heavily penalizes directional imbalances
  */
-function calculateStaminaBalanceWithCompensation(
-    teamAStamina: number, teamBStamina: number,
-    teamATotalWorkRate: number, teamBTotalWorkRate: number
-): number {
-    const totalStamina = teamAStamina + teamBStamina;
-    const totalWorkRate = teamATotalWorkRate + teamBTotalWorkRate;
+function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
+    const inbalanceCompensation = calculateDirectionalImbalancePenalty(teamA.staminaScore - teamB.staminaScore, teamA.workrateScore - teamB.workrateScore);
 
-    if (totalStamina === 0) return 1;
+    const staminaRatio = calculateBasicDifferenceRatio(teamA.staminaScore, teamB.staminaScore);
+    const workrateRatio = calculateBasicDifferenceRatio(teamA.workrateScore, teamB.workrateScore);
 
-    // Calculate raw stamina difference (emphasize minimizing absolute differences)
-    const rawStaminaDiff = Math.abs(teamAStamina - teamBStamina);
-    const rawStaminaPercent = rawStaminaDiff / totalStamina;
+    const energyBalanceRatio = staminaRatio * workrateRatio * inbalanceCompensation;
 
-    // Calculate work rate compensation factor
-    // Team with lower work rate should be allowed slightly higher stamina
-    let compensationFactor = 1.0;
-    if (totalWorkRate > 0) {
-        const workRateDiff = Math.abs(teamATotalWorkRate - teamBTotalWorkRate);
-        const workRatePercent = workRateDiff / totalWorkRate;
-        // Reduce penalty by up to 15% based on work rate imbalance (less compensation)
-        compensationFactor = 1.0 - (workRatePercent * 0.15);
+    if (debug) {
+
     }
 
-    // Apply compensation and then moderate curve (exponent 2.5 = moderately harsh)
-    const adjustedPercent = rawStaminaPercent * compensationFactor;
-    // Linear 99.4% becomes ~92%, Linear 95% becomes ~84%
-    return Math.pow(1 - adjustedPercent, 5);
+    // Apply directional penalty to the combined score
+    return energyBalanceRatio;
+}
+
+/**
+ * Calculates overall team strength balance by comparing peak potential
+ *
+ * Peak potential represents the theoretical maximum strength each team could achieve.
+ * A value of 1.0 means both teams have equal peak potential (perfectly balanced).
+ * A value closer to 0 means one team has significantly higher peak potential.
+ *
+ * @param teamA First team
+ * @param teamB Second team
+ * @returns Balance score from 0 (imbalanced) to 1 (perfectly balanced)
+ */
+function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
+    const strengthBalanceRatio = calculateBasicDifferenceRatio(teamA.peakPotential, teamB.peakPotential);
+
+    if (debug) {
+
+    }
+
+    return strengthBalanceRatio;
+}
+
+/**
+ * Calculates positional score balance by comparing actual team scores
+ *
+ * This measures how balanced the teams are based on players' actual scores
+ * in their assigned positions (not theoretical peak).
+ *
+ * @param teamA First team
+ * @param teamB Second team
+ * @returns Balance score from 0 (imbalanced) to 1 (perfectly balanced)
+ */
+function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
+    const positionalBalanceRatio = calculateBasicDifferenceRatio(teamA.totalScore, teamB.totalScore);
+
+    if (debug) {
+
+    }
+
+    return positionalBalanceRatio;
+}
+
+/**
+ * Calculates the inner variance of a team's zones
+ *
+ * @param team team
+ * @returns Balance score from 0 (imbalanced) to 1 (perfectly balanced)
+ */
+const calculateSingleTeamZonalBalance = (team: FastTeam): number => {
+    // Extract non-goalkeeper zones: Defense (1), Midfield (2), Attack (3)
+    const defenseZoneScore = team.zoneScores[1];
+    const midfieldZoneScore = team.zoneScores[2];
+    const attackZoneScore = team.zoneScores[3];
+
+    const nonGoalkeeperZones = [defenseZoneScore, midfieldZoneScore, attackZoneScore];
+    const zoneTotal = nonGoalkeeperZones.reduce((sum, score) => sum + score, 0);
+    const zoneAverage = zoneTotal / 3;
+
+    // Perfect balance when all zones are empty or equal
+    if (zoneAverage === 0) return 1;
+
+    // Calculate variance to measure how spread out the zone scores are
+    // Lower variance = more balanced distribution
+    const zoneVariance = nonGoalkeeperZones.reduce(
+        (sum, zoneScore) => sum + Math.pow(zoneScore - zoneAverage, 2),
+        0
+    ) / 3;
+
+    const zoneStandardDeviation = Math.sqrt(zoneVariance);
+
+    // Coefficient of variation: standard deviation relative to mean
+    // Measures relative variability (0 = perfectly even, higher = more uneven)
+    const coefficientOfVariation = zoneStandardDeviation / zoneAverage;
+
+    // Convert to balance score using inverse relationship
+    // Lower CV = higher balance score
+    const zonalBalanceScore = 1 / (1 + coefficientOfVariation);
+
+    return zonalBalanceScore;
+};
+
+/**
+ * Calculates zonal distribution balance within each team
+ *
+ * This measures how evenly distributed the strength is across zones
+ * (Defense, Midfield, Attack) within each team. A well-balanced team
+ * has similar strength across all zones rather than being heavily
+ * concentrated in one area.
+ *
+ * @param teamA First team
+ * @param teamB Second team
+ * @returns Average balance score from 0 (imbalanced) to 1 (perfectly balanced)
+ */
+function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
+    const N = Math.min(teamA.zoneScores.length);
+
+    let totalImbalance = 1.0;
+
+    for (let zoneIdx = 1; zoneIdx < N; zoneIdx++) {
+        const a = teamA.zoneScores[zoneIdx];
+        const b = teamB.zoneScores[zoneIdx];
+        totalImbalance *= calculateBasicDifferenceRatio(a, b);
+    }
+
+    const teamAZonalBalance = calculateSingleTeamZonalBalance(teamA);
+    const teamBZonalBalance = calculateSingleTeamZonalBalance(teamB);
+
+    if (debug) {
+
+    }
+
+
+    return totalImbalance * teamAZonalBalance * teamBZonalBalance;
+}
+
+/**
+ * Calculates zonal distribution balance within each team
+ *
+ * This measures how evenly distributed the strength is across zones
+ * (Defense, Midfield, Attack) within each team. A well-balanced team
+ * has similar strength across all zones rather than being heavily
+ * concentrated in one area.
+ *
+ * @param teamA First team
+ * @param teamB Second team
+ * @returns Average balance score from 0 (imbalanced) to 1 (perfectly balanced)
+ */
+function calculateCreativityBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
+    const creativityBalanceRatio = calculateBasicDifferenceRatio(teamA.creativityScore, teamB.creativityScore);
+
+    if (debug) {
+
+    }
+
+    return creativityBalanceRatio;
 }
 
 /**
  * Calculates comprehensive balance metrics
- * A well balanced team needs to meet a bunch of criteria
- * Which can include : overall player skill on each team, how suitable each player is to their position, etc
+ *
+ * A well-balanced team assignment needs to satisfy multiple criteria:
+ * - Similar overall strength (peak potential)
+ * - Similar positional scores
+ * - Balanced internal zone distribution
+ * - Similar attack/defense distribution
+ * - Similar energy levels (stamina and work rates)
+ *
+ * @param teamA First team
+ * @param teamB Second team
+ * @param config Balance configuration with weights for each metric
+ * @returns Combined score and detailed metrics
  */
 export function calculateMetrics(
     teamA: FastTeam,
     teamB: FastTeam,
-    config: BalanceConfig
+    config: BalanceConfig,
+    debug: boolean
 ): { score: number; details: BalanceMetrics } {
+    // Calculate each metric independently
+    const overallStrengthBalance = calculateOverallStrengthBalance(teamA, teamB, debug);
+    const positionalScoreBalance = calculatePositionalScoreBalance(teamA, teamB, debug);
+    const zonalDistributionBalance = calculateZonalDistributionBalance(teamA, teamB, debug);
+    const energyBalance = calculateEnergyBalance(teamA, teamB, debug);
+    const creativityBalance = calculateCreativityBalance(teamA, teamB, debug);
+
+    // Assemble detailed metrics
     const metrics: BalanceMetrics = {
-        balance: 0,
-        positionBalance: 0,
-        zonalBalance: 0,
-        attackDefenseBalance: 0,
-        energy: 0,
+        overallStrengthBalance,
+        positionalScoreBalance,
+        zonalDistributionBalance,
+        energyBalance,
+        creativityBalance
     };
-    
-    // Balance: Peak potential balance between teams
-    const peakDiff = Math.abs(teamA.peakPotential - teamB.peakPotential);
-    const maxPeak = Math.max(teamA.peakPotential, teamB.peakPotential);
-    const rawBalance = maxPeak > 0 ? 1 - (peakDiff / maxPeak) : 1;
-    metrics.balance = Math.pow(rawBalance, 2); // Steepen curve: 0.95→0.857, 0.90→0.729
-    
-    // Position Balance: Actual score balance
-    const scoreDiff = Math.abs(teamA.totalScore - teamB.totalScore);
-    const maxScore = Math.max(teamA.totalScore, teamB.totalScore);
-    metrics.positionBalance = maxScore > 0 ? 1 - (scoreDiff / maxScore) : 1;
-    
-    // Zonal Balance: Internal team balance
-    const calcZonalBalance = (team: FastTeam) => {
-        const nonGkZones = [team.zoneScores[1], team.zoneScores[2], team.zoneScores[3]];
-        const avg = nonGkZones.reduce((a, b) => a + b, 0) / 3;
-        if (avg === 0) return 1;
-        const variance = nonGkZones.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / 3;
-        return 1 / (1 + Math.sqrt(variance) / avg);
-    };
-    
-    metrics.zonalBalance = (calcZonalBalance(teamA) + calcZonalBalance(teamB)) / 2;
-    
-    // Attack/Defense Balance: Equal distribution of attacking and defensive talent
-    // This prevents scenarios where one team gets all defenders and the other all attackers
-    const calcAttackDefenseBalance = () => {
-        // Calculate percentage of total score in each category for each team
-        const teamATotalCat = teamA.defensiveScore + teamA.neutralScore + teamA.attackingScore;
-        const teamBTotalCat = teamB.defensiveScore + teamB.neutralScore + teamB.attackingScore;
-        
-        if (teamATotalCat === 0 || teamBTotalCat === 0) return 0;
-        
-        // Get percentages for each category
-        const teamADefPct = teamA.defensiveScore / teamATotalCat;
-        const teamANeuPct = teamA.neutralScore / teamATotalCat;
-        const teamAAttPct = teamA.attackingScore / teamATotalCat;
-        
-        const teamBDefPct = teamB.defensiveScore / teamBTotalCat;
-        const teamBNeuPct = teamB.neutralScore / teamBTotalCat;
-        const teamBAttPct = teamB.attackingScore / teamBTotalCat;
-        
-        // Calculate balance for each category (1 = perfect balance, 0 = total imbalance)
-        const defBalance = 1 - Math.abs(teamADefPct - teamBDefPct);
-        const neuBalance = 1 - Math.abs(teamANeuPct - teamBNeuPct);
-        const attBalance = 1 - Math.abs(teamAAttPct - teamBAttPct);
-        
-        // AGGRESSIVE SCALING: Use power function to harshly penalize imbalances
-        // Using exponent of 0.4 (between square root 0.5 and cube root 0.33)
-        
-        // Calculate absolute differences with aggressive scaling
-        const defAbsDiff = Math.abs(teamA.defensiveScore - teamB.defensiveScore);
-        const attAbsDiff = Math.abs(teamA.attackingScore - teamB.attackingScore);
-        const neuAbsDiff = Math.abs(teamA.neutralScore - teamB.neutralScore);
-        
-        const maxDef = Math.max(teamA.defensiveScore, teamB.defensiveScore, 1);
-        const maxAtt = Math.max(teamA.attackingScore, teamB.attackingScore, 1);
-        const maxNeu = Math.max(teamA.neutralScore, teamB.neutralScore, 1);
-        
-        // Apply aggressive power scaling: small differences get amplified
-        // Example: 6/378 = 0.016 becomes 0.126 with exponent 0.4
-        const defAbsBalance = 1 - Math.pow(defAbsDiff / maxDef, AGGRESSION_EXPONENT);
-        const attAbsBalance = 1 - Math.pow(attAbsDiff / maxAtt, AGGRESSION_EXPONENT);
-        const neuAbsBalance = 1 - Math.pow(neuAbsDiff / maxNeu, AGGRESSION_EXPONENT);
-        
-        // Combine percentage and absolute balance with aggressive absolute weighting
-        // Increased absolute balance weights to emphasize the aggressive scaling
-        return (defBalance * 0.2 + neuBalance * 0.05 + attBalance * 0.2 + 
-                defAbsBalance * 0.25 + attAbsBalance * 0.25 + neuAbsBalance * 0.05);
-    };
-    
-    metrics.attackDefenseBalance = calcAttackDefenseBalance();
 
-    // Energy Balance: Equal distribution of stamina and work rates between teams
-    metrics.energy = calculateEnergyBalance(teamA, teamB);
+    // Calculate weighted score based on config
+    const weightedScore =
+        config.weights.overallStrengthBalance * metrics.overallStrengthBalance +
+        config.weights.positionalScoreBalance * metrics.positionalScoreBalance +
+        config.weights.zonalDistributionBalance * metrics.zonalDistributionBalance +
+        config.weights.energyBalance * metrics.energyBalance +
+        config.weights.creativityBalance * metrics.creativityBalance;
 
-    // Calculate weighted score
-    const score =
-        config.weights.balance * metrics.balance +
-        config.weights.positionBalance * metrics.positionBalance +
-        config.weights.zonalBalance * metrics.zonalBalance +
-        config.weights.attackDefenseBalance * metrics.attackDefenseBalance +
-        config.weights.energy * metrics.energy;
-    
-    return { score, details: metrics };
+
+    if (debug) {
+
+    }
+
+    return { score: weightedScore, details: metrics };
 }

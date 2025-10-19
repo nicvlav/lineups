@@ -19,13 +19,13 @@ export function toFastPlayer(player: ScoredGamePlayer): FastPlayer {
     let bestScore = 0;
     let bestPosition = -1;
     let secondBestScore = 0;
-    
+
     // Fill score array and find best positions
     for (let i = 0; i < POSITION_COUNT; i++) {
         const position = INDEX_TO_POSITION[i];
         const score = player.zoneFit[position] || 0;
         scores[i] = score;
-        
+
         if (score > bestScore) {
             secondBestScore = bestScore;
             bestScore = score;
@@ -34,7 +34,7 @@ export function toFastPlayer(player: ScoredGamePlayer): FastPlayer {
             secondBestScore = score;
         }
     }
-    
+
     return {
         original: player,
         scores,
@@ -55,20 +55,18 @@ export function createFastTeam(): FastTeam {
     for (let i = 0; i < POSITION_COUNT; i++) {
         positions[i] = [];
     }
-    
+
     return {
         positions,
         totalScore: 0,
         zoneScores: new Float32Array(4),
+        zonePeakScores: new Float32Array(4),
         playerCount: 0,
         peakPotential: 0,
         formation: null,
-        defensiveScore: 0,
-        neutralScore: 0,
-        attackingScore: 0,
         staminaScore: 0,
-        attackWorkRateScore: 0,
-        defensiveWorkRateScore: 0,
+        workrateScore: 0,
+        creativityScore: 0,
     };
 }
 
@@ -83,18 +81,18 @@ export function createPositionComparator(
     return (a: FastPlayer, b: FastPlayer): number => {
         const aScore = a.scores[positionIdx];
         const bScore = b.scores[positionIdx];
-        
+
         // Calculate specialization for THIS specific position
         // A specialist is someone whose score at this position dominates their other scores
         const aIsPositionSpecialist = a.bestPosition === positionIdx && a.specializationRatio >= dominanceRatio;
         const bIsPositionSpecialist = b.bestPosition === positionIdx && b.specializationRatio >= dominanceRatio;
-        
+
         // Priority 1: MASSIVE preference for specialists at this exact position
         if (aIsPositionSpecialist !== bIsPositionSpecialist) {
             // Specialist vs non-specialist: HUGE sorting difference
             return aIsPositionSpecialist ? -1000 : 1000;
         }
-        
+
         // Priority 2: If both are specialists for this position, prefer stronger specialization
         if (aIsPositionSpecialist && bIsPositionSpecialist) {
             // Higher specialization ratio = more specialized
@@ -104,23 +102,23 @@ export function createPositionComparator(
                 return ratioDiff > 0 ? 100 : -100;
             }
         }
-        
+
         // Priority 3: Efficiency - how good are they at THIS position relative to their best?
         const aEfficiency = a.bestScore > 0 ? aScore / a.bestScore : 0;
         const bEfficiency = b.bestScore > 0 ? bScore / b.bestScore : 0;
-        
+
         // Strong penalty for players who would be "wasted" at this position
         const efficiencyDiff = bEfficiency - aEfficiency;
         if (Math.abs(efficiencyDiff) > 0.02) { // Even 2% efficiency difference matters
             return efficiencyDiff > 0 ? 50 : -50;
         }
-        
+
         // Priority 4: Raw score at this position
         const scoreDiff = bScore - aScore;
         if (Math.abs(scoreDiff) > 0.01) {
             return scoreDiff;
         }
-        
+
         // Priority 5: Overall quality as final tiebreaker
         return b.bestScore - a.bestScore;
     };

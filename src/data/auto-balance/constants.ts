@@ -44,18 +44,15 @@ export const POSITION_CATEGORIES = {
     attacking: [6, 7, 8] as readonly number[],    // AM, ST, WR - attack minded
 } as const;
 
-/** Aggressive scaling exponent for attack/defense balance */
-export const AGGRESSION_EXPONENT = 0.4;
-
 /** Default Monte Carlo configuration */
 export const DEFAULT_CONFIG: BalanceConfig = {
     numSimulations: 500,
     weights: {
-        balance: 0.5,           // Peak skill balance
-        positionBalance: 0.15,   // Actual score balance
-        zonalBalance: 0.25,      // Zone balance within teams
-        attackDefenseBalance: 0.0, // Attack vs Defense balance between teams
-        energy: 0.1,              // Energy balance (stamina + work rates) between teams
+        overallStrengthBalance: 0.5,           // Peak potential balance between teams
+        positionalScoreBalance: 0.15,          // Actual score balance between teams
+        zonalDistributionBalance: 0.20,        // Zone distribution balance within teams
+        energyBalance: 0.1,                    // Energy balance (stamina + work rates) between teams
+        creativityBalance: 0.05,                // Energy balance (stamina + work rates) between teams
     },
     dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
     recursive: true,

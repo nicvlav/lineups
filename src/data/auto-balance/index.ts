@@ -14,8 +14,8 @@
  * @module auto-balance
  */
 
-import type { 
-    FilledGamePlayer, 
+import type {
+    FilledGamePlayer,
     ScoredGamePlayer
 } from "@/data/player-types";
 import { normalizedDefaultWeights } from "@/data/position-types";
@@ -24,11 +24,12 @@ import { normalizedDefaultWeights } from "@/data/position-types";
 import type { BalanceConfig, BalanceMetrics } from "./types";
 import { ENABLE_DEBUG, DEFAULT_CONFIG } from "./constants";
 import { toFastPlayer } from "./utils";
-import { 
-    runMonteCarlo, 
-    runRecursiveOptimization, 
-    convertToGamePlayers 
+import {
+    runMonteCarlo,
+    runRecursiveOptimization,
+    convertToGamePlayers
 } from "./algorithm";
+import { calculateMetrics } from "./metrics";
 
 // Re-export types for external use
 export type { BalanceConfig, BalanceMetrics } from "./types";
@@ -68,33 +69,33 @@ export function autoCreateTeamsScored(
     if (players.length > 24) {
         throw new Error("Too many players to form teams (maximum: 24)");
     }
-    
+
     // Convert to optimized format
     const fastPlayers = players.map(toFastPlayer);
-    
+
     // Configure algorithm - ENABLE_DEBUG overrides everything
     const config: BalanceConfig = {
         ...DEFAULT_CONFIG,
         debugMode: ENABLE_DEBUG || debugMode,
     };
-    
+
     if (config.debugMode) {
         console.log("\n🔍 DEBUG MODE ENABLED (set ENABLE_DEBUG to false to disable)");
         console.log(`Running auto-balance for ${players.length} players...`);
     }
-    
+
     // Run optimization
-    const result = config.recursive 
+    const result = config.recursive
         ? runRecursiveOptimization(fastPlayers, config)
         : runMonteCarlo(fastPlayers, config);
-    
+
     if (!result) {
         throw new Error("Failed to balance teams - no valid formation found");
     }
-    
+
     // Log results if debugging
-    // logResults(result, config);
-    
+    calculateMetrics(result.teamA, result.teamB, config, true);
+
     // Convert and return
     return convertToGamePlayers(result);
 }
@@ -112,12 +113,12 @@ export function autoCreateTeamsFilled(
 ): { a: ScoredGamePlayer[]; b: ScoredGamePlayer[] } {
     // Import here to avoid circular dependency
     const { calculateScoresForStats } = require("@/data/player-types");
-    
+
     const scoredPlayers = players.map(player => ({
         ...player,
         zoneFit: calculateScoresForStats(player.stats, normalizedDefaultWeights),
     })) as ScoredGamePlayer[];
-    
+
     return autoCreateTeamsScored(scoredPlayers, debugMode);
 }
 
@@ -139,7 +140,7 @@ export function autoBalanceWithConfig(
     if (players.length < 10 || players.length > 24) {
         throw new Error(`Invalid player count: ${players.length} (must be 10-24)`);
     }
-    
+
     // Merge with defaults
     const config: BalanceConfig = {
         ...DEFAULT_CONFIG,
@@ -149,7 +150,7 @@ export function autoBalanceWithConfig(
             ...customConfig.weights,
         },
     };
-    
+
     // Normalize weights to sum to 1
     const weightSum = Object.values(config.weights).reduce((a, b) => a + b, 0);
     if (weightSum > 0) {
@@ -158,19 +159,19 @@ export function autoBalanceWithConfig(
             config.weights[key as keyof typeof config.weights] /= weightSum;
         });
     }
-    
+
     // Convert and optimize
     const fastPlayers = players.map(toFastPlayer);
-    const result = config.recursive 
+    const result = config.recursive
         ? runRecursiveOptimization(fastPlayers, config)
         : runMonteCarlo(fastPlayers, config);
-    
+
     if (!result) {
         throw new Error("Failed to balance teams");
     }
-    
-    // logResults(result, config);
-    
+
+    calculateMetrics(result.teamA, result.teamB, config, true);
+
     return {
         teams: convertToGamePlayers(result),
         metrics: result.metrics,
