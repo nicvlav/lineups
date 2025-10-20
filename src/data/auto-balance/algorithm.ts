@@ -216,7 +216,7 @@ export function assignPlayersToTeams(
                 if (stats) {
                     teamA.staminaScore += stats.stamina;
                     teamA.workrateScore += stats.workrate;
-                    teamA.creativityScore += stats.vision + stats.passing + stats.technique + stats.decisions + stats.teamwork;
+                    teamA.creativityScore += stats.vision + stats.decisions + stats.teamwork;
                 }
             }
             for (const player of teamB.positions[posIdx]) {
@@ -229,7 +229,7 @@ export function assignPlayersToTeams(
                 if (stats) {
                     teamB.staminaScore += stats.stamina;
                     teamB.workrateScore += stats.workrate;
-                    teamB.creativityScore += stats.vision + stats.passing + stats.technique + stats.decisions + stats.teamwork;
+                    teamB.creativityScore += stats.vision + stats.decisions + stats.teamwork;
                 }
             }
         }
@@ -286,14 +286,15 @@ export function runRecursiveOptimization(
     // Recursive refinement
     const subConfig: BalanceConfig = {
         ...config,
-        numSimulations: 500,
+        numSimulations: 1000,
         recursive: false,
         weights: {
-            overallStrengthBalance: 0.1,
-            positionalScoreBalance: 0.2,
+            overallStrengthBalance: 0.15,
+            positionalScoreBalance: 0.15,
             zonalDistributionBalance: 0.2,
-            energyBalance: 0.3,
-            creativityBalance: 0.2,
+            energyBalance: 0.15,
+            creativityBalance: 0.15,
+            allStatBalance: 0.2,
         },
     };
 

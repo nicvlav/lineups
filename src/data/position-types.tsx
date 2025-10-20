@@ -152,7 +152,7 @@ export const defaultZoneWeights: Weighting = {
             positioning: 250,              // was attackPositioning
             technique: 0,               // new: ball control
             dribbling: 0,
-            decisions: 50,              // was interceptions
+            decisions: 150,              // was interceptions
             marking: 850,                // was blocking
             heading: 400,
             aggression: 400,
@@ -237,7 +237,7 @@ export const defaultZoneWeights: Weighting = {
             stamina: 100,
             teamwork: 400,               
             determination: 200,
-            leadership: 300,
+            leadership: 400,
             concentration: 200,
         },
         isCentral: true,
@@ -275,7 +275,7 @@ export const defaultZoneWeights: Weighting = {
             stamina: 600,                // KEY STAT for CM - box to box running
             teamwork: 350,
             determination: 200,
-            leadership: 200,
+            leadership: 300,
             concentration: 300,
         },
         isCentral: true,
@@ -296,7 +296,7 @@ export const defaultZoneWeights: Weighting = {
             passing: 300,                // was shortPassing + longPassing
             tackling: 25,
             finishing: 0,
-            speed: 225,
+            speed: 450,
             strength: 5,
             agility: 50,
             workrate: 650,               // was defensiveWorkrate + attackingWorkrate
@@ -411,7 +411,7 @@ export const defaultZoneWeights: Weighting = {
             passing: 100,                // was shortPassing + longPassing
             tackling: 0,
             finishing: 50,
-            speed: 400,
+            speed: 900,
             strength: 0,
             agility: 600,
             workrate: 600,               // was defensiveWorkrate + attackingWorkrate
@@ -541,14 +541,14 @@ export const formationTemplates: Record<number, Formation[]> = {
         // },
     ],
     12: [
-        {
-            name: "3-5-3",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 2, WM: 2, AM: 0, ST: 1, WR: 2 }
-        },
         // {
-        //     name: "3-4-4",
-        //     positions: { GK: 1, CB: 3, FB: 0, DM: 2, CM: 0, WM: 0, AM: 2, ST: 2, WR: 2 }
+        //     name: "3-5-3",
+        //     positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 2, WM: 2, AM: 0, ST: 1, WR: 2 }
         // },
+        {
+            name: "3-4-4",
+            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 2, AM: 2, ST: 1, WR: 2 }
+        },
     ],
 } as const;
 

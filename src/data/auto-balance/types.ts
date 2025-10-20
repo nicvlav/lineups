@@ -29,6 +29,9 @@ export interface BalanceMetrics {
 
     /** Creativity balance (vision, passing, and teamwork balance between teams) */
     creativityBalance: number;
+
+    /** All-stat balance (sum of all aggregate player stats between teams) */
+    allStatBalance: number;
 }
 
 /**
