@@ -48,12 +48,13 @@ export const POSITION_CATEGORIES = {
 export const DEFAULT_CONFIG: BalanceConfig = {
     numSimulations: 500,
     weights: {
-        overallStrengthBalance: 0.25,           // Peak potential balance between teams
+        overallStrengthBalance: 0.20,           // Peak potential balance between teams
         positionalScoreBalance: 0.15,          // Actual score balance between teams
-        zonalDistributionBalance: 0.2,        // Zone distribution balance within teams
-        energyBalance: 0.2,                    // Energy balance (stamina + work rates) between teams
-        creativityBalance: 0.1,                // Creativity balance between teams
-        allStatBalance: 0.1,                   // All-stat balance (sum of all stats) between teams
+        zonalDistributionBalance: 0.15,        // Zone distribution balance within teams
+        energyBalance: 0.20,                   // Energy balance (stamina + work rates) between teams
+        creativityBalance: 0.10,               // Creativity balance between teams
+        allStatBalance: 0.10,                  // All-stat balance (sum of all stats) between teams
+        talentDistributionBalance: 0.10,       // Talent distribution balance (std dev of player scores)
     },
     dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
     recursive: true,

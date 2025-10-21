@@ -32,6 +32,9 @@ export interface BalanceMetrics {
 
     /** All-stat balance (sum of all aggregate player stats between teams) */
     allStatBalance: number;
+
+    /** Talent distribution balance (comparing standard deviation of player scores) */
+    talentDistributionBalance: number;
 }
 
 /**

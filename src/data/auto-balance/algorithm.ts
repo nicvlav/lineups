@@ -289,12 +289,13 @@ export function runRecursiveOptimization(
         numSimulations: 1000,
         recursive: false,
         weights: {
-            overallStrengthBalance: 0.15,
+            overallStrengthBalance: 0.1,
             positionalScoreBalance: 0.15,
             zonalDistributionBalance: 0.2,
             energyBalance: 0.15,
             creativityBalance: 0.15,
-            allStatBalance: 0.2,
+            allStatBalance: 0.5,
+            talentDistributionBalance: 0.15
         },
     };
 

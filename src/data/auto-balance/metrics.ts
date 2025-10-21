@@ -414,6 +414,80 @@ function calculateCreativityBalance(teamA: FastTeam, teamB: FastTeam, debug: boo
 }
 
 /**
+ * Calculates the standard deviation of individual player scores within a team
+ *
+ * This measures talent distribution consistency - whether a team has
+ * spiky talent (few superstars + many weak players) or flat talent
+ * (consistently solid players throughout).
+ *
+ * @param team Team to analyze
+ * @returns Standard deviation of player scores
+ */
+function calculatePlayerScoreStdDev(team: FastTeam): number {
+    const playerScores: number[] = [];
+
+    // Collect all player scores from all positions
+    for (const positionPlayers of team.positions) {
+        for (const player of positionPlayers) {
+            // Use the player's assigned position score
+            if (player.assignedPosition >= 0) {
+                playerScores.push(player.scores[player.assignedPosition]);
+            }
+        }
+    }
+
+    // Handle empty team case
+    if (playerScores.length === 0) return 0;
+
+    // Calculate mean
+    const mean = playerScores.reduce((sum, score) => sum + score, 0) / playerScores.length;
+
+    // Calculate variance
+    const variance = playerScores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / playerScores.length;
+
+    // Return standard deviation
+    return Math.sqrt(variance);
+}
+
+/**
+ * Calculates talent distribution balance between teams
+ *
+ * This measures whether both teams have similar talent distribution patterns.
+ * A team with "spiky" talent (few superstars + weak players) will have high
+ * standard deviation, while a team with "flat" talent (consistent quality)
+ * will have low standard deviation.
+ *
+ * Balancing standard deviations prevents scenarios like:
+ * - Team A: 4 elite players + 4 worst players (high std dev)
+ * - Team B: 8 solid players (low std dev)
+ * Even if peak scores are equal, the distributions feel very different.
+ *
+ * @param teamA First team
+ * @param teamB Second team
+ * @returns Balance score from 0 (imbalanced) to 1 (perfectly balanced)
+ */
+function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
+    const teamAStdDev = calculatePlayerScoreStdDev(teamA);
+    const teamBStdDev = calculatePlayerScoreStdDev(teamB);
+
+    const rawRatio = calculateBasicDifferenceRatio(teamAStdDev, teamBStdDev);
+
+    // Apply moderate power scaling to penalize distribution mismatches
+    // pow(0.95, 2) = 0.902, pow(0.90, 2) = 0.810, pow(0.80, 2) = 0.640
+    const talentDistributionRatio = Math.pow(rawRatio, 2);
+
+    if (debug) {
+        console.log('Talent Distribution Balance (Player Score Std Dev):');
+        console.log(formatComparison('Std Dev', teamAStdDev, teamBStdDev, rawRatio));
+        console.log(`  Team A: ${teamAStdDev > teamBStdDev ? 'More spiky' : 'More flat'} talent distribution`);
+        console.log(`  Team B: ${teamBStdDev > teamAStdDev ? 'More spiky' : 'More flat'} talent distribution`);
+        console.log(`  Scaled (^2): ${talentDistributionRatio.toFixed(3)}`);
+    }
+
+    return talentDistributionRatio;
+}
+
+/**
  * Calculates comprehensive balance metrics
  *
  * A well-balanced team assignment needs to satisfy multiple criteria:
@@ -442,6 +516,7 @@ export function calculateMetrics(
     const energyBalance = (debug || config.weights.energyBalance) ? calculateEnergyBalance(teamA, teamB, debug) : 0;
     const creativityBalance = (debug || config.weights.creativityBalance) ? calculateCreativityBalance(teamA, teamB, debug) : 0;
     const allStatBalance = (debug || config.weights.allStatBalance) ? calculateAllStatBalance(teamA, teamB, debug) : 0;
+    const talentDistributionBalance = (debug || config.weights.talentDistributionBalance) ? calculateTalentDistributionBalance(teamA, teamB, debug) : 0;
 
     // Assemble detailed metrics
     const metrics: BalanceMetrics = {
@@ -450,7 +525,8 @@ export function calculateMetrics(
         zonalDistributionBalance,
         energyBalance,
         creativityBalance,
-        allStatBalance
+        allStatBalance,
+        talentDistributionBalance
     };
 
     // Calculate weighted score based on config
@@ -460,7 +536,8 @@ export function calculateMetrics(
         config.weights.zonalDistributionBalance * metrics.zonalDistributionBalance +
         config.weights.energyBalance * metrics.energyBalance +
         config.weights.creativityBalance * metrics.creativityBalance +
-        config.weights.allStatBalance * metrics.allStatBalance;
+        config.weights.allStatBalance * metrics.allStatBalance +
+        config.weights.talentDistributionBalance * metrics.talentDistributionBalance;
 
     if (debug) {
         console.log('');
@@ -473,6 +550,7 @@ export function calculateMetrics(
         console.log(`  Energy Balance:           ${metrics.energyBalance.toFixed(3)} (weight: ${config.weights.energyBalance.toFixed(2)}) = ${(config.weights.energyBalance * metrics.energyBalance).toFixed(3)}`);
         console.log(`  Creativity Balance:       ${metrics.creativityBalance.toFixed(3)} (weight: ${config.weights.creativityBalance.toFixed(2)}) = ${(config.weights.creativityBalance * metrics.creativityBalance).toFixed(3)}`);
         console.log(`  All-Stat Balance:         ${metrics.allStatBalance.toFixed(3)} (weight: ${config.weights.allStatBalance.toFixed(2)}) = ${(config.weights.allStatBalance * metrics.allStatBalance).toFixed(3)}`);
+        console.log(`  Talent Distribution:      ${metrics.talentDistributionBalance.toFixed(3)} (weight: ${config.weights.talentDistributionBalance.toFixed(2)}) = ${(config.weights.talentDistributionBalance * metrics.talentDistributionBalance).toFixed(3)}`);
         console.log('----------------------------------------------------------------');
         console.log(`  FINAL WEIGHTED SCORE:     ${weightedScore.toFixed(3)}`);
         console.log('================================================================');
