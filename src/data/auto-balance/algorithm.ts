@@ -283,20 +283,21 @@ export function runRecursiveOptimization(
     let bestResult = runMonteCarlo(players, config);
     if (!bestResult) return null;
 
-    // Recursive refinement
+    // Recursive refinement - focus heavily on talent distribution and consistency
     const subConfig: BalanceConfig = {
         ...config,
-        numSimulations: 500,
+        numSimulations: 200,
         recursive: false,
         weights: {
             overallStrengthBalance: 0.0,
-            positionalScoreBalance: 0.1,
-            zonalDistributionBalance: 0.1,
-            energyBalance: 0.1,
+            positionalScoreBalance: 0.05,
+            zonalDistributionBalance: 0.05,
+            energyBalance: 0.05,
             creativityBalance: 0.0,
-            allStatBalance: 0.3,
-            talentDistributionBalance: 0.4
+            allStatBalance: 0.25,
+            talentDistributionBalance: 0.6         // THE SECRET SAUCE - dominate the recursive phase
         },
+        consistencyPenaltyWeight: 3.0,             // Even more aggressive in recursive phase
     };
 
     for (let depth = 0; depth < config.recursiveDepth; depth++) {

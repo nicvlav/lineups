@@ -46,16 +46,17 @@ export const POSITION_CATEGORIES = {
 
 /** Default Monte Carlo configuration */
 export const DEFAULT_CONFIG: BalanceConfig = {
-    numSimulations: 2000,
+    numSimulations: 5000,
     weights: {
-        overallStrengthBalance: 0.2,           // Peak potential balance between teams
-        positionalScoreBalance: 0.1,          // Actual score balance between teams
-        zonalDistributionBalance: 0.2,        // Zone distribution balance within teams
-        energyBalance: 0.2,                   // Energy balance (stamina + work rates) between teams
-        creativityBalance: 0.0,               // Creativity balance between teams
-        allStatBalance: 0.0,                  // All-stat balance (sum of all stats) between teams
-        talentDistributionBalance: 0.3,       // Talent distribution balance (std dev of player scores)
+        overallStrengthBalance: 0.15,          // Peak potential balance between teams
+        positionalScoreBalance: 0.075,          // Actual score balance between teams
+        zonalDistributionBalance: 0.125,        // Zone distribution balance within teams
+        energyBalance: 0.15,                   // Energy balance (stamina + work rates) between teams
+        creativityBalance: 0.0,                // Creativity balance between teams
+        allStatBalance: 0.0,                   // All-stat balance (sum of all stats) between teams
+        talentDistributionBalance: 0.5,        // Talent distribution balance (std dev of player scores) - THE SECRET SAUCE
     },
+    consistencyPenaltyWeight: 2.0,             // Weight for consistency penalty (higher = more penalty for uneven metrics)
     dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
     recursive: true,
     recursiveDepth: 25,

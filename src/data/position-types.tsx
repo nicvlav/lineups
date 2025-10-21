@@ -238,7 +238,7 @@ export const defaultZoneWeights: Weighting = {
             teamwork: 400,
             determination: 200,
             leadership: 600,
-            concentration: 200,
+            concentration: 400,
         },
         isCentral: true,
         absoluteYPosition: 0.5,

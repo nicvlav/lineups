@@ -161,7 +161,7 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const energyBalanceRatio = Math.pow(rawCombined, 4);
+    const energyBalanceRatio = Math.pow(rawCombined, 2);
 
     if (debug) {
         console.log('Energy Balance:');
@@ -472,16 +472,16 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 
     const rawRatio = calculateBasicDifferenceRatio(teamAStdDev, teamBStdDev);
 
-    // Apply moderate power scaling to penalize distribution mismatches
-    // pow(0.95, 2) = 0.902, pow(0.90, 2) = 0.810, pow(0.80, 2) = 0.640
-    const talentDistributionRatio = Math.pow(rawRatio, 1);
+    // Apply harsh power scaling to heavily penalize distribution mismatches
+    // pow(0.95, 3) = 0.857, pow(0.90, 3) = 0.729, pow(0.80, 3) = 0.512
+    const talentDistributionRatio = Math.pow(rawRatio, 4);
 
     if (debug) {
         console.log('Talent Distribution Balance (Player Score Std Dev):');
         console.log(formatComparison('Std Dev', teamAStdDev, teamBStdDev, rawRatio));
         console.log(`  Team A: ${teamAStdDev > teamBStdDev ? 'More spiky' : 'More flat'} talent distribution`);
         console.log(`  Team B: ${teamBStdDev > teamAStdDev ? 'More spiky' : 'More flat'} talent distribution`);
-        console.log(`  Scaled (^2): ${talentDistributionRatio.toFixed(3)}`);
+        console.log(`  Scaled (^3): ${talentDistributionRatio.toFixed(3)}`);
     }
 
     return talentDistributionRatio;
@@ -508,15 +508,14 @@ export function calculateMetrics(
     config: BalanceConfig,
     debug: boolean
 ): { score: number; details: BalanceMetrics } {
-    // Calculate each metric independently
-    // only calculate if their weights are above 0 or if its in debug mode
-    const overallStrengthBalance = (debug || config.weights.overallStrengthBalance) ? calculateOverallStrengthBalance(teamA, teamB, debug) : 0;
-    const positionalScoreBalance = (debug || config.weights.positionalScoreBalance) ? calculatePositionalScoreBalance(teamA, teamB, debug) : 0;
-    const zonalDistributionBalance = (debug || config.weights.zonalDistributionBalance) ? calculateZonalDistributionBalance(teamA, teamB, debug) : 0;;
-    const energyBalance = (debug || config.weights.energyBalance) ? calculateEnergyBalance(teamA, teamB, debug) : 0;
-    const creativityBalance = (debug || config.weights.creativityBalance) ? calculateCreativityBalance(teamA, teamB, debug) : 0;
-    const allStatBalance = (debug || config.weights.allStatBalance) ? calculateAllStatBalance(teamA, teamB, debug) : 0;
-    const talentDistributionBalance = (debug || config.weights.talentDistributionBalance) ? calculateTalentDistributionBalance(teamA, teamB, debug) : 0;
+    // Calculate each metric independently (always calculate all metrics)
+    const overallStrengthBalance = calculateOverallStrengthBalance(teamA, teamB, debug);
+    const positionalScoreBalance = calculatePositionalScoreBalance(teamA, teamB, debug);
+    const zonalDistributionBalance = calculateZonalDistributionBalance(teamA, teamB, debug);
+    const energyBalance = calculateEnergyBalance(teamA, teamB, debug);
+    const creativityBalance = calculateCreativityBalance(teamA, teamB, debug);
+    const allStatBalance = calculateAllStatBalance(teamA, teamB, debug);
+    const talentDistributionBalance = calculateTalentDistributionBalance(teamA, teamB, debug);
 
     // Assemble detailed metrics
     const metrics: BalanceMetrics = {
@@ -539,6 +538,26 @@ export function calculateMetrics(
         config.weights.allStatBalance * metrics.allStatBalance +
         config.weights.talentDistributionBalance * metrics.talentDistributionBalance;
 
+    // Calculate consistency penalty to favor results where all metrics are close to 1.0
+    const metricValues = [
+        metrics.overallStrengthBalance,
+        metrics.positionalScoreBalance,
+        metrics.zonalDistributionBalance,
+        metrics.energyBalance,
+        metrics.creativityBalance,
+        metrics.allStatBalance,
+        metrics.talentDistributionBalance
+    ];
+
+    // Calculate standard deviation of the metrics
+    const mean = metricValues.reduce((a, b) => a + b, 0) / metricValues.length;
+    const variance = metricValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / metricValues.length;
+    const stdDev = Math.sqrt(variance);
+
+    // Apply consistency penalty - higher stdDev = worse score
+    const consistencyPenalty = stdDev * config.consistencyPenaltyWeight;
+    const finalScore = weightedScore - consistencyPenalty;
+
     if (debug) {
         console.log('');
         console.log('================================================================');
@@ -552,10 +571,17 @@ export function calculateMetrics(
         console.log(`  All-Stat Balance:         ${metrics.allStatBalance.toFixed(3)} (weight: ${config.weights.allStatBalance.toFixed(2)}) = ${(config.weights.allStatBalance * metrics.allStatBalance).toFixed(3)}`);
         console.log(`  Talent Distribution:      ${metrics.talentDistributionBalance.toFixed(3)} (weight: ${config.weights.talentDistributionBalance.toFixed(2)}) = ${(config.weights.talentDistributionBalance * metrics.talentDistributionBalance).toFixed(3)}`);
         console.log('----------------------------------------------------------------');
-        console.log(`  FINAL WEIGHTED SCORE:     ${weightedScore.toFixed(3)}`);
+        console.log(`  WEIGHTED SCORE:           ${weightedScore.toFixed(3)}`);
+        console.log('');
+        console.log(`  Consistency Analysis:`);
+        console.log(`    Metric Mean:            ${mean.toFixed(3)}`);
+        console.log(`    Metric Std Dev:         ${stdDev.toFixed(3)}`);
+        console.log(`    Consistency Penalty:    ${consistencyPenalty.toFixed(3)} (weight: ${config.consistencyPenaltyWeight.toFixed(2)})`);
+        console.log('----------------------------------------------------------------');
+        console.log(`  FINAL SCORE:              ${finalScore.toFixed(3)}`);
         console.log('================================================================');
         console.log('');
     }
 
-    return { score: weightedScore, details: metrics };
+    return { score: finalScore, details: metrics };
 }

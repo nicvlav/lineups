@@ -47,6 +47,9 @@ export interface BalanceConfig {
     /** Weights for different optimization criteria (must sum to 1.0) */
     weights: BalanceMetrics;
 
+    /** Weight for consistency penalty (penalizes high std dev across metrics) */
+    consistencyPenaltyWeight: number;
+
     /** Ratio for specialist detection (higher = stricter) */
     dominanceRatio: number;
 
