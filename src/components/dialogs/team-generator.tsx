@@ -99,7 +99,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
         );
     };
 
-    const canGenerate = selectedPlayers.length >= 10 && selectedPlayers.length <= 24;
+    const canGenerate = selectedPlayers.length >= 10 && selectedPlayers.length <= 26;
     const allSelected = selectedPlayers.length === playersArr.length;
 
     return (

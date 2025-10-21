@@ -66,7 +66,7 @@ export function autoCreateTeamsScored(
     if (players.length < 10) {
         throw new Error("Not enough players to form teams (minimum: 10)");
     }
-    if (players.length > 24) {
+    if (players.length > 26) {
         throw new Error("Too many players to form teams (maximum: 24)");
     }
 
@@ -137,8 +137,8 @@ export function autoBalanceWithConfig(
     metrics: BalanceMetrics;
 } {
     // Validate input
-    if (players.length < 10 || players.length > 24) {
-        throw new Error(`Invalid player count: ${players.length} (must be 10-24)`);
+    if (players.length < 10 || players.length > 26) {
+        throw new Error(`Invalid player count: ${players.length} (must be 10-26)`);
     }
 
     // Merge with defaults
