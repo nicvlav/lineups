@@ -286,16 +286,16 @@ export function runRecursiveOptimization(
     // Recursive refinement
     const subConfig: BalanceConfig = {
         ...config,
-        numSimulations: 1000,
+        numSimulations: 500,
         recursive: false,
         weights: {
-            overallStrengthBalance: 0.1,
+            overallStrengthBalance: 0.0,
             positionalScoreBalance: 0.1,
             zonalDistributionBalance: 0.1,
             energyBalance: 0.1,
-            creativityBalance: 0.1,
+            creativityBalance: 0.0,
             allStatBalance: 0.3,
-            talentDistributionBalance: 0.2
+            talentDistributionBalance: 0.4
         },
     };
 

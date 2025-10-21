@@ -402,7 +402,7 @@ function calculateCreativityBalance(teamA: FastTeam, teamB: FastTeam, debug: boo
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const creativityBalanceRatio = Math.pow(rawRatio, 2);
+    const creativityBalanceRatio = Math.pow(rawRatio, 1);
 
     if (debug) {
         console.log('Creativity Balance:');
@@ -474,7 +474,7 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 
     // Apply moderate power scaling to penalize distribution mismatches
     // pow(0.95, 2) = 0.902, pow(0.90, 2) = 0.810, pow(0.80, 2) = 0.640
-    const talentDistributionRatio = Math.pow(rawRatio, 2);
+    const talentDistributionRatio = Math.pow(rawRatio, 1);
 
     if (debug) {
         console.log('Talent Distribution Balance (Player Score Std Dev):');
