@@ -31,26 +31,30 @@ export const getBarColor = (value: number) => {
 
 // Modern minimal card accent system for player cards
 export const getPlayerAccent = (rating: number) => {
-    if (rating >= 85) return { 
-        border: 'border-l-4 border-l-emerald-400/70 border-r border-t border-b border-border/40', 
-        badge: 'bg-emerald-500 border-emerald-400' 
-    }; // Excellent (85+)
-    if (rating >= 75) return { 
-        border: 'border-l-4 border-l-blue-400/70 border-r border-t border-b border-border/40', 
-        badge: 'bg-blue-500 border-blue-400' 
-    }; // Good (75-85)
-    if (rating >= 65) return { 
-        border: 'border-l-4 border-l-amber-400/70 border-r border-t border-b border-border/40', 
-        badge: 'bg-amber-500 border-amber-400' 
-    }; // Average (65-75)
-    if (rating >= 50) return { 
-        border: 'border-l-4 border-l-orange-400/70 border-r border-t border-b border-border/40', 
-        badge: 'bg-orange-500 border-orange-400' 
-    }; // Below average (50-65)
-    return { 
-        border: 'border border-border/30', 
-        badge: 'bg-slate-500 border-slate-400' 
-    }; // Poor (<50)
+    if (rating >= 90) return {
+        border: 'border-l-4 border-l-emerald-400/70 border-r border-t border-b border-border/40',
+        badge: 'bg-emerald-500 border-emerald-400'
+    }; // Elite (90+)
+    if (rating >= 80) return {
+        border: 'border-l-4 border-l-blue-400/70 border-r border-t border-b border-border/40',
+        badge: 'bg-blue-500 border-blue-400'
+    }; // Excellent (80-90)
+    if (rating >= 70) return {
+        border: 'border-l-4 border-l-amber-400/70 border-r border-t border-b border-border/40',
+        badge: 'bg-amber-500 border-amber-400'
+    }; // Good (70-80)
+    if (rating >= 60) return {
+        border: 'border-l-4 border-l-orange-400/70 border-r border-t border-b border-border/40',
+        badge: 'bg-orange-500 border-orange-400'
+    }; // Average (60-70)
+    if (rating >= 40) return {
+        border: 'border-l-4 border-l-red-400/70 border-r border-t border-b border-border/40',
+        badge: 'bg-red-500 border-red-400'
+    }; // Below average (40-60)
+    return {
+        border: 'border border-border/30',
+        badge: 'bg-slate-500 border-slate-400'
+    }; // Poor (<40)
 };
 
 const SharedPlayerStatsModal: React.FC<SharedPlayerStatsModalProps> = ({
