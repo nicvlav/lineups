@@ -33,7 +33,7 @@ const LayoutContent = () => {
     const isStaging = window.location.hostname.includes('staging');
 
     const canVote = user !== null;
-    const showCards = user?.id === '24115871-04fe-4111-b048-18f7e3e976fc';
+    const showCards = isStaging || (user?.id === '24115871-04fe-4111-b048-18f7e3e976fc');
 
     // Check if current route is an auth route
     const isAuthRoute = location.pathname.startsWith('/auth');
