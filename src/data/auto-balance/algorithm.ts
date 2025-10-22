@@ -6,7 +6,7 @@
  * @module auto-balance/algorithm
  */
 
-import type { FastPlayer, SimulationResult, BalanceConfig } from "./types";
+import type { FastPlayer, Teams, SimulationResult, BalanceConfig } from "./types";
 import type { ScoredGamePlayer } from "@/data/player-types";
 import {
     POSITION_INDICES,
@@ -16,8 +16,8 @@ import {
 } from "./constants";
 import { defaultZoneWeights, getPointForPosition } from "@/data/position-types";
 import { getFastFormation } from "./formation";
+import { createFastTeam, createPositionComparator, sortWorstInPlace, cryptoRandom, cryptoRandomInt } from "./utils";
 import { calculateMetrics } from "./metrics";
-import { createFastTeam, createPositionComparator, sortWorstInPlace } from "./utils";
 
 /**
  * Core team assignment algorithm
@@ -30,7 +30,7 @@ import { createFastTeam, createPositionComparator, sortWorstInPlace } from "./ut
 export function assignPlayersToTeams(
     players: FastPlayer[],
     config: BalanceConfig
-): SimulationResult | null {
+): Teams | null {
     const totalPlayers = players.length;
     const teamASize = Math.floor(totalPlayers / 2);
     const teamBSize = totalPlayers - teamASize;
@@ -130,8 +130,8 @@ export function assignPlayersToTeams(
         const targetFormation = assignToA ? formationA : formationB;
         const availableZones = assignToA ? aZones : bZones;
 
-        // RANDOMIZATION: Pick a random zone to fill (like original)
-        const randomZone = availableZones[Math.floor(Math.random() * availableZones.length)];
+        // RANDOMIZATION: Pick a random zone to fill using crypto random
+        const randomZone = availableZones[cryptoRandomInt(0, availableZones.length)];
         const zonePositions = ZONE_POSITIONS[randomZone];
 
         // Within the zone, still respect priority order
@@ -147,13 +147,13 @@ export function assignPlayersToTeams(
             }
         }
 
-        // Sort by priority (but could randomize within same priority for more variety)
+        // Sort by priority (but randomize within same priority for more variety)
         availablePositions.sort((a, b) => {
             if (a.priority !== b.priority) {
                 return a.priority - b.priority;
             }
-            // Add small randomization for same priority positions
-            return Math.random() - 0.5;
+            // Add randomization for same priority positions using crypto random
+            return cryptoRandom() - 0.5;
         });
 
         // Try to assign to positions in this zone
@@ -234,15 +234,9 @@ export function assignPlayersToTeams(
             }
         }
     }
-
-    // Calculate balance metrics
-    const metrics = calculateMetrics(teamA, teamB, config, false);
-
     return {
         teamA,
-        teamB,
-        score: metrics.score,
-        metrics: metrics.details,
+        teamB
     };
 }
 
@@ -256,16 +250,16 @@ export function runMonteCarlo(
     let bestResult: SimulationResult | null = null;
     let bestScore = -Infinity;
 
-    for (let i = 0; i < config.numSimulations; i++) {
+    for (let i = 0; i < config.recursiveDepth; i++) {
         const result = assignPlayersToTeams(players, config);
 
-        if (result && result.score > bestScore) {
-            bestScore = result.score;
-            bestResult = result;
+        if (!result) continue;
 
-            if (config.debugMode && i % 10 === 0) {
-                console.log(`Simulation ${i}/${config.numSimulations}: Score=${result.score.toFixed(3)}`);
-            }
+        const metrics = calculateMetrics(result.teamA, result.teamB, config, false);
+
+        if (metrics.score > bestScore) {
+            bestScore = metrics.score;
+            bestResult = { teams: result, score: metrics.score, metrics: metrics.details };
         }
     }
 
@@ -280,31 +274,85 @@ export function runRecursiveOptimization(
     config: BalanceConfig
 ): SimulationResult | null {
     // Run initial optimization
-    let bestResult = runMonteCarlo(players, config);
-    if (!bestResult) return null;
+    let bestResult: SimulationResult | null = null;
+    let bestScore = -Infinity;
 
     // Recursive refinement - focus heavily on talent distribution and consistency
     const subConfig: BalanceConfig = {
         ...config,
-        numSimulations: 200,
+        recursiveDepth: 500,
         recursive: false,
         weights: {
-            overallStrengthBalance: 0.0,
-            positionalScoreBalance: 0.05,
-            zonalDistributionBalance: 0.05,
-            energyBalance: 0.05,
-            creativityBalance: 0.0,
-            allStatBalance: 0.25,
-            talentDistributionBalance: 0.6         // THE SECRET SAUCE - dominate the recursive phase
+            overallStrengthBalance: 0.1,
+            positionalScoreBalance: 0.15,
+            zonalDistributionBalance: 0.3,
+            energyBalance: 0.1,
+            creativityBalance: 0.05,
+            allStatBalance: 0.15,
+            talentDistributionBalance: 0.15         // THE SECRET SAUCE - dominate the recursive phase
         },
-        consistencyPenaltyWeight: 3.0,             // Even more aggressive in recursive phase
+        consistencyPenaltyWeight: 0.0,             // Even more aggressive in recursive phase
     };
 
     for (let depth = 0; depth < config.recursiveDepth; depth++) {
         const refined = runMonteCarlo(players, subConfig);
-        if (refined && refined.score > bestResult.score) {
-            bestResult = refined;
+
+        if (!refined) continue;
+
+        const metrics = calculateMetrics(refined.teams.teamA, refined.teams.teamB, config, false);
+
+        if (metrics.score > bestScore) {
+            bestScore = metrics.score;
+            bestResult = { teams: refined.teams, score: metrics.score, metrics: metrics.details };
         }
+    }
+
+    return bestResult;
+}
+
+/**
+ * Recursive optimization for better results
+ */
+export function runTopLevelRecursiveOptimization(
+    players: FastPlayer[],
+    config: BalanceConfig
+): SimulationResult | null {
+    let bestResult: SimulationResult | null = null;
+    let bestScore = -Infinity;
+
+    // Recursive refinement - focus heavily on talent distribution and consistency
+    const subConfig: BalanceConfig = {
+        ...config,
+        recursiveDepth: 1000,
+        weights: {
+            overallStrengthBalance: 0.1,
+            positionalScoreBalance: 0.0,
+            zonalDistributionBalance: 0.1,
+            energyBalance: 0.1,
+            creativityBalance: 0.1,
+            allStatBalance: 0.2,
+            talentDistributionBalance: 0.4
+        },
+        recursive: true,
+        consistencyPenaltyWeight: 0.0,             // Even more aggressive in recursive phase
+    };
+
+    for (let depth = 0; depth < config.recursiveDepth; depth++) {
+        const refined = runMonteCarlo(players, subConfig);
+
+        if (!refined) continue;
+
+        const metrics = calculateMetrics(refined.teams.teamA, refined.teams.teamB, config, false);
+
+        if (metrics.score >= 0.95 && metrics.details.talentDistributionBalance >= 0.95 && (Math.abs(refined.teams.teamA.peakPotential - refined.teams.teamB.peakPotential) < 5)) {
+            return { teams: refined.teams, score: metrics.score, metrics: metrics.details };
+        }
+
+        if (metrics.score > bestScore) {
+            bestScore = metrics.score;
+            bestResult = { teams: refined.teams, score: metrics.score, metrics: metrics.details };
+        }
+        console.log("Run ", depth, config.recursiveDepth, metrics);
     }
 
     return bestResult;
@@ -325,14 +373,14 @@ export function convertToGamePlayers(
         const weight = defaultZoneWeights[position];
 
         // Team A players
-        const teamAPlayers = result.teamA.positions[posIdx];
+        const teamAPlayers = result.teams.teamA.positions[posIdx];
         teamAPlayers.forEach((player, idx) => {
             // Pass formation for CM positioning
             const point = getPointForPosition(
                 weight,
                 idx,
                 teamAPlayers.length,
-                result.teamA.formation || undefined
+                result.teams.teamA.formation || undefined
             );
             teamA.push({
                 ...player.original,
@@ -343,14 +391,14 @@ export function convertToGamePlayers(
         });
 
         // Team B players
-        const teamBPlayers = result.teamB.positions[posIdx];
+        const teamBPlayers = result.teams.teamB.positions[posIdx];
         teamBPlayers.forEach((player, idx) => {
             // Pass formation for CM positioning
             const point = getPointForPosition(
                 weight,
                 idx,
                 teamBPlayers.length,
-                result.teamB.formation || undefined
+                result.teams.teamB.formation || undefined
             );
             teamB.push({
                 ...player.original,

@@ -48,12 +48,12 @@ function calculateDirectionalImbalancePenalty(staminaDiff: number, workRateDiff:
     let workRateDirection = 0;
 
     if (staminaDiff != 0) staminaDirection = staminaDiff > 0 ? 1 : -1;
-    if (staminaDiff != 0) workRateDirection = workRateDiff > 0 ? 1 : -1;
+    if (workRateDiff != 0) workRateDirection = workRateDiff > 0 ? 1 : -1;
 
     // this can range from 0 - 2
     const maxFavors = Math.abs(staminaDirection + workRateDirection);
 
-    return 1.0 - (maxFavors * 0.25);
+    return 1.0 - (maxFavors * 0.3);
 }
 
 /**
@@ -161,7 +161,7 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const energyBalanceRatio = Math.pow(rawCombined, 2);
+    const energyBalanceRatio = Math.pow(rawCombined, 4);
 
     if (debug) {
         console.log('Energy Balance:');
@@ -474,7 +474,7 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 
     // Apply harsh power scaling to heavily penalize distribution mismatches
     // pow(0.95, 3) = 0.857, pow(0.90, 3) = 0.729, pow(0.80, 3) = 0.512
-    const talentDistributionRatio = Math.pow(rawRatio, 4);
+    const talentDistributionRatio = Math.pow(rawRatio, 1);
 
     if (debug) {
         console.log('Talent Distribution Balance (Player Score Std Dev):');

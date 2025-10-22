@@ -41,9 +41,6 @@ export interface BalanceMetrics {
  * Configuration for the auto-balance algorithm
  */
 export interface BalanceConfig {
-    /** Number of Monte Carlo simulations to run */
-    numSimulations: number;
-
     /** Weights for different optimization criteria (must sum to 1.0) */
     weights: BalanceMetrics;
 
@@ -129,11 +126,19 @@ export interface FastTeam {
 }
 
 /**
+ * Result of a team generation run
+ */
+export interface Teams {
+    teamA: FastTeam;
+    teamB: FastTeam;
+}
+
+
+/**
  * Result of a simulation run
  */
 export interface SimulationResult {
-    teamA: FastTeam;
-    teamB: FastTeam;
+    teams: Teams;
     score: number;
     metrics: BalanceMetrics;
 }

@@ -130,3 +130,40 @@ export function createPositionComparator(
 export function sortWorstInPlace(players: FastPlayer[]): void {
     players.sort((a, b) => a.bestScore - b.bestScore);
 }
+
+/**
+ * Cryptographically secure random number generator
+ * Returns a random float between 0 (inclusive) and 1 (exclusive)
+ * Uses crypto.getRandomValues for better randomness than Math.random()
+ */
+export function cryptoRandom(): number {
+    // Use crypto API if available (browser and modern Node.js)
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        const array = new Uint32Array(1);
+        crypto.getRandomValues(array);
+        // Convert to 0-1 range (divide by max uint32 value)
+        return array[0] / 0x100000000;
+    }
+    // Fallback to Math.random if crypto not available
+    return Math.random();
+}
+
+/**
+ * Fisher-Yates shuffle using crypto random
+ * Provides better randomization than repeated random picks
+ */
+export function cryptoShuffle<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(cryptoRandom() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+/**
+ * Random integer between min (inclusive) and max (exclusive) using crypto random
+ */
+export function cryptoRandomInt(min: number, max: number): number {
+    return Math.floor(cryptoRandom() * (max - min)) + min;
+}

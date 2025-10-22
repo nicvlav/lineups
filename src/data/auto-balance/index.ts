@@ -26,7 +26,7 @@ import { ENABLE_DEBUG, DEFAULT_CONFIG } from "./constants";
 import { toFastPlayer } from "./utils";
 import {
     runMonteCarlo,
-    runRecursiveOptimization,
+    runTopLevelRecursiveOptimization,
     convertToGamePlayers
 } from "./algorithm";
 import { calculateMetrics } from "./metrics";
@@ -76,6 +76,7 @@ export function autoCreateTeamsScored(
     // Configure algorithm - ENABLE_DEBUG overrides everything
     const config: BalanceConfig = {
         ...DEFAULT_CONFIG,
+        recursiveDepth: 50,
         debugMode: ENABLE_DEBUG || debugMode,
     };
 
@@ -86,15 +87,16 @@ export function autoCreateTeamsScored(
 
     // Run optimization
     const result = config.recursive
-        ? runRecursiveOptimization(fastPlayers, config)
+        ? runTopLevelRecursiveOptimization(fastPlayers, config)
         : runMonteCarlo(fastPlayers, config);
 
     if (!result) {
         throw new Error("Failed to balance teams - no valid formation found");
     }
 
+
     // Log results if debugging
-    calculateMetrics(result.teamA, result.teamB, config, true);
+    calculateMetrics(result.teams.teamA, result.teams.teamB, config, true);
 
     // Convert and return
     return convertToGamePlayers(result);
@@ -145,6 +147,7 @@ export function autoBalanceWithConfig(
     const config: BalanceConfig = {
         ...DEFAULT_CONFIG,
         ...customConfig,
+        recursiveDepth: 50,
         weights: {
             ...DEFAULT_CONFIG.weights,
             ...customConfig.weights,
@@ -163,14 +166,14 @@ export function autoBalanceWithConfig(
     // Convert and optimize
     const fastPlayers = players.map(toFastPlayer);
     const result = config.recursive
-        ? runRecursiveOptimization(fastPlayers, config)
+        ? runTopLevelRecursiveOptimization(fastPlayers, config)
         : runMonteCarlo(fastPlayers, config);
 
     if (!result) {
         throw new Error("Failed to balance teams");
     }
 
-    calculateMetrics(result.teamA, result.teamB, config, true);
+    calculateMetrics(result.teams.teamA, result.teams.teamB, config, true);
 
     return {
         teams: convertToGamePlayers(result),
