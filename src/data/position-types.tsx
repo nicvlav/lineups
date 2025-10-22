@@ -137,7 +137,7 @@ export const defaultZoneWeights: Weighting = {
         zone: "defense",
         weights: {
             anticipation: 1000,          // was defensiveAwareness
-            composure: 50,
+            composure: 150,
             offTheBall: 0,
             vision: 0,
             firstTouch: 5,
@@ -149,10 +149,10 @@ export const defaultZoneWeights: Weighting = {
             agility: 0,
             workrate: 25,               // was defensiveWorkrate
             crossing: 0,
-            positioning: 250,              // was attackPositioning
+            positioning: 600,              // was attackPositioning
             technique: 0,               // new: ball control
             dribbling: 0,
-            decisions: 150,              // was interceptions
+            decisions: 300,              // was interceptions
             marking: 850,                // was blocking
             heading: 400,
             aggression: 400,
@@ -160,9 +160,9 @@ export const defaultZoneWeights: Weighting = {
             longShots: 0,
             stamina: 50,
             teamwork: 50,
-            determination: 100,
-            leadership: 300,             // KEY STAT for CB - defensive leader
-            concentration: 300,
+            determination: 150,
+            leadership: 400,             // KEY STAT for CB - defensive leader
+            concentration: 400,
         },
         isCentral: true,
         absoluteYPosition: 0.675,
