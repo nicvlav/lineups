@@ -297,7 +297,7 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
 
         // Apply harsh power scaling to each zone ratio individually
         // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-        const scaledRatio = Math.pow(rawRatio, 2);
+        const scaledRatio = Math.pow(rawRatio, 5);
 
         rawZoneRatios.push(rawRatio);
         scaledZoneRatios.push(scaledRatio);
