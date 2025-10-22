@@ -98,33 +98,40 @@ export const defaultZoneWeights: Weighting = {
         shortName: "GK",
         zone: "goalkeeper",
         weights: {
-            anticipation: 950,           // was defensiveAwareness
-            composure: 200,
-            offTheBall: 0,
-            vision: 150,
+            // Technical
+            passing: 200,
             firstTouch: 200,
-            passing: 200,                // was shortPassing + longPassing
-            tackling: 0,
+            crossing: 0,
+            dribbling: 50,
+            technique: 100,
             finishing: 0,
+            longShots: 0,
+
+            // Tactical
+            anticipation: 950,
+            vision: 150,
+            positioning: 0,
+            offTheBall: 0,
+            decisions: 300,
+            marking: 800,
+            tackling: 0,
+            workrate: 0,
+
+            // Mental
+            composure: 200,
+            concentration: 600,
+            determination: 50,
+            leadership: 100,
+            teamwork: 200,
+            aggression: 0,
+            flair: 0,
+
+            // Physical
             speed: 0,
             strength: 300,
             agility: 150,
-            workrate: 0,               // was defensiveWorkrate
-            crossing: 0,
-            positioning: 0,              // was attackPositioning
-            technique: 100,              // new: ball control
-            dribbling: 50,
-            decisions: 300,              // was interceptions
-            marking: 800,                // was blocking
-            heading: 0,
-            aggression: 0,
-            flair: 0,
-            longShots: 0,
             stamina: 50,
-            teamwork: 200,
-            determination: 50,
-            leadership: 100,
-            concentration: 600,          // KEY STAT for GK - one lapse = goal
+            heading: 0,
         },
         isCentral: true,
         absoluteYPosition: 1.0,
@@ -136,33 +143,40 @@ export const defaultZoneWeights: Weighting = {
         shortName: "CB",
         zone: "defense",
         weights: {
-            anticipation: 1000,          // was defensiveAwareness
-            composure: 150,
-            offTheBall: 0,
-            vision: 0,
+            // Technical
+            passing: 25,
             firstTouch: 5,
-            passing: 25,                // was shortPassing + longPassing
-            tackling: 1000,
+            crossing: 0,
+            dribbling: 0,
+            technique: 0,
             finishing: 0,
+            longShots: 0,
+
+            // Tactical
+            anticipation: 1000,
+            vision: 0,
+            positioning: 600,
+            offTheBall: 0,
+            decisions: 300,
+            marking: 850,
+            tackling: 1000,
+            workrate: 25,
+
+            // Mental
+            composure: 150,
+            concentration: 400,
+            determination: 150,
+            leadership: 400,
+            teamwork: 50,
+            aggression: 400,
+            flair: 0,
+
+            // Physical
             speed: 0,
             strength: 400,
             agility: 0,
-            workrate: 25,               // was defensiveWorkrate
-            crossing: 0,
-            positioning: 600,              // was attackPositioning
-            technique: 0,               // new: ball control
-            dribbling: 0,
-            decisions: 300,              // was interceptions
-            marking: 850,                // was blocking
-            heading: 400,
-            aggression: 400,
-            flair: 0,
-            longShots: 0,
             stamina: 50,
-            teamwork: 50,
-            determination: 150,
-            leadership: 400,             // KEY STAT for CB - defensive leader
-            concentration: 400,
+            heading: 400,
         },
         isCentral: true,
         absoluteYPosition: 0.675,
@@ -174,33 +188,40 @@ export const defaultZoneWeights: Weighting = {
         shortName: "FB",
         zone: "defense",
         weights: {
-            anticipation: 500,           // was defensiveAwareness
-            composure: 5,
-            offTheBall: 50,
-            vision: 0,
+            // Technical
+            passing: 100,
             firstTouch: 5,
-            passing: 100,                // was shortPassing + longPassing
-            tackling: 600,
+            crossing: 150,
+            dribbling: 100,
+            technique: 0,
             finishing: 0,
+            longShots: 0,
+
+            // Tactical
+            anticipation: 500,
+            vision: 0,
+            positioning: 50,
+            offTheBall: 50,
+            decisions: 25,
+            marking: 500,
+            tackling: 600,
+            workrate: 600,
+
+            // Mental
+            composure: 5,
+            concentration: 5,
+            determination: 300,
+            leadership: 0,
+            teamwork: 300,
+            aggression: 100,
+            flair: 0,
+
+            // Physical
             speed: 100,
             strength: 5,
             agility: 5,
-            workrate: 600,               // was defensiveWorkrate + attackingWorkrate
-            crossing: 150,
-            positioning: 50,            // was attackPositioning
-            technique: 0,              // new
-            dribbling: 100,
-            decisions: 25,              // was interceptions
-            marking: 500,                // was blocking
+            stamina: 600,
             heading: 10,
-            aggression: 100,
-            flair: 0,
-            longShots: 0,
-            stamina: 600,                // KEY STAT for FB - runs up and down all game
-            teamwork: 300,
-            determination: 300,
-            leadership: 0,
-            concentration: 5,
         },
         isCentral: false,
         absoluteYPosition: 0.65,
@@ -212,33 +233,40 @@ export const defaultZoneWeights: Weighting = {
         shortName: "DM",
         zone: "midfield",
         weights: {
-            anticipation: 1000,           // was defensiveAwareness
-            composure: 1000,
-            offTheBall: 10,
-            vision: 350,
+            // Technical
+            passing: 800,
             firstTouch: 500,
-            passing: 800,                // was shortPassing + longPassing
-            tackling: 300,
+            crossing: 0,
+            dribbling: 50,
+            technique: 200,
             finishing: 0,
+            longShots: 10,
+
+            // Tactical
+            anticipation: 1000,
+            vision: 350,
+            positioning: 0,
+            offTheBall: 10,
+            decisions: 700,
+            marking: 10,
+            tackling: 300,
+            workrate: 200,
+
+            // Mental
+            composure: 1000,
+            concentration: 400,
+            determination: 200,
+            leadership: 600,
+            teamwork: 400,
+            aggression: 20,
+            flair: 0,
+
+            // Physical
             speed: 0,
             strength: 50,
             agility: 0,
-            workrate: 200,               // was defensiveWorkrate
-            crossing: 0,
-            positioning: 0,              // was attackPositioning
-            technique: 200,              // new: ball control
-            dribbling: 50,
-            decisions: 700,              // was interceptions
-            marking: 10,                 // was blocking
-            heading: 10,
-            aggression: 20,
-            flair: 0,
-            longShots: 10,
             stamina: 100,
-            teamwork: 400,
-            determination: 200,
-            leadership: 600,
-            concentration: 400,
+            heading: 10,
         },
         isCentral: true,
         absoluteYPosition: 0.5,
@@ -250,33 +278,40 @@ export const defaultZoneWeights: Weighting = {
         shortName: "CM",
         zone: "midfield",
         weights: {
-            anticipation: 100,           // was defensiveAwareness
-            composure: 1000,
-            offTheBall: 25,
-            vision: 400,
+            // Technical
+            passing: 1000,
             firstTouch: 300,
-            passing: 1000,               // was shortPassing + longPassing
-            tackling: 50,
+            crossing: 0,
+            dribbling: 50,
+            technique: 200,
             finishing: 0,
+            longShots: 50,
+
+            // Tactical
+            anticipation: 100,
+            vision: 400,
+            positioning: 15,
+            offTheBall: 25,
+            decisions: 600,
+            marking: 5,
+            tackling: 50,
+            workrate: 400,
+
+            // Mental
+            composure: 1000,
+            concentration: 300,
+            determination: 200,
+            leadership: 300,
+            teamwork: 350,
+            aggression: 5,
+            flair: 0,
+
+            // Physical
             speed: 50,
             strength: 5,
             agility: 5,
-            workrate: 400,               // was defensiveWorkrate + attackingWorkrate
-            crossing: 0,
-            positioning: 15,             // was attackPositioning
-            technique: 200,              // new: ball control
-            dribbling: 50,
-            decisions: 600,              // was interceptions
-            marking: 5,                  // was blocking
+            stamina: 600,
             heading: 0,
-            aggression: 5,
-            flair: 0,
-            longShots: 50,
-            stamina: 600,                // KEY STAT for CM - box to box running
-            teamwork: 350,
-            determination: 200,
-            leadership: 300,
-            concentration: 300,
         },
         isCentral: true,
         absoluteYPosition: 0.45,
@@ -288,33 +323,40 @@ export const defaultZoneWeights: Weighting = {
         shortName: "WM",
         zone: "midfield",
         weights: {
-            anticipation: 150,           // was defensiveAwareness
-            composure: 300,
-            offTheBall: 150,
-            vision: 0,
+            // Technical
+            passing: 300,
             firstTouch: 50,
-            passing: 300,                // was shortPassing + longPassing
-            tackling: 25,
+            crossing: 800,
+            dribbling: 200,
+            technique: 25,
             finishing: 0,
+            longShots: 30,
+
+            // Tactical
+            anticipation: 150,
+            vision: 0,
+            positioning: 150,
+            offTheBall: 150,
+            decisions: 200,
+            marking: 25,
+            tackling: 25,
+            workrate: 650,
+
+            // Mental
+            composure: 300,
+            concentration: 15,
+            determination: 200,
+            leadership: 0,
+            teamwork: 500,
+            aggression: 5,
+            flair: 15,
+
+            // Physical
             speed: 450,
             strength: 5,
             agility: 50,
-            workrate: 650,               // was defensiveWorkrate + attackingWorkrate
-            crossing: 800,
-            positioning: 150,            // was attackPositioning
-            technique: 25,              // new
-            dribbling: 200,
-            decisions: 200,              // was interceptions
-            marking: 25,                  // was blocking
+            stamina: 650,
             heading: 0,
-            aggression: 5,
-            flair: 15,
-            longShots: 30,
-            stamina: 650,                // KEY STAT for WM - running up and down wing
-            teamwork: 500,
-            determination: 200,
-            leadership: 0,
-            concentration: 15,
         },
         isCentral: false,
         absoluteYPosition: 0.4,
@@ -326,33 +368,40 @@ export const defaultZoneWeights: Weighting = {
         shortName: "AM",
         zone: "midfield",
         weights: {
-            anticipation: 50,            // was defensiveAwareness
-            composure: 1000,
-            offTheBall: 50,
-            vision: 1000,
+            // Technical
+            passing: 800,
             firstTouch: 600,
-            passing: 800,               // was shortPassing + longPassing
-            tackling: 0,
+            crossing: 5,
+            dribbling: 350,
+            technique: 650,
             finishing: 25,
+            longShots: 50,
+
+            // Tactical
+            anticipation: 50,
+            vision: 1000,
+            positioning: 100,
+            offTheBall: 50,
+            decisions: 0,
+            marking: 0,
+            tackling: 0,
+            workrate: 650,
+
+            // Mental
+            composure: 1000,
+            concentration: 50,
+            determination: 50,
+            leadership: 5,
+            teamwork: 300,
+            aggression: 5,
+            flair: 50,
+
+            // Physical
             speed: 5,
             strength: 0,
             agility: 100,
-            workrate: 650,               // was defensiveWorkrate + attackingWorkrate
-            crossing: 5,
-            positioning: 100,            // was attackPositioning
-            technique: 650,              // new: ball control, very important
-            dribbling: 350,
-            decisions: 0,                // was interceptions
-            marking: 0,                  // was blocking
-            heading: 0,
-            aggression: 5,
-            flair: 50,                  // KEY STAT for AM - creativity/playmaking
-            longShots: 50,
             stamina: 150,
-            teamwork: 300,
-            determination: 50,
-            leadership: 5,
-            concentration: 50,
+            heading: 0,
         },
         isCentral: true,
         absoluteYPosition: 0.325,
@@ -364,35 +413,41 @@ export const defaultZoneWeights: Weighting = {
         shortName: "ST",
         zone: "attack",
         weights: {
-            anticipation: 400,             // was defensiveAwareness
-            composure: 1000,
-            offTheBall: 800,
-            vision: 50,
+            // Technical
+            passing: 50,
             firstTouch: 600,
-            passing: 50,                // was shortPassing + longPassing
-            tackling: 0,
+            crossing: 0,
+            dribbling: 50,
+            technique: 300,
             finishing: 1000,
+            longShots: 15,
+
+            // Tactical
+            anticipation: 400,
+            vision: 50,
+            positioning: 1000,
+            offTheBall: 800,
+            decisions: 200,
+            marking: 0,
+            tackling: 0,
+            workrate: 300,
+
+            // Mental
+            composure: 1000,
+            concentration: 200,
+            determination: 200,
+            leadership: 5,
+            teamwork: 100,
+            aggression: 100,
+            flair: 50,
+
+            // Physical
             speed: 100,
             strength: 400,
             agility: 50,
-            workrate: 300,               // was defensiveWorkrate + attackingWorkrate
-            crossing: 0,
-            positioning: 1000,           // was attackPositioning
-            technique: 300,              // new: ball control
-            dribbling: 50,
-            decisions: 200,                // was interceptions
-            marking: 0,                  // was blocking
-            heading: 100,
-            aggression: 100,
-            flair: 50,
-            longShots: 15,
             stamina: 100,
-            teamwork: 100,
-            determination: 200,          // KEY STAT for ST - never give up attitude
-            leadership: 5,
-            concentration: 200,
+            heading: 100,
         },
-
         isCentral: true,
         absoluteYPosition: 0.175,
         priorityStat: 1,
@@ -403,35 +458,41 @@ export const defaultZoneWeights: Weighting = {
         shortName: "WR",
         zone: "attack",
         weights: {
-            anticipation: 5,             // was defensiveAwareness
-            composure: 150,
-            offTheBall: 600,
-            vision: 100,
+            // Technical
+            passing: 100,
             firstTouch: 550,
-            passing: 100,                // was shortPassing + longPassing
-            tackling: 0,
+            crossing: 1000,
+            dribbling: 800,
+            technique: 400,
             finishing: 50,
+            longShots: 25,
+
+            // Tactical
+            anticipation: 5,
+            vision: 100,
+            positioning: 300,
+            offTheBall: 600,
+            decisions: 25,
+            marking: 0,
+            tackling: 0,
+            workrate: 600,
+
+            // Mental
+            composure: 150,
+            concentration: 10,
+            determination: 150,
+            leadership: 0,
+            teamwork: 50,
+            aggression: 0,
+            flair: 300,
+
+            // Physical
             speed: 900,
             strength: 0,
             agility: 600,
-            workrate: 600,               // was defensiveWorkrate + attackingWorkrate
-            crossing: 1000,
-            positioning: 300,            // was attackPositioning
-            technique: 400,              // new: ball control, important for wingers
-            dribbling: 800,
-            decisions: 25,                // was interceptions
-            marking: 0,                  // was blocking
-            heading: 0,
-            aggression: 0,
-            flair: 300,                  // KEY STAT for WR - creativity/trickery
-            longShots: 25,
             stamina: 300,
-            teamwork: 50,
-            determination: 150,
-            leadership: 0,
-            concentration: 10,
+            heading: 0,
         },
-
         isCentral: false,
         absoluteYPosition: 0.2,
         priorityStat: 2,
