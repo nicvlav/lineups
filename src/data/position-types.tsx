@@ -145,7 +145,7 @@ export const defaultZoneWeights: Weighting = {
         weights: {
             // Technical
             passing: 25,
-            firstTouch: 5,
+            firstTouch: 200,
             crossing: 0,
             dribbling: 0,
             technique: 0,
@@ -163,11 +163,11 @@ export const defaultZoneWeights: Weighting = {
             workrate: 25,
 
             // Mental
-            composure: 150,
+            composure: 250,
             concentration: 400,
             determination: 150,
             leadership: 400,
-            teamwork: 50,
+            teamwork: 200,
             aggression: 400,
             flair: 0,
 
@@ -190,7 +190,7 @@ export const defaultZoneWeights: Weighting = {
         weights: {
             // Technical
             passing: 100,
-            firstTouch: 5,
+            firstTouch: 200,
             crossing: 150,
             dribbling: 100,
             technique: 0,
@@ -202,14 +202,14 @@ export const defaultZoneWeights: Weighting = {
             vision: 0,
             positioning: 50,
             offTheBall: 50,
-            decisions: 25,
+            decisions: 200,
             marking: 500,
             tackling: 600,
             workrate: 600,
 
             // Mental
-            composure: 5,
-            concentration: 5,
+            composure: 200,
+            concentration: 150,
             determination: 300,
             leadership: 0,
             teamwork: 300,
@@ -324,8 +324,8 @@ export const defaultZoneWeights: Weighting = {
         zone: "midfield",
         weights: {
             // Technical
-            passing: 300,
-            firstTouch: 50,
+            passing: 400,
+            firstTouch: 200,
             crossing: 800,
             dribbling: 200,
             technique: 25,
@@ -344,17 +344,17 @@ export const defaultZoneWeights: Weighting = {
 
             // Mental
             composure: 300,
-            concentration: 15,
+            concentration: 150,
             determination: 200,
             leadership: 0,
-            teamwork: 500,
+            teamwork: 600,
             aggression: 5,
             flair: 15,
 
             // Physical
-            speed: 450,
+            speed: 400,
             strength: 5,
-            agility: 50,
+            agility: 100,
             stamina: 650,
             heading: 0,
         },
@@ -369,7 +369,7 @@ export const defaultZoneWeights: Weighting = {
         zone: "midfield",
         weights: {
             // Technical
-            passing: 800,
+            passing: 1000,
             firstTouch: 600,
             crossing: 5,
             dribbling: 350,
@@ -382,14 +382,14 @@ export const defaultZoneWeights: Weighting = {
             vision: 1000,
             positioning: 100,
             offTheBall: 50,
-            decisions: 0,
+            decisions: 400,
             marking: 0,
             tackling: 0,
             workrate: 650,
 
             // Mental
             composure: 1000,
-            concentration: 50,
+            concentration: 150,
             determination: 50,
             leadership: 5,
             teamwork: 300,
@@ -414,8 +414,8 @@ export const defaultZoneWeights: Weighting = {
         zone: "attack",
         weights: {
             // Technical
-            passing: 50,
-            firstTouch: 600,
+            passing: 100,
+            firstTouch: 650,
             crossing: 0,
             dribbling: 50,
             technique: 300,
@@ -427,7 +427,7 @@ export const defaultZoneWeights: Weighting = {
             vision: 50,
             positioning: 1000,
             offTheBall: 800,
-            decisions: 200,
+            decisions: 300,
             marking: 0,
             tackling: 0,
             workrate: 300,
@@ -437,7 +437,7 @@ export const defaultZoneWeights: Weighting = {
             concentration: 200,
             determination: 200,
             leadership: 5,
-            teamwork: 100,
+            teamwork: 200,
             aggression: 100,
             flair: 50,
 
@@ -459,37 +459,37 @@ export const defaultZoneWeights: Weighting = {
         zone: "attack",
         weights: {
             // Technical
-            passing: 100,
+            passing: 300,
             firstTouch: 550,
             crossing: 1000,
-            dribbling: 800,
-            technique: 400,
+            dribbling: 600,
+            technique: 200,
             finishing: 50,
             longShots: 25,
 
             // Tactical
             anticipation: 5,
-            vision: 100,
+            vision: 200,
             positioning: 300,
             offTheBall: 600,
-            decisions: 25,
+            decisions: 300,
             marking: 0,
             tackling: 0,
             workrate: 600,
 
             // Mental
-            composure: 150,
-            concentration: 10,
+            composure: 200,
+            concentration: 150,
             determination: 150,
             leadership: 0,
-            teamwork: 50,
+            teamwork: 200,
             aggression: 0,
             flair: 300,
 
             // Physical
-            speed: 900,
+            speed: 800,
             strength: 0,
-            agility: 600,
+            agility: 400,
             stamina: 300,
             heading: 0,
         },
