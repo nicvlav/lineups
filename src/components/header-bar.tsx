@@ -27,8 +27,9 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
     const isStaging = window.location.hostname.includes('staging');
 
     const canVote = user !== null;
+    
     // Only show Cards to me!
-    const showCards = user?.id === '24115871-04fe-4111-b048-18f7e3e976fc';
+    const showCards = isStaging || (user?.id === '24115871-04fe-4111-b048-18f7e3e976fc');
 
     const handleSignOut = async (e: React.MouseEvent) => {
         e.preventDefault();
