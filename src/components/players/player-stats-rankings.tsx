@@ -3,9 +3,9 @@ import { usePlayers } from "@/context/players-provider";
 import { getZoneAverages, calculateScoresForStats, getTopPositions } from "@/data/player-types";
 import { normalizedDefaultWeights, PositionLabels, Position, positionKeys } from "@/data/position-types";
 import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
-import Panel from "@/components/dialogs/panel";
+import Panel from "@/components/shared/panel";
 import { ActionBarTwoColumn } from "@/components/ui/action-bar";
-import SharedPlayerStatsModal, { getPlayerAccent } from "@/components/dialogs/shared-player-stats-modal";
+import SharedPlayerStatsModal, { getPlayerAccent } from "@/components/players/shared-player-stats-modal";
 import { Trophy, Medal, Award, Star, TrendingUp } from "lucide-react";
 
 interface PlayerRanking {

@@ -3,7 +3,7 @@ import { useDrop, DropTargetMonitor } from 'react-dnd';
 import { usePlayers } from "@/context/players-provider"
 import { ScoredGamePlayerWithThreat } from "@/data/player-types";
 
-import DraggablePlayer from '@/components/pitch/pitch-player'
+import DraggablePlayer from '@/components/game/pitch/pitch-player'
 
 const mergeRefs = (...refs: (React.Ref<any> | null)[]) => (el: any) => {
   refs.forEach((ref) => {

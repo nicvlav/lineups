@@ -1,10 +1,10 @@
-import TeamArea from "@/components/pitch/team-area"; // Render directly
-import Panel from "@/components/dialogs/panel"
+import TeamArea from "@/components/game/pitch/team-area"; // Render directly
+import Panel from "@/components/shared/panel"
 import { Button } from "@/components/ui/button"
 import { Share, Trash2 } from "lucide-react";
 import { usePlayers } from "@/context/players-provider"
 import { encodeStateToURL } from "@/data/state-manager";
-import FormationSelector from "@/components/formation-selector"
+import FormationSelector from "@/components/game/formation-selector"
 import { cn } from "@/lib/utils";
 import { ANIMATIONS } from "@/lib/design-tokens";
 import { ActionBarTwoColumn } from "@/components/ui/action-bar";

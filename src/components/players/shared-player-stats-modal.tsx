@@ -2,8 +2,8 @@ import React from "react";
 import { StatCategory, StatsKey, statLabelMap, CategorizedStats } from "@/data/stat-types";
 import { ZoneAverages, Player } from "@/data/player-types";
 import { ZoneScores } from "@/data/position-types";
-import { PositionScoreList } from "@/components/dialogs/position-score-list";
-import Modal from "@/components/dialogs/modal";
+import { PositionScoreList } from "@/components/players/position-score-list";
+import Modal from "@/components/shared/modal";
 
 interface SharedPlayerStatsModalProps {
     player: Player | null;

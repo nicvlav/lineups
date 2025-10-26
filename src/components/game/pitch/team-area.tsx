@@ -1,4 +1,4 @@
-import Pitch from '@/components/pitch/pitch'
+import Pitch from '@/components/game/pitch/pitch'
 import { usePlayers } from "@/context/players-provider";
 
 interface TeamAreaProps {

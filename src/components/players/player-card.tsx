@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { StatsKey } from "@/data/stat-types";
 import { ZoneAverages, Player } from "@/data/player-types";
 import { ZoneScores } from "@/data/position-types";
-import SharedPlayerStatsModal, { getPlayerAccent } from "@/components/dialogs/shared-player-stats-modal";
+import SharedPlayerStatsModal, { getPlayerAccent } from "@/components/players/shared-player-stats-modal";
 
 interface PlayerCardProps {
     player: Player; // Full player object for avatar access

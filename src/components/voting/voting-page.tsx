@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { usePlayers } from "@/context/players-provider";
-import { PlayerVoting } from "@/components/dialogs/player-voting";
+import { PlayerVoting } from "@/components/voting/player-voting-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

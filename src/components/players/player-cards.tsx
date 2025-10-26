@@ -3,11 +3,11 @@ import { usePlayers } from "@/context/players-provider";
 import { StatCategoryKeys, StatCategoryNameMap, } from "@/data/stat-types";
 import { getZoneAverages, getTopPositions, calculateScoresForStats } from "@/data/player-types";
 import { normalizedDefaultWeights } from "@/data/position-types";
-import PlayerCard from "@/components/dialogs/player-card";
-import PlayerStatsRankings from "@/components/dialogs/player-stats-rankings";
+import PlayerCard from "@/components/players/player-card";
+import PlayerStatsRankings from "@/components/players/player-stats-rankings";
 import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import Panel from "@/components/dialogs/panel";
+import Panel from "@/components/shared/panel";
 import { ActionBarTwoColumn } from "@/components/ui/action-bar";
 import { SquareUser, TrendingUp } from "lucide-react";
 

@@ -5,7 +5,7 @@ import { ScoredGamePlayerWithThreat } from "@/data/player-types";
 import { usePlayers } from "@/context/players-provider";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
 // import Panel from "@/components/dialogs/panel"
-import PlayerDialog from "@/components/dialogs/player-dialog";
+import PlayerDialog from "@/components/players/player-dialog";
 
 interface PitchPlayerProps {
   player: ScoredGamePlayerWithThreat;
