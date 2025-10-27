@@ -280,7 +280,7 @@ export const defaultZoneWeights: Weighting = {
         weights: {
             // Technical
             passing: 1000,
-            firstTouch: 300,
+            firstTouch: 350,
             crossing: 0,
             dribbling: 50,
             technique: 200,
@@ -290,19 +290,19 @@ export const defaultZoneWeights: Weighting = {
             // Tactical
             anticipation: 400,
             vision: 400,
-            positioning: 300,
+            positioning: 250,
             offTheBall: 25,
-            decisions: 600,
+            decisions: 550,
             marking: 5,
             tackling: 50,
-            workrate: 400,
+            workrate: 350,
 
             // Mental
             composure: 1000,
             concentration: 300,
             determination: 200,
-            leadership: 300,
-            teamwork: 350,
+            leadership: 225,
+            teamwork: 300,
             aggression: 5,
             flair: 0,
 
@@ -459,23 +459,23 @@ export const defaultZoneWeights: Weighting = {
         zone: "attack",
         weights: {
             // Technical
-            passing: 400,
-            firstTouch: 550,
+            passing: 300,
+            firstTouch: 750,
             crossing: 1000,
             dribbling: 800,
             technique: 500,
-            finishing: 500,
+            finishing: 300,
             longShots: 25,
 
             // Tactical
-            anticipation: 400,
-            vision: 300,
-            positioning: 300,
+            anticipation: 250,
+            vision: 225,
+            positioning: 200,
             offTheBall: 600,
             decisions: 300,
             marking: 0,
             tackling: 0,
-            workrate: 600,
+            workrate: 400,
 
             // Mental
             composure: 200,
@@ -484,10 +484,10 @@ export const defaultZoneWeights: Weighting = {
             leadership: 0,
             teamwork: 300,
             aggression: 150,
-            flair: 350,
+            flair: 200,
 
             // Physical
-            speed: 750,
+            speed: 600,
             strength: 5,
             agility: 400,
             stamina: 300,
