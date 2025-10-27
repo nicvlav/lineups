@@ -37,7 +37,7 @@ interface VotingProviderProps {
 }
 
 export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
-    const { user, ensureValidSession } = useAuth();
+    const { user } = useAuth();
     const { players } = usePlayers();
 
     // Voting stats - cached and updated via real-time
@@ -377,6 +377,8 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
                     voteEntry.retryCount++;
                     voteEntry.lastAttempt = now;
 
+                    console.error(error);
+
                     if (voteEntry.retryCount >= MAX_RETRY_ATTEMPTS) {
                         if (voteEntry.toastId) {
                             toast.dismiss(voteEntry.toastId);
@@ -453,11 +455,6 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
         };
 
         if (!user) throw new Error('User not authenticated');
-
-        const sessionValid = await ensureValidSession();
-        if (!sessionValid) {
-            throw new Error('Session invalid - please sign in again');
-        }
 
         const { data: userProfile, error: profileError } = await supabase
             .from('user_profiles')
