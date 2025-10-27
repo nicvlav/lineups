@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { usePlayers } from "@/context/players-provider";
+import { useVoting } from "@/context/voting-provider";
 import { PlayerVoting } from "@/components/voting/player-voting-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,16 +16,12 @@ interface VoteData {
 
 export default function VotingPage() {
   const { user, canVote, isVerified } = useAuth();
+  const { players: playersRecord } = usePlayers();
   const {
-    players: playersRecord,
     submitVote,
     votingStats,
     userVotes,
-    resetVotingProgress,
-    votingSession,
-    setCurrentVotingPlayer,
-    getNextPlayerToVote,
-  } = usePlayers();
+  } = useVoting();
   const players = Object.values(playersRecord);
   const [showVoting, setShowVoting] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
@@ -39,18 +36,24 @@ export default function VotingPage() {
     setLoading(false);
   }, [user]);
 
+  // Helper function to get next player to vote on
+  const getNextPlayerToVote = () => {
+    const eligiblePlayers = players.filter(player => {
+      const isAssociatedPlayer = user?.profile?.associated_player_id === player.id;
+      return !isAssociatedPlayer && !userVotes.has(player.id);
+    });
+    return eligiblePlayers.length > 0 ? eligiblePlayers[0].id : null;
+  };
+
   // Set initial voting player
   useEffect(() => {
     if (user && !loading) {
-      const currentPlayer = votingSession?.currentPlayerId || getNextPlayerToVote();
+      const currentPlayer = getNextPlayerToVote();
       if (currentPlayer) {
         setCurrentVotingPlayerId(currentPlayer);
-        if (currentPlayer !== votingSession?.currentPlayerId) {
-          setCurrentVotingPlayer(currentPlayer);
-        }
       }
     }
-  }, [user, loading, votingSession, getNextPlayerToVote, setCurrentVotingPlayer]);
+  }, [user, loading]);
 
   const handleVoteSubmit = async (voteData: VoteData) => {
     if (!user) return;
@@ -59,20 +62,29 @@ export default function VotingPage() {
       // Submit the vote
       await submitVote(voteData);
 
-      // Find next player to vote on
-      const nextPlayer = getNextPlayerToVote();
+      // Find next player to vote on (after vote is submitted)
+      setTimeout(() => {
+        const nextPlayer = getNextPlayerToVote();
 
-      if (nextPlayer) {
-        setCurrentVotingPlayerId(nextPlayer);
-        setCurrentVotingPlayer(nextPlayer);
-      } else {
-        // No more players to vote on
-        setCurrentVotingPlayerId(null);
-        setShowVoting(false);
-      }
+        if (nextPlayer) {
+          setCurrentVotingPlayerId(nextPlayer);
+        } else {
+          // No more players to vote on
+          setCurrentVotingPlayerId(null);
+          setShowVoting(false);
+        }
+      }, 100);
     } catch (error) {
       console.error('Error submitting vote:', error);
       throw error;
+    }
+  };
+
+  const resetVotingProgress = () => {
+    // Reset to first unvoted player
+    const nextPlayer = getNextPlayerToVote();
+    if (nextPlayer) {
+      setCurrentVotingPlayerId(nextPlayer);
     }
   };
 

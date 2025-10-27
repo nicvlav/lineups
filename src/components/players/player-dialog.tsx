@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { usePlayers } from "@/context/players-provider";
+import { useGame } from "@/context/game-provider";
 import { Player, ScoredGamePlayerWithThreat } from "@/data/player-types";
 import { Button } from "@/components/ui/button"
 import Modal from "@/components/shared/modal";
@@ -17,7 +18,8 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
     isOpen,
     onClose,
 }) => {
-    const { players, gamePlayers, removeFromGame, switchToRealPlayer } = usePlayers();
+    const { players } = usePlayers();
+    const { gamePlayers, removeFromGame, switchToRealPlayer } = useGame();
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
     const [isConfirmOpen, setConfirmOpen] = useState(false);

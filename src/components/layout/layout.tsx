@@ -5,6 +5,8 @@ import { TouchBackend } from 'react-dnd-touch-backend';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/auth-context";
 import { PlayersProvider } from "@/context/players-provider";
+import { GameProvider } from "@/context/game-provider";
+import { VotingProvider } from "@/context/voting-provider";
 import { PitchAnimationProvider } from "@/context/pitch-animation-context";
 import HeaderBar from "@/components/layout/header-bar";
 import { SquadIdVerification } from "@/components/auth/dialogs/squad-id-verification";
@@ -80,7 +82,9 @@ const LayoutContent = () => {
     return (
         <PitchAnimationProvider>
             <PlayersProvider>
-                <DndProvider backend={backend} options={options}>
+                <GameProvider>
+                    <VotingProvider>
+                        <DndProvider backend={backend} options={options}>
                     {/* Staging environment banner */}
                     {isStaging && (
                         <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-center py-1 px-4 text-sm font-medium z-50 relative">
@@ -144,7 +148,9 @@ const LayoutContent = () => {
                             )}
                         </>
                     )}
-                </DndProvider>
+                        </DndProvider>
+                    </VotingProvider>
+                </GameProvider>
             </PlayersProvider>
         </PitchAnimationProvider>
     );
