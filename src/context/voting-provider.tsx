@@ -454,20 +454,10 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
             concentration: 'concentration'
         };
 
-        if (!user) throw new Error('User not authenticated');
-
-        const { data: userProfile, error: profileError } = await supabase
-            .from('user_profiles')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (profileError || !userProfile) {
-            throw new Error('User profile not found. Please complete verification first.');
-        }
+        if (!user || !user.profile) throw new Error('User not authenticated');
 
         const dbVoteData: any = {
-            voter_user_profile_id: userProfile.id,
+            voter_user_profile_id: user.profile.id,
             player_id: voteData.playerId,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -498,6 +488,8 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
                 reject(new Error('Database operation timed out after 10 seconds'));
             }, 10000);
         });
+
+        console.log("Trying supabase upsert");
 
         try {
             const upsertPromise = supabase
