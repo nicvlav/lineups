@@ -393,7 +393,7 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
                         });
 
                         toast.error(`Failed to submit vote for ${player?.name || 'player'}`, {
-                            description: 'Please try again later',
+                            description: error as string,
                             duration: 4000,
                             icon: '❌'
                         });
