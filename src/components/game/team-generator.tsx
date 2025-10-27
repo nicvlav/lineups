@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { usePlayers } from "@/context/players-provider";
+import { useGame } from "@/context/game-provider";
 import { Users, Wand2, CheckCircle2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,8 @@ interface TeamGeneratorProps {
 
 const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
-    const { players, gamePlayers, generateTeams } = usePlayers();
+    const { players } = usePlayers();
+    const { gamePlayers, generateTeams } = useGame();
     const navigate = useNavigate();
     
     const playersArr = Object.values(players);

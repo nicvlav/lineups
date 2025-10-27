@@ -5,7 +5,7 @@ import { Player, getZoneAverages, ZoneAverages } from "@/data/player-types";
 import { } from "lucide-react";
 import { Radar } from "react-chartjs-2";
 import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from "chart.js";
-import Panel from "@/components/dialogs/panel"
+import Panel from "@/components/shared/panel"
 
 ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 

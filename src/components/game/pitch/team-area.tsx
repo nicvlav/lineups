@@ -1,5 +1,5 @@
-import Pitch from '@/components/pitch/pitch'
-import { usePlayers } from "@/context/players-provider";
+import Pitch from '@/components/game/pitch/pitch'
+import { useGame } from "@/context/game-provider";
 
 interface TeamAreaProps {
   team: string;
@@ -7,7 +7,7 @@ interface TeamAreaProps {
 }
 
 const TeamArea: React.FC<TeamAreaProps> = ({ team, playerSize }) => {
-  const { gamePlayers } = usePlayers();
+  const { gamePlayers } = useGame();
 
   const teamPlayers = Object.values(gamePlayers).filter((p) => p.team === team);
 

@@ -1,11 +1,11 @@
-import { ModeToggle } from "@/components/mode-toggle"
+import { ModeToggle } from "@/components/layout/mode-toggle"
 import { Home, ListChecks , SquareUser, Vote, LogIn, LogOut, User, type LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LAYOUT, GAP, ANIMATIONS } from "@/lib/design-tokens";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
-import { PlayerAssociation } from "@/components/dialogs/player-association";
+import { PlayerAssociation } from "@/components/auth/dialogs/player-association";
 import { useState } from "react";
 
 interface HeaderBarProps {

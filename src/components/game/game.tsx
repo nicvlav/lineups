@@ -1,10 +1,10 @@
-import TeamArea from "@/components/pitch/team-area"; // Render directly
-import Panel from "@/components/dialogs/panel"
+import TeamArea from "@/components/game/pitch/team-area"; // Render directly
+import Panel from "@/components/shared/panel"
 import { Button } from "@/components/ui/button"
 import { Share, Trash2 } from "lucide-react";
-import { usePlayers } from "@/context/players-provider"
+import { useGame } from "@/context/game-provider"
 import { encodeStateToURL } from "@/data/state-manager";
-import FormationSelector from "@/components/formation-selector"
+import FormationSelector from "@/components/game/formation-selector"
 import { cn } from "@/lib/utils";
 import { ANIMATIONS } from "@/lib/design-tokens";
 import { ActionBarTwoColumn } from "@/components/ui/action-bar";
@@ -18,7 +18,7 @@ interface GameProps {
 }
 
 const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
-    const { clearGame, gamePlayers } = usePlayers();
+    const { clearGame, gamePlayers } = useGame();
 
     const handleShare = async () => {
         try {
@@ -40,7 +40,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
     return (
         <div className="w-full h-full p-4">
             {/* Layout for small screens (stacked and tall) */}
-            <div className='flex flex-col h-full w-full max-w-[100%]'>
+            <div className='flex flex-col h-full w-full max-w-full'>
 
                 {/* Action Bar - Professional alignment using unified component */}
                 <ActionBarTwoColumn

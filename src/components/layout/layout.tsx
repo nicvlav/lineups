@@ -5,24 +5,26 @@ import { TouchBackend } from 'react-dnd-touch-backend';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/auth-context";
 import { PlayersProvider } from "@/context/players-provider";
+import { GameProvider } from "@/context/game-provider";
+import { VotingProvider } from "@/context/voting-provider";
 import { PitchAnimationProvider } from "@/context/pitch-animation-context";
-import HeaderBar from "@/components/header-bar";
-import { SquadIdVerification } from "@/components/dialogs/squad-id-verification";
-import { PlayerAssignment } from "@/components/dialogs/player-assignment";
+import HeaderBar from "@/components/layout/header-bar";
+import { SquadIdVerification } from "@/components/auth/dialogs/squad-id-verification";
+import { PlayerAssignment } from "@/components/auth/dialogs/player-assignment";
 import { useLocation } from 'react-router-dom';
 
-import Game from "@/components/game";
+import Game from "@/components/game/game";
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import PlayerCards from "@/components/dialogs/player-cards";
-import TeamGenerator from "@/components/dialogs/team-generator";
-import VotingPage from "@/components/voting-page";
-import SignInPage from "@/components/auth/sign-in";
-import SignUpPage from "@/components/auth/sign-up";
-import ResetPasswordPage from "@/components/auth/reset-password";
-import UpdatePasswordPage from "@/components/auth/update-password";
-import AuthDebugPage from "@/components/auth/debug";
-import AuthCallbackPage from "@/components/auth/callback";
-import DataDeletionPage from "@/components/data-deletion";
+import PlayerCards from "@/components/players/player-cards";
+import TeamGenerator from "@/components/game/team-generator";
+import VotingPage from "@/components/voting/voting-page";
+import SignInPage from "@/components/auth/pages/sign-in";
+import SignUpPage from "@/components/auth/pages/sign-up";
+import ResetPasswordPage from "@/components/auth/pages/reset-password";
+import UpdatePasswordPage from "@/components/auth/pages/update-password";
+import AuthDebugPage from "@/components/auth/pages/debug";
+import AuthCallbackPage from "@/components/auth/pages/callback";
+import DataDeletionPage from "@/components/auth/pages/data-deletion";
 
 const LayoutContent = () => {
     const { needsVerification, user } = useAuth();
@@ -80,7 +82,9 @@ const LayoutContent = () => {
     return (
         <PitchAnimationProvider>
             <PlayersProvider>
-                <DndProvider backend={backend} options={options}>
+                <GameProvider>
+                    <VotingProvider>
+                        <DndProvider backend={backend} options={options}>
                     {/* Staging environment banner */}
                     {isStaging && (
                         <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-center py-1 px-4 text-sm font-medium z-50 relative">
@@ -144,7 +148,9 @@ const LayoutContent = () => {
                             )}
                         </>
                     )}
-                </DndProvider>
+                        </DndProvider>
+                    </VotingProvider>
+                </GameProvider>
             </PlayersProvider>
         </PitchAnimationProvider>
     );

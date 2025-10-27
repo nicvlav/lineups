@@ -48,7 +48,6 @@ interface AuthContextProps {
     signOut: () => Promise<{ error: AuthError | null }>;
     forceSignOut: () => Promise<void>;
     refreshSessionIfNeeded: () => Promise<boolean>;
-    ensureValidSession: () => Promise<boolean>;
     clearUrlState: () => void;
     // Profile management
     updateAssociatedPlayer: (playerId: string | null) => Promise<{ error: AuthError | null }>;
@@ -540,16 +539,6 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         }
     };
 
-    const ensureValidSession = async (): Promise<boolean> => {
-        if (!user || !session) {
-            console.warn('AUTH: No user or session available');
-            return false;
-        }
-
-        // Always refresh before critical operations
-        return await refreshSessionIfNeeded();
-    };
-
     const clearUrlState = () => {
         setUrlState(null);
     };
@@ -878,7 +867,6 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             signOut,
             forceSignOut,
             refreshSessionIfNeeded,
-            ensureValidSession,
             clearUrlState,
             updateAssociatedPlayer,
             validateSquad,

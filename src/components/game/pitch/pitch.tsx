@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { useDrop, DropTargetMonitor } from 'react-dnd';
 import { usePlayers } from "@/context/players-provider"
+import { useGame } from "@/context/game-provider"
 import { ScoredGamePlayerWithThreat } from "@/data/player-types";
 
-import DraggablePlayer from '@/components/pitch/pitch-player'
+import DraggablePlayer from '@/components/game/pitch/pitch-player'
 
 const mergeRefs = (...refs: (React.Ref<any> | null)[]) => (el: any) => {
   refs.forEach((ref) => {
@@ -36,7 +37,8 @@ const getPlayerPosition = (player: ScoredGamePlayerWithThreat, playerSize: numbe
 
 const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, playerSize }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { players, addExisitingPlayerToGame, updateGamePlayerPosition } = usePlayers();
+  const { players } = usePlayers();
+  const { addExisitingPlayerToGame, updateGamePlayerPosition } = useGame();
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   // Update container size on mount, resize, and whenever the container might change

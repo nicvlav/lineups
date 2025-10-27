@@ -1,9 +1,9 @@
-import { usePlayers } from "@/context/players-provider";
+import { useGame } from "@/context/game-provider";
 import { formationTemplates } from "@/data/position-types";
 import { Select, SelectTrigger, SelectGroup, SelectItem, SelectLabel, SelectContent, SelectValue } from "@/components/ui/select";
 
 const FormationSelector = () => {
-    const { applyFormation } = usePlayers();
+    const { applyFormation } = useGame();
 
     const handleChange = (value: string) => {
         if (!value) return;
