@@ -1,103 +1,77 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/context/auth-context";
 import { usePlayers } from "@/context/players-provider";
 import { useVoting } from "@/context/voting-provider";
-import { PlayerVoting } from "@/components/voting/player-voting-dialog";
+import { PlayerVoteCard } from "@/components/voting/player-vote-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Vote, CheckCircle, Users, RotateCcw, Edit3 } from "lucide-react";
-import { StatsKey } from "@/data/stat-types";
+import { Input } from "@/components/ui/input";
+import Panel from "@/components/shared/panel";
+import { Vote, CheckCircle, Users, Search, ArrowUpDown } from "lucide-react";
 
-interface VoteData {
-  playerId: string;
-  votes: Record<StatsKey, number>;
-}
+type TabType = 'not-voted' | 'voted';
+type SortType = 'name' | 'votes';
 
 export default function VotingPage() {
   const { user, canVote, isVerified } = useAuth();
   const { players: playersRecord } = usePlayers();
-  const {
-    submitVote,
-    votingStats,
-    userVotes,
-  } = useVoting();
+  const { votingStats, userVotes } = useVoting();
+
   const players = Object.values(playersRecord);
-  const [showVoting, setShowVoting] = useState(false);
-  const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
-  const [currentVotingPlayerId, setCurrentVotingPlayerId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
+  const [activeTab, setActiveTab] = useState<TabType>('not-voted');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortType>('name');
 
-  useEffect(() => {
-    if (!user) return;
-
-    // All data now comes from PlayersProvider - no queries needed!
-    setLoading(false);
-  }, [user]);
-
-  // Helper function to get next player to vote on
-  const getNextPlayerToVote = () => {
-    const eligiblePlayers = players.filter(player => {
+  // Filter out user's associated player
+  const eligiblePlayers = useMemo(() => {
+    return players.filter(player => {
       const isAssociatedPlayer = user?.profile?.associated_player_id === player.id;
-      return !isAssociatedPlayer && !userVotes.has(player.id);
+      return !isAssociatedPlayer;
     });
-    return eligiblePlayers.length > 0 ? eligiblePlayers[0].id : null;
-  };
+  }, [players, user]);
 
-  // Set initial voting player
-  useEffect(() => {
-    if (user && !loading) {
-      const currentPlayer = getNextPlayerToVote();
-      if (currentPlayer) {
-        setCurrentVotingPlayerId(currentPlayer);
+  // Split into voted/not voted
+  const votedPlayers = useMemo(() => {
+    return eligiblePlayers.filter(player => userVotes.has(player.id));
+  }, [eligiblePlayers, userVotes]);
+
+  const notVotedPlayers = useMemo(() => {
+    return eligiblePlayers.filter(player => !userVotes.has(player.id));
+  }, [eligiblePlayers, userVotes]);
+
+  // Apply search and sort
+  const filteredAndSortedPlayers = useMemo(() => {
+    const playersToShow = activeTab === 'voted' ? votedPlayers : notVotedPlayers;
+
+    // Apply search filter
+    let filtered = playersToShow;
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      filtered = playersToShow.filter(p =>
+        p.name.toLowerCase().includes(lowerSearch)
+      );
+    }
+
+    // Apply sorting
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'name') {
+        return a.name.localeCompare(b.name);
+      } else {
+        // Sort by vote count (ascending - fewer votes first)
+        return (a.vote_count || 0) - (b.vote_count || 0);
       }
-    }
-  }, [user, loading]);
+    });
+  }, [activeTab, votedPlayers, notVotedPlayers, searchTerm, sortBy]);
 
-  const handleVoteSubmit = async (voteData: VoteData) => {
-    if (!user) return;
+  const progressPercent = eligiblePlayers.length > 0
+    ? (votedPlayers.length / eligiblePlayers.length) * 100
+    : 0;
 
-    try {
-      // Submit the vote
-      await submitVote(voteData);
-
-      // Find next player to vote on (after vote is submitted)
-      setTimeout(() => {
-        const nextPlayer = getNextPlayerToVote();
-
-        if (nextPlayer) {
-          setCurrentVotingPlayerId(nextPlayer);
-        } else {
-          // No more players to vote on
-          setCurrentVotingPlayerId(null);
-          setShowVoting(false);
-        }
-      }, 100);
-    } catch (error) {
-      console.error('Error submitting vote:', error);
-      throw error;
-    }
-  };
-
-  const resetVotingProgress = () => {
-    // Reset to first unvoted player
-    const nextPlayer = getNextPlayerToVote();
-    if (nextPlayer) {
-      setCurrentVotingPlayerId(nextPlayer);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <div className="text-center space-y-4">
-          <Vote className="h-12 w-12 animate-pulse mx-auto text-muted-foreground" />
-          <p className="text-muted-foreground">Loading voting data...</p>
-        </div>
-      </div>
-    );
-  }
+  const associatedPlayer = user?.profile?.associated_player_id
+    ? players.find(p => p.id === user.profile?.associated_player_id)
+    : null;
 
   if (!user) {
     return (
@@ -146,43 +120,27 @@ export default function VotingPage() {
     );
   }
 
-  // Filter out user's associated player from voting options
-  const eligiblePlayers = players.filter(player => {
-    const isAssociatedPlayer = user?.profile?.associated_player_id === player.id;
-    return !isAssociatedPlayer;
-  });
-
-  const unvotedPlayers = eligiblePlayers.filter(player => !userVotes.has(player.id));
-  const votedPlayers = eligiblePlayers.filter(player => userVotes.has(player.id));
-  const progressPercent = eligiblePlayers.length > 0 ? (votedPlayers.length / eligiblePlayers.length) * 100 : 0;
-
-  const associatedPlayer = user?.profile?.associated_player_id
-    ? players.find(p => p.id === user.profile?.associated_player_id)
-    : null;
-
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
-      {/* Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Section Header */}
-        <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">Player Evaluation</h1>
-        <p className="text-muted-foreground">
-          Help build fair team selections by rating players. Your votes contribute to community-driven player statistics.
-        </p>
-      </div>
+    <div className="flex flex-col h-full w-full overflow-hidden p-4 gap-4">
+      {/* Header Section */}
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Player Evaluation</h1>
+          <p className="text-muted-foreground">
+            Vote for any player, any time. Your votes help build fair teams.
+          </p>
+        </div>
 
-        {/* Unified Header Bar - Fixed height to match Cards and Generator */}
-        <div className="flex items-center justify-between min-h-10">
-        <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-xl overflow-x-auto">
-          <div className="flex items-center gap-4 text-sm px-3 py-1 whitespace-nowrap">
+        {/* Stats Bar */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">
                 {votedPlayers.length}/{eligiblePlayers.length} rated
               </span>
               <span className="text-muted-foreground">
-                ({progressPercent.toFixed(0)}% complete)
+                ({progressPercent.toFixed(0)}%)
               </span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -191,128 +149,114 @@ export default function VotingPage() {
             </div>
           </div>
         </div>
+
+        {associatedPlayer && (
+          <p className="text-xs text-blue-600 dark:text-blue-400">
+            Excluding {associatedPlayer.name} (your profile)
+          </p>
+        )}
       </div>
 
-        {/* Cute Start Voting Panel */}
-        <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Vote className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg">
-                  {unvotedPlayers.length === 0 ? 'All Done!' : 'Ready to Vote?'}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {unvotedPlayers.length === 0 
-                    ? `Great job! You've rated all ${eligiblePlayers.length} players.`
-                    : `${unvotedPlayers.length} players remaining • ~${Math.ceil(unvotedPlayers.length * 2.5)} min`
-                  }
-                </p>
-                {associatedPlayer && (
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    Excluding {associatedPlayer.name} (your profile)
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 justify-end sm:justify-start">
+      {/* Tabbed Panel */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        <Panel>
+          <div className="space-y-4">
+            {/* Tab Buttons */}
+            <div className="flex gap-2">
               <Button
-                onClick={() => setShowVoting(true)}
-                disabled={unvotedPlayers.length === 0}
+                variant={activeTab === 'not-voted' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('not-voted')}
                 className="flex items-center gap-2"
               >
                 <Vote className="h-4 w-4" />
-                {unvotedPlayers.length === 0 ? 'Complete!' : 'Start Voting'}
+                Not Voted
+                <Badge variant={activeTab === 'not-voted' ? 'secondary' : 'outline'}>
+                  {notVotedPlayers.length}
+                </Badge>
               </Button>
-              {votedPlayers.length > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={resetVotingProgress}
-                  className="flex items-center gap-2"
-                  title="Reset voting progress (keeps player order)"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Reset
-                </Button>
+              <Button
+                variant={activeTab === 'voted' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('voted')}
+                className="flex items-center gap-2"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Voted
+                <Badge variant={activeTab === 'voted' ? 'secondary' : 'outline'}>
+                  {votedPlayers.length}
+                </Badge>
+              </Button>
+            </div>
+
+            {/* Search and Sort */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search players..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSortBy(sortBy === 'name' ? 'votes' : 'name')}
+                title={sortBy === 'name' ? 'Sort by vote count' : 'Sort by name'}
+              >
+                <ArrowUpDown className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Sort indicator */}
+            <div className="text-xs text-muted-foreground">
+              Sorted by: {sortBy === 'name' ? 'Name (A-Z)' : 'Vote Count (Fewest First)'}
+            </div>
+
+            {/* Player List */}
+            <div className="space-y-2">
+              {filteredAndSortedPlayers.length === 0 ? (
+                <div className="text-center py-12">
+                  {searchTerm ? (
+                    <p className="text-muted-foreground">
+                      No players found matching "{searchTerm}"
+                    </p>
+                  ) : activeTab === 'voted' ? (
+                    <div className="space-y-2">
+                      <Vote className="h-12 w-12 mx-auto text-muted-foreground" />
+                      <p className="text-muted-foreground">
+                        No votes submitted yet
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Switch to "Not Voted" tab to start rating players
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <CheckCircle className="h-12 w-12 mx-auto text-green-600" />
+                      <p className="text-muted-foreground font-medium">
+                        All done! You've rated all {eligiblePlayers.length} players.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        You can edit any vote by switching to the "Voted" tab
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                filteredAndSortedPlayers.map(player => (
+                  <PlayerVoteCard
+                    key={player.id}
+                    player={player}
+                    hasVoted={userVotes.has(player.id)}
+                    userVote={userVotes.get(player.id)}
+                  />
+                ))
               )}
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-        {/* Clean History Panel */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Your Vote History
-              <Badge variant="secondary">{votedPlayers.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {votedPlayers.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No votes submitted yet. Click "Start Voting" above to begin rating players.
-              </p>
-            ) : (
-              <div className="space-y-2 max-h-[40vh] overflow-y-auto">
-                {votedPlayers
-                  .sort((a, b) => {
-                    const aVote = userVotes.get(a.id);
-                    const bVote = userVotes.get(b.id);
-                    const aDate = new Date(aVote?.created_at || 0);
-                    const bDate = new Date(bVote?.created_at || 0);
-                    return bDate.getTime() - aDate.getTime(); // Most recent first
-                  })
-                  .map(player => {
-                    const voteData = userVotes.get(player.id);
-                    const voteDate = new Date(voteData?.created_at).toLocaleDateString();
-                    return (
-                      <div key={player.id} className="flex justify-between items-center py-3 border-b last:border-b-0">
-                        <div className="flex-1">
-                          <span className="font-medium">{player.name}</span>
-                          <div className="text-xs text-muted-foreground">
-                            Voted on {voteDate}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingPlayer(player.id)}
-                          className="flex items-center gap-1 h-8 px-2"
-                          title={`Edit vote for ${player.name}`}
-                        >
-                          <Edit3 className="h-3 w-3" />
-                          Edit
-                        </Button>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        </Panel>
       </div>
-
-      {showVoting && currentVotingPlayerId && playersRecord[currentVotingPlayerId] && (
-        <PlayerVoting
-          player={playersRecord[currentVotingPlayerId]}
-          onVoteComplete={handleVoteSubmit}
-          onClose={() => setShowVoting(false)}
-        />
-      )}
-
-      {editingPlayer && playersRecord[editingPlayer] && (
-        <PlayerVoting
-          player={playersRecord[editingPlayer]}
-          onVoteComplete={handleVoteSubmit}
-          onClose={() => setEditingPlayer(null)}
-          isEditing={true}
-          existingVotes={userVotes.get(editingPlayer)}
-        />
-      )}
     </div>
   );
 }

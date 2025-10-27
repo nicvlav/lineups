@@ -27,6 +27,7 @@ interface VotingContextType {
     // Vote submission
     submitVote: (voteData: VoteData) => Promise<void>;
     getPendingVoteCount: () => number;
+    recoverFailedVotes: () => void;
 }
 
 export const VotingContext = createContext<VotingContextType | undefined>(undefined);
@@ -60,6 +61,9 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
     const MAX_RETRY_ATTEMPTS = 3;
     const BASE_RETRY_DELAY = 1000;
 
+    // Track failed votes that need to be re-queued (for timeout recovery)
+    const failedVotesRef = useRef<Map<string, VoteData>>(new Map());
+
     // Clear vote data on sign out
     useEffect(() => {
         if (!user) {
@@ -68,6 +72,23 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
             console.log('🗳️ VOTING: Cleared vote state on user sign out');
         }
     }, [user]);
+
+    // Periodic recovery check for failed votes
+    useEffect(() => {
+        const recoveryInterval = setInterval(() => {
+            recoverFailedVotes();
+        }, 15000); // Check every 15 seconds
+
+        return () => clearInterval(recoveryInterval);
+    }, []);
+
+    // Load user votes when user signs in
+    useEffect(() => {
+        if (user && !userVotesLoaded) {
+            console.log('🗳️ VOTING: User detected, loading user votes...');
+            loadUserVotes();
+        }
+    }, [user, userVotesLoaded]);
 
     // Initialize voting stats on app launch
     useEffect(() => {
@@ -470,21 +491,25 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
         console.log('VOTING: Calling supabase upsert with data:', dbVoteData);
         console.time('VOTING: submitVoteToDatabase');
 
+        const abortController = new AbortController();
         let timeoutId: NodeJS.Timeout;
+
         const timeoutPromise = new Promise<never>((_, reject) => {
             timeoutId = setTimeout(() => {
-                console.error('❌ VOTING: Vote submission timed out after 10 seconds');
+                console.error('❌ VOTING: Vote submission timed out after 10 seconds - aborting request');
+                abortController.abort();
                 reject(new Error('Database operation timed out after 10 seconds'));
             }, 10000);
         });
 
-        const upsertPromise = supabase
-            .from('player_votes')
-            .upsert(dbVoteData, {
-                onConflict: 'player_id,voter_user_profile_id'
-            });
-
         try {
+            const upsertPromise = supabase
+                .from('player_votes')
+                .upsert(dbVoteData, {
+                    onConflict: 'player_id,voter_user_profile_id'
+                })
+                .abortSignal(abortController.signal);
+
             const { data, error } = await Promise.race([upsertPromise, timeoutPromise]);
             clearTimeout(timeoutId!);
             console.timeEnd('VOTING: submitVoteToDatabase');
@@ -495,10 +520,19 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
                 throw error;
             }
 
+            // Success - remove from failed votes if it was there
+            failedVotesRef.current.delete(voteData.playerId);
             console.log('✅ VOTING: Vote successfully submitted to database');
-        } catch (err) {
+        } catch (err: any) {
             clearTimeout(timeoutId!);
             console.timeEnd('VOTING: submitVoteToDatabase');
+
+            // If timeout or abort, add to failed votes for recovery
+            if (err.name === 'AbortError' || err.message?.includes('timed out')) {
+                failedVotesRef.current.set(voteData.playerId, voteData);
+                console.error('❌ VOTING: Request aborted/timed out - added to failed queue for recovery');
+            }
+
             console.error('❌ VOTING: Vote submission error:', err);
             throw err;
         }
@@ -539,8 +573,37 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
         }
     };
 
+    // Recovery function to re-queue failed votes
+    const recoverFailedVotes = () => {
+        const failedCount = failedVotesRef.current.size;
+        if (failedCount === 0) return;
+
+        console.log(`🔄 VOTING: Recovering ${failedCount} failed votes`);
+
+        failedVotesRef.current.forEach((voteData, playerId) => {
+            // Re-add to pending queue if not already there
+            if (!pendingVotesRef.current.has(playerId)) {
+                const player = players[playerId];
+                const toastId = toast.loading(`Recovering vote for ${player?.name || 'player'}...`, {
+                    icon: '🔄'
+                });
+
+                pendingVotesRef.current.set(playerId, {
+                    data: voteData,
+                    retryCount: 0,
+                    lastAttempt: 0,
+                    status: 'pending',
+                    toastId: toastId
+                });
+            }
+        });
+
+        failedVotesRef.current.clear();
+        debounceVoteProcessing(1000);
+    };
+
     const getPendingVoteCount = (): number => {
-        return pendingVotesRef.current.size;
+        return pendingVotesRef.current.size + failedVotesRef.current.size;
     };
 
     return (
@@ -551,6 +614,7 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
             loadUserVotes,
             submitVote,
             getPendingVoteCount,
+            recoverFailedVotes,
         }}>
             {children}
         </VotingContext.Provider>
