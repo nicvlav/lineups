@@ -42,7 +42,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                         const newPlayer = payload.new as any;
                         // Convert individual stats for new players
                         newPlayer.stats = convertIndividualStatsToPlayerStats(newPlayer);
-                        newPlayer.vote_count = 0;
+                        newPlayer.vote_count = newPlayer.vote_count || 0; // Use actual DB value
                         newPlayer.aggregates = null;
                         newPlayers[newPlayer.id] = newPlayer;
                         return newPlayers;
@@ -65,8 +65,10 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                         const newPlayers = { ...prevPlayers };
                         const updatedPlayer = payload.new as any;
 
+                        console.log(`🔄 PLAYERS: Real-time UPDATE received for player ${updatedPlayer.name} (vote_count: ${updatedPlayer.vote_count})`);
+
                         updatedPlayer.stats = convertIndividualStatsToPlayerStats(updatedPlayer);
-                        updatedPlayer.vote_count = 0;
+                        updatedPlayer.vote_count = updatedPlayer.vote_count || 0; // Use actual DB value
                         updatedPlayer.aggregates = null;
 
                         newPlayers[id] = updatedPlayer;
