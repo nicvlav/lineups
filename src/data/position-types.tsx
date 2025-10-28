@@ -534,23 +534,23 @@ export const formationTemplates: Record<number, Formation[]> = {
         },
     ],
     8: [
-        {
-            name: "3-3-1",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 0, AM: 2, ST: 1, WR: 0 }
-        },
+        // {
+        //     name: "3-3-1",
+        //     positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 0, AM: 2, ST: 1, WR: 0 }
+        // },
         {
             name: "2-4-1",
             positions: { GK: 1, CB: 2, FB: 0, DM: 1, CM: 0, WM: 2, AM: 1, ST: 1, WR: 0 }
         },
         {
             name: "2-2-3",
-            positions: { GK: 1, CB: 2, FB: 0, DM: 1, CM: 1, WM: 0, AM: 0, ST: 1, WR: 2 }
+            positions: { GK: 1, CB: 2, FB: 0, DM: 1, CM: 1, WM: 2, AM: 0, ST: 1, WR: 0 }
         },
     ],
     9: [
         {
             name: "3-2-3",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 2, WM: 0, AM: 0, ST: 1, WR: 2 }
+            positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 2, WM: 2, AM: 0, ST: 1, WR: 0 }
         },
         {
             name: "3-4-1",
