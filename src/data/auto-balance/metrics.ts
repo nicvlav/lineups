@@ -192,7 +192,7 @@ function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const strengthBalanceRatio = Math.pow(rawRatio, 4);
+    const strengthBalanceRatio = Math.pow(rawRatio, 9);
 
     if (debug) {
         console.log('Overall Strength Balance (Peak Potential):');
