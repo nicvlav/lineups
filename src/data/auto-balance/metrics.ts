@@ -130,13 +130,13 @@ function calculateZoneDirectionalPenalty(
         penalty = 0.1; // 40% penalty
     } else if ((maxWins === 2 && neutrals === 0) || (maxWins === 1 && neutrals === 2)) {
         // 2-1 split: moderate directional imbalance
-        penalty = Math.pow(calculateBasicDifferenceRatio(sumA, sumB), 9);
+        penalty = Math.pow(calculateBasicDifferenceRatio(sumA, sumB), 4);
     } else if (maxWins === 2 && neutrals === 1) {
         // 2-0-1 split: two zones favor one team, one neutral
         penalty = 0.4; // 10% penalty
     } else if (maxWins > 0) {
         // 1-1-1 split: cancel out two zones
-        penalty = Math.pow(calculateBasicDifferenceRatio(sumA, sumB), 4);
+        penalty = Math.pow(calculateBasicDifferenceRatio(sumA, sumB), 2);
     }
     // else: balanced distributions ( 0-0-3, etc.) get no penalty (1.0)
 
@@ -157,11 +157,11 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
     const staminaRatio = calculateBasicDifferenceRatio(teamA.staminaScore, teamB.staminaScore);
     const workrateRatio = calculateBasicDifferenceRatio(teamA.workrateScore, teamB.workrateScore);
 
-    const rawCombined = staminaRatio * workrateRatio * inbalanceCompensation;
+    const rawCombined = inbalanceCompensation * (staminaRatio + workrateRatio) / 2;
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const energyBalanceRatio = Math.pow(rawCombined, 4);
+    const energyBalanceRatio = Math.pow(rawCombined, 2);
 
     if (debug) {
         console.log('Energy Balance:');
@@ -192,7 +192,7 @@ function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const strengthBalanceRatio = Math.pow(rawRatio, 9);
+    const strengthBalanceRatio = Math.pow(rawRatio, 3);
 
     if (debug) {
         console.log('Overall Strength Balance (Peak Potential):');
@@ -297,7 +297,7 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
 
         // Apply harsh power scaling to each zone ratio individually
         // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-        const scaledRatio = Math.pow(rawRatio, 5);
+        const scaledRatio = Math.pow(rawRatio, 2);
 
         rawZoneRatios.push(rawRatio);
         scaledZoneRatios.push(scaledRatio);

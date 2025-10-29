@@ -9,6 +9,7 @@
 import type { Formation } from "@/data/position-types";
 import { formationTemplates } from "@/data/position-types";
 import { INDEX_TO_POSITION, POSITION_COUNT } from "./constants";
+import { cryptoRandom } from "./utils";
 
 /**
  * Gets formation requirements as an optimized array
@@ -21,7 +22,7 @@ export function getFastFormation(numPlayers: number): { array: Int8Array; format
     }
     
     // Random selection for variety
-    const selectedFormation = formations[Math.floor(Math.random() * formations.length)];
+    const selectedFormation = formations[Math.floor(cryptoRandom() * formations.length)];
     
     // Convert to array
     const arr = new Int8Array(POSITION_COUNT);
