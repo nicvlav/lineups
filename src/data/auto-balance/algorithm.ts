@@ -257,6 +257,19 @@ export function runMonteCarlo(
 
         const metrics = calculateMetrics(result.teamA, result.teamB, config, false);
 
+        // Quality gates: reject results that don't meet minimum consistency standards
+        const allMetricValues = Object.values(metrics.details);
+        const mean = allMetricValues.reduce((a, b) => a + b, 0) / allMetricValues.length;
+        const variance = allMetricValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / allMetricValues.length;
+        const stdDev = Math.sqrt(variance);
+
+        // Gate 1: Reject if metrics are too inconsistent (stdDev > 0.08)
+        if (stdDev > 0.15) continue;
+
+        // Gate 2: Reject if overallStrengthBalance is below 95% of other metrics' mean
+        const otherMetricsMean = (mean * allMetricValues.length - metrics.details.overallStrengthBalance) / (allMetricValues.length - 1);
+        if (metrics.details.overallStrengthBalance < otherMetricsMean * 0.95) continue;
+
         if (metrics.score > bestScore) {
             bestScore = metrics.score;
             bestResult = { teams: result, score: metrics.score, metrics: metrics.details };
@@ -283,13 +296,13 @@ export function runRecursiveOptimization(
         recursiveDepth: 500,
         recursive: false,
         weights: {
-            overallStrengthBalance: 0.35,
-            positionalScoreBalance: 0.1,
-            zonalDistributionBalance: 0.15,
-            energyBalance: 0.1,
-            creativityBalance: 0.05,
-            allStatBalance: 0.15,
-            talentDistributionBalance: 0.1         // THE SECRET SAUCE - dominate the recursive phase
+            overallStrengthBalance: 0.45,
+            positionalScoreBalance: 0.05,
+            zonalDistributionBalance: 0.1,
+            energyBalance: 0.0,
+            creativityBalance: 0.0,
+            allStatBalance: 0.0,
+            talentDistributionBalance: 0.4         // THE SECRET SAUCE - dominate the recursive phase
         },
         consistencyPenaltyWeight: 0.0,             // Even more aggressive in recursive phase
     };
@@ -325,12 +338,12 @@ export function runTopLevelRecursiveOptimization(
         ...config,
         recursiveDepth: 1000,
         weights: {
-            overallStrengthBalance: 0.3,
+            overallStrengthBalance: 0.45,
             positionalScoreBalance: 0.0,
-            zonalDistributionBalance: 0.15,
+            zonalDistributionBalance: 0.1,
             energyBalance: 0.1,
             creativityBalance: 0.1,
-            allStatBalance: 0.25,
+            allStatBalance: 0.15,
             talentDistributionBalance: 0.1
         },
         recursive: true,
