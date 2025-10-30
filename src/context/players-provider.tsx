@@ -123,6 +123,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                     name,
                     vote_count,
                     anticipation_avg,
+                    interceptions_avg,
                     composure_avg,
                     off_the_ball_avg,
                     vision_avg,
@@ -203,6 +204,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const convertPlayerStatsToIndividualColumns = (stats: PlayerStats) => {
         return {
             anticipation_avg: Math.round(stats.anticipation / 10),
+            interceptions_avg: Math.round(stats.interceptions / 10),
             composure_avg: Math.round(stats.composure / 10),
             off_the_ball_avg: Math.round(stats.offTheBall / 10),
             vision_avg: Math.round(stats.vision / 10),
@@ -239,6 +241,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         // Map database AGGREGATE column names to stat keys and convert 0-10 to 0-100 scale
         const statMapping: Record<string, keyof PlayerStats> = {
             anticipation_avg: 'anticipation',
+            interceptions_avg: 'interceptions',
             composure_avg: 'composure',
             off_the_ball_avg: 'offTheBall',
             vision_avg: 'vision',

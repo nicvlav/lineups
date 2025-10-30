@@ -256,7 +256,7 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
 
             const { data, error } = await supabase
                 .from('player_votes')
-                .select('player_id, created_at, anticipation, composure, off_the_ball, vision, first_touch, passing, tackling, finishing, speed, strength, agility, workrate, crossing, positioning, technique, dribbling, decisions, marking, heading, aggression, flair, long_shots, stamina, teamwork, determination, leadership, concentration')
+                .select('player_id, created_at, anticipation, interceptions, composure, off_the_ball, vision, first_touch, passing, tackling, finishing, speed, strength, agility, workrate, crossing, positioning, technique, dribbling, decisions, marking, heading, aggression, flair, long_shots, stamina, teamwork, determination, leadership, concentration')
                 .eq('voter_user_profile_id', userProfile.id);
 
             console.timeEnd('VOTING: Load user votes');
@@ -272,6 +272,7 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
             data?.forEach(voteRow => {
                 const votes: Record<string, number> = {
                     anticipation: voteRow.anticipation || 0,
+                    interceptions: voteRow.interceptions || 0,
                     composure: voteRow.composure || 0,
                     offTheBall: voteRow.off_the_ball || 0,
                     vision: voteRow.vision || 0,
@@ -426,6 +427,7 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
         console.log('VOTING: submitVoteToDatabase called for player:', voteData.playerId);
         const statMapping: Record<string, string> = {
             anticipation: 'anticipation',
+            interceptions: 'interceptions',
             composure: 'composure',
             offTheBall: 'off_the_ball',
             vision: 'vision',

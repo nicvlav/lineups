@@ -1,6 +1,7 @@
 
 export type StatsKey =
     | "anticipation"
+    | "interceptions"
     | "composure"
     | "offTheBall"
     | "vision"
@@ -30,6 +31,7 @@ export type StatsKey =
 
 export const statKeys: StatsKey[] = [
     "anticipation",
+    "interceptions",
     "composure",
     "offTheBall",
     "vision",
@@ -60,6 +62,7 @@ export const statKeys: StatsKey[] = [
 
 export const statLabelMap: Record<StatsKey, string> = {
     anticipation: "Anticipation",
+    interceptions: "Interceptions",
     composure: "Composure",
     offTheBall: "Off the Ball",
     vision: "Vision",
@@ -91,6 +94,7 @@ export const statLabelMap: Record<StatsKey, string> = {
 
 export const statShortLabelMap: Record<StatsKey, string> = {
     anticipation: "ANT",
+    interceptions: "REA",
     composure: "CMP",
     offTheBall: "OTB",
     vision: "VIS",
@@ -121,6 +125,7 @@ export const statShortLabelMap: Record<StatsKey, string> = {
 
 export const statColorsMap: Record<StatsKey, string> = {
     anticipation: "bg-orange-600",
+    interceptions: "bg-teal-600",
     composure: "bg-yellow-500",
     offTheBall: "bg-orange-400",
     vision: "bg-yellow-600",
@@ -154,6 +159,7 @@ export type PlayerStats = Record<StatsKey, number>;
 export const defaultStatScores: PlayerStats = Object.fromEntries(
     ([
         "anticipation",
+        "interceptions",
         "composure",
         "offTheBall",
         "vision",
@@ -213,6 +219,7 @@ export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
     ],
     tactical: [
         "anticipation",
+        "interceptions",
         "vision",
         "positioning",
         "offTheBall",

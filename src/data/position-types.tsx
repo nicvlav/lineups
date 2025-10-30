@@ -109,6 +109,7 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 1000,
+            interceptions: 0,
             vision: 300,
             positioning: 600,
             offTheBall: 0,
@@ -154,6 +155,7 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 1000,
+            interceptions: 600,
             vision: 100,
             positioning: 600,
             offTheBall: 0,
@@ -199,6 +201,7 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 500,
+            interceptions: 600,
             vision: 100,
             positioning: 300,
             offTheBall: 50,
@@ -244,6 +247,7 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 1000,
+            interceptions: 900,
             vision: 350,
             positioning: 600,
             offTheBall: 100,
@@ -289,6 +293,7 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 400,
+            interceptions: 250,
             vision: 400,
             positioning: 250,
             offTheBall: 25,
@@ -333,7 +338,8 @@ export const defaultZoneWeights: Weighting = {
             longShots: 30,
 
             // Tactical
-            anticipation: 150,
+            anticipation: 250,
+            interceptions: 75,
             vision: 100,
             positioning: 150,
             offTheBall: 150,
@@ -379,6 +385,7 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 600,
+            interceptions: 50,
             vision: 1000,
             positioning: 100,
             offTheBall: 50,
@@ -424,6 +431,7 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 700,
+            interceptions: 25,
             vision: 200,
             positioning: 1000,
             offTheBall: 800,
@@ -469,6 +477,7 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 250,
+            interceptions: 25,
             vision: 225,
             positioning: 200,
             offTheBall: 600,
