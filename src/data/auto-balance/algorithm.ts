@@ -12,7 +12,8 @@ import {
     POSITION_INDICES,
     ZONE_POSITIONS,
     INDEX_TO_POSITION,
-    POSITION_COUNT
+    POSITION_COUNT,
+    getStdDevThreshold
 } from "./constants";
 import { defaultZoneWeights, getPointForPosition } from "@/data/position-types";
 import { getFastFormation } from "./formation";
@@ -263,8 +264,10 @@ export function runMonteCarlo(
         const variance = allMetricValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / allMetricValues.length;
         const stdDev = Math.sqrt(variance);
 
-        // Gate 1: Reject if metrics are too inconsistent (stdDev > 0.08)
-        if (stdDev > 0.08) continue;
+        // Gate 1: Reject if metrics are too inconsistent
+        // Dynamic threshold: more players = stricter (lower threshold)
+
+        if (stdDev > getStdDevThreshold(players.length)) continue;
 
         // Gate 2: Reject if overallStrengthBalance is below 95% of other metrics' mean
         const otherMetricsMean = (mean * allMetricValues.length - metrics.details.overallStrengthBalance) / (allMetricValues.length - 1);
@@ -296,13 +299,13 @@ export function runRecursiveOptimization(
         recursiveDepth: 500,
         recursive: false,
         weights: {
-            overallStrengthBalance: 0.5,
-            positionalScoreBalance: 0.1,
-            zonalDistributionBalance: 0.05,
+            overallStrengthBalance: 0.4,
+            positionalScoreBalance: 0.15,
+            zonalDistributionBalance: 0.1,
             energyBalance: 0.0,
             creativityBalance: 0.0,
-            allStatBalance: 0.0,
-            talentDistributionBalance: 0.35         // THE SECRET SAUCE - dominate the recursive phase
+            allStatBalance: 0.15,
+            talentDistributionBalance: 0.2         // THE SECRET SAUCE - dominate the recursive phase
         },
     };
 
@@ -337,8 +340,8 @@ export function runTopLevelRecursiveOptimization(
         ...config,
         recursiveDepth: 1000,
         weights: {
-            overallStrengthBalance: 0.35,
-            positionalScoreBalance: 0.0,
+            overallStrengthBalance: 0.25,
+            positionalScoreBalance: 0.1,
             zonalDistributionBalance: 0.1,
             energyBalance: 0.1,
             creativityBalance: 0.1,
@@ -355,7 +358,11 @@ export function runTopLevelRecursiveOptimization(
 
         const metrics = calculateMetrics(refined.teams.teamA, refined.teams.teamB, config, false);
 
-        if (metrics.score >= 0.95 && metrics.details.talentDistributionBalance >= 0.95 && (Math.abs(refined.teams.teamA.peakPotential - refined.teams.teamB.peakPotential) < 5)) {
+        if (
+            metrics.score >= 0.95 &&
+            metrics.details.positionalScoreBalance >= 0.925 &&
+            metrics.details.talentDistributionBalance >= 0.925 &&
+            (Math.abs(refined.teams.teamA.peakPotential - refined.teams.teamB.peakPotential) < 5)) {
             return { teams: refined.teams, score: metrics.score, metrics: metrics.details };
         }
 

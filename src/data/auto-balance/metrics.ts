@@ -8,7 +8,7 @@
 
 import type { FastTeam, BalanceConfig, BalanceMetrics } from "./types";
 import type { Formation } from "@/data/position-types";
-import { ZONE_POSITIONS, INDEX_TO_POSITION } from "./constants";
+import { ZONE_POSITIONS, INDEX_TO_POSITION, getMidfieldPenaltyPower, getInternalVariancePower, getInternalZoneSkillPower } from "./constants";
 
 /**
  * Helper function to format a simple comparison for debug output
@@ -208,7 +208,7 @@ function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const strengthBalanceRatio = Math.pow(rawRatio, 3);
+    const strengthBalanceRatio = Math.pow(rawRatio, 16);
 
     if (debug) {
         console.log('Overall Strength Balance (Peak Potential):');
@@ -230,14 +230,14 @@ function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug
  * @returns Balance score from 0 (imbalanced) to 1 (perfectly balanced)
  */
 function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
-    const peakScores = teamA.peakPotential + teamB.peakPotential - teamA.zonePeakScores[0] - teamA.zonePeakScores[0];
-    const sumScores = teamA.totalScore + teamB.totalScore - teamA.zoneScores[0] - teamA.zoneScores[0];
+    const peakScores = teamA.peakPotential + teamB.peakPotential;
+    const sumScores = teamA.totalScore + teamB.totalScore - teamA.zoneScores[0] - teamA.zoneScores[0] + teamA.zonePeakScores[0] + teamA.zonePeakScores[0];
 
     const efficiency = calculateBasicDifferenceRatio(sumScores, peakScores);
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const positionalBalanceRatio = Math.pow(efficiency, 3);
+    const positionalBalanceRatio = Math.pow(efficiency, 4);
 
     if (debug) {
         console.log('Positional Score Balance:');
@@ -321,15 +321,15 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
         totalImbalance *= scaledRatio;
     }
 
-    const teamAZonalBalance = calculateSingleTeamZonalBalance(teamA.zoneScores);
+    const teamAZonalBalance = calculateSingleTeamZonalBalance(teamA.zonePeakScores);
     const teamBZonalBalance = calculateSingleTeamZonalBalance(teamA.zonePeakScores);
-    const internalVarianceRatio = calculateBasicDifferenceRatio(teamAZonalBalance, teamBZonalBalance);
+    const internalSkillRatio = calculateBasicDifferenceRatio(teamAZonalBalance, teamBZonalBalance);
 
     // Calculate zone directional penalty (detects 2-1 or 3-0 zone clustering)
     const directionality = calculateZoneDirectionalPenalty(teamA, teamB);
 
     // Combine all factors (no additional power scaling - already scaled per zone)
-    const zonalBalanceRatio = directionality.penalty * (totalImbalance + internalVarianceRatio) / 2;
+    const zonalBalanceRatio = directionality.penalty * (totalImbalance + internalSkillRatio) / 2;
 
     if (debug) {
         console.log('Zonal Distribution Balance:');
@@ -392,7 +392,7 @@ function calculateAllStatBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const allStatBalanceRatio = Math.pow(rawRatio, 7);
+    const allStatBalanceRatio = Math.pow(rawRatio, 16);
 
     if (debug) {
         console.log('All-Stat Balance (Sum of Every Player Stat):');
@@ -472,11 +472,16 @@ function calculateZoneAverageRatings(team: FastTeam): Float32Array {
  * (excluding GK). The penalty is based on how far the midfield average is
  * from the maximum zone average.
  *
+ * Power scaling adjusts based on player count:
+ * - Small teams (18 players): gentler penalty (power ~1.5, more linear)
+ * - Large teams (22+ players): harsher penalty (power ~4.0, exponential)
+ *
  * @param zoneAverages Array of zone average ratings [GK, DEF, MID, ATT]
  * @param penaltyStrength How harsh the penalty should be (0-1, where 1 is max penalty)
+ * @param numPlayers Total number of players (used for dynamic power scaling)
  * @returns Penalty multiplier from 0 (harsh penalty) to 1 (no penalty)
  */
-function calculateMidfieldPreferencePenalty(zoneAverages: Float32Array, penaltyStrength: number = 0.5): number {
+function calculateMidfieldPreferencePenalty(zoneAverages: Float32Array, penaltyStrength: number = 0.5, numPlayers: number = 22): number {
     // Extract non-GK zones
     const defAvg = zoneAverages[1];  // DEF
     const midAvg = zoneAverages[2];  // MID
@@ -501,8 +506,12 @@ function calculateMidfieldPreferencePenalty(zoneAverages: Float32Array, penaltyS
     // relativeGap determines the magnitude based on the actual difference
     const penalty = 1.0 - (relativeGap * penaltyStrength);
 
-    // Ensure penalty stays in valid range [0, 1]
-    return Math.max(0, Math.min(1, penalty));
+    // Get dynamic power based on number of players
+    // More players = harsher penalty (higher power)
+    const power = getMidfieldPenaltyPower(numPlayers);
+
+    // Ensure penalty stays in valid range [0, 1] and apply power scaling
+    return Math.pow(Math.max(0, Math.min(1, penalty)), power);
 }
 
 /**
@@ -569,20 +578,30 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 
     const teamAZonalBalance = calculateSingleTeamZonalBalance(teamAZoneAverages);
     const teamBZonalBalance = calculateSingleTeamZonalBalance(teamBZoneAverages);
-    const internalVarianceRatio = calculateBasicDifferenceRatio(teamAZonalBalance, teamBZonalBalance);
+    const internalSkillRatio = teamAZonalBalance * teamBZonalBalance;
 
     // Calculate midfield preference penalty for each team
     // penaltyStrength can be adjusted: 0 = no penalty, 1 = maximum penalty
+    // Power scaling is dynamic based on player count (more players = harsher penalty)
     const midfieldPenaltyStrength = 0.5;
-    const teamAMidfieldPenalty = calculateMidfieldPreferencePenalty(teamAZoneAverages, midfieldPenaltyStrength);
-    const teamBMidfieldPenalty = calculateMidfieldPreferencePenalty(teamBZoneAverages, midfieldPenaltyStrength);
+    const numPlayers = teamA.playerCount + teamB.playerCount;
+    const teamAMidfieldPenalty = calculateMidfieldPreferencePenalty(teamAZoneAverages, midfieldPenaltyStrength, numPlayers);
+    const teamBMidfieldPenalty = calculateMidfieldPreferencePenalty(teamBZoneAverages, midfieldPenaltyStrength, numPlayers);
 
     // Combined midfield penalty (average of both teams)
     const combinedMidfieldPenalty = (teamAMidfieldPenalty + teamBMidfieldPenalty) / 2;
 
-    // Apply harsh power scaling to heavily penalize distribution mismatches
-    // pow(0.95, 3) = 0.857, pow(0.90, 3) = 0.729, pow(0.80, 3) = 0.512
-    const talentDistributionRatio = Math.pow(rawRatio, 2) * Math.pow(internalVarianceRatio, 2) * combinedMidfieldPenalty;
+    // Get dynamic power scaling for internal variance based on player count
+    // More players = harsher penalty for zone imbalance
+    const skillZonePower = getInternalZoneSkillPower(numPlayers);
+
+    // Get dynamic power scaling for internal variance based on player count
+    // More players = harsher penalty for zone imbalance
+    const internalVariancePower = getInternalVariancePower(numPlayers);
+
+    // Apply dynamic power scaling to heavily penalize distribution mismatches
+    // Power scales with player count: 18 players → power 1.0, 22+ players → power 2.0
+    const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.5 +  Math.pow(internalSkillRatio, skillZonePower) * 0.5) * combinedMidfieldPenalty;
 
     if (debug) {
         console.log('Talent Distribution Balance (Player Score Std Dev):');
@@ -597,8 +616,9 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
         const teamBMaxNonGK = Math.max(teamBZoneAverages[1], teamBZoneAverages[2], teamBZoneAverages[3]);
         const teamAMidGap = teamAMaxNonGK - teamAZoneAverages[2];
         const teamBMidGap = teamBMaxNonGK - teamBZoneAverages[2];
+        const penaltyPower = getMidfieldPenaltyPower(numPlayers);
 
-        console.log(`  Midfield Preference Penalty (strength: ${midfieldPenaltyStrength.toFixed(2)}):`);
+        console.log(`  Midfield Preference Penalty (strength: ${midfieldPenaltyStrength.toFixed(2)}, power: ${penaltyPower.toFixed(1)}, players: ${numPlayers}):`);
         console.log(`    Team A: MID=${teamAZoneAverages[2].toFixed(1)}, Max=${teamAMaxNonGK.toFixed(1)}, Gap=${teamAMidGap.toFixed(1)}, Penalty=${teamAMidfieldPenalty.toFixed(3)} ${teamAMidfieldPenalty === 1.0 ? '(MID is strongest!)' : '(MID not strongest)'}`);
         console.log(`    Team B: MID=${teamBZoneAverages[2].toFixed(1)}, Max=${teamBMaxNonGK.toFixed(1)}, Gap=${teamBMidGap.toFixed(1)}, Penalty=${teamBMidfieldPenalty.toFixed(3)} ${teamBMidfieldPenalty === 1.0 ? '(MID is strongest!)' : '(MID not strongest)'}`);
         console.log(`    Combined Midfield Penalty: ${combinedMidfieldPenalty.toFixed(3)}`);
@@ -607,7 +627,8 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
         console.log(`  Zone Average Internal Balance (Deviation across zones):`);
         console.log(`    Team A Zone Avg Balance: ${teamAZonalBalance.toFixed(3)} ${teamAZonalBalance > teamBZonalBalance ? '(more balanced zones)' : '(less balanced zones)'}`);
         console.log(`    Team B Zone Avg Balance: ${teamBZonalBalance.toFixed(3)} ${teamBZonalBalance > teamAZonalBalance ? '(more balanced zones)' : '(less balanced zones)'}`);
-        console.log(`    Internal Variance Ratio: ${internalVarianceRatio.toFixed(3)}`);
+        console.log(`    Internal Variance Ratio: ${internalSkillRatio.toFixed(3)} (power: ${skillZonePower.toFixed(1)})`);
+        console.log(`    Scaled Internal Variance: ${Math.pow(internalSkillRatio, skillZonePower).toFixed(3)}`);
         console.log('');
         console.log(formatComparison('Std Dev', teamAStdDev, teamBStdDev, rawRatio));
         console.log(`  Team A: ${teamAStdDev > teamBStdDev ? 'More spiky' : 'More flat'} talent distribution`);

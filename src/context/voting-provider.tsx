@@ -486,7 +486,7 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
                 console.error('❌ VOTING: Vote submission timed out after 10 seconds - aborting request');
                 abortController.abort();
                 reject(new Error('Database operation timed out after 10 seconds'));
-            }, 10000);
+            }, 2000);
         });
 
         console.log("Trying supabase upsert");
