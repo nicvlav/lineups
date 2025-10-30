@@ -7,6 +7,8 @@
  */
 
 import type { FastTeam, BalanceConfig, BalanceMetrics } from "./types";
+import type { Formation } from "@/data/position-types";
+import { ZONE_POSITIONS, INDEX_TO_POSITION } from "./constants";
 
 /**
  * Helper function to format a simple comparison for debug output
@@ -36,6 +38,20 @@ function formatZonePeakScores(teamA: FastTeam, teamB: FastTeam): string {
     output += '         GK      DEF     MID     ATT\n';
     output += `  A:  ${Array.from(teamA.zonePeakScores).map(s => s.toFixed(1).padStart(6)).join(' ')}\n`;
     output += `  B:  ${Array.from(teamB.zonePeakScores).map(s => s.toFixed(1).padStart(6)).join(' ')}\n`;
+    return output;
+}
+
+/**
+ * Helper function to format zone average ratings in a compact table
+ */
+function formatZoneAverageRatings(teamA: FastTeam, teamB: FastTeam): string {
+    const teamAZoneAverages = calculateZoneAverageRatings(teamA);
+    const teamBZoneAverages = calculateZoneAverageRatings(teamB);
+
+    let output = '  Zone Average Ratings:\n';
+    output += '         GK      DEF     MID     ATT\n';
+    output += `  A:  ${Array.from(teamAZoneAverages).map(s => s.toFixed(1).padStart(6)).join(' ')}\n`;
+    output += `  B:  ${Array.from(teamBZoneAverages).map(s => s.toFixed(1).padStart(6)).join(' ')}\n`;
     return output;
 }
 
@@ -238,11 +254,11 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
  * @param team team
  * @returns Balance score from 0 (imbalanced) to 1 (perfectly balanced)
  */
-const calculateSingleTeamZonalBalance = (team: FastTeam): number => {
+const calculateSingleTeamZonalBalance = (zoneScores: Float32Array): number => {
     // Extract non-goalkeeper zones: Defense (1), Midfield (2), Attack (3)
-    const defenseZoneScore = team.zoneScores[1];
-    const midfieldZoneScore = team.zoneScores[2];
-    const attackZoneScore = team.zoneScores[3];
+    const defenseZoneScore = zoneScores[1];
+    const midfieldZoneScore = zoneScores[2];
+    const attackZoneScore = zoneScores[3];
 
     const nonGoalkeeperZones = [defenseZoneScore, midfieldZoneScore, attackZoneScore];
     const zoneTotal = nonGoalkeeperZones.reduce((sum, score) => sum + score, 0);
@@ -298,15 +314,15 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
 
         // Apply harsh power scaling to each zone ratio individually
         // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-        const scaledRatio = Math.pow(rawRatio, 9);
+        const scaledRatio = Math.pow(rawRatio, 3);
 
         rawZoneRatios.push(rawRatio);
         scaledZoneRatios.push(scaledRatio);
         totalImbalance *= scaledRatio;
     }
 
-    const teamAZonalBalance = calculateSingleTeamZonalBalance(teamA);
-    const teamBZonalBalance = calculateSingleTeamZonalBalance(teamB);
+    const teamAZonalBalance = calculateSingleTeamZonalBalance(teamA.zoneScores);
+    const teamBZonalBalance = calculateSingleTeamZonalBalance(teamA.zonePeakScores);
     const internalVarianceRatio = calculateBasicDifferenceRatio(teamAZonalBalance, teamBZonalBalance);
 
     // Calculate zone directional penalty (detects 2-1 or 3-0 zone clustering)
@@ -319,6 +335,7 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
         console.log('Zonal Distribution Balance:');
         console.log(formatZoneScores(teamA, teamB));
         console.log(formatZonePeakScores(teamA, teamB));
+        console.log(formatZoneAverageRatings(teamA, teamB));
         console.log('  Per-Zone Raw Ratios (DEF, MID, ATT): ' + rawZoneRatios.map(r => r.toFixed(3)).join(', '));
         console.log('  Per-Zone Scaled (^4) (DEF, MID, ATT): ' + scaledZoneRatios.map(r => r.toFixed(3)).join(', '));
         console.log(`  Zone Winners: ${directionality.winners.join(', ')}`);
@@ -415,6 +432,80 @@ function calculateCreativityBalance(teamA: FastTeam, teamB: FastTeam, debug: boo
 }
 
 /**
+ * Helper to determine which zone a position index belongs to
+ * Uses ZONE_POSITIONS constant for zone boundaries
+ */
+function getNumPlayersForZone(zoneIdx: number, formation: Formation | null): number {
+    if (!formation) return 1;
+
+    let count = 0;
+
+    const zone = ZONE_POSITIONS[zoneIdx];
+
+    zone.forEach((val) => {
+        count += formation.positions[INDEX_TO_POSITION[val]];
+    });
+
+
+    // Fallback (should never reach here if ZONE_POSITIONS is complete)
+    return count;
+}
+
+/**
+ * Calculates the average player rating per zone for a team
+ *
+ * @param team Team to analyze
+ * @returns Array of average ratings per zone [GK, DEF, MID, ATT]
+ */
+function calculateZoneAverageRatings(team: FastTeam): Float32Array {
+    const sums = team.zonePeakScores.map((val, i) => {
+        return val / getNumPlayersForZone(i, team.formation);
+    });
+
+    return sums;
+}
+
+/**
+ * Calculates midfield preference penalty for a single team
+ *
+ * Penalizes scenarios where the midfield (zone 2) isn't the strongest zone
+ * (excluding GK). The penalty is based on how far the midfield average is
+ * from the maximum zone average.
+ *
+ * @param zoneAverages Array of zone average ratings [GK, DEF, MID, ATT]
+ * @param penaltyStrength How harsh the penalty should be (0-1, where 1 is max penalty)
+ * @returns Penalty multiplier from 0 (harsh penalty) to 1 (no penalty)
+ */
+function calculateMidfieldPreferencePenalty(zoneAverages: Float32Array, penaltyStrength: number = 0.5): number {
+    // Extract non-GK zones
+    const defAvg = zoneAverages[1];  // DEF
+    const midAvg = zoneAverages[2];  // MID
+    const attAvg = zoneAverages[3];  // ATT
+
+    // Find the maximum average among DEF, MID, ATT
+    const maxZoneAvg = Math.max(defAvg, midAvg, attAvg);
+
+    // If midfield is already the strongest (or tied), no penalty
+    if (midAvg >= maxZoneAvg) {
+        return 1.0;
+    }
+
+    // Calculate how far midfield is from the max
+    const gap = maxZoneAvg - midAvg;
+
+    // Calculate the relative gap (as a percentage of the max)
+    const relativeGap = gap / maxZoneAvg;
+
+    // Apply penalty based on the gap and the strength parameter
+    // penaltyStrength controls how harsh the penalty is
+    // relativeGap determines the magnitude based on the actual difference
+    const penalty = 1.0 - (relativeGap * penaltyStrength);
+
+    // Ensure penalty stays in valid range [0, 1]
+    return Math.max(0, Math.min(1, penalty));
+}
+
+/**
  * Calculates the standard deviation of individual player scores within a team
  *
  * This measures talent distribution consistency - whether a team has
@@ -473,12 +564,51 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 
     const rawRatio = calculateBasicDifferenceRatio(teamAStdDev, teamBStdDev);
 
+    const teamAZoneAverages = calculateZoneAverageRatings(teamA);
+    const teamBZoneAverages = calculateZoneAverageRatings(teamB);
+
+    const teamAZonalBalance = calculateSingleTeamZonalBalance(teamAZoneAverages);
+    const teamBZonalBalance = calculateSingleTeamZonalBalance(teamBZoneAverages);
+    const internalVarianceRatio = calculateBasicDifferenceRatio(teamAZonalBalance, teamBZonalBalance);
+
+    // Calculate midfield preference penalty for each team
+    // penaltyStrength can be adjusted: 0 = no penalty, 1 = maximum penalty
+    const midfieldPenaltyStrength = 0.5;
+    const teamAMidfieldPenalty = calculateMidfieldPreferencePenalty(teamAZoneAverages, midfieldPenaltyStrength);
+    const teamBMidfieldPenalty = calculateMidfieldPreferencePenalty(teamBZoneAverages, midfieldPenaltyStrength);
+
+    // Combined midfield penalty (average of both teams)
+    const combinedMidfieldPenalty = (teamAMidfieldPenalty + teamBMidfieldPenalty) / 2;
+
     // Apply harsh power scaling to heavily penalize distribution mismatches
     // pow(0.95, 3) = 0.857, pow(0.90, 3) = 0.729, pow(0.80, 3) = 0.512
-    const talentDistributionRatio = Math.pow(rawRatio, 1);
+    const talentDistributionRatio = Math.pow(rawRatio, 2) * Math.pow(internalVarianceRatio, 2) * combinedMidfieldPenalty;
 
     if (debug) {
         console.log('Talent Distribution Balance (Player Score Std Dev):');
+        console.log('  Average Player Ratings Per Zone:');
+        console.log('         GK      DEF     MID     ATT');
+        console.log(`  A:  ${Array.from(teamAZoneAverages).map(s => s.toFixed(1).padStart(6)).join(' ')}`);
+        console.log(`  B:  ${Array.from(teamBZoneAverages).map(s => s.toFixed(1).padStart(6)).join(' ')}`);
+        console.log('');
+
+        // Midfield preference penalty debug output
+        const teamAMaxNonGK = Math.max(teamAZoneAverages[1], teamAZoneAverages[2], teamAZoneAverages[3]);
+        const teamBMaxNonGK = Math.max(teamBZoneAverages[1], teamBZoneAverages[2], teamBZoneAverages[3]);
+        const teamAMidGap = teamAMaxNonGK - teamAZoneAverages[2];
+        const teamBMidGap = teamBMaxNonGK - teamBZoneAverages[2];
+
+        console.log(`  Midfield Preference Penalty (strength: ${midfieldPenaltyStrength.toFixed(2)}):`);
+        console.log(`    Team A: MID=${teamAZoneAverages[2].toFixed(1)}, Max=${teamAMaxNonGK.toFixed(1)}, Gap=${teamAMidGap.toFixed(1)}, Penalty=${teamAMidfieldPenalty.toFixed(3)} ${teamAMidfieldPenalty === 1.0 ? '(MID is strongest!)' : '(MID not strongest)'}`);
+        console.log(`    Team B: MID=${teamBZoneAverages[2].toFixed(1)}, Max=${teamBMaxNonGK.toFixed(1)}, Gap=${teamBMidGap.toFixed(1)}, Penalty=${teamBMidfieldPenalty.toFixed(3)} ${teamBMidfieldPenalty === 1.0 ? '(MID is strongest!)' : '(MID not strongest)'}`);
+        console.log(`    Combined Midfield Penalty: ${combinedMidfieldPenalty.toFixed(3)}`);
+        console.log('');
+
+        console.log(`  Zone Average Internal Balance (Deviation across zones):`);
+        console.log(`    Team A Zone Avg Balance: ${teamAZonalBalance.toFixed(3)} ${teamAZonalBalance > teamBZonalBalance ? '(more balanced zones)' : '(less balanced zones)'}`);
+        console.log(`    Team B Zone Avg Balance: ${teamBZonalBalance.toFixed(3)} ${teamBZonalBalance > teamAZonalBalance ? '(more balanced zones)' : '(less balanced zones)'}`);
+        console.log(`    Internal Variance Ratio: ${internalVarianceRatio.toFixed(3)}`);
+        console.log('');
         console.log(formatComparison('Std Dev', teamAStdDev, teamBStdDev, rawRatio));
         console.log(`  Team A: ${teamAStdDev > teamBStdDev ? 'More spiky' : 'More flat'} talent distribution`);
         console.log(`  Team B: ${teamBStdDev > teamAStdDev ? 'More spiky' : 'More flat'} talent distribution`);

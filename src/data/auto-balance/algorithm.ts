@@ -296,13 +296,13 @@ export function runRecursiveOptimization(
         recursiveDepth: 500,
         recursive: false,
         weights: {
-            overallStrengthBalance: 0.45,
-            positionalScoreBalance: 0.05,
-            zonalDistributionBalance: 0.1,
+            overallStrengthBalance: 0.5,
+            positionalScoreBalance: 0.1,
+            zonalDistributionBalance: 0.05,
             energyBalance: 0.0,
             creativityBalance: 0.0,
             allStatBalance: 0.0,
-            talentDistributionBalance: 0.4         // THE SECRET SAUCE - dominate the recursive phase
+            talentDistributionBalance: 0.35         // THE SECRET SAUCE - dominate the recursive phase
         },
     };
 
@@ -337,13 +337,13 @@ export function runTopLevelRecursiveOptimization(
         ...config,
         recursiveDepth: 1000,
         weights: {
-            overallStrengthBalance: 0.45,
+            overallStrengthBalance: 0.35,
             positionalScoreBalance: 0.0,
             zonalDistributionBalance: 0.1,
             energyBalance: 0.1,
             creativityBalance: 0.1,
-            allStatBalance: 0.15,
-            talentDistributionBalance: 0.1
+            allStatBalance: 0.2,
+            talentDistributionBalance: 0.15
         },
         recursive: true,
     };
