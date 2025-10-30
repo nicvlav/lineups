@@ -44,6 +44,7 @@ export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
         name: newPlayerName.trim(),
         stats: {
           anticipation: 60,
+          interceptions: 60,
           composure: 40,
           offTheBall: 50,
           vision: 60,
