@@ -55,7 +55,6 @@ export const DEFAULT_CONFIG: BalanceConfig = {
         allStatBalance: 0.2,                   // All-stat balance (sum of all stats) between teams
         talentDistributionBalance: 0.2,        // Talent distribution balance (std dev of player scores) - THE SECRET SAUCE
     },
-    consistencyPenaltyWeight: 0.0,             // Weight for consistency penalty (higher = more penalty for uneven metrics)
     dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
     recursive: true,
     recursiveDepth: 25,

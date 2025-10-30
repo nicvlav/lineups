@@ -264,7 +264,7 @@ export function runMonteCarlo(
         const stdDev = Math.sqrt(variance);
 
         // Gate 1: Reject if metrics are too inconsistent (stdDev > 0.08)
-        if (stdDev > 0.15) continue;
+        if (stdDev > 0.08) continue;
 
         // Gate 2: Reject if overallStrengthBalance is below 95% of other metrics' mean
         const otherMetricsMean = (mean * allMetricValues.length - metrics.details.overallStrengthBalance) / (allMetricValues.length - 1);
@@ -304,7 +304,6 @@ export function runRecursiveOptimization(
             allStatBalance: 0.0,
             talentDistributionBalance: 0.4         // THE SECRET SAUCE - dominate the recursive phase
         },
-        consistencyPenaltyWeight: 0.0,             // Even more aggressive in recursive phase
     };
 
     for (let depth = 0; depth < config.recursiveDepth; depth++) {
@@ -347,7 +346,6 @@ export function runTopLevelRecursiveOptimization(
             talentDistributionBalance: 0.1
         },
         recursive: true,
-        consistencyPenaltyWeight: 0.0,             // Even more aggressive in recursive phase
     };
 
     for (let depth = 0; depth < config.recursiveDepth; depth++) {
