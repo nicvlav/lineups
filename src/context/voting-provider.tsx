@@ -62,7 +62,11 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
     const BASE_RETRY_DELAY = 1000;
 
     // Track failed votes that need to be re-queued (for timeout recovery)
-    const failedVotesRef = useRef<Map<string, VoteData>>(new Map());
+    const failedVotesRef = useRef<Map<string, {
+        data: VoteData;
+        recoveryAttempts: number;
+    }>>(new Map());
+    const MAX_RECOVERY_ATTEMPTS = 3;
 
     // Clear vote data on sign out
     useEffect(() => {
@@ -378,31 +382,55 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
                     voteEntry.retryCount++;
                     voteEntry.lastAttempt = now;
 
-                    console.error(error);
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error('❌ VOTING: Vote processing error:', errorMessage);
 
                     if (voteEntry.retryCount >= MAX_RETRY_ATTEMPTS) {
                         if (voteEntry.toastId) {
                             toast.dismiss(voteEntry.toastId);
                         }
 
+                        // Remove from pending queue
                         pendingVotesRef.current.delete(playerId);
 
-                        setUserVotes(prev => {
-                            const updated = new Map(prev);
-                            updated.delete(playerId);
-                            return updated;
-                        });
+                        // Check if it's a timeout/network error - if so, add to recovery queue
+                        const isTimeoutError = errorMessage.includes('timed out') ||
+                            errorMessage.includes('AbortError') ||
+                            errorMessage.includes('network') ||
+                            errorMessage.includes('fetch');
 
-                        toast.error(`Failed to submit vote for ${player?.name || 'player'}`, {
-                            description: error as string,
-                            duration: 4000,
-                            icon: '❌'
-                        });
+                        if (isTimeoutError) {
+                            // Move to failed votes for periodic recovery
+                            failedVotesRef.current.set(playerId, {
+                                data: voteEntry.data,
+                                recoveryAttempts: 0
+                            });
+
+                            console.warn('⚠️ VOTING: Max retries reached - moving to recovery queue');
+                            toast.warning(`Vote for ${player?.name || 'player'} will be retried`, {
+                                description: 'Attempting automatic recovery...',
+                                duration: 3000,
+                                icon: '🔄'
+                            });
+                        } else {
+                            // Permanent failure - remove optimistic update
+                            setUserVotes(prev => {
+                                const updated = new Map(prev);
+                                updated.delete(playerId);
+                                return updated;
+                            });
+
+                            toast.error(`Failed to submit vote for ${player?.name || 'player'}`, {
+                                description: errorMessage,
+                                duration: 4000,
+                                icon: '❌'
+                            });
+                        }
                     } else {
                         if (voteEntry.toastId) {
                             toast.dismiss(voteEntry.toastId);
                         }
-                        voteEntry.toastId = toast.loading(`Retrying vote for ${player?.name || 'player'}...`, {
+                        voteEntry.toastId = toast.loading(`Retrying vote for ${player?.name || 'player'}... (${voteEntry.retryCount}/${MAX_RETRY_ATTEMPTS})`, {
                             duration: 1500,
                             icon: '🔄'
                         });
@@ -456,7 +484,11 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
             concentration: 'concentration'
         };
 
-        if (!user || !user.profile) throw new Error('User not authenticated');
+        // Re-validate user authentication on each attempt (in case auth state changed)
+        if (!user || !user.profile) {
+            console.error('❌ VOTING: User not authenticated during submission');
+            throw new Error('User not authenticated');
+        }
 
         const dbVoteData: any = {
             voter_user_profile_id: user.profile.id,
@@ -480,20 +512,25 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
         console.log('VOTING: Calling supabase upsert with data:', dbVoteData);
         console.time('VOTING: submitVoteToDatabase');
 
+        // Create fresh abort controller for each attempt
         const abortController = new AbortController();
-        let timeoutId: NodeJS.Timeout;
-
-        const timeoutPromise = new Promise<never>((_, reject) => {
-            timeoutId = setTimeout(() => {
-                console.error('❌ VOTING: Vote submission timed out after 10 seconds - aborting request');
-                abortController.abort();
-                reject(new Error('Database operation timed out after 10 seconds'));
-            }, 2000);
-        });
-
-        console.log("Trying supabase upsert");
+        let timeoutId: NodeJS.Timeout | null = null;
+        let isTimedOut = false;
 
         try {
+            // Start the timeout
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                timeoutId = setTimeout(() => {
+                    isTimedOut = true;
+                    console.error('❌ VOTING: Vote submission timed out after 10 seconds - aborting request');
+                    abortController.abort();
+                    reject(new Error('Database operation timed out after 10 seconds'));
+                }, 10000);
+            });
+
+            console.log("Trying supabase upsert");
+
+            // Make the request with a fresh abort signal
             const upsertPromise = supabase
                 .from('player_votes')
                 .upsert(dbVoteData, {
@@ -502,7 +539,8 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
                 .abortSignal(abortController.signal);
 
             const { data, error } = await Promise.race([upsertPromise, timeoutPromise]);
-            clearTimeout(timeoutId!);
+
+            if (timeoutId) clearTimeout(timeoutId);
             console.timeEnd('VOTING: submitVoteToDatabase');
             console.log('✅ VOTING: Supabase upsert completed, error:', error, 'data:', data);
 
@@ -515,16 +553,26 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
             failedVotesRef.current.delete(voteData.playerId);
             console.log('✅ VOTING: Vote successfully submitted to database');
         } catch (err: any) {
-            clearTimeout(timeoutId!);
+            if (timeoutId) clearTimeout(timeoutId);
             console.timeEnd('VOTING: submitVoteToDatabase');
 
-            // If timeout or abort, add to failed votes for recovery
-            if (err.name === 'AbortError' || err.message?.includes('timed out')) {
-                failedVotesRef.current.set(voteData.playerId, voteData);
-                console.error('❌ VOTING: Request aborted/timed out - added to failed queue for recovery');
+            // Only add to failed votes for recovery if it's a timeout/network issue
+            // Don't recover auth errors or validation errors
+            const isRecoverableError =
+                isTimedOut ||
+                err.name === 'AbortError' ||
+                err.message?.includes('timed out') ||
+                err.message?.includes('network') ||
+                err.message?.includes('fetch');
+
+            if (isRecoverableError) {
+                console.warn('⚠️ VOTING: Recoverable error - will NOT add to failed queue (regular retry will handle it)');
+                // Don't add to failedVotesRef - let the regular retry mechanism handle it
+                // Only add to failedVotesRef if we've exhausted all retries in processVoteQueue
+            } else {
+                console.error('❌ VOTING: Non-recoverable error:', err.message);
             }
 
-            console.error('❌ VOTING: Vote submission error:', err);
             throw err;
         }
     };
@@ -569,28 +617,66 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
         const failedCount = failedVotesRef.current.size;
         if (failedCount === 0) return;
 
-        console.log(`🔄 VOTING: Recovering ${failedCount} failed votes`);
+        console.log(`🔄 VOTING: Attempting to recover ${failedCount} failed votes`);
 
-        failedVotesRef.current.forEach((voteData, playerId) => {
-            // Re-add to pending queue if not already there
-            if (!pendingVotesRef.current.has(playerId)) {
-                const player = players[playerId];
-                const toastId = toast.loading(`Recovering vote for ${player?.name || 'player'}...`, {
-                    icon: '🔄'
-                });
+        const toRemove: string[] = [];
+        let recoveredCount = 0;
 
-                pendingVotesRef.current.set(playerId, {
-                    data: voteData,
-                    retryCount: 0,
-                    lastAttempt: 0,
-                    status: 'pending',
-                    toastId: toastId
-                });
+        failedVotesRef.current.forEach((failedVote, playerId) => {
+            // Skip if already in pending queue (race condition prevention)
+            if (pendingVotesRef.current.has(playerId)) {
+                console.log(`⏭️ VOTING: Skipping ${playerId} - already in pending queue`);
+                toRemove.push(playerId);
+                return;
             }
+
+            // Check if max recovery attempts reached
+            if (failedVote.recoveryAttempts >= MAX_RECOVERY_ATTEMPTS) {
+                console.warn(`⚠️ VOTING: Max recovery attempts reached for ${playerId} - giving up`);
+                const player = players[playerId];
+
+                // Clean up optimistic UI update
+                setUserVotes(prev => {
+                    const updated = new Map(prev);
+                    updated.delete(playerId);
+                    return updated;
+                });
+
+                toast.error(`Unable to recover vote for ${player?.name || 'player'}`, {
+                    description: 'Please try voting again manually',
+                    duration: 5000,
+                    icon: '❌'
+                });
+                toRemove.push(playerId);
+                return;
+            }
+
+            // Re-add to pending queue
+            const player = players[playerId];
+            const toastId = toast.loading(`Recovering vote for ${player?.name || 'player'}... (attempt ${failedVote.recoveryAttempts + 1}/${MAX_RECOVERY_ATTEMPTS})`, {
+                icon: '🔄'
+            });
+
+            pendingVotesRef.current.set(playerId, {
+                data: failedVote.data,
+                retryCount: 0,
+                lastAttempt: 0,
+                status: 'pending',
+                toastId: toastId
+            });
+
+            // Increment recovery attempts
+            failedVote.recoveryAttempts++;
+            recoveredCount++;
         });
 
-        failedVotesRef.current.clear();
-        debounceVoteProcessing(1000);
+        // Remove votes that exceeded max recovery attempts or were already pending
+        toRemove.forEach(playerId => failedVotesRef.current.delete(playerId));
+
+        if (recoveredCount > 0) {
+            console.log(`✅ VOTING: Re-queued ${recoveredCount} votes for recovery`);
+            debounceVoteProcessing(1000);
+        }
     };
 
     const getPendingVoteCount = (): number => {
