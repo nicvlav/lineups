@@ -13,7 +13,7 @@ import {
     ZONE_POSITIONS,
     INDEX_TO_POSITION,
     POSITION_COUNT,
-    getStdDevThreshold
+    // getStdDevThreshold
 } from "./constants";
 import { defaultZoneWeights, getPointForPosition } from "@/data/position-types";
 import { getFastFormation } from "./formation";
@@ -258,20 +258,20 @@ export function runMonteCarlo(
 
         const metrics = calculateMetrics(result.teamA, result.teamB, config, false);
 
-        // Quality gates: reject results that don't meet minimum consistency standards
-        const allMetricValues = Object.values(metrics.details);
-        const mean = allMetricValues.reduce((a, b) => a + b, 0) / allMetricValues.length;
-        const variance = allMetricValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / allMetricValues.length;
-        const stdDev = Math.sqrt(variance);
+        // // Quality gates: reject results that don't meet minimum consistency standards
+        // const allMetricValues = Object.values(metrics.details);
+        // const mean = allMetricValues.reduce((a, b) => a + b, 0) / allMetricValues.length;
+        // const variance = allMetricValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / allMetricValues.length;
+        // const stdDev = Math.sqrt(variance);
 
-        // Gate 1: Reject if metrics are too inconsistent
-        // Dynamic threshold: more players = stricter (lower threshold)
+        // // Gate 1: Reject if metrics are too inconsistent
+        // // Dynamic threshold: more players = stricter (lower threshold)
 
-        if (stdDev > getStdDevThreshold(players.length)) continue;
+        // if (stdDev > getStdDevThreshold(players.length)) continue;
 
-        // Gate 2: Reject if overallStrengthBalance is below 95% of other metrics' mean
-        const otherMetricsMean = (mean * allMetricValues.length - metrics.details.overallStrengthBalance) / (allMetricValues.length - 1);
-        if (metrics.details.overallStrengthBalance < otherMetricsMean * 0.95) continue;
+        // // Gate 2: Reject if overallStrengthBalance is below 95% of other metrics' mean
+        // const otherMetricsMean = (mean * allMetricValues.length - metrics.details.overallStrengthBalance) / (allMetricValues.length - 1);
+        // if (metrics.details.overallStrengthBalance < otherMetricsMean * 0.95) continue;
 
         if (metrics.score > bestScore) {
             bestScore = metrics.score;
@@ -296,16 +296,16 @@ export function runRecursiveOptimization(
     // Recursive refinement - focus heavily on talent distribution and consistency
     const subConfig: BalanceConfig = {
         ...config,
-        recursiveDepth: 500,
+        recursiveDepth: 750,
         recursive: false,
         weights: {
-            overallStrengthBalance: 0.3,
+            overallStrengthBalance: 0.025,
             positionalScoreBalance: 0.25,
-            zonalDistributionBalance: 0.2,
-            energyBalance: 0.0,
-            creativityBalance: 0.0,
-            allStatBalance: 0.10,
-            talentDistributionBalance: 0.15         // THE SECRET SAUCE - dominate the recursive phase
+            zonalDistributionBalance: 0.1,
+            energyBalance: 0.125,
+            creativityBalance: 0.1,
+            allStatBalance: 0.35,
+            talentDistributionBalance: 0.05      
         },
     };
 
@@ -340,13 +340,13 @@ export function runTopLevelRecursiveOptimization(
         ...config,
         recursiveDepth: 1000,
         weights: {
-            overallStrengthBalance: 0.25,
+            overallStrengthBalance: 0.2,
             positionalScoreBalance: 0.1,
-            zonalDistributionBalance: 0.1,
+            zonalDistributionBalance: 0.2,
             energyBalance: 0.1,
             creativityBalance: 0.1,
             allStatBalance: 0.2,
-            talentDistributionBalance: 0.15
+            talentDistributionBalance: 0.1
         },
         recursive: true,
     };

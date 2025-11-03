@@ -101,7 +101,7 @@ function calculateBasicDifferenceRatio(a: number, b: number): number {
 function calculateZoneDirectionalPenalty(
     teamA: FastTeam,
     teamB: FastTeam,
-    epsilon: number = 0.99
+    epsilon: number = 0.995
 ): { penalty: number; teamAWins: number; teamBWins: number; neutrals: number; winners: string[] } {
     const zoneNames = ['DEF', 'MID', 'ATT'];
     const zoneIndices = [1, 2, 3]; // Exclude GK (index 0)
@@ -109,8 +109,7 @@ function calculateZoneDirectionalPenalty(
     let teamAWins = 0;
     let teamBWins = 0;
     let neutrals = 0;
-    let sumA = 0;
-    let sumB = 0;
+    let sum = 1.0;
     const winners: string[] = [];
 
     for (let i = 0; i < zoneIndices.length; i++) {
@@ -133,8 +132,7 @@ function calculateZoneDirectionalPenalty(
             winners.push(`${zoneName}:B`);
         }
 
-        sumA += scoreA;
-        sumB += scoreB;
+        sum *= ratio;
     }
 
     // Calculate penalty based on directional clustering
@@ -146,13 +144,13 @@ function calculateZoneDirectionalPenalty(
         penalty = 0.1; // 40% penalty
     } else if ((maxWins === 2 && neutrals === 0) || (maxWins === 1 && neutrals === 2)) {
         // 2-1 split: moderate directional imbalance
-        penalty = Math.pow(calculateBasicDifferenceRatio(sumA, sumB), 4);
+        penalty = Math.pow(sum, 4);
     } else if (maxWins === 2 && neutrals === 1) {
         // 2-0-1 split: two zones favor one team, one neutral
         penalty = 0.4; // 10% penalty
     } else if (maxWins > 0) {
         // 1-1-1 split: cancel out two zones
-        penalty = Math.pow(calculateBasicDifferenceRatio(sumA, sumB), 2);
+        penalty = Math.pow(sum, 2);
     }
     // else: balanced distributions ( 0-0-3, etc.) get no penalty (1.0)
 
@@ -404,7 +402,7 @@ function calculateAllStatBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const allStatBalanceRatio = Math.pow(rawRatio, 16);
+    const allStatBalanceRatio = Math.pow(rawRatio, 9);
 
     if (debug) {
         console.log('All-Stat Balance (Sum of Every Player Stat):');
@@ -613,7 +611,7 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 
     // Apply dynamic power scaling to heavily penalize distribution mismatches
     // Power scales with player count: 18 players → power 1.0, 22+ players → power 2.0
-    const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.5 + Math.pow(internalSkillRatio, skillZonePower) * 0.5) * combinedMidfieldPenalty;
+    const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.25 + Math.pow(internalSkillRatio, skillZonePower) * 0.75) * combinedMidfieldPenalty;
 
     if (debug) {
         console.log('Talent Distribution Balance (Player Score Std Dev):');

@@ -412,7 +412,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: true,
         absoluteYPosition: 0.325,
-        priorityStat: 1,
+        priorityStat: 2,
     },
 
     ST: {
