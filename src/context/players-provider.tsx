@@ -123,7 +123,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                     name,
                     vote_count,
                     anticipation_avg,
-                    interceptions_avg,
+                    def_workrate_avg,
                     composure_avg,
                     off_the_ball_avg,
                     vision_avg,
@@ -134,7 +134,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
                     speed_avg,
                     strength_avg,
                     agility_avg,
-                    workrate_avg,
+                    att_workrate_avg,
                     crossing_avg,
                     positioning_avg,
                     technique_avg,
@@ -204,7 +204,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
     const convertPlayerStatsToIndividualColumns = (stats: PlayerStats) => {
         return {
             anticipation_avg: Math.round(stats.anticipation / 10),
-            interceptions_avg: Math.round(stats.interceptions / 10),
+            def_workrate_avg: Math.round(stats.defWorkrate / 10),
             composure_avg: Math.round(stats.composure / 10),
             off_the_ball_avg: Math.round(stats.offTheBall / 10),
             vision_avg: Math.round(stats.vision / 10),
@@ -215,7 +215,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             speed_avg: Math.round(stats.speed / 10),
             strength_avg: Math.round(stats.strength / 10),
             agility_avg: Math.round(stats.agility / 10),
-            workrate_avg: Math.round(stats.workrate / 10),
+            att_workrate_avg: Math.round(stats.attWorkrate / 10),
             crossing_avg: Math.round(stats.crossing / 10),
             positioning_avg: Math.round(stats.positioning / 10),
             technique_avg: Math.round(stats.technique / 10),
@@ -241,7 +241,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
         // Map database AGGREGATE column names to stat keys and convert 0-10 to 0-100 scale
         const statMapping: Record<string, keyof PlayerStats> = {
             anticipation_avg: 'anticipation',
-            interceptions_avg: 'interceptions',
+            def_workrate_avg: 'defWorkrate',
             composure_avg: 'composure',
             off_the_ball_avg: 'offTheBall',
             vision_avg: 'vision',
@@ -252,7 +252,7 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             speed_avg: 'speed',
             strength_avg: 'strength',
             agility_avg: 'agility',
-            workrate_avg: 'workrate',
+            att_workrate_avg: 'attWorkrate',
             crossing_avg: 'crossing',
             positioning_avg: 'positioning',
             technique_avg: 'technique',

@@ -44,7 +44,7 @@ export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
         name: newPlayerName.trim(),
         stats: {
           anticipation: 60,
-          interceptions: 60,
+          defWorkrate: 60,
           composure: 40,
           offTheBall: 50,
           vision: 60,
@@ -55,7 +55,7 @@ export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
           speed: 60,
           strength: 60,
           agility: 60,
-          workrate: 60,
+          attWorkrate: 60,
           crossing: 60,
           positioning: 60,
           technique: 60,

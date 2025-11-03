@@ -26,7 +26,7 @@ function createBenchmarkPlayers(count: number): ScoredGamePlayer[] {
             'firstTouch', 'shortPassing', 'tackling', 'finishing',
             'speed', 'strength', 'agility', 'defensiveWorkrate',
             'crossing', 'attackPositioning', 'longPassing', 'dribbling',
-            'interceptions', 'blocking', 'heading', 'aggression',
+            'defWorkrate', 'blocking', 'heading', 'aggression',
             'attackingWorkrate', 'longShots', 'stamina', 'teamwork',
             'positivity', 'willingToSwitch', 'communication'
         ];

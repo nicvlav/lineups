@@ -67,6 +67,7 @@ export function createFastTeam(): FastTeam {
         staminaScore: 0,
         workrateScore: 0,
         creativityScore: 0,
+        strikerScore: 0,
     };
 }
 

@@ -28,7 +28,10 @@ export interface BalanceMetrics {
     energyBalance: number;
 
     /** Creativity balance (vision, passing, and teamwork balance between teams) */
-    creativityBalance: number;
+    creativityBalance: number;    
+    
+    /** Striker balance (finishing, technique, etc between teams) */
+    strikerBalance: number;
 
     /** All-stat balance (sum of all aggregate player stats between teams) */
     allStatBalance: number;
@@ -119,7 +122,10 @@ export interface FastTeam {
     workrateScore: number;
 
     /** Creativity score for creativity balance calculation */
-    creativityScore: number;
+    creativityScore: number;    
+    
+    /** Creativity score for creativity balance calculation */
+    strikerScore: number;
 }
 
 /**

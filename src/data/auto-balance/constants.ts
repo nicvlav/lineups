@@ -128,7 +128,7 @@ export function getScaledPower(
  * - 22+ players → 4.0 (harsh penalty)
  */
 export function getMidfieldPenaltyPower(numPlayers: number): number {
-    return getScaledPower(numPlayers, 0.8, 3.5);
+    return getScaledPower(numPlayers, 0.8, 4);
 }
 
 /**
@@ -145,7 +145,7 @@ export function getMidfieldPenaltyPower(numPlayers: number): number {
  * - 22+ players → 2.0 (harsh)
  */
 export function getInternalZoneSkillPower(numPlayers: number): number {
-    return getScaledPower(numPlayers, 0.75, 1.5);
+    return getScaledPower(numPlayers, 0.75, 2.5);
 }
 
 /**
@@ -168,16 +168,17 @@ export function getInternalVariancePower(numPlayers: number): number {
 /** Default Monte Carlo configuration */
 export const DEFAULT_CONFIG: BalanceConfig = {
     weights: {
-        overallStrengthBalance: 0.4,          // Peak potential balance between teams
+        overallStrengthBalance: 0.3,          // Peak potential balance between teams
         positionalScoreBalance: 0.1,          // Actual score balance between teams
         zonalDistributionBalance: 0.05,        // Zone distribution balance within teams
-        energyBalance: 0.025,                   // Energy balance (stamina + work rates) between teams
-        creativityBalance: 0.025,                // Creativity balance between teams
-        allStatBalance: 0.0,                   // All-stat balance (sum of all stats) between teams
-        talentDistributionBalance: 0.4,        // Talent distribution balance (std dev of player scores) - THE SECRET SAUCE
+        energyBalance: 0.066,                   // Energy balance (stamina + work rates) between teams
+        creativityBalance: 0.066,                // Creativity balance between teams
+        strikerBalance: 0.066,                // Creativity balance between teams
+        allStatBalance: 0.15,                   // All-stat balance (sum of all stats) between teams
+        talentDistributionBalance: 0.2,        // Talent distribution balance (std dev of player scores) - THE SECRET SAUCE
     },
     dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
     recursive: true,
-    recursiveDepth: 100,
+    recursiveDepth: 500,
     debugMode: false,  // Use ENABLE_DEBUG flag instead
 } as const;

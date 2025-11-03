@@ -109,14 +109,14 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 1000,
-            interceptions: 0,
             vision: 300,
             positioning: 600,
             offTheBall: 0,
             decisions: 300,
             marking: 300,
             tackling: 0,
-            workrate: 0,
+            defWorkrate: 0,
+            attWorkrate: 0,
 
             // Mental
             composure: 400,
@@ -155,14 +155,14 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 1000,
-            interceptions: 600,
             vision: 100,
             positioning: 600,
             offTheBall: 0,
             decisions: 300,
             marking: 900,
             tackling: 1000,
-            workrate: 50,
+            attWorkrate: 0,
+            defWorkrate: 600,
 
             // Mental
             composure: 250,
@@ -201,14 +201,14 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 500,
-            interceptions: 600,
             vision: 100,
             positioning: 300,
             offTheBall: 50,
             decisions: 200,
             marking: 500,
             tackling: 600,
-            workrate: 700,
+            defWorkrate: 600,
+            attWorkrate: 100,
 
             // Mental
             composure: 200,
@@ -247,14 +247,14 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 1000,
-            interceptions: 900,
             vision: 350,
             positioning: 600,
             offTheBall: 100,
             decisions: 700,
             marking: 300,
             tackling: 300,
-            workrate: 200,
+            defWorkrate: 800,
+            attWorkrate: 0,
 
             // Mental
             composure: 1000,
@@ -293,14 +293,14 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 400,
-            interceptions: 250,
             vision: 400,
             positioning: 250,
             offTheBall: 25,
             decisions: 550,
             marking: 5,
             tackling: 50,
-            workrate: 350,
+            defWorkrate: 500,
+            attWorkrate: 500,
 
             // Mental
             composure: 1000,
@@ -339,14 +339,14 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 250,
-            interceptions: 75,
             vision: 100,
             positioning: 150,
             offTheBall: 150,
             decisions: 200,
             marking: 25,
             tackling: 25,
-            workrate: 650,
+            defWorkrate: 150,
+            attWorkrate: 550,
 
             // Mental
             composure: 300,
@@ -385,14 +385,14 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 600,
-            interceptions: 50,
             vision: 1000,
             positioning: 100,
             offTheBall: 50,
             decisions: 400,
             marking: 0,
             tackling: 0,
-            workrate: 400,
+            defWorkrate: 25,
+            attWorkrate: 600,
 
             // Mental
             composure: 1000,
@@ -431,14 +431,14 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 700,
-            interceptions: 25,
             vision: 200,
             positioning: 1000,
             offTheBall: 800,
             decisions: 300,
             marking: 0,
             tackling: 0,
-            workrate: 300,
+            defWorkrate: 0,
+            attWorkrate: 800,
 
             // Mental
             composure: 1000,
@@ -477,14 +477,14 @@ export const defaultZoneWeights: Weighting = {
 
             // Tactical
             anticipation: 250,
-            interceptions: 25,
             vision: 225,
             positioning: 200,
             offTheBall: 600,
             decisions: 300,
             marking: 0,
             tackling: 0,
-            workrate: 400,
+            defWorkrate: 10,
+            attWorkrate: 800,
 
             // Mental
             composure: 200,

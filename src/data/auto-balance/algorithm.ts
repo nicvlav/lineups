@@ -216,8 +216,9 @@ export function assignPlayersToTeams(
                 const stats = player.original.stats;
                 if (stats) {
                     teamA.staminaScore += stats.stamina;
-                    teamA.workrateScore += stats.workrate;
-                    teamA.creativityScore += stats.vision + stats.decisions + stats.teamwork;
+                    teamA.workrateScore += stats.attWorkrate;
+                    teamA.creativityScore += stats.vision * 5 + stats.teamwork + stats.decisions + stats.passing + stats.composure;
+                    teamA.strikerScore += stats.finishing * 5 + stats.offTheBall + stats.technique + stats.attWorkrate;
                 }
             }
             for (const player of teamB.positions[posIdx]) {
@@ -229,8 +230,9 @@ export function assignPlayersToTeams(
                 const stats = player.original.stats;
                 if (stats) {
                     teamB.staminaScore += stats.stamina;
-                    teamB.workrateScore += stats.workrate;
-                    teamB.creativityScore += stats.vision + stats.decisions + stats.teamwork;
+                    teamB.workrateScore += stats.attWorkrate;
+                    teamB.creativityScore += stats.vision * 5 + stats.teamwork + stats.decisions + stats.passing + stats.composure;
+                    teamB.strikerScore += stats.finishing * 5 + stats.offTheBall + stats.technique+  stats.attWorkrate;
                 }
             }
         }
@@ -296,16 +298,17 @@ export function runRecursiveOptimization(
     // Recursive refinement - focus heavily on talent distribution and consistency
     const subConfig: BalanceConfig = {
         ...config,
-        recursiveDepth: 750,
+        recursiveDepth: 250,
         recursive: false,
         weights: {
-            overallStrengthBalance: 0.025,
-            positionalScoreBalance: 0.25,
-            zonalDistributionBalance: 0.1,
-            energyBalance: 0.125,
-            creativityBalance: 0.1,
-            allStatBalance: 0.35,
-            talentDistributionBalance: 0.05      
+            overallStrengthBalance: 0.0,
+            positionalScoreBalance: 0.3,
+            zonalDistributionBalance: 0.2,
+            energyBalance: 0.033,
+            creativityBalance: 0.033,
+            strikerBalance: 0.033,
+            allStatBalance: 0.1,
+            talentDistributionBalance: 0.3      
         },
     };
 
@@ -338,13 +341,14 @@ export function runTopLevelRecursiveOptimization(
     // Recursive refinement - focus heavily on talent distribution and consistency
     const subConfig: BalanceConfig = {
         ...config,
-        recursiveDepth: 1000,
+        recursiveDepth: 100,
         weights: {
-            overallStrengthBalance: 0.2,
-            positionalScoreBalance: 0.1,
+            overallStrengthBalance: 0.0,
+            positionalScoreBalance: 0.05,
             zonalDistributionBalance: 0.2,
-            energyBalance: 0.1,
-            creativityBalance: 0.1,
+            energyBalance: 0.15,
+            creativityBalance: 0.15,
+            strikerBalance: 0.15,
             allStatBalance: 0.2,
             talentDistributionBalance: 0.1
         },

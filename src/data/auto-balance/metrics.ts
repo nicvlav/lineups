@@ -231,8 +231,6 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
     const aPeakScores = teamA.peakPotential;
     const bPeakScores = teamB.peakPotential;
 
-
-
     const aSumScores = teamA.totalScore - teamA.zoneScores[0] - teamA.zoneScores[0];
     const bSumScores = teamB.totalScore - teamB.zoneScores[0] - teamB.zoneScores[0];
 
@@ -244,7 +242,7 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const positionalBalanceRatio = diff * 0.75 + Math.pow(efficiency, 0.8) * 0.25;
+    const positionalBalanceRatio = Math.pow(diff, 16) * 0.8 + Math.pow(efficiency, 0.5) * 0.2;
 
     if (debug) {
         console.log('Positional Score Balance:');
@@ -324,7 +322,7 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
 
         // Apply harsh power scaling to each zone ratio individually
         // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-        const scaledRatio = Math.pow(rawRatio, 4);
+        const scaledRatio = Math.pow(rawRatio, 1);
 
         rawZoneRatios.push(rawRatio);
         scaledZoneRatios.push(scaledRatio);
@@ -364,7 +362,7 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
  *
  * This is a simple "sanity check" metric that loops through all players
  * on each team and sums up ALL their individual stats (anticipation,
- * composure, speed, strength, stamina, workrate, etc.). Ensures overall
+ * composure, speed, strength, stamina, attWorkrate, etc.). Ensures overall
  * raw player value is balanced regardless of positioning or role.
  *
  * @param teamA First team
@@ -430,7 +428,7 @@ function calculateCreativityBalance(teamA: FastTeam, teamB: FastTeam, debug: boo
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const creativityBalanceRatio = Math.pow(rawRatio, 1);
+    const creativityBalanceRatio = Math.pow(rawRatio, 9);
 
     if (debug) {
         console.log('Creativity Balance:');
@@ -439,6 +437,31 @@ function calculateCreativityBalance(teamA: FastTeam, teamB: FastTeam, debug: boo
     }
 
     return creativityBalanceRatio;
+}
+/**
+ * Calculates creativity balance between teams
+ *
+ * This measures how evenly distributed the creativity stats are
+ * between teams.
+ *
+ * @param teamA First team
+ * @param teamB Second team
+ * @returns Average balance score from 0 (imbalanced) to 1 (perfectly balanced)
+ */
+function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
+    const rawRatio = calculateBasicDifferenceRatio(teamA.strikerScore, teamB.strikerScore);
+
+    // Apply harsh power scaling to penalize imbalances
+    // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
+    const strikerBalanceRatio = Math.pow(rawRatio, 9);
+
+    if (debug) {
+        console.log('Striker Balance:');
+        console.log(formatComparison('Striker', teamA.strikerScore, teamB.strikerScore, rawRatio));
+        console.log(`  Scaled (^4): ${strikerBalanceRatio.toFixed(3)}`);
+    }
+
+    return strikerBalanceRatio;
 }
 
 /**
@@ -676,6 +699,7 @@ export function calculateMetrics(
     const zonalDistributionBalance = calculateZonalDistributionBalance(teamA, teamB, debug);
     const energyBalance = calculateEnergyBalance(teamA, teamB, debug);
     const creativityBalance = calculateCreativityBalance(teamA, teamB, debug);
+    const strikerBalance = calculateStrikerBalance(teamA, teamB, debug);
     const allStatBalance = calculateAllStatBalance(teamA, teamB, debug);
     const talentDistributionBalance = calculateTalentDistributionBalance(teamA, teamB, debug);
 
@@ -686,6 +710,7 @@ export function calculateMetrics(
         zonalDistributionBalance,
         energyBalance,
         creativityBalance,
+        strikerBalance,
         allStatBalance,
         talentDistributionBalance
     };
@@ -697,6 +722,7 @@ export function calculateMetrics(
         config.weights.zonalDistributionBalance * metrics.zonalDistributionBalance +
         config.weights.energyBalance * metrics.energyBalance +
         config.weights.creativityBalance * metrics.creativityBalance +
+        config.weights.strikerBalance * metrics.strikerBalance +
         config.weights.allStatBalance * metrics.allStatBalance +
         config.weights.talentDistributionBalance * metrics.talentDistributionBalance;
 
@@ -707,6 +733,7 @@ export function calculateMetrics(
         metrics.zonalDistributionBalance,
         metrics.energyBalance,
         metrics.creativityBalance,
+        metrics.strikerBalance,
         metrics.allStatBalance,
         metrics.talentDistributionBalance
     ];
@@ -715,6 +742,7 @@ export function calculateMetrics(
     const mean = metricValues.reduce((a, b) => a + b, 0) / metricValues.length;
     const variance = metricValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / metricValues.length;
     const stdDev = Math.sqrt(variance);
+    const finalScore = weightedScore;// * Math.pow(1-stdDev, 1.5);
 
     if (debug) {
         console.log('');
@@ -726,6 +754,7 @@ export function calculateMetrics(
         console.log(`  Zonal Distribution:       ${metrics.zonalDistributionBalance.toFixed(3)} (weight: ${config.weights.zonalDistributionBalance.toFixed(2)}) = ${(config.weights.zonalDistributionBalance * metrics.zonalDistributionBalance).toFixed(3)}`);
         console.log(`  Energy Balance:           ${metrics.energyBalance.toFixed(3)} (weight: ${config.weights.energyBalance.toFixed(2)}) = ${(config.weights.energyBalance * metrics.energyBalance).toFixed(3)}`);
         console.log(`  Creativity Balance:       ${metrics.creativityBalance.toFixed(3)} (weight: ${config.weights.creativityBalance.toFixed(2)}) = ${(config.weights.creativityBalance * metrics.creativityBalance).toFixed(3)}`);
+        console.log(`  Striker Balance:          ${metrics.strikerBalance.toFixed(3)} (weight: ${config.weights.strikerBalance.toFixed(2)}) = ${(config.weights.strikerBalance * metrics.strikerBalance).toFixed(3)}`);
         console.log(`  All-Stat Balance:         ${metrics.allStatBalance.toFixed(3)} (weight: ${config.weights.allStatBalance.toFixed(2)}) = ${(config.weights.allStatBalance * metrics.allStatBalance).toFixed(3)}`);
         console.log(`  Talent Distribution:      ${metrics.talentDistributionBalance.toFixed(3)} (weight: ${config.weights.talentDistributionBalance.toFixed(2)}) = ${(config.weights.talentDistributionBalance * metrics.talentDistributionBalance).toFixed(3)}`);
         console.log('----------------------------------------------------------------');
@@ -735,10 +764,10 @@ export function calculateMetrics(
         console.log(`    Metric Mean:            ${mean.toFixed(3)}`);
         console.log(`    Metric Std Dev:         ${stdDev.toFixed(3)}`);
         console.log('----------------------------------------------------------------');
-        console.log(`  FINAL SCORE:              ${weightedScore.toFixed(3)}`);
+        console.log(`  FINAL SCORE:              ${finalScore.toFixed(3)}`);
         console.log('================================================================');
         console.log('');
     }
 
-    return { score: weightedScore, details: metrics };
+    return { score: finalScore, details: metrics };
 }

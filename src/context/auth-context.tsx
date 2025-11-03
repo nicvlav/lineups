@@ -739,7 +739,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                         long_passing_avg: 5,
                         short_passing_avg: 5,
                         communication_avg: 5,
-                        interceptions_avg: 5,
+                        def_workrate_avg: 5,
                         composure_avg: 5,
                         willing_to_switch_avg: 5,
                         attack_positioning_avg: 5,

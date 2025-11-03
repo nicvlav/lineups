@@ -30,7 +30,7 @@ function createTestPlayer(id: string, seed: number = 0): ScoredGamePlayer {
         attackPositioning: 50 + ((seed * 14) % 50),
         longPassing: 50 + ((seed * 15) % 50),
         dribbling: 50 + ((seed * 16) % 50),
-        interceptions: 50 + ((seed * 17) % 50),
+        defWorkrate: 50 + ((seed * 17) % 50),
         blocking: 50 + ((seed * 18) % 50),
         heading: 50 + ((seed * 19) % 50),
         aggression: 50 + ((seed * 20) % 50),

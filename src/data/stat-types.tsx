@@ -1,7 +1,7 @@
 
 export type StatsKey =
     | "anticipation"
-    | "interceptions"
+    | "defWorkrate"
     | "composure"
     | "offTheBall"
     | "vision"
@@ -12,7 +12,7 @@ export type StatsKey =
     | "speed"
     | "strength"
     | "agility"
-    | "workrate"
+    | "attWorkrate"
     | "crossing"
     | "positioning"
     | "technique"
@@ -31,7 +31,7 @@ export type StatsKey =
 
 export const statKeys: StatsKey[] = [
     "anticipation",
-    "interceptions",
+    "defWorkrate",
     "composure",
     "offTheBall",
     "vision",
@@ -42,7 +42,7 @@ export const statKeys: StatsKey[] = [
     "speed",
     "strength",
     "agility",
-    "workrate",
+    "attWorkrate",
     "crossing",
     "positioning",
     "technique",
@@ -62,7 +62,7 @@ export const statKeys: StatsKey[] = [
 
 export const statLabelMap: Record<StatsKey, string> = {
     anticipation: "Anticipation",
-    interceptions: "Interceptions",
+    defWorkrate: "Defensive Work Rate",
     composure: "Composure",
     offTheBall: "Off the Ball",
     vision: "Vision",
@@ -73,7 +73,7 @@ export const statLabelMap: Record<StatsKey, string> = {
     speed: "Speed",
     strength: "Strength",
     agility: "Agility",
-    workrate: "Work Rate",
+    attWorkrate: "Attacking Work Rate",
     crossing: "Crossing",
     positioning: "Positioning",
     technique: "Technique",
@@ -94,7 +94,7 @@ export const statLabelMap: Record<StatsKey, string> = {
 
 export const statShortLabelMap: Record<StatsKey, string> = {
     anticipation: "ANT",
-    interceptions: "REA",
+    defWorkrate: "DWR",
     composure: "CMP",
     offTheBall: "OTB",
     vision: "VIS",
@@ -105,7 +105,7 @@ export const statShortLabelMap: Record<StatsKey, string> = {
     speed: "SPD",
     strength: "STR",
     agility: "AGI",
-    workrate: "WOR",
+    attWorkrate: "AWR",
     crossing: "CRS",
     positioning: "POS",
     technique: "TEC",
@@ -125,7 +125,7 @@ export const statShortLabelMap: Record<StatsKey, string> = {
 
 export const statColorsMap: Record<StatsKey, string> = {
     anticipation: "bg-orange-600",
-    interceptions: "bg-teal-600",
+    defWorkrate: "bg-teal-600",
     composure: "bg-yellow-500",
     offTheBall: "bg-orange-400",
     vision: "bg-yellow-600",
@@ -136,7 +136,7 @@ export const statColorsMap: Record<StatsKey, string> = {
     speed: "bg-emerald-500",
     strength: "bg-green-600",
     agility: "bg-lime-500",
-    workrate: "bg-green-400",
+    attWorkrate: "bg-green-400",
     crossing: "bg-sky-400",
     positioning: "bg-rose-500",
     technique: "bg-purple-400",
@@ -159,7 +159,7 @@ export type PlayerStats = Record<StatsKey, number>;
 export const defaultStatScores: PlayerStats = Object.fromEntries(
     ([
         "anticipation",
-        "interceptions",
+        "defWorkrate",
         "composure",
         "offTheBall",
         "vision",
@@ -170,7 +170,7 @@ export const defaultStatScores: PlayerStats = Object.fromEntries(
         "speed",
         "strength",
         "agility",
-        "workrate",
+        "attWorkrate",
         "crossing",
         "positioning",
         "technique",
@@ -219,14 +219,14 @@ export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
     ],
     tactical: [
         "anticipation",
-        "interceptions",
         "vision",
         "positioning",
         "offTheBall",
         "decisions",
         "marking",
         "tackling",
-        "workrate",
+        "attWorkrate",
+        "defWorkrate",
     ],
     mental: [
         "composure",

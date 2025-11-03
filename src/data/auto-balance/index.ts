@@ -26,7 +26,7 @@ import { ENABLE_DEBUG, DEFAULT_CONFIG } from "./constants";
 import { toFastPlayer } from "./utils";
 import {
     runMonteCarlo,
-    runRecursiveOptimization,
+    runTopLevelRecursiveOptimization,
     convertToGamePlayers
 } from "./algorithm";
 import { calculateMetrics } from "./metrics";
@@ -76,7 +76,7 @@ export function autoCreateTeamsScored(
     // Configure algorithm - ENABLE_DEBUG overrides everything
     const config: BalanceConfig = {
         ...DEFAULT_CONFIG,
-        recursiveDepth: 50,
+        // recursiveDepth: 50,
         debugMode: ENABLE_DEBUG || debugMode,
     };
 
@@ -87,7 +87,7 @@ export function autoCreateTeamsScored(
 
     // Run optimization
     const result = config.recursive
-        ? runRecursiveOptimization(fastPlayers, config)
+        ? runTopLevelRecursiveOptimization(fastPlayers, config)
         : runMonteCarlo(fastPlayers, config);
 
     if (!result) {
@@ -147,7 +147,7 @@ export function autoBalanceWithConfig(
     const config: BalanceConfig = {
         ...DEFAULT_CONFIG,
         ...customConfig,
-        recursiveDepth: 50,
+        // recursiveDepth: 50,
         weights: {
             ...DEFAULT_CONFIG.weights,
             ...customConfig.weights,
@@ -166,7 +166,7 @@ export function autoBalanceWithConfig(
     // Convert and optimize
     const fastPlayers = players.map(toFastPlayer);
     const result = config.recursive
-        ? runRecursiveOptimization(fastPlayers, config)
+        ? runTopLevelRecursiveOptimization(fastPlayers, config)
         : runMonteCarlo(fastPlayers, config);
 
     if (!result) {
