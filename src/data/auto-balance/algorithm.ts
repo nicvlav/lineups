@@ -299,13 +299,13 @@ export function runRecursiveOptimization(
         recursiveDepth: 500,
         recursive: false,
         weights: {
-            overallStrengthBalance: 0.4,
-            positionalScoreBalance: 0.15,
-            zonalDistributionBalance: 0.1,
+            overallStrengthBalance: 0.3,
+            positionalScoreBalance: 0.25,
+            zonalDistributionBalance: 0.2,
             energyBalance: 0.0,
             creativityBalance: 0.0,
-            allStatBalance: 0.15,
-            talentDistributionBalance: 0.2         // THE SECRET SAUCE - dominate the recursive phase
+            allStatBalance: 0.10,
+            talentDistributionBalance: 0.15         // THE SECRET SAUCE - dominate the recursive phase
         },
     };
 
@@ -358,13 +358,13 @@ export function runTopLevelRecursiveOptimization(
 
         const metrics = calculateMetrics(refined.teams.teamA, refined.teams.teamB, config, false);
 
-        if (
-            metrics.score >= 0.95 &&
-            metrics.details.positionalScoreBalance >= 0.925 &&
-            metrics.details.talentDistributionBalance >= 0.925 &&
-            (Math.abs(refined.teams.teamA.peakPotential - refined.teams.teamB.peakPotential) < 5)) {
-            return { teams: refined.teams, score: metrics.score, metrics: metrics.details };
-        }
+        // if (
+        //     metrics.score >= 0.95 &&
+        //     metrics.details.positionalScoreBalance >= 0.925 &&
+        //     metrics.details.talentDistributionBalance >= 0.925 &&
+        //     (Math.abs(refined.teams.teamA.peakPotential - refined.teams.teamB.peakPotential) < 5)) {
+        //     return { teams: refined.teams, score: metrics.score, metrics: metrics.details };
+        // }
 
         if (metrics.score > bestScore) {
             bestScore = metrics.score;

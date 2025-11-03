@@ -168,13 +168,13 @@ export function getInternalVariancePower(numPlayers: number): number {
 /** Default Monte Carlo configuration */
 export const DEFAULT_CONFIG: BalanceConfig = {
     weights: {
-        overallStrengthBalance: 0.4,          // Peak potential balance between teams
+        overallStrengthBalance: 0.3,          // Peak potential balance between teams
         positionalScoreBalance: 0.10,          // Actual score balance between teams
         zonalDistributionBalance: 0.05,        // Zone distribution balance within teams
         energyBalance: 0.05,                   // Energy balance (stamina + work rates) between teams
         creativityBalance: 0.05,                // Creativity balance between teams
         allStatBalance: 0.1,                   // All-stat balance (sum of all stats) between teams
-        talentDistributionBalance: 0.25,        // Talent distribution balance (std dev of player scores) - THE SECRET SAUCE
+        talentDistributionBalance: 0.35,        // Talent distribution balance (std dev of player scores) - THE SECRET SAUCE
     },
     dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
     recursive: true,

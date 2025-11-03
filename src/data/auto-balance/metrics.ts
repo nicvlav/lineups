@@ -230,19 +230,31 @@ function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug
  * @returns Balance score from 0 (imbalanced) to 1 (perfectly balanced)
  */
 function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
-    const peakScores = teamA.peakPotential + teamB.peakPotential;
-    const sumScores = teamA.totalScore + teamB.totalScore - teamA.zoneScores[0] - teamA.zoneScores[0] + teamA.zonePeakScores[0] + teamA.zonePeakScores[0];
+    const aPeakScores = teamA.peakPotential;
+    const bPeakScores = teamB.peakPotential;
 
-    const efficiency = calculateBasicDifferenceRatio(sumScores, peakScores);
+
+
+    const aSumScores = teamA.totalScore - teamA.zoneScores[0] - teamA.zoneScores[0];
+    const bSumScores = teamB.totalScore - teamB.zoneScores[0] - teamB.zoneScores[0];
+
+    const aRatio = calculateBasicDifferenceRatio(aSumScores, aPeakScores);
+    const bRatio = calculateBasicDifferenceRatio(bSumScores, bPeakScores);
+    const diff = calculateBasicDifferenceRatio(aRatio, bRatio);
+
+    const efficiency = calculateBasicDifferenceRatio(aSumScores + bSumScores, aPeakScores + bPeakScores);
 
     // Apply harsh power scaling to penalize imbalances
     // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const positionalBalanceRatio = Math.pow(efficiency, 4);
+    const positionalBalanceRatio = diff * 0.75 + Math.pow(efficiency, 0.8) * 0.25;
 
     if (debug) {
         console.log('Positional Score Balance:');
-        console.log(formatComparison('Efficiency | Peak vs Placed | ', peakScores, sumScores, efficiency));
-        console.log(`  Scaled (^4): ${positionalBalanceRatio.toFixed(3)}`);
+        console.log(formatComparison('A     | Peak vs Placed | ', aPeakScores, aSumScores, aRatio));
+        console.log(formatComparison('B     | Peak vs Placed | ', bPeakScores, bSumScores, bRatio));
+        console.log(formatComparison('Diff  | Peak vs Placed | ', aRatio, bRatio, diff));
+        console.log(formatComparison('Total | Peak vs Placed | ', aSumScores + bSumScores, bPeakScores + bPeakScores, efficiency));
+        console.log(`  Final: ${positionalBalanceRatio.toFixed(3)}`);
     }
 
     return positionalBalanceRatio;
@@ -308,13 +320,13 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
 
     // Apply power scaling to EACH zone individually
     for (let zoneIdx = 1; zoneIdx < N; zoneIdx++) {
-        const a = teamA.zonePeakScores[zoneIdx];
-        const b = teamB.zonePeakScores[zoneIdx];
+        const a = teamA.zoneScores[zoneIdx];
+        const b = teamB.zoneScores[zoneIdx];
         const rawRatio = calculateBasicDifferenceRatio(a, b);
 
         // Apply harsh power scaling to each zone ratio individually
         // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-        const scaledRatio = Math.pow(rawRatio, 3);
+        const scaledRatio = Math.pow(rawRatio, 4);
 
         rawZoneRatios.push(rawRatio);
         scaledZoneRatios.push(scaledRatio);
@@ -601,7 +613,7 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 
     // Apply dynamic power scaling to heavily penalize distribution mismatches
     // Power scales with player count: 18 players → power 1.0, 22+ players → power 2.0
-    const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.5 +  Math.pow(internalSkillRatio, skillZonePower) * 0.5) * combinedMidfieldPenalty;
+    const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.5 + Math.pow(internalSkillRatio, skillZonePower) * 0.5) * combinedMidfieldPenalty;
 
     if (debug) {
         console.log('Talent Distribution Balance (Player Score Std Dev):');
