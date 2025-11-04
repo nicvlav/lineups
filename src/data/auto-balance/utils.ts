@@ -168,3 +168,146 @@ export function cryptoShuffle<T>(array: T[]): T[] {
 export function cryptoRandomInt(min: number, max: number): number {
     return Math.floor(cryptoRandom() * (max - min)) + min;
 }
+
+/**
+ * Weighted random selection from array
+ *
+ * Selects an element from the array with probability based on weights.
+ * Weights do not need to sum to 1.0 - they will be normalized.
+ *
+ * @param items Array of items to select from
+ * @param weights Array of weights (same length as items)
+ * @returns Randomly selected item
+ *
+ * @example
+ * const players = [player1, player2, player3, player4];
+ * const weights = [0.50, 0.30, 0.15, 0.05]; // Prefer first player
+ * const selected = weightedRandomSelect(players, weights);
+ */
+export function weightedRandomSelect<T>(items: T[], weights: number[]): T {
+    if (items.length === 0) {
+        throw new Error("Cannot select from empty array");
+    }
+
+    if (items.length !== weights.length) {
+        throw new Error("Items and weights must have same length");
+    }
+
+    if (items.length === 1) {
+        return items[0];
+    }
+
+    // Normalize weights to sum to 1.0
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    const normalizedWeights = weights.map(w => w / totalWeight);
+
+    // Create cumulative distribution
+    const cumulativeWeights: number[] = [];
+    let cumulative = 0;
+    for (const weight of normalizedWeights) {
+        cumulative += weight;
+        cumulativeWeights.push(cumulative);
+    }
+
+    // Select using crypto random
+    const rand = cryptoRandom();
+
+    for (let i = 0; i < cumulativeWeights.length; i++) {
+        if (rand <= cumulativeWeights[i]) {
+            return items[i];
+        }
+    }
+
+    // Fallback (should never reach here due to floating point rounding)
+    return items[items.length - 1];
+}
+
+/**
+ * Select top N players from available pool with proximity filtering
+ *
+ * Only includes players whose score is within proximityThreshold of the best player.
+ * Then selects from this filtered list using weighted random selection.
+ *
+ * @param available Array of available players (will be sorted in place)
+ * @param positionIdx Position index to evaluate
+ * @param comparator Comparator function for sorting
+ * @param proximityThreshold Maximum score difference from best (default: 5)
+ * @param topN Maximum candidates to consider (default: 4)
+ * @param selectionWeights Probability weights for top N (default: [0.5, 0.3, 0.15, 0.05])
+ * @returns Selected player
+ */
+export function selectPlayerWithProximity(
+    available: FastPlayer[],
+    positionIdx: number,
+    comparator: (a: FastPlayer, b: FastPlayer) => number,
+    proximityThreshold: number = 5,
+    topN: number = 4,
+    selectionWeights: number[] = [0.50, 0.30, 0.15, 0.05]
+): FastPlayer {
+    if (available.length === 0) {
+        throw new Error("Cannot select from empty array");
+    }
+
+    // Sort by comparator
+    available.sort(comparator);
+
+    // Get best player's score
+    const bestScore = available[0].scores[positionIdx];
+
+    // Filter candidates within proximity threshold
+    const candidates: FastPlayer[] = [];
+    for (let i = 0; i < Math.min(topN, available.length); i++) {
+        const player = available[i];
+        const scoreDiff = bestScore - player.scores[positionIdx];
+
+        if (scoreDiff <= proximityThreshold) {
+            candidates.push(player);
+        } else {
+            // Players are sorted, so no need to check further
+            break;
+        }
+    }
+
+    // If no candidates within threshold, just take the best
+    if (candidates.length === 0) {
+        return available[0];
+    }
+
+    // If only one candidate, return it
+    if (candidates.length === 1) {
+        return candidates[0];
+    }
+
+    // Use weighted random selection
+    const weights = selectionWeights.slice(0, candidates.length);
+    return weightedRandomSelect(candidates, weights);
+}
+
+/**
+ * Get available zones for a formation
+ *
+ * Returns indices of zones that still need players.
+ *
+ * @param formation Formation array
+ * @returns Array of zone indices that have open positions
+ */
+export function getAvailableZones(formation: Int8Array): number[] {
+    const zones: number[] = [];
+    const ZONE_POSITIONS = [
+        [0],           // Goalkeeper
+        [1, 2],        // Defense
+        [3, 4, 5, 6],  // Midfield
+        [7, 8],        // Attack
+    ];
+
+    for (let zoneIdx = 0; zoneIdx < ZONE_POSITIONS.length; zoneIdx++) {
+        const positions = ZONE_POSITIONS[zoneIdx];
+        const hasOpenings = positions.some(posIdx => formation[posIdx] > 0);
+
+        if (hasOpenings) {
+            zones.push(zoneIdx);
+        }
+    }
+
+    return zones;
+}

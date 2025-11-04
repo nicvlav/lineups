@@ -1,14 +1,18 @@
 /**
  * Auto-Balance Metrics Calculation
- * 
- * Functions for calculating team balance metrics and scores.
- * 
+ *
+ * Professional metrics using calibrated transformations instead of arbitrary power scaling.
+ * All thresholds and formulas are centralized in DEFAULT_BALANCE_CONFIG.
+ *
  * @module auto-balance/metrics
  */
 
 import type { FastTeam, BalanceConfig, BalanceMetrics } from "./types";
+import type {BalanceConfiguration} from "./metrics-config"
 import type { Formation } from "@/data/position-types";
 import { ZONE_POSITIONS, INDEX_TO_POSITION, getMidfieldPenaltyPower, getInternalVariancePower, getInternalZoneSkillPower } from "./constants";
+import { calibratedScore, Steepness } from "./metric-transformations";
+import { DEFAULT_BALANCE_CONFIG } from "./metrics-config";
 
 /**
  * Helper function to format a simple comparison for debug output
@@ -58,6 +62,8 @@ function formatZoneAverageRatings(teamA: FastTeam, teamB: FastTeam): string {
 /**
  * Calculates penalty for when all components favor the same team
  * The more components that favor one team, the harsher the penalty
+ *
+ * Uses configured penalty per component instead of magic number (0.3)
  */
 function calculateDirectionalImbalancePenalty(staminaDiff: number, workRateDiff: number): number {
     let staminaDirection = 0;
@@ -69,7 +75,8 @@ function calculateDirectionalImbalancePenalty(staminaDiff: number, workRateDiff:
     // this can range from 0 - 2
     const maxFavors = Math.abs(staminaDirection + workRateDirection);
 
-    return 1.0 - (maxFavors * 0.3);
+    const penaltyPerComponent = DEFAULT_BALANCE_CONFIG.formulas.directionalImbalance.penaltyPerComponent;
+    return 1.0 - (maxFavors * penaltyPerComponent);
 }
 
 /**
@@ -90,19 +97,20 @@ function calculateBasicDifferenceRatio(a: number, b: number): number {
 /**
  * Calculates penalty when one team dominates multiple zones
  *
- * Uses epsilon threshold to ignore very small differences (neutral zones).
+ * Uses configured epsilon threshold to ignore very small differences (neutral zones).
  * Penalizes when zones cluster directionally (e.g., team A wins DEF+ATT, team B only wins MID).
+ *
+ * All thresholds come from DEFAULT_BALANCE_CONFIG.formulas.zoneDirectionality
  *
  * @param teamA First team
  * @param teamB Second team
- * @param epsilon Ratio threshold above which zones are considered neutral (default 0.985)
  * @returns Penalty multiplier from 0 (harsh penalty) to 1 (no penalty)
  */
 function calculateZoneDirectionalPenalty(
     teamA: FastTeam,
-    teamB: FastTeam,
-    epsilon: number = 0.995
+    teamB: FastTeam
 ): { penalty: number; teamAWins: number; teamBWins: number; neutrals: number; winners: string[] } {
+    const epsilon = DEFAULT_BALANCE_CONFIG.formulas.zoneDirectionality.neutralEpsilon;
     const zoneNames = ['DEF', 'MID', 'ATT'];
     const zoneIndices = [1, 2, 3]; // Exclude GK (index 0)
 
@@ -138,16 +146,19 @@ function calculateZoneDirectionalPenalty(
     // Calculate penalty based on directional clustering
     const maxWins = Math.max(teamAWins, teamBWins);
 
+    const dominationPenalty = DEFAULT_BALANCE_CONFIG.formulas.zoneDirectionality.dominationPenalty;
+    const twoZonePenalty = DEFAULT_BALANCE_CONFIG.formulas.zoneDirectionality.twoZonePenalty;
+
     let penalty = 1.0;
     if (maxWins === 3) {
         // 3-0 split: one team dominates all zones (harsh)
-        penalty = 0.1; // 40% penalty
+        penalty = dominationPenalty;
     } else if ((maxWins === 2 && neutrals === 0) || (maxWins === 1 && neutrals === 2)) {
         // 2-1 split: moderate directional imbalance
         penalty = Math.pow(sum, 4);
     } else if (maxWins === 2 && neutrals === 1) {
         // 2-0-1 split: two zones favor one team, one neutral
-        penalty = 0.4; // 10% penalty
+        penalty = twoZonePenalty;
     } else if (maxWins > 0) {
         // 1-1-1 split: cancel out two zones
         penalty = Math.pow(sum, 2);
@@ -161,7 +172,7 @@ function calculateZoneDirectionalPenalty(
 
 /**
  * Calculates energy balance between teams
- * Uses smart system that heavily penalizes directional imbalances
+ * Uses calibrated scoring system with configured thresholds
  */
 function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
     const staminaDiff = teamA.staminaScore - teamB.staminaScore;
@@ -173,20 +184,24 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
 
     const rawCombined = inbalanceCompensation * (staminaRatio + workrateRatio) / 2;
 
-    // Apply harsh power scaling to penalize imbalances
-    // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const energyBalanceRatio = Math.pow(rawCombined, 2);
+    // Use calibrated scoring instead of arbitrary Math.pow(rawCombined, 2)
+    const energyBalanceRatio = calibratedScore(
+        rawCombined,
+        DEFAULT_BALANCE_CONFIG.thresholds.energy,
+        Steepness.Gentle
+    );
 
     if (debug) {
+        const t = DEFAULT_BALANCE_CONFIG.thresholds.energy;
         console.log('Energy Balance:');
         console.log(formatComparison('Stamina', teamA.staminaScore, teamB.staminaScore, staminaRatio));
         console.log(formatComparison('Workrate', teamA.workrateScore, teamB.workrateScore, workrateRatio));
         console.log(`  Directional Penalty: ${inbalanceCompensation.toFixed(3)}`);
         console.log(`  Raw Combined: ${rawCombined.toFixed(3)}`);
-        console.log(`  Scaled (^4): ${energyBalanceRatio.toFixed(3)}`);
+        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        console.log(`  Calibrated Score: ${energyBalanceRatio.toFixed(3)}`);
     }
 
-    // Apply directional penalty to the combined score
     return energyBalanceRatio;
 }
 
@@ -194,8 +209,7 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
  * Calculates overall team strength balance by comparing peak potential
  *
  * Peak potential represents the theoretical maximum strength each team could achieve.
- * A value of 1.0 means both teams have equal peak potential (perfectly balanced).
- * A value closer to 0 means one team has significantly higher peak potential.
+ * Uses calibrated scoring with configured thresholds instead of arbitrary Math.pow(ratio, 16).
  *
  * @param teamA First team
  * @param teamB Second team
@@ -204,14 +218,19 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
 function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
     const rawRatio = calculateBasicDifferenceRatio(teamA.peakPotential, teamB.peakPotential);
 
-    // Apply harsh power scaling to penalize imbalances
-    // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const strengthBalanceRatio = Math.pow(rawRatio, 16);
+    // Use calibrated scoring instead of arbitrary Math.pow(rawRatio, 16)
+    const strengthBalanceRatio = calibratedScore(
+        rawRatio,
+        DEFAULT_BALANCE_CONFIG.thresholds.peakPotential,
+        Steepness.VerySteep
+    );
 
     if (debug) {
+        const t = DEFAULT_BALANCE_CONFIG.thresholds.peakPotential;
         console.log('Overall Strength Balance (Peak Potential):');
         console.log(formatComparison('Peak', teamA.peakPotential, teamB.peakPotential, rawRatio));
-        console.log(`  Scaled (^4): ${strengthBalanceRatio.toFixed(3)}`);
+        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        console.log(`  Calibrated Score: ${strengthBalanceRatio.toFixed(3)}`);
     }
 
     return strengthBalanceRatio;
@@ -222,6 +241,8 @@ function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug
  *
  * This measures how balanced the teams are based on players' actual scores
  * in their assigned positions (not theoretical peak).
+ *
+ * Uses calibrated scoring and configured formula weights instead of magic numbers.
  *
  * @param teamA First team
  * @param teamB Second team
@@ -240,16 +261,32 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
 
     const efficiency = calculateBasicDifferenceRatio(aSumScores + bSumScores, aPeakScores + bPeakScores);
 
-    // Apply harsh power scaling to penalize imbalances
-    // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const positionalBalanceRatio = Math.pow(diff, 16) * 0.8 + Math.pow(efficiency, 0.5) * 0.2;
+    // Use calibrated scoring instead of arbitrary Math.pow(diff, 16) and Math.pow(efficiency, 0.5)
+    const diffScore = calibratedScore(
+        diff,
+        DEFAULT_BALANCE_CONFIG.thresholds.scoreBalance,
+        Steepness.VerySteep
+    );
+    const efficiencyScore = calibratedScore(
+        efficiency,
+        DEFAULT_BALANCE_CONFIG.thresholds.scoreBalance,
+        Steepness.Gentle
+    );
+
+    // Use configured weights instead of magic numbers (0.8, 0.2)
+    const formula = DEFAULT_BALANCE_CONFIG.formulas.positionalBalance;
+    const positionalBalanceRatio = diffScore * formula.diffWeight + efficiencyScore * formula.efficiencyWeight;
 
     if (debug) {
+        const t = DEFAULT_BALANCE_CONFIG.thresholds.scoreBalance;
         console.log('Positional Score Balance:');
         console.log(formatComparison('A     | Peak vs Placed | ', aPeakScores, aSumScores, aRatio));
         console.log(formatComparison('B     | Peak vs Placed | ', bPeakScores, bSumScores, bRatio));
         console.log(formatComparison('Diff  | Peak vs Placed | ', aRatio, bRatio, diff));
         console.log(formatComparison('Total | Peak vs Placed | ', aSumScores + bSumScores, bPeakScores + bPeakScores, efficiency));
+        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        console.log(`  Diff Score: ${diffScore.toFixed(3)} (weight: ${formula.diffWeight})`);
+        console.log(`  Efficiency Score: ${efficiencyScore.toFixed(3)} (weight: ${formula.efficiencyWeight})`);
         console.log(`  Final: ${positionalBalanceRatio.toFixed(3)}`);
     }
 
@@ -303,6 +340,8 @@ const calculateSingleTeamZonalBalance = (zoneScores: Float32Array): number => {
  * has similar strength across all zones rather than being heavily
  * concentrated in one area.
  *
+ * Uses calibrated scoring instead of no-op Math.pow(ratio, 1).
+ *
  * @param teamA First team
  * @param teamB Second team
  * @returns Average balance score from 0 (imbalanced) to 1 (perfectly balanced)
@@ -314,15 +353,18 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
     const rawZoneRatios: number[] = [];
     const scaledZoneRatios: number[] = [];
 
-    // Apply power scaling to EACH zone individually
+    // Apply calibrated scoring to EACH zone individually
     for (let zoneIdx = 1; zoneIdx < N; zoneIdx++) {
         const a = teamA.zoneScores[zoneIdx];
         const b = teamB.zoneScores[zoneIdx];
         const rawRatio = calculateBasicDifferenceRatio(a, b);
 
-        // Apply harsh power scaling to each zone ratio individually
-        // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-        const scaledRatio = Math.pow(rawRatio, 1);
+        // Use calibrated scoring instead of no-op Math.pow(rawRatio, 1)
+        const scaledRatio = calibratedScore(
+            rawRatio,
+            DEFAULT_BALANCE_CONFIG.thresholds.zoneBalance,
+            Steepness.Gentle
+        );
 
         rawZoneRatios.push(rawRatio);
         scaledZoneRatios.push(scaledRatio);
@@ -336,16 +378,18 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
     // Calculate zone directional penalty (detects 2-1 or 3-0 zone clustering)
     const directionality = calculateZoneDirectionalPenalty(teamA, teamB);
 
-    // Combine all factors (no additional power scaling - already scaled per zone)
+    // Combine all factors
     const zonalBalanceRatio = directionality.penalty * (totalImbalance + internalSkillRatio) / 2;
 
     if (debug) {
+        const t = DEFAULT_BALANCE_CONFIG.thresholds.zoneBalance;
         console.log('Zonal Distribution Balance:');
         console.log(formatZoneScores(teamA, teamB));
         console.log(formatZonePeakScores(teamA, teamB));
         console.log(formatZoneAverageRatings(teamA, teamB));
         console.log('  Per-Zone Raw Ratios (DEF, MID, ATT): ' + rawZoneRatios.map(r => r.toFixed(3)).join(', '));
-        console.log('  Per-Zone Scaled (^4) (DEF, MID, ATT): ' + scaledZoneRatios.map(r => r.toFixed(3)).join(', '));
+        console.log('  Per-Zone Calibrated Scores (DEF, MID, ATT): ' + scaledZoneRatios.map(r => r.toFixed(3)).join(', '));
+        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
         console.log(`  Zone Winners: ${directionality.winners.join(', ')}`);
         console.log(`  Directional Split: A=${directionality.teamAWins}, B=${directionality.teamBWins}, Neutral=${directionality.neutrals}`);
         console.log(`  Zone Directional Penalty: ${directionality.penalty.toFixed(3)}`);
@@ -364,6 +408,8 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
  * on each team and sums up ALL their individual stats (anticipation,
  * composure, speed, strength, stamina, attWorkrate, etc.). Ensures overall
  * raw player value is balanced regardless of positioning or role.
+ *
+ * Uses calibrated scoring instead of arbitrary Math.pow(ratio, 9).
  *
  * @param teamA First team
  * @param teamB Second team
@@ -398,16 +444,21 @@ function calculateAllStatBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
 
     const rawRatio = calculateBasicDifferenceRatio(teamATotal, teamBTotal);
 
-    // Apply harsh power scaling to penalize imbalances
-    // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const allStatBalanceRatio = Math.pow(rawRatio, 9);
+    // Use calibrated scoring instead of arbitrary Math.pow(rawRatio, 9)
+    const allStatBalanceRatio = calibratedScore(
+        rawRatio,
+        DEFAULT_BALANCE_CONFIG.thresholds.allStatBalance,
+        Steepness.Steep
+    );
 
     if (debug) {
+        const t = DEFAULT_BALANCE_CONFIG.thresholds.allStatBalance;
         console.log('All-Stat Balance (Sum of Every Player Stat):');
         console.log(formatComparison('Total All Stats', teamATotal, teamBTotal, rawRatio));
         console.log(`  Team A: ${teamAPlayerCount} players, avg ${(teamATotal / teamAPlayerCount).toFixed(1)} total stats/player`);
         console.log(`  Team B: ${teamBPlayerCount} players, avg ${(teamBTotal / teamBPlayerCount).toFixed(1)} total stats/player`);
-        console.log(`  Scaled (^4): ${allStatBalanceRatio.toFixed(3)}`);
+        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        console.log(`  Calibrated Score: ${allStatBalanceRatio.toFixed(3)}`);
     }
 
     return allStatBalanceRatio;
@@ -419,6 +470,8 @@ function calculateAllStatBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
  * This measures how evenly distributed the creativity stats are
  * between teams.
  *
+ * Uses calibrated scoring instead of arbitrary Math.pow(ratio, 9).
+ *
  * @param teamA First team
  * @param teamB Second team
  * @returns Average balance score from 0 (imbalanced) to 1 (perfectly balanced)
@@ -426,23 +479,30 @@ function calculateAllStatBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
 function calculateCreativityBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
     const rawRatio = calculateBasicDifferenceRatio(teamA.creativityScore, teamB.creativityScore);
 
-    // Apply harsh power scaling to penalize imbalances
-    // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const creativityBalanceRatio = Math.pow(rawRatio, 9);
+    // Use calibrated scoring instead of arbitrary Math.pow(rawRatio, 9)
+    const creativityBalanceRatio = calibratedScore(
+        rawRatio,
+        DEFAULT_BALANCE_CONFIG.thresholds.creativity,
+        Steepness.Steep
+    );
 
     if (debug) {
+        const t = DEFAULT_BALANCE_CONFIG.thresholds.creativity;
         console.log('Creativity Balance:');
         console.log(formatComparison('Creativity', teamA.creativityScore, teamB.creativityScore, rawRatio));
-        console.log(`  Scaled (^4): ${creativityBalanceRatio.toFixed(3)}`);
+        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        console.log(`  Calibrated Score: ${creativityBalanceRatio.toFixed(3)}`);
     }
 
     return creativityBalanceRatio;
 }
 /**
- * Calculates creativity balance between teams
+ * Calculates striker balance between teams
  *
- * This measures how evenly distributed the creativity stats are
+ * This measures how evenly distributed the striker stats are
  * between teams.
+ *
+ * Uses calibrated scoring instead of arbitrary Math.pow(ratio, 9).
  *
  * @param teamA First team
  * @param teamB Second team
@@ -451,14 +511,19 @@ function calculateCreativityBalance(teamA: FastTeam, teamB: FastTeam, debug: boo
 function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
     const rawRatio = calculateBasicDifferenceRatio(teamA.strikerScore, teamB.strikerScore);
 
-    // Apply harsh power scaling to penalize imbalances
-    // pow(0.95, 4) = 0.815, pow(0.90, 4) = 0.656, pow(0.80, 4) = 0.410
-    const strikerBalanceRatio = Math.pow(rawRatio, 9);
+    // Use calibrated scoring instead of arbitrary Math.pow(rawRatio, 9)
+    const strikerBalanceRatio = calibratedScore(
+        rawRatio,
+        DEFAULT_BALANCE_CONFIG.thresholds.striker,
+        Steepness.VerySteep
+    );
 
     if (debug) {
+        const t = DEFAULT_BALANCE_CONFIG.thresholds.striker;
         console.log('Striker Balance:');
         console.log(formatComparison('Striker', teamA.strikerScore, teamB.strikerScore, rawRatio));
-        console.log(`  Scaled (^4): ${strikerBalanceRatio.toFixed(3)}`);
+        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        console.log(`  Calibrated Score: ${strikerBalanceRatio.toFixed(3)}`);
     }
 
     return strikerBalanceRatio;
@@ -510,11 +575,11 @@ function calculateZoneAverageRatings(team: FastTeam): Float32Array {
  * - Large teams (22+ players): harsher penalty (power ~4.0, exponential)
  *
  * @param zoneAverages Array of zone average ratings [GK, DEF, MID, ATT]
- * @param penaltyStrength How harsh the penalty should be (0-1, where 1 is max penalty)
+ * @param penaltyStrength How harsh the penalty should be (0-1, where 1 is max penalty) - comes from config
  * @param numPlayers Total number of players (used for dynamic power scaling)
  * @returns Penalty multiplier from 0 (harsh penalty) to 1 (no penalty)
  */
-function calculateMidfieldPreferencePenalty(zoneAverages: Float32Array, penaltyStrength: number = 0.5, numPlayers: number = 22): number {
+function calculateMidfieldPreferencePenalty(zoneAverages: Float32Array, penaltyStrength: number, numPlayers: number = 22): number {
     // Extract non-GK zones
     const defAvg = zoneAverages[1];  // DEF
     const midAvg = zoneAverages[2];  // MID
@@ -614,9 +679,9 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
     const internalSkillRatio = teamAZonalBalance * teamBZonalBalance;
 
     // Calculate midfield preference penalty for each team
-    // penaltyStrength can be adjusted: 0 = no penalty, 1 = maximum penalty
+    // penaltyStrength comes from config instead of magic number (0.5)
     // Power scaling is dynamic based on player count (more players = harsher penalty)
-    const midfieldPenaltyStrength = 0.5;
+    const midfieldPenaltyStrength = DEFAULT_BALANCE_CONFIG.formulas.midfieldPreference.penaltyStrength;
     const numPlayers = teamA.playerCount + teamB.playerCount;
     const teamAMidfieldPenalty = calculateMidfieldPreferencePenalty(teamAZoneAverages, midfieldPenaltyStrength, numPlayers);
     const teamBMidfieldPenalty = calculateMidfieldPreferencePenalty(teamBZoneAverages, midfieldPenaltyStrength, numPlayers);
@@ -673,7 +738,89 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 }
 
 /**
- * Calculates comprehensive balance metrics
+ * Calculates comprehensive balance metrics using NEW configuration system
+ *
+ * Uses calibrated transformations and professional configuration.
+ * This is the modern API - use this instead of calculateMetrics().
+ *
+ * @param teamA First team
+ * @param teamB Second team
+ * @param config NEW BalanceConfiguration with calibrated thresholds
+ * @param debug Enable detailed debug output with threshold context
+ * @returns Combined score and detailed metrics
+ */
+export function calculateMetricsV3(
+    teamA: FastTeam,
+    teamB: FastTeam,
+    config: BalanceConfiguration,
+    debug: boolean
+): { score: number; details: BalanceMetrics } {
+    // Calculate each metric independently (always calculate all metrics)
+    const overallStrengthBalance = calculateOverallStrengthBalance(teamA, teamB, debug);
+    const positionalScoreBalance = calculatePositionalScoreBalance(teamA, teamB, debug);
+    const zonalDistributionBalance = calculateZonalDistributionBalance(teamA, teamB, debug);
+    const energyBalance = calculateEnergyBalance(teamA, teamB, debug);
+    const creativityBalance = calculateCreativityBalance(teamA, teamB, debug);
+    const strikerBalance = calculateStrikerBalance(teamA, teamB, debug);
+    const allStatBalance = calculateAllStatBalance(teamA, teamB, debug);
+    const talentDistributionBalance = calculateTalentDistributionBalance(teamA, teamB, debug);
+
+    // Assemble detailed metrics
+    const metrics: BalanceMetrics = {
+        overallStrengthBalance,
+        positionalScoreBalance,
+        zonalDistributionBalance,
+        energyBalance,
+        creativityBalance,
+        strikerBalance,
+        allStatBalance,
+        talentDistributionBalance
+    };
+
+    // Calculate weighted score using NEW config structure
+    const weightedScore =
+        config.weights.primary.peakPotential * metrics.overallStrengthBalance +
+        config.weights.primary.scoreBalance * metrics.positionalScoreBalance +
+        config.weights.secondary.zoneBalance * metrics.zonalDistributionBalance +
+        config.weights.secondary.energy * metrics.energyBalance +
+        config.weights.secondary.creativity * metrics.creativityBalance +
+        config.weights.secondary.striker * metrics.strikerBalance +
+        config.weights.secondary.allStatBalance * metrics.allStatBalance +
+        config.weights.primary.starDistribution * metrics.talentDistributionBalance;
+
+    const finalScore = weightedScore;
+
+    if (debug) {
+        console.log('');
+        console.log('╔═══════════════════════════════════════════════════════════════════╗');
+        console.log('║         PROFESSIONAL BALANCE METRICS (Calibrated System)         ║');
+        console.log('╚═══════════════════════════════════════════════════════════════════╝');
+        console.log('');
+        console.log('PRIMARY METRICS (What users care about most):');
+        console.log(`  Star Distribution:     ${metrics.talentDistributionBalance.toFixed(3)} × ${config.weights.primary.starDistribution.toFixed(2)} = ${(config.weights.primary.starDistribution * metrics.talentDistributionBalance).toFixed(3)}`);
+        console.log(`  Score Balance:         ${metrics.positionalScoreBalance.toFixed(3)} × ${config.weights.primary.scoreBalance.toFixed(2)} = ${(config.weights.primary.scoreBalance * metrics.positionalScoreBalance).toFixed(3)}`);
+        console.log(`  Peak Potential:          ${metrics.overallStrengthBalance.toFixed(3)} × ${config.weights.primary.peakPotential.toFixed(2)} = ${(config.weights.primary.peakPotential * metrics.overallStrengthBalance).toFixed(3)}`);
+        console.log('');
+        console.log('SECONDARY METRICS (Fine-tuning):');
+        console.log(`  Zone Balance:        ${metrics.zonalDistributionBalance.toFixed(3)} × ${config.weights.secondary.zoneBalance.toFixed(2)} = ${(config.weights.secondary.zoneBalance * metrics.zonalDistributionBalance).toFixed(3)}`);
+        console.log(`  All-Stat Balance:      ${metrics.allStatBalance.toFixed(3)} × ${config.weights.secondary.allStatBalance.toFixed(2)} = ${(config.weights.secondary.allStatBalance * metrics.allStatBalance).toFixed(3)}`);
+        console.log(`  Energy:                ${metrics.energyBalance.toFixed(3)} × ${config.weights.secondary.energy.toFixed(2)} = ${(config.weights.secondary.energy * metrics.energyBalance).toFixed(3)}`);
+        console.log(`  Creativity:            ${metrics.creativityBalance.toFixed(3)} × ${config.weights.secondary.creativity.toFixed(2)} = ${(config.weights.secondary.creativity * metrics.creativityBalance).toFixed(3)}`);
+        console.log(`  Striker Quality:       ${metrics.strikerBalance.toFixed(3)} × ${config.weights.secondary.striker.toFixed(2)} = ${(config.weights.secondary.striker * metrics.strikerBalance).toFixed(3)}`);
+        console.log('');
+        console.log('─────────────────────────────────────────────────────────────────────');
+        console.log(`  FINAL WEIGHTED SCORE:  ${finalScore.toFixed(3)}`);
+        console.log('╚═══════════════════════════════════════════════════════════════════╝');
+        console.log('');
+    }
+
+    return { score: finalScore, details: metrics };
+}
+
+/**
+ * Calculates comprehensive balance metrics (LEGACY API)
+ *
+ * @deprecated Use calculateMetricsV3() with BalanceConfiguration instead
  *
  * A well-balanced team assignment needs to satisfy multiple criteria:
  * - Similar overall strength (peak potential)

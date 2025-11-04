@@ -6,7 +6,7 @@
  * @module auto-balance/algorithm
  */
 
-import type { FastPlayer, Teams, SimulationResult, BalanceConfig } from "./types";
+import type { FastPlayer, Teams, SimulationResult } from "./types";
 import type { ScoredGamePlayer } from "@/data/player-types";
 import {
     POSITION_INDICES,
@@ -17,8 +17,9 @@ import {
 } from "./constants";
 import { defaultZoneWeights, getPointForPosition } from "@/data/position-types";
 import { getFastFormation } from "./formation";
-import { createFastTeam, createPositionComparator, sortWorstInPlace, cryptoRandom, cryptoRandomInt } from "./utils";
-import { calculateMetrics } from "./metrics";
+import { createFastTeam, createPositionComparator, sortWorstInPlace, cryptoRandom, cryptoRandomInt, selectPlayerWithProximity, getAvailableZones } from "./utils";
+import type { BalanceConfiguration } from "./metrics-config";
+import { calculateMetricsV3 } from "./metrics";
 
 /**
  * Core team assignment algorithm
@@ -30,7 +31,7 @@ import { calculateMetrics } from "./metrics";
  */
 export function assignPlayersToTeams(
     players: FastPlayer[],
-    config: BalanceConfig
+    config: BalanceConfiguration
 ): Teams | null {
     const totalPlayers = players.length;
     const teamASize = Math.floor(totalPlayers / 2);
@@ -43,9 +44,9 @@ export function assignPlayersToTeams(
         : getFastFormation(teamBSize);
 
     if (!formationDataA || !formationDataB) {
-        if (config.debugMode) {
-            console.warn(`No formation available for ${teamASize}/${teamBSize} players`);
-        }
+        // if (config.debugMode) {
+        //     console.warn(`No formation available for ${teamASize}/${teamBSize} players`);
+        // }
         return null;
     }
 
@@ -96,26 +97,22 @@ export function assignPlayersToTeams(
     }
 
     // Phase 2: Assign remaining players with dynamic balancing
-    // first pre-build comparitors for each position
-    // might simplfiy this to one generic sort method.. 
+    // Pre-build comparators for each position
     const comparators = new Map<number, (a: FastPlayer, b: FastPlayer) => number>();
     for (let i = 0; i < POSITION_COUNT; i++) {
-        comparators.set(i, createPositionComparator(i, config.dominanceRatio));
+        comparators.set(i, createPositionComparator(i, 1.03));
     }
 
-    // Track which zones have available positions
-    const getAvailableZones = (formation: Int8Array): number[] => {
-        const zones: number[] = [];
-        for (let zoneIdx = 0; zoneIdx < 4; zoneIdx++) {
-            for (const posIdx of ZONE_POSITIONS[zoneIdx]) {
-                if (formation[posIdx] > 0) {
-                    zones.push(zoneIdx);
-                    break;
-                }
-            }
-        }
-        return zones;
-    };
+    // Get configuration for guided randomness
+    const algConfig = config.algorithm;
+    const proximityThreshold = algConfig.proximityThreshold;
+    const selectionWeights = algConfig.selectionWeights;
+
+    // Calculate dynamic topN based on team size if scaling enabled
+    const baseTopN = algConfig.baseTopN;
+    const topN = algConfig.topNScaling
+        ? Math.min(baseTopN, Math.floor(totalPlayers / 5))
+        : baseTopN;
 
     while (available.length > 0) {
         // Choose team based on current balance
@@ -161,11 +158,23 @@ export function assignPlayersToTeams(
         for (const { posIdx } of availablePositions) {
             if (assigned) break;
 
-            // Sort available players for this position
-            available.sort(comparators.get(posIdx)!);
-
             if (available.length > 0) {
-                const player = available.shift()!;
+                // GUIDED RANDOMNESS: Select from top N candidates within proximity threshold
+                const player = selectPlayerWithProximity(
+                    available,
+                    posIdx,
+                    comparators.get(posIdx)!,
+                    proximityThreshold,
+                    topN,
+                    selectionWeights
+                );
+
+                // Remove selected player from available pool
+                const playerIndex = available.indexOf(player);
+                if (playerIndex > -1) {
+                    available.splice(playerIndex, 1);
+                }
+
                 const score = player.scores[posIdx];
 
                 player.assignedPosition = posIdx;
@@ -181,28 +190,42 @@ export function assignPlayersToTeams(
         }
 
         if (!assigned && available.length > 0) {
-            if (config.debugMode) {
-                console.warn("Could not assign player in zone", randomZone);
-            }
-            // Try any position as fallback
+            // if (config.debugMode) {
+            //     console.warn("Could not assign player in zone", randomZone);
+            // }
+            // Try any position as fallback (still using guided randomness)
             for (let posIdx = 0; posIdx < POSITION_COUNT; posIdx++) {
-                if (targetFormation[posIdx] > 0) {
-                    available.sort(comparators.get(posIdx)!);
-                    if (available.length > 0) {
-                        const player = available.shift()!;
-                        player.assignedPosition = posIdx;
-                        player.team = assignToA ? 'A' : 'B';
-                        targetTeam.positions[posIdx].push(player);
-                        targetTeam.totalScore += player.scores[posIdx];
-                        targetTeam.peakPotential += player.bestScore;
-                        targetTeam.playerCount++;
-                        targetFormation[posIdx]--;
-                        break;
+                if (targetFormation[posIdx] > 0 && available.length > 0) {
+                    const player = selectPlayerWithProximity(
+                        available,
+                        posIdx,
+                        comparators.get(posIdx)!,
+                        proximityThreshold,
+                        topN,
+                        selectionWeights
+                    );
+
+                    const playerIndex = available.indexOf(player);
+                    if (playerIndex > -1) {
+                        available.splice(playerIndex, 1);
                     }
+
+                    player.assignedPosition = posIdx;
+                    player.team = assignToA ? 'A' : 'B';
+                    targetTeam.positions[posIdx].push(player);
+                    targetTeam.totalScore += player.scores[posIdx];
+                    targetTeam.peakPotential += player.bestScore;
+                    targetTeam.playerCount++;
+                    targetFormation[posIdx]--;
+                    break;
                 }
             }
         }
     }
+
+    // Get formula weights from configuration
+    const creativityFormula = config.formulas.creativity;
+    const strikerFormula = config.formulas.striker;
 
     // Calculate zone scores and attack/defense scores
     for (let zoneIdx = 0; zoneIdx < 4; zoneIdx++) {
@@ -217,8 +240,21 @@ export function assignPlayersToTeams(
                 if (stats) {
                     teamA.staminaScore += stats.stamina;
                     teamA.workrateScore += stats.attWorkrate;
-                    teamA.creativityScore += stats.vision * 5 + stats.teamwork + stats.decisions + stats.passing + stats.composure;
-                    teamA.strikerScore += stats.finishing * 5 + stats.offTheBall + stats.technique + stats.attWorkrate;
+
+                    // Creativity score using configured formula
+                    teamA.creativityScore +=
+                        stats.vision * creativityFormula.vision +
+                        stats.teamwork * creativityFormula.teamwork +
+                        stats.decisions * creativityFormula.decisions +
+                        stats.passing * creativityFormula.passing +
+                        stats.composure * creativityFormula.composure;
+
+                    // Striker score using configured formula
+                    teamA.strikerScore +=
+                        stats.finishing * strikerFormula.finishing +
+                        stats.offTheBall * strikerFormula.offTheBall +
+                        stats.technique * strikerFormula.technique +
+                        stats.attWorkrate * strikerFormula.attWorkrate;
                 }
             }
             for (const player of teamB.positions[posIdx]) {
@@ -231,8 +267,21 @@ export function assignPlayersToTeams(
                 if (stats) {
                     teamB.staminaScore += stats.stamina;
                     teamB.workrateScore += stats.attWorkrate;
-                    teamB.creativityScore += stats.vision * 5 + stats.teamwork + stats.decisions + stats.passing + stats.composure;
-                    teamB.strikerScore += stats.finishing * 5 + stats.offTheBall + stats.technique+  stats.attWorkrate;
+
+                    // Creativity score using configured formula
+                    teamB.creativityScore +=
+                        stats.vision * creativityFormula.vision +
+                        stats.teamwork * creativityFormula.teamwork +
+                        stats.decisions * creativityFormula.decisions +
+                        stats.passing * creativityFormula.passing +
+                        stats.composure * creativityFormula.composure;
+
+                    // Striker score using configured formula
+                    teamB.strikerScore +=
+                        stats.finishing * strikerFormula.finishing +
+                        stats.offTheBall * strikerFormula.offTheBall +
+                        stats.technique * strikerFormula.technique +
+                        stats.attWorkrate * strikerFormula.attWorkrate;
                 }
             }
         }
@@ -245,35 +294,22 @@ export function assignPlayersToTeams(
 
 /**
  * Runs Monte Carlo simulation to find optimal team balance
+ *
+ * @deprecated Use runOptimizedMonteCarlo for better performance
  */
 export function runMonteCarlo(
     players: FastPlayer[],
-    config: BalanceConfig
+    config: BalanceConfiguration
 ): SimulationResult | null {
     let bestResult: SimulationResult | null = null;
     let bestScore = -Infinity;
 
-    for (let i = 0; i < config.recursiveDepth; i++) {
+    for (let i = 0; i < config.monteCarlo.maxIterations; i++) {
         const result = assignPlayersToTeams(players, config);
 
         if (!result) continue;
 
-        const metrics = calculateMetrics(result.teamA, result.teamB, config, false);
-
-        // // Quality gates: reject results that don't meet minimum consistency standards
-        // const allMetricValues = Object.values(metrics.details);
-        // const mean = allMetricValues.reduce((a, b) => a + b, 0) / allMetricValues.length;
-        // const variance = allMetricValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / allMetricValues.length;
-        // const stdDev = Math.sqrt(variance);
-
-        // // Gate 1: Reject if metrics are too inconsistent
-        // // Dynamic threshold: more players = stricter (lower threshold)
-
-        // if (stdDev > getStdDevThreshold(players.length)) continue;
-
-        // // Gate 2: Reject if overallStrengthBalance is below 95% of other metrics' mean
-        // const otherMetricsMean = (mean * allMetricValues.length - metrics.details.overallStrengthBalance) / (allMetricValues.length - 1);
-        // if (metrics.details.overallStrengthBalance < otherMetricsMean * 0.95) continue;
+        const metrics = calculateMetricsV3(result.teamA, result.teamB, config, false);
 
         if (metrics.score > bestScore) {
             bestScore = metrics.score;
@@ -285,8 +321,83 @@ export function runMonteCarlo(
 }
 
 /**
- * Recursive optimization for better results
+ * Optimized Monte Carlo simulation with early termination
+ *
+ * Replaces triple nested loop (500×100×100 = 5M iterations) with
+ * single-tier smart search (~200-250 iterations).
+ *
+ * Features:
+ * - Early exit when excellent result found
+ * - Configurable iteration limit
+ * - Progress tracking
+ * - Optional diagnostic output
  */
+export function runOptimizedMonteCarlo(
+    players: FastPlayer[],
+    config: BalanceConfiguration,
+    verbose: boolean = false
+): SimulationResult | null {
+    const results: SimulationResult[] = [];
+    const maxIterations = config.monteCarlo.maxIterations;
+    const earlyExitThreshold = config.monteCarlo.earlyExitThreshold;
+
+    let bestScore = -Infinity;
+    let bestResult: SimulationResult | null = null;
+
+    if (verbose) {
+        console.log('🎲 Starting optimized Monte Carlo simulation...');
+        console.log(`   Max iterations: ${maxIterations}`);
+        console.log(`   Early exit threshold: ${earlyExitThreshold}`);
+    }
+
+    for (let i = 0; i < maxIterations; i++) {
+        const result = assignPlayersToTeams(players, config);
+        if (!result) continue;
+
+        const metrics = calculateMetricsV3(result.teamA, result.teamB, config, false);
+        const simResult: SimulationResult = {
+            teams: result,
+            score: metrics.score,
+            metrics: metrics.details
+        };
+
+        results.push(simResult);
+
+        if (metrics.score > bestScore) {
+            bestScore = metrics.score;
+            bestResult = simResult;
+
+            if (verbose && i % 20 === 0) {
+                console.log(`   Iteration ${i}: Best score = ${bestScore.toFixed(3)}`);
+            }
+        }
+
+        // Early exit if excellent result found
+        if (metrics.score >= earlyExitThreshold) {
+            if (verbose) {
+                console.log(`   Excellent result found at iteration ${i}!`);
+                console.log(`   Score: ${metrics.score.toFixed(3)} (threshold: ${earlyExitThreshold})`);
+                console.log(`   Score balance: ${metrics.details.positionalScoreBalance.toFixed(3)}`);
+                console.log(`   Star distribution: ${metrics.details.talentDistributionBalance.toFixed(3)}`);
+                console.log(`   Zone balance: ${metrics.details.zonalDistributionBalance.toFixed(3)}`);
+            }
+            return simResult;
+        }
+    }
+
+    if (verbose && bestResult) {
+        console.log(`✓ Completed ${maxIterations} iterations`);
+        console.log(`   Best score: ${bestScore.toFixed(3)}`);
+        console.log(`   Score balance: ${bestResult.metrics.positionalScoreBalance.toFixed(3)}`);
+        console.log(`   Star distribution: ${bestResult.metrics.talentDistributionBalance.toFixed(3)}`);
+    }
+
+    return bestResult;
+}
+
+/**
+ * Recursive optimization for better results
+
 export function runRecursiveOptimization(
     players: FastPlayer[],
     config: BalanceConfig
@@ -327,10 +438,10 @@ export function runRecursiveOptimization(
 
     return bestResult;
 }
-
+ */
 /**
  * Recursive optimization for better results
- */
+
 export function runTopLevelRecursiveOptimization(
     players: FastPlayer[],
     config: BalanceConfig
@@ -379,7 +490,7 @@ export function runTopLevelRecursiveOptimization(
 
     return bestResult;
 }
-
+ */
 /**
  * Converts optimized result back to original format
  */

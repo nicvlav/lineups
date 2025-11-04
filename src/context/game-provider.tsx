@@ -9,7 +9,7 @@ import { openDB } from "idb";
 import { Formation, Point, Position, getPointForPosition, getThreatScore, normalizedDefaultWeights, emptyZoneScores } from "@/data/position-types";
 import { Player, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, GamePlayer } from "@/data/player-types";
 import { decodeStateFromURL } from "@/data/state-manager";
-import { autoCreateTeamsScored } from "@/data/auto-balance";
+import { autoBalanceV3 } from "@/data/auto-balance";
 
 const DB_NAME = "GameDB";
 const STORE_NAME = "gameState";
@@ -456,9 +456,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         let teamB: ScoredGamePlayer[] = [];
 
         try {
-            const balanced = autoCreateTeamsScored(gamePlayersWithScores);
-            teamA = balanced.a;
-            teamB = balanced.b;
+            const balanced = autoBalanceV3(gamePlayersWithScores);
+            teamA = balanced.teams.a;
+            teamB = balanced.teams.b;
         } catch (error) {
             return;
         }

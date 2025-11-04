@@ -1,13 +1,16 @@
 /**
  * Auto-Balance Constants and Configuration
- * 
+ *
  * Centralized constants for the team balancing algorithm.
- * 
+ *
  * @module auto-balance/constants
  */
 
 import type { Position } from "@/data/position-types";
 import type { BalanceConfig } from "./types";
+
+// Re-export new configuration system
+export { DEFAULT_BALANCE_CONFIG, type BalanceConfiguration } from "./metrics-config";
 
 /**
  * 🔍 GLOBAL DEBUG SWITCH
