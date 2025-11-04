@@ -220,20 +220,20 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
     weights: {
         primary: {
             // #1 Priority: Actual score balance (what users see and care about)
-            scoreBalance: 0.20,
+            scoreBalance: 0.175,
 
             // #1 Priority: Top talent evenly distributed
             starDistribution: 0.15,
 
             // #2 Priority: Each zone (DEF/MID/ATT) competitive
-            peakPotential: 0.35,
+            peakPotential: 0.325,
         },
         secondary: {
             // Peak potential matters less than actual scores
             zoneBalance: 0.05,
 
             // All-stat balance ensures no hidden advantages
-            allStatBalance: 0.05,
+            allStatBalance: 0.1,
 
             // Fine-tuning metrics
             energy: 0.05,
@@ -281,22 +281,22 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         // Energy: Stamina + work rate
         energy: {
             perfect: 0.99,
-            acceptable: 0.98,
+            acceptable: 0.96,
             poor: 0.90,
         },
 
         // Creativity: Vision, passing, composure
         creativity: {
             perfect: 0.99,
-            acceptable: 0.98,
+            acceptable: 0.96,
             poor: 0.90,
         },
 
-        // Striker: Finishing, off-the-ball, technique
+        // Energy: Stamina + work rate
         striker: {
-            perfect: 0.9995,
-            acceptable: 0.99,
-            poor: 0.94,
+            perfect: 0.99,
+            acceptable: 0.98,
+            poor: 0.90,
         },
     },
 

@@ -8,7 +8,7 @@
  */
 
 import type { FastTeam, BalanceConfig, BalanceMetrics } from "./types";
-import type {BalanceConfiguration} from "./metrics-config"
+import type { BalanceConfiguration } from "./metrics-config"
 import type { Formation } from "@/data/position-types";
 import { ZONE_POSITIONS, INDEX_TO_POSITION, getMidfieldPenaltyPower, getInternalVariancePower, getInternalZoneSkillPower } from "./constants";
 import { calibratedScore, Steepness } from "./metric-transformations";
@@ -65,18 +65,27 @@ function formatZoneAverageRatings(teamA: FastTeam, teamB: FastTeam): string {
  *
  * Uses configured penalty per component instead of magic number (0.3)
  */
-function calculateDirectionalImbalancePenalty(staminaDiff: number, workRateDiff: number): number {
-    let staminaDirection = 0;
-    let workRateDirection = 0;
+function calculateDirectionalImbalancePenalty(a1: number, a2: number, b1: number, b2: number): number {
+    const aDiff = a1 - a2;
+    const bDiff = b1 - b2;
 
-    if (staminaDiff != 0) staminaDirection = staminaDiff > 0 ? 1 : -1;
-    if (workRateDiff != 0) workRateDirection = workRateDiff > 0 ? 1 : -1;
+    let aDir = 0;
+    let bDir = 0;
+
+    if (aDiff != 0) aDir = aDiff > 0 ? 1 : -1;
+    if (bDiff != 0) bDir = bDir > 0 ? 1 : -1;
 
     // this can range from 0 - 2
-    const maxFavors = Math.abs(staminaDirection + workRateDirection);
+    const maxFavors = Math.abs(aDir + bDir);
 
-    const penaltyPerComponent = DEFAULT_BALANCE_CONFIG.formulas.directionalImbalance.penaltyPerComponent;
-    return 1.0 - (maxFavors * penaltyPerComponent);
+    if (maxFavors == 0) return 1.0;
+
+    const ratio = Math.min(Math.abs(aDiff + bDiff) / Math.max(a1, a2, b1, b2), 1.0);
+    const scaled = Math.pow(1 - ratio, Steepness.Moderate);
+
+    if (maxFavors == 1) return 0.8 + 0.2 * scaled;
+
+    return 0.4 + 0.6 * scaled;
 }
 
 /**
@@ -175,14 +184,12 @@ function calculateZoneDirectionalPenalty(
  * Uses calibrated scoring system with configured thresholds
  */
 function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
-    const staminaDiff = teamA.staminaScore - teamB.staminaScore;
-    const workrateDiff = teamA.workrateScore - teamB.workrateScore;
-    const inbalanceCompensation = calculateDirectionalImbalancePenalty(staminaDiff, workrateDiff);
+    const inbalanceCompensation = calculateDirectionalImbalancePenalty(teamA.staminaScore, teamB.staminaScore, teamA.workrateScore, teamB.workrateScore);
 
     const staminaRatio = calculateBasicDifferenceRatio(teamA.staminaScore, teamB.staminaScore);
     const workrateRatio = calculateBasicDifferenceRatio(teamA.workrateScore, teamB.workrateScore);
 
-    const rawCombined = inbalanceCompensation * (staminaRatio + workrateRatio) / 2;
+    const rawCombined = inbalanceCompensation * 0.8 + ((staminaRatio + workrateRatio) / 2) * 0.2;
 
     // Use calibrated scoring instead of arbitrary Math.pow(rawCombined, 2)
     const energyBalanceRatio = calibratedScore(
