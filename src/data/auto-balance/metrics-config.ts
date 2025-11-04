@@ -271,10 +271,10 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
             poor: 0.70,         // Multiple zones significantly imbalanced
         },
 
-        // All-stat balance: Sum of every player stat
+        // Peak potential: Theoretical max strength
         allStatBalance: {
-            perfect: 0.9995,
-            acceptable: 0.99,
+            perfect: 0.99,
+            acceptable: 0.975,
             poor: 0.90,
         },
 
