@@ -358,7 +358,7 @@ export interface TeamSummary {
 /**
  * Summarize team statistics
  */
-export function summarizeTeam(team: FastTeam, starThreshold: number = 87): TeamSummary {
+export function getStarCount(team: FastTeam, starThreshold: number = 87): number {
     // Count star players (players with bestScore >= threshold)
     let starCount = 0;
     for (const posPlayers of team.positions) {
@@ -368,6 +368,15 @@ export function summarizeTeam(team: FastTeam, starThreshold: number = 87): TeamS
             }
         }
     }
+
+    return starCount;
+}
+
+/**
+ * Summarize team statistics
+ */
+export function summarizeTeam(team: FastTeam, starThreshold: number = 87): TeamSummary {
+    const starCount = getStarCount(team, starThreshold);
 
     return {
         totalScore: team.totalScore,
@@ -440,10 +449,10 @@ export function diagnosticReport(
     lines.push(formatTeamSummary(summaryB, "B"));
     lines.push("");
 
- 
+
     // Score explanation
     const explanation = explainScore(metrics, config);
     lines.push(formatScoreExplanation(explanation));
- 
+
     return lines.join("\n");
 }

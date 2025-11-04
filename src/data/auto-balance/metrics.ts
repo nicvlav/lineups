@@ -13,6 +13,7 @@ import type { Formation } from "@/data/position-types";
 import { ZONE_POSITIONS, INDEX_TO_POSITION, getMidfieldPenaltyPower, getInternalVariancePower, getInternalZoneSkillPower } from "./constants";
 import { calibratedScore, Steepness } from "./metric-transformations";
 import { DEFAULT_BALANCE_CONFIG } from "./metrics-config";
+import { getStarCount } from "./debug-tools";
 
 /**
  * Helper function to format a simple comparison for debug output
@@ -126,7 +127,7 @@ function calculateZoneDirectionalPenalty(
     let teamAWins = 0;
     let teamBWins = 0;
     let neutrals = 0;
-    let sum = 1.0;
+    let sum = 0.0;
     const winners: string[] = [];
 
     for (let i = 0; i < zoneIndices.length; i++) {
@@ -149,8 +150,10 @@ function calculateZoneDirectionalPenalty(
             winners.push(`${zoneName}:B`);
         }
 
-        sum *= ratio;
+        sum += ratio;
     }
+
+    sum /= zoneIndices.length;
 
     // Calculate penalty based on directional clustering
     const maxWins = Math.max(teamAWins, teamBWins);
@@ -164,13 +167,13 @@ function calculateZoneDirectionalPenalty(
         penalty = dominationPenalty;
     } else if ((maxWins === 2 && neutrals === 0) || (maxWins === 1 && neutrals === 2)) {
         // 2-1 split: moderate directional imbalance
-        penalty = Math.pow(sum, 4);
+        penalty = Math.pow(sum, Steepness.Gentle);
     } else if (maxWins === 2 && neutrals === 1) {
         // 2-0-1 split: two zones favor one team, one neutral
         penalty = twoZonePenalty;
     } else if (maxWins > 0) {
         // 1-1-1 split: cancel out two zones
-        penalty = Math.pow(sum, 2);
+        penalty = Math.pow(sum, Steepness.VeryGentle);
     }
     // else: balanced distributions ( 0-0-3, etc.) get no penalty (1.0)
 
@@ -189,7 +192,7 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
     const staminaRatio = calculateBasicDifferenceRatio(teamA.staminaScore, teamB.staminaScore);
     const workrateRatio = calculateBasicDifferenceRatio(teamA.workrateScore, teamB.workrateScore);
 
-    const rawCombined = inbalanceCompensation * 0.8 + ((staminaRatio + workrateRatio) / 2) * 0.2;
+    const rawCombined = inbalanceCompensation * 0.5 + ((staminaRatio + workrateRatio) / 2) * 0.5;
 
     // Use calibrated scoring instead of arbitrary Math.pow(rawCombined, 2)
     const energyBalanceRatio = calibratedScore(
@@ -704,9 +707,13 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
     // More players = harsher penalty for zone imbalance
     const internalVariancePower = getInternalVariancePower(numPlayers);
 
+    const starCountA = getStarCount(teamA, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
+    const starCountB = getStarCount(teamB, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
+    const starPenalty = Math.abs(starCountA - starCountB) >= 2 ? 0.5 : 1.0;
+
     // Apply dynamic power scaling to heavily penalize distribution mismatches
     // Power scales with player count: 18 players → power 1.0, 22+ players → power 2.0
-    const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.25 + Math.pow(internalSkillRatio, skillZonePower) * 0.75) * combinedMidfieldPenalty;
+    const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.25 + Math.pow(internalSkillRatio, skillZonePower) * 0.75) * combinedMidfieldPenalty * starPenalty;
 
     if (debug) {
         console.log('Talent Distribution Balance (Player Score Std Dev):');

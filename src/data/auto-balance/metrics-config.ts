@@ -281,14 +281,14 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         // Energy: Stamina + work rate
         energy: {
             perfect: 0.99,
-            acceptable: 0.96,
+            acceptable: 0.975,
             poor: 0.90,
         },
 
         // Creativity: Vision, passing, composure
         creativity: {
             perfect: 0.99,
-            acceptable: 0.96,
+            acceptable: 0.975,
             poor: 0.90,
         },
 
@@ -317,7 +317,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
     monteCarlo: {
         // Run up to 200 iterations
-        maxIterations: 1000,
+        maxIterations: 5000,
 
         // Stop early if we find a result scoring 95%+
         earlyExitThreshold: 0.995,
