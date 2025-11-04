@@ -298,7 +298,7 @@ export function runRecursiveOptimization(
     // Recursive refinement - focus heavily on talent distribution and consistency
     const subConfig: BalanceConfig = {
         ...config,
-        recursiveDepth: 250,
+        recursiveDepth: 50,
         recursive: false,
         weights: {
             overallStrengthBalance: 0.0,
