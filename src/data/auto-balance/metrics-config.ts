@@ -220,25 +220,25 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
     weights: {
         primary: {
             // #1 Priority: Actual score balance (what users see and care about)
-            scoreBalance: 0.175,
+            scoreBalance: 0.1,
 
             // #1 Priority: Top talent evenly distributed
-            starDistribution: 0.15,
+            starDistribution: 0.1,
 
             // #2 Priority: Each zone (DEF/MID/ATT) competitive
-            peakPotential: 0.325,
+            peakPotential: 0.25,
         },
         secondary: {
             // Peak potential matters less than actual scores
-            zoneBalance: 0.05,
+            zoneBalance: 0.1,
 
             // All-stat balance ensures no hidden advantages
-            allStatBalance: 0.1,
+            allStatBalance: 0.05,
 
             // Fine-tuning metrics
-            energy: 0.05,
-            creativity: 0.05,
-            striker: 0.1,
+            energy: 0.1,
+            creativity: 0.1,
+            striker: 0.2,
         }
     },
 
@@ -267,8 +267,8 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         // Zone balance: Each zone competitive between teams
         zoneBalance: {
             perfect: 0.95,      // All zones within 5% of each other
-            acceptable: 0.85,   // Most zones balanced, one slightly off
-            poor: 0.70,         // Multiple zones significantly imbalanced
+            acceptable: 0.90,   // Most zones balanced, one slightly off
+            poor: 0.80,         // Multiple zones significantly imbalanced
         },
 
         // Peak potential: Theoretical max strength
@@ -281,14 +281,14 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         // Energy: Stamina + work rate
         energy: {
             perfect: 0.99,
-            acceptable: 0.975,
-            poor: 0.90,
+            acceptable: 0.95,
+            poor: 0.93,
         },
 
         // Creativity: Vision, passing, composure
         creativity: {
             perfect: 0.99,
-            acceptable: 0.975,
+            acceptable: 0.98,
             poor: 0.90,
         },
 
@@ -302,22 +302,22 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
     algorithm: {
         // Only randomize between players within 5 points of best
-        proximityThreshold: 3,
+        proximityThreshold: 6,
 
         // Scale candidate pool with team size (20 players = top 4 candidates)
-        topNScaling: true,
-        baseTopN: 4,
+        topNScaling: false,
+        baseTopN: 6,
 
         // Use priority-based position selection within zones
         zonePositionStrategy: 'priority',
 
         // Weighted probability for selecting from top N: [50%, 30%, 15%, 5%]
-        selectionWeights: [0.50, 0.30, 0.15, 0.05],
+        selectionWeights: [0.50, 0.2, 0.10, 0.10, 0.075, 0.025],
     },
 
     monteCarlo: {
         // Run up to 200 iterations
-        maxIterations: 5000,
+        maxIterations: 20000,
 
         // Stop early if we find a result scoring 95%+
         earlyExitThreshold: 0.995,

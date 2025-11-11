@@ -460,6 +460,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             teamA = balanced.teams.a;
             teamB = balanced.teams.b;
         } catch (error) {
+            console.error(error);
             return;
         }
 

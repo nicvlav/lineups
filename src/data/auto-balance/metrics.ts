@@ -61,35 +61,6 @@ function formatZoneAverageRatings(teamA: FastTeam, teamB: FastTeam): string {
 }
 
 /**
- * Calculates penalty for when all components favor the same team
- * The more components that favor one team, the harsher the penalty
- *
- * Uses configured penalty per component instead of magic number (0.3)
- */
-function calculateDirectionalImbalancePenalty(a1: number, a2: number, b1: number, b2: number): number {
-    const aDiff = a1 - a2;
-    const bDiff = b1 - b2;
-
-    let aDir = 0;
-    let bDir = 0;
-
-    if (aDiff != 0) aDir = aDiff > 0 ? 1 : -1;
-    if (bDiff != 0) bDir = bDir > 0 ? 1 : -1;
-
-    // this can range from 0 - 2
-    const maxFavors = Math.abs(aDir + bDir);
-
-    if (maxFavors == 0) return 1.0;
-
-    const ratio = Math.min(Math.abs(aDiff + bDiff) / Math.max(a1, a2, b1, b2), 1.0);
-    const scaled = Math.pow(1 - ratio, Steepness.Moderate);
-
-    if (maxFavors == 1) return 0.8 + 0.2 * scaled;
-
-    return 0.4 + 0.6 * scaled;
-}
-
-/**
  * Calculate difference ratio
  * 
  * Any time we have two values to compare for a balance ratio
@@ -183,18 +154,51 @@ function calculateZoneDirectionalPenalty(
 
 
 /**
- * Calculates energy balance between teams
+ * Calculates energy balance between teams with intelligent workrate handling
+ *
+ * This handles three components:
+ * 1. Stamina - balanced independently
+ * 2. Attacking/Defensive workrate compensation - allows cancellation but penalizes large raw differences
+ * 3. Combined energy metric
+ *
+ * Key insight: If team A has high att WR + low def WR and team B is the inverse,
+ * that's perfect cancellation BUT also means 500 point raw differences - that's terrible!
+ *
  * Uses calibrated scoring system with configured thresholds
  */
 function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
-    const inbalanceCompensation = calculateDirectionalImbalancePenalty(teamA.staminaScore, teamB.staminaScore, teamA.workrateScore, teamB.workrateScore);
-
+    // 1. Stamina balance (independent metric)
     const staminaRatio = calculateBasicDifferenceRatio(teamA.staminaScore, teamB.staminaScore);
-    const workrateRatio = calculateBasicDifferenceRatio(teamA.workrateScore, teamB.workrateScore);
 
-    const rawCombined = inbalanceCompensation * 0.5 + ((staminaRatio + workrateRatio) / 2) * 0.5;
+    // 2. Workrate analysis - need to handle att/def compensation intelligently
+    const aAttWR = teamA.attWorkrateScore;
+    const aDefWR = teamA.defWorkrateScore;
+    const bAttWR = teamB.attWorkrateScore;
+    const bDefWR = teamB.defWorkrateScore;
 
-    // Use calibrated scoring instead of arbitrary Math.pow(rawCombined, 2)
+    // Calculate team totals
+    const aTotalWR = aAttWR + aDefWR;
+    const bTotalWR = bAttWR + bDefWR;
+
+    // Raw balance of total workrate
+    const attWRRatio = calculateBasicDifferenceRatio(aAttWR, aAttWR);
+    const defWRRatio = calculateBasicDifferenceRatio(aDefWR, bDefWR);
+    const totalWRRatio = calculateBasicDifferenceRatio(aTotalWR, bTotalWR);
+
+    // Check for cancellation: do the differences point in opposite directions?
+    const aAttAdvantage = Math.min(1, Math.max(-1, aAttWR - bAttWR)); // positive if A has more att WR
+    const aDefAdvantage = Math.min(1, Math.max(-1, aDefWR - bDefWR)); // positive if A has more def WR
+    const cancellationFactor = 1.0 - (Math.abs(aAttAdvantage + aDefAdvantage)) / 2.0; // 1 if opposite signs (cancellation)
+
+    // Combine: if perfect cancellation (both teams balanced differently), still penalize raw differences
+    // If no cancellation (same team ahead in both), use total ratio directly
+    const workrateRatio = cancellationFactor * attWRRatio * defWRRatio;
+
+    // 3. Combine stamina and workrate
+    // Stamina is slightly more important (55/45 split)
+    const rawCombined = staminaRatio * 0.4 + workrateRatio * 0.6;
+
+    // Use calibrated scoring
     const energyBalanceRatio = calibratedScore(
         rawCombined,
         DEFAULT_BALANCE_CONFIG.thresholds.energy,
@@ -205,8 +209,11 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
         const t = DEFAULT_BALANCE_CONFIG.thresholds.energy;
         console.log('Energy Balance:');
         console.log(formatComparison('Stamina', teamA.staminaScore, teamB.staminaScore, staminaRatio));
-        console.log(formatComparison('Workrate', teamA.workrateScore, teamB.workrateScore, workrateRatio));
-        console.log(`  Directional Penalty: ${inbalanceCompensation.toFixed(3)}`);
+        console.log(formatComparison('Att Workrate', aAttWR, bAttWR, calculateBasicDifferenceRatio(aAttWR, bAttWR)));
+        console.log(formatComparison('Def Workrate', aDefWR, bDefWR, calculateBasicDifferenceRatio(aDefWR, bDefWR)));
+        console.log(formatComparison('Total Workrate', aTotalWR, bTotalWR, totalWRRatio));
+        console.log(`  Cancellation: ${cancellationFactor} (att favor: ${aAttAdvantage.toFixed(1)}, def favor: ${aDefAdvantage.toFixed(1)})`);
+        console.log(`  Combined Workrate Ratio: ${workrateRatio.toFixed(3)}`);
         console.log(`  Raw Combined: ${rawCombined.toFixed(3)}`);
         console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
         console.log(`  Calibrated Score: ${energyBalanceRatio.toFixed(3)}`);
@@ -405,6 +412,8 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
         console.log(`  Zone Directional Penalty: ${directionality.penalty.toFixed(3)}`);
         console.log(`  Team A Internal Balance: ${teamAZonalBalance.toFixed(3)}`);
         console.log(`  Team B Internal Balance: ${teamBZonalBalance.toFixed(3)}`);
+        console.log(`  internalSkillRatio: ${internalSkillRatio.toFixed(3)}`);
+        console.log(`  totalImbalance: ${totalImbalance.toFixed(3)}`);
         console.log(`  Final Zonal Balance: ${zonalBalanceRatio.toFixed(3)}`);
     }
 

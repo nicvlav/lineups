@@ -190,6 +190,7 @@ export function assignPlayersToTeams(
         }
 
         if (!assigned && available.length > 0) {
+
             // if (config.debugMode) {
             //     console.warn("Could not assign player in zone", randomZone);
             // }
@@ -239,7 +240,9 @@ export function assignPlayersToTeams(
                 const stats = player.original.stats;
                 if (stats) {
                     teamA.staminaScore += stats.stamina;
-                    teamA.workrateScore += stats.attWorkrate;
+                    teamA.attWorkrateScore += stats.attWorkrate;
+                    teamA.defWorkrateScore += stats.defWorkrate;
+                    teamA.workrateScore += stats.attWorkrate; // deprecated - kept for compatibility
 
                     // Creativity score using configured formula
                     teamA.creativityScore +=
@@ -266,7 +269,9 @@ export function assignPlayersToTeams(
                 const stats = player.original.stats;
                 if (stats) {
                     teamB.staminaScore += stats.stamina;
-                    teamB.workrateScore += stats.attWorkrate;
+                    teamB.attWorkrateScore += stats.attWorkrate;
+                    teamB.defWorkrateScore += stats.defWorkrate;
+                    teamB.workrateScore += stats.attWorkrate; // deprecated - kept for compatibility
 
                     // Creativity score using configured formula
                     teamB.creativityScore +=

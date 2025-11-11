@@ -145,13 +145,19 @@ export interface FastTeam {
     /** Stamina score for energy balance calculation */
     staminaScore: number;
 
-    /** Workrate score for energy balance calculation */
+    /** Attacking workrate score for energy balance calculation */
+    attWorkrateScore: number;
+
+    /** Defensive workrate score for energy balance calculation */
+    defWorkrateScore: number;
+
+    /** Workrate score for energy balance calculation (deprecated - kept for compatibility) */
     workrateScore: number;
 
     /** Creativity score for creativity balance calculation */
-    creativityScore: number;    
-    
-    /** Creativity score for creativity balance calculation */
+    creativityScore: number;
+
+    /** Striker score for striker balance calculation */
     strikerScore: number;
 }
 

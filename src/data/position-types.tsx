@@ -425,7 +425,7 @@ export const defaultZoneWeights: Weighting = {
             firstTouch: 650,
             crossing: 0,
             dribbling: 200,
-            technique: 300,
+            technique: 400,
             finishing: 1000,
             longShots: 15,
 

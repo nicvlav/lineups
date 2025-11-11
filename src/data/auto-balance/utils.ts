@@ -65,6 +65,8 @@ export function createFastTeam(): FastTeam {
         peakPotential: 0,
         formation: null,
         staminaScore: 0,
+        attWorkrateScore: 0,
+        defWorkrateScore: 0,
         workrateScore: 0,
         creativityScore: 0,
         strikerScore: 0,
@@ -254,6 +256,8 @@ export function selectPlayerWithProximity(
     // Get best player's score
     const bestScore = available[0].scores[positionIdx];
 
+
+
     // Filter candidates within proximity threshold
     const candidates: FastPlayer[] = [];
     for (let i = 0; i < Math.min(topN, available.length); i++) {
@@ -280,6 +284,7 @@ export function selectPlayerWithProximity(
 
     // Use weighted random selection
     const weights = selectionWeights.slice(0, candidates.length);
+
     return weightedRandomSelect(candidates, weights);
 }
 
