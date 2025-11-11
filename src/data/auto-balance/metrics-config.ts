@@ -230,14 +230,14 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         },
         secondary: {
             // Peak potential matters less than actual scores
-            zoneBalance: 0.1,
+            zoneBalance: 0.075,
 
             // All-stat balance ensures no hidden advantages
-            allStatBalance: 0.05,
+            allStatBalance: 0.025,
 
             // Fine-tuning metrics
-            energy: 0.1,
-            creativity: 0.1,
+            energy: 0.125,
+            creativity: 0.125,
             striker: 0.2,
         }
     },
@@ -281,7 +281,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         // Energy: Stamina + work rate
         energy: {
             perfect: 0.99,
-            acceptable: 0.95,
+            acceptable: 0.98,
             poor: 0.93,
         },
 
@@ -317,7 +317,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
     monteCarlo: {
         // Run up to 200 iterations
-        maxIterations: 20000,
+        maxIterations: 25000,
 
         // Stop early if we find a result scoring 95%+
         earlyExitThreshold: 0.995,
