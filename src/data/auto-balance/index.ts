@@ -131,7 +131,6 @@ export function autoCreateTeamsScored(
         console.log(`\n🎲 Running optimized Monte Carlo for ${players.length} players...`);
         console.log(`   Using new calibrated metrics system`);
         console.log(`   Max iterations: ${DEFAULT_BALANCE_CONFIG.monteCarlo.maxIterations}`);
-        console.log(`   Early exit threshold: ${DEFAULT_BALANCE_CONFIG.monteCarlo.earlyExitThreshold}\n`);
     }
 
     // Run NEW optimized Monte Carlo (100x faster!)
@@ -277,7 +276,6 @@ export function autoBalanceV3(
         console.log(`\nConfiguration:`);
         console.log(`   Players: ${players.length}`);
         console.log(`   Max Iterations: ${config.monteCarlo.maxIterations}`);
-        console.log(`   Early Exit Threshold: ${config.monteCarlo.earlyExitThreshold}`);
         console.log(`   Proximity Threshold: ${config.algorithm.proximityThreshold}`);
         console.log('');
         console.log('Metric Weights:');

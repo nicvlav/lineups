@@ -344,7 +344,6 @@ export function runOptimizedMonteCarlo(
 ): SimulationResult | null {
     const results: SimulationResult[] = [];
     const maxIterations = config.monteCarlo.maxIterations;
-    const earlyExitThreshold = config.monteCarlo.earlyExitThreshold;
 
     let bestScore = -Infinity;
     let bestResult: SimulationResult | null = null;
@@ -352,7 +351,6 @@ export function runOptimizedMonteCarlo(
     if (verbose) {
         console.log('🎲 Starting optimized Monte Carlo simulation...');
         console.log(`   Max iterations: ${maxIterations}`);
-        console.log(`   Early exit threshold: ${earlyExitThreshold}`);
     }
 
     for (let i = 0; i < maxIterations; i++) {
@@ -375,18 +373,6 @@ export function runOptimizedMonteCarlo(
             if (verbose && i % 20 === 0) {
                 console.log(`   Iteration ${i}: Best score = ${bestScore.toFixed(3)}`);
             }
-        }
-
-        // Early exit if excellent result found
-        if (metrics.score >= earlyExitThreshold) {
-            if (verbose) {
-                console.log(`   Excellent result found at iteration ${i}!`);
-                console.log(`   Score: ${metrics.score.toFixed(3)} (threshold: ${earlyExitThreshold})`);
-                console.log(`   Score balance: ${metrics.details.positionalScoreBalance.toFixed(3)}`);
-                console.log(`   Star distribution: ${metrics.details.talentDistributionBalance.toFixed(3)}`);
-                console.log(`   Zone balance: ${metrics.details.zonalDistributionBalance.toFixed(3)}`);
-            }
-            return simResult;
         }
     }
 

@@ -179,3 +179,47 @@ export interface SimulationResult {
     metrics: BalanceMetrics;
 }
 
+/**
+ * Star player zone classification
+ * Categorizes a star player as defensive, attacking, or all-rounder specialist
+ */
+export interface StarZoneClassification {
+    /** The player being classified */
+    player: FastPlayer;
+
+    /** Type of specialist: defensive, attacking, or all-rounder */
+    specialistType: 'defensive' | 'attacking' | 'all-rounder';
+
+    /** How specialized they are (higher = more specialized in one zone) */
+    specializationStrength: number;
+
+    /** Best defensive position score */
+    bestDefensiveScore: number;
+
+    /** Best attacking position score */
+    bestAttackingScore: number;
+
+    /** Average score across all positions */
+    averageScore: number;
+}
+
+/**
+ * Team star distribution by zone
+ */
+export interface TeamStarDistribution {
+    /** Total star players on the team */
+    totalStars: number;
+
+    /** Number of defensive specialists */
+    defensiveSpecialists: number;
+
+    /** Number of attacking specialists */
+    attackingSpecialists: number;
+
+    /** Number of all-rounders */
+    allRounders: number;
+
+    /** Detailed classifications for each star player */
+    classifications: StarZoneClassification[];
+}
+

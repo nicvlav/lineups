@@ -87,9 +87,6 @@ export interface MonteCarloConfig {
     /** Maximum iterations before stopping */
     maxIterations: number;
 
-    /** Stop early if this score is reached (0-1) */
-    earlyExitThreshold: number;
-
     /** Number of top results to track */
     trackTopN: number;
 
@@ -115,6 +112,18 @@ export interface StarPlayerThresholds {
 
     /** Points below threshold still considered "solid" */
     solidRange: number;
+
+    /** Zone specialization thresholds */
+    zoneSpecialization: {
+        /** Minimum score difference between best zone and average to be considered a specialist */
+        specialistGapThreshold: number;
+
+        /** Minimum score difference between defensive and attacking zones for all-rounder classification */
+        allRounderBalanceThreshold: number;
+
+        /** Penalty multiplier per extra specialist in same zone beyond balanced distribution */
+        zoneStackingPenalty: number;
+    };
 }
 
 /**
@@ -220,7 +229,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
     weights: {
         primary: {
             // #1 Priority: Actual score balance (what users see and care about)
-            scoreBalance: 0.15,
+            scoreBalance: 0.1,
 
             // #1 Priority: Top talent evenly distributed
             starDistribution: 0.1,
@@ -230,24 +239,24 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         },
         secondary: {
             // Peak potential matters less than actual scores
-            zoneBalance: 0.05,
+            zoneBalance: 0.1,
 
             // All-stat balance ensures no hidden advantages
-            allStatBalance: 0.1,
+            allStatBalance: 0.05,
 
             // Fine-tuning metrics
-            energy: 0.15,
-            creativity: 0.15,
-            striker: 0.15,
+            energy: 0.2,
+            creativity: 0.175,
+            striker: 0.125,
         }
     },
 
     thresholds: {
         // Score balance: Within 1% = perfect, within 3% = acceptable, >10% = poor
         scoreBalance: {
-            perfect: 0.99,      // <1% difference (e.g., 400 vs 404 out of 800 total)
-            acceptable: 0.90,   // <3% difference (e.g., 400 vs 412)
-            poor: 0.70,         // >10% difference (e.g., 400 vs 440)
+            perfect: 0.85,      // <1% difference (e.g., 400 vs 404 out of 800 total)
+            acceptable: 0.83,   // <3% difference (e.g., 400 vs 412)
+            poor: 0.80,         // >10% difference (e.g., 400 vs 440)
         },
 
         // Star distribution: Perfect = equal split, acceptable = ±1 player, poor = ±3 players
@@ -260,36 +269,36 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         // Peak potential: Theoretical max strength
         peakPotential: {
             perfect: 0.9995,      // <2% difference in potential
-            acceptable: 0.999,   // <5% difference
+            acceptable: 0.99,   // <5% difference
             poor: 0.95,         // >15% difference
         },
 
         // Zone balance: Each zone competitive between teams
         zoneBalance: {
-            perfect: 0.99,      // All zones within 5% of each other
-            acceptable: 0.96,   // Most zones balanced, one slightly off
-            poor: 0.95,         // Multiple zones significantly imbalanced
+            perfect: 0.97,      // All zones within 5% of each other
+            acceptable: 0.93,   // Most zones balanced, one slightly off
+            poor: 0.90,         // Multiple zones significantly imbalanced
         },
 
         // Peak potential: Theoretical max strength
         allStatBalance: {
             perfect: 0.99,
             acceptable: 0.975,
-            poor: 0.90,
+            poor: 0.95,
         },
 
         // Energy: Stamina + work rate
         energy: {
             perfect: 0.99,
-            acceptable: 0.98,
-            poor: 0.93,
+            acceptable: 0.975,
+            poor: 0.95,
         },
 
         // Creativity: Vision, passing, composure
         creativity: {
             perfect: 0.99,
-            acceptable: 0.98,
-            poor: 0.90,
+            acceptable: 0.975,
+            poor: 0.95,
         },
 
         // Energy: Stamina + work rate
@@ -302,7 +311,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
     algorithm: {
         // Only randomize between players within 5 points of best
-        proximityThreshold: 10,
+        proximityThreshold: 7,
 
         // Scale candidate pool with team size (20 players = top 4 candidates)
         topNScaling: true,
@@ -318,9 +327,6 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
     monteCarlo: {
         // Run up to 200 iterations
         maxIterations: 50000,
-
-        // Stop early if we find a result scoring 95%+
-        earlyExitThreshold: 0.995,
 
         // Track top 10 results
         trackTopN: 20,
@@ -342,6 +348,21 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
         // -5 points below threshold still "solid" (82-86)
         solidRange: 5,
+
+        // Zone specialization configuration
+        zoneSpecialization: {
+            // A star is a specialist if their best zone is 8+ points above their average
+            // Example: CB 95, other positions 80s = specialist defender
+            specialistGapThreshold: 8,
+
+            // All-rounder if defensive and attacking scores are within 5 points
+            // Example: DEF 90, ATT 88 = balanced all-rounder
+            allRounderBalanceThreshold: 5,
+
+            // Apply 0.15 penalty multiplier per extra stacked specialist beyond balance
+            // Example: Team A has 3 defensive specialists, Team B has 1 → 2 extra → 0.7 penalty
+            zoneStackingPenalty: 0.15,
+        },
     },
 
     formulas: {
