@@ -307,7 +307,7 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
         console.log(`  Final: ${positionalBalanceRatio.toFixed(3)}`);
     }
 
-    return positionalBalanceRatio;
+    return efficiency;//positionalBalanceRatio;
 }
 
 /**
@@ -716,13 +716,10 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
     // More players = harsher penalty for zone imbalance
     const internalVariancePower = getInternalVariancePower(numPlayers);
 
-    const starCountA = getStarCount(teamA, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
-    const starCountB = getStarCount(teamB, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
-    const starPenalty = Math.abs(starCountA - starCountB) >= 2 ? 0.5 : 1.0;
 
     // Apply dynamic power scaling to heavily penalize distribution mismatches
     // Power scales with player count: 18 players → power 1.0, 22+ players → power 2.0
-    const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.25 + Math.pow(internalSkillRatio, skillZonePower) * 0.75) * combinedMidfieldPenalty * starPenalty;
+    const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.25 + Math.pow(internalSkillRatio, skillZonePower) * 0.75) * combinedMidfieldPenalty;
 
     if (debug) {
         console.log('Talent Distribution Balance (Player Score Std Dev):');
@@ -800,6 +797,10 @@ export function calculateMetricsV3(
         talentDistributionBalance
     };
 
+    const starCountA = getStarCount(teamA, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
+    const starCountB = getStarCount(teamB, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
+    const starPenalty = Math.abs(starCountA - starCountB) >= 2 ? 0.5 : 1.0;
+
     // Calculate weighted score using NEW config structure
     const weightedScore =
         config.weights.primary.peakPotential * metrics.overallStrengthBalance +
@@ -811,7 +812,7 @@ export function calculateMetricsV3(
         config.weights.secondary.allStatBalance * metrics.allStatBalance +
         config.weights.primary.starDistribution * metrics.talentDistributionBalance;
 
-    const finalScore = weightedScore;
+    const finalScore = weightedScore * starPenalty;
 
     if (debug) {
         console.log('');
@@ -908,11 +909,15 @@ export function calculateMetrics(
         metrics.talentDistributionBalance
     ];
 
+    const starCountA = getStarCount(teamA, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
+    const starCountB = getStarCount(teamB, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
+    const starPenalty = Math.abs(starCountA - starCountB) >= 2 ? 0.5 : 1.0;
+
     // Calculate standard deviation of the metrics
     const mean = metricValues.reduce((a, b) => a + b, 0) / metricValues.length;
     const variance = metricValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / metricValues.length;
     const stdDev = Math.sqrt(variance);
-    const finalScore = weightedScore;// * Math.pow(1-stdDev, 1.5);
+    const finalScore = weightedScore * starPenalty;// * Math.pow(1-stdDev, 1.5);
 
     if (debug) {
         console.log('');
