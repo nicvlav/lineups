@@ -623,10 +623,10 @@ export const formationTemplates: Record<number, Formation[]> = {
         //     name: "3-5-3 (1)",
         //     positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 3, WM: 0, AM: 2, ST: 1, WR: 2 }
         // },
-        {
-            name: "3-5-3 (2)",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 2, CM: 0, WM: 0, AM: 3, ST: 1, WR: 2 }
-        },
+        // {
+        //     name: "3-5-3 (2)",
+        //     positions: { GK: 1, CB: 3, FB: 0, DM: 2, CM: 0, WM: 0, AM: 3, ST: 1, WR: 2 }
+        // },
         {
             name: "3-5-3 (3)",
             positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 2, AM: 2, ST: 1, WR: 2 }

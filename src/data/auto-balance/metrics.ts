@@ -10,7 +10,7 @@
 import type { FastTeam, BalanceConfig, BalanceMetrics, FastPlayer, StarZoneClassification, TeamStarDistribution } from "./types";
 import type { BalanceConfiguration } from "./metrics-config"
 import type { Formation } from "@/data/position-types";
-import { ZONE_POSITIONS, INDEX_TO_POSITION, getMidfieldPenaltyPower, getInternalVariancePower, getInternalZoneSkillPower, POSITION_INDICES } from "./constants";
+import { ZONE_POSITIONS, INDEX_TO_POSITION, getMidfieldPenaltyPower, getInternalZoneSkillPower, POSITION_INDICES } from "./constants";
 import { calibratedScore, Steepness } from "./metric-transformations";
 import { DEFAULT_BALANCE_CONFIG } from "./metrics-config";
 import { getStarCount } from "./debug-tools";
@@ -706,7 +706,19 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
     const teamBMidfieldPenalty = calculateMidfieldPreferencePenalty(teamBZoneAverages, midfieldPenaltyStrength, numPlayers);
 
     // Combined midfield penalty (average of both teams)
-    const combinedMidfieldPenalty = (teamAMidfieldPenalty + teamBMidfieldPenalty) / 2;
+    const combinedMidfieldPenalty= teamAMidfieldPenalty * teamBMidfieldPenalty;
+    calibratedScore(
+        teamAMidfieldPenalty * teamBMidfieldPenalty,
+        DEFAULT_BALANCE_CONFIG.thresholds.starDistribution,
+        Steepness.VeryGentle
+    ); 
+    const midDiffRatio = calibratedScore(
+        calculateBasicDifferenceRatio(teamAZoneAverages[2], teamBZoneAverages[2]),
+        DEFAULT_BALANCE_CONFIG.thresholds.starDistribution,
+        Steepness.Gentle
+    );
+
+    const midRatio = midDiffRatio * combinedMidfieldPenalty;
 
     // Get dynamic power scaling for internal variance based on player count
     // More players = harsher penalty for zone imbalance
@@ -714,12 +726,12 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 
     // Get dynamic power scaling for internal variance based on player count
     // More players = harsher penalty for zone imbalance
-    const internalVariancePower = getInternalVariancePower(numPlayers);
+    // const internalVariancePower = getInternalVariancePower(numPlayers);
 
 
     // Apply dynamic power scaling to heavily penalize distribution mismatches
     // Power scales with player count: 18 players → power 1.0, 22+ players → power 2.0
-    const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.25 + Math.pow(internalSkillRatio, skillZonePower) * 0.75) * combinedMidfieldPenalty;
+    // const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.25 + Math.pow(internalSkillRatio, skillZonePower) * 0.75) * combinedMidfieldPenalty;
 
     if (debug) {
         console.log('Talent Distribution Balance (Player Score Std Dev):');
@@ -751,10 +763,11 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
         console.log(formatComparison('Std Dev', teamAStdDev, teamBStdDev, rawRatio));
         console.log(`  Team A: ${teamAStdDev > teamBStdDev ? 'More spiky' : 'More flat'} talent distribution`);
         console.log(`  Team B: ${teamBStdDev > teamAStdDev ? 'More spiky' : 'More flat'} talent distribution`);
-        console.log(`  Scaled (^3): ${talentDistributionRatio.toFixed(3)}`);
+        console.log(`  midDiffRatio (^3): ${midDiffRatio.toFixed(3)}`);
+        console.log(`  Scaled (^3): ${midRatio.toFixed(3)}`);
     }
 
-    return talentDistributionRatio;
+    return midRatio;
 }
 
 /**
@@ -1014,13 +1027,13 @@ function calculateStarZonePenalty(
     // variance < 0.003 = high clustering (0.10 penalty)
     // variance < 0.01 = moderate clustering (0.05 penalty)
     const clusteringPenalty = avgVariance < 0.001 ? 0.15 :
-                              avgVariance < 0.003 ? 0.10 :
-                              avgVariance < 0.01 ? 0.05 : 0;
+        avgVariance < 0.003 ? 0.10 :
+            avgVariance < 0.01 ? 0.05 : 0;
 
     // 4. Penalize zone-specific quality imbalances with softer scaling
     // Use sqrt to be lenient on small differences, harsher on large differences
-    const defQualityPenalty = Math.sqrt(normalizedDefQualityDiff) * 0.6; // Defensive quality matters more
-    const attQualityPenalty = Math.sqrt(normalizedAttQualityDiff) * 0.4; // Attacking quality matters less
+    const defQualityPenalty = Math.sqrt(normalizedDefQualityDiff) * 0.45; // Defensive quality matters more
+    const attQualityPenalty = Math.sqrt(normalizedAttQualityDiff) * 0.55; // Attacking quality matters less
 
     const totalPenalty = leanPenalty + opposingPenalty + clusteringPenalty + defQualityPenalty + attQualityPenalty;
     const penalty = Math.max(0, 1.0 - totalPenalty);

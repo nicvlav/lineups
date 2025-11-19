@@ -235,19 +235,19 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
             starDistribution: 0.1,
 
             // #2 Priority: Each zone (DEF/MID/ATT) competitive
-            peakPotential: 0.15,
+            peakPotential: 0.2,
         },
         secondary: {
             // Peak potential matters less than actual scores
-            zoneBalance: 0.1,
+            zoneBalance: 0.15,
 
             // All-stat balance ensures no hidden advantages
             allStatBalance: 0.05,
 
             // Fine-tuning metrics
-            energy: 0.2,
-            creativity: 0.175,
-            striker: 0.125,
+            energy: 0.15,
+            creativity: 0.2,
+            striker: 0.05,
         }
     },
 
@@ -261,9 +261,9 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
         // Star distribution: Perfect = equal split, acceptable = ±1 player, poor = ±3 players
         starDistribution: {
-            perfect: 0.99,      // Nearly equal star distribution
-            acceptable: 0.90,   // Slightly uneven (one extra star player)
-            poor: 0.80,         // Very uneven (3+ star differential)
+            perfect: 0.99,
+            acceptable: 0.975,
+            poor: 0.95,
         },
 
         // Peak potential: Theoretical max strength
@@ -304,14 +304,14 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         // Energy: Stamina + work rate
         striker: {
             perfect: 0.99,
-            acceptable: 0.98,
-            poor: 0.90,
+            acceptable: 0.94,
+            poor: 0.93,
         },
     },
 
     algorithm: {
         // Only randomize between players within 5 points of best
-        proximityThreshold: 7,
+        proximityThreshold: 10,
 
         // Scale candidate pool with team size (20 players = top 4 candidates)
         topNScaling: true,
@@ -353,7 +353,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         zoneSpecialization: {
             // A star is a specialist if their best zone is 8+ points above their average
             // Example: CB 95, other positions 80s = specialist defender
-            specialistGapThreshold: 8,
+            specialistGapThreshold: 6,
 
             // All-rounder if defensive and attacking scores are within 5 points
             // Example: DEF 90, ATT 88 = balanced all-rounder
