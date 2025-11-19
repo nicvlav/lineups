@@ -235,19 +235,19 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
             starDistribution: 0.1,
 
             // #2 Priority: Each zone (DEF/MID/ATT) competitive
-            peakPotential: 0.2,
+            peakPotential: 0.225,
         },
         secondary: {
             // Peak potential matters less than actual scores
-            zoneBalance: 0.15,
+            zoneBalance: 0.1,
 
             // All-stat balance ensures no hidden advantages
             allStatBalance: 0.05,
 
             // Fine-tuning metrics
             energy: 0.15,
-            creativity: 0.2,
-            striker: 0.05,
+            creativity: 0.15,
+            striker: 0.125,
         }
     },
 
