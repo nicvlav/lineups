@@ -256,20 +256,17 @@ export function selectPlayerWithProximity(
     // Get best player's score
     const bestScore = available[0].scores[positionIdx];
 
-
-
     // Filter candidates within proximity threshold
     const candidates: FastPlayer[] = [];
-    for (let i = 0; i < Math.min(topN, available.length); i++) {
+    const N = Math.min(topN, available.length);
+
+    for (let i = 0; i < N; i++) {
         const player = available[i];
         const scoreDiff = bestScore - player.scores[positionIdx];
 
         if (scoreDiff <= proximityThreshold) {
             candidates.push(player);
-        } else {
-            // Players are sorted, so no need to check further
-            break;
-        }
+        } 
     }
 
     // If no candidates within threshold, just take the best
@@ -295,6 +292,7 @@ export function selectPlayerWithProximity(
  *
  * @param formation Formation array
  * @returns Array of zone indices that have open positions
+ * @deprecated Use getAvailablePositions for position-based selection
  */
 export function getAvailableZones(formation: Int8Array): number[] {
     const zones: number[] = [];
@@ -315,4 +313,23 @@ export function getAvailableZones(formation: Int8Array): number[] {
     }
 
     return zones;
+}
+
+/**
+ * Get available positions for a formation
+ *
+ * Returns indices of all positions that still need players.
+ * Used for priority-based position selection algorithm.
+ *
+ * @param formation Formation array where each index is a position and value is remaining count
+ * @returns Array of position indices that still need players (where formation[posIdx] > 0)
+ */
+export function getAvailablePositions(formation: Int8Array): number[] {
+    const positions: number[] = [];
+    for (let posIdx = 0; posIdx < POSITION_COUNT; posIdx++) {
+        if (formation[posIdx] > 0) {
+            positions.push(posIdx);
+        }
+    }
+    return positions;
 }

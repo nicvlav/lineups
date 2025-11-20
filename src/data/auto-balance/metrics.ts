@@ -371,7 +371,7 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
     const scaledZoneRatios: number[] = [];
 
     // Apply calibrated scoring to EACH zone individually
-    for (let zoneIdx = 1; zoneIdx < N; zoneIdx++) {
+    for (let zoneIdx = 0; zoneIdx < N; zoneIdx++) {
         const a = teamA.zoneScores[zoneIdx];
         const b = teamB.zoneScores[zoneIdx];
         const rawRatio = calculateBasicDifferenceRatio(a, b);
@@ -598,7 +598,7 @@ function calculateZoneAverageRatings(team: FastTeam): Float32Array {
  * @param numPlayers Total number of players (used for dynamic power scaling)
  * @returns Penalty multiplier from 0 (harsh penalty) to 1 (no penalty)
  */
-function calculateMidfieldPreferencePenalty(zoneAverages: Float32Array, penaltyStrength: number, numPlayers: number = 22): number {
+function calculateMidfieldPreferencePenalty(zoneAverages: Float32Array): number {
     // Extract non-GK zones
     const defAvg = zoneAverages[1];  // DEF
     const midAvg = zoneAverages[2];  // MID
@@ -617,24 +617,6 @@ function calculateMidfieldPreferencePenalty(zoneAverages: Float32Array, penaltyS
         DEFAULT_BALANCE_CONFIG.thresholds.starDistribution,
         Steepness.Steep
     );
-
-    // Calculate how far midfield is from the max
-    const gap = maxZoneAvg - midAvg;
-
-    // Calculate the relative gap (as a percentage of the max)
-    const relativeGap = gap / maxZoneAvg;
-
-    // Apply penalty based on the gap and the strength parameter
-    // penaltyStrength controls how harsh the penalty is
-    // relativeGap determines the magnitude based on the actual difference
-    const penalty = 1.0 - (relativeGap * penaltyStrength);
-
-    // Get dynamic power based on number of players
-    // More players = harsher penalty (higher power)
-    const power = getMidfieldPenaltyPower(numPlayers);
-
-    // Ensure penalty stays in valid range [0, 1] and apply power scaling
-    return Math.pow(Math.max(0, Math.min(1, penalty)), power);
 }
 
 /**
@@ -708,8 +690,8 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
     // Power scaling is dynamic based on player count (more players = harsher penalty)
     const midfieldPenaltyStrength = DEFAULT_BALANCE_CONFIG.formulas.midfieldPreference.penaltyStrength;
     const numPlayers = teamA.playerCount + teamB.playerCount;
-    const teamAMidfieldPenalty = calculateMidfieldPreferencePenalty(teamAZoneAverages, midfieldPenaltyStrength, numPlayers);
-    const teamBMidfieldPenalty = calculateMidfieldPreferencePenalty(teamBZoneAverages, midfieldPenaltyStrength, numPlayers);
+    const teamAMidfieldPenalty = calculateMidfieldPreferencePenalty(teamAZoneAverages);
+    const teamBMidfieldPenalty = calculateMidfieldPreferencePenalty(teamBZoneAverages);
 
     // Combined midfield penalty (average of both teams)
     const combinedMidfieldPenalty = teamAMidfieldPenalty * teamBMidfieldPenalty;
@@ -1174,7 +1156,7 @@ export function calculateMetricsV3(
         config.weights.secondary.allStatBalance * metrics.allStatBalance +
         config.weights.primary.starDistribution * metrics.talentDistributionBalance;
 
-    const finalScore = weightedScore * starPenalty;
+    const finalScore = (weightedScore * 0.5) + (starPenalty * 0.5);
 
     if (debug) {
         console.log('');

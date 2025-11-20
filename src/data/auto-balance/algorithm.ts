@@ -9,15 +9,13 @@
 import type { FastPlayer, Teams, SimulationResult } from "./types";
 import type { ScoredGamePlayer } from "@/data/player-types";
 import {
-    POSITION_INDICES,
-    ZONE_POSITIONS,
     INDEX_TO_POSITION,
     POSITION_COUNT,
-    // getStdDevThreshold
+    ZONE_POSITIONS,
 } from "./constants";
 import { defaultZoneWeights, getPointForPosition } from "@/data/position-types";
 import { getFastFormation } from "./formation";
-import { createFastTeam, createPositionComparator, sortWorstInPlace, cryptoRandom, cryptoRandomInt, selectPlayerWithProximity, getAvailableZones } from "./utils";
+import { createFastTeam, createPositionComparator, cryptoRandomInt, selectPlayerWithProximity, getAvailablePositions } from "./utils";
 import type { BalanceConfiguration } from "./metrics-config";
 import { calculateMetricsV3 } from "./metrics";
 
@@ -70,33 +68,21 @@ export function assignPlayersToTeams(
         player.team = null;
     }
 
-    // Phase 1: Assign goalkeepers (worst overall players)
-    sortWorstInPlace(available);
+    // Main Assignment Phase: Unified priority-based position filling
+    // GK (priority 10) will naturally fill last through this algorithm
 
-    const gkIdx = POSITION_INDICES.GK;
-    if (formationA[gkIdx] > 0 && available.length > 0) {
-        const gk = available.shift()!;
-        gk.assignedPosition = gkIdx;
-        gk.team = 'A';
-        teamA.positions[gkIdx].push(gk);
-        teamA.totalScore += gk.scores[gkIdx];
-        teamA.peakPotential += gk.bestScore;
-        teamA.playerCount++;
-        formationA[gkIdx]--;
+    // Initialize dynamic priority tracking for each team
+    const teamAPriorities = new Int8Array(POSITION_COUNT);
+    const teamBPriorities = new Int8Array(POSITION_COUNT);
+
+    // Copy base priorities from defaultZoneWeights
+    for (let i = 0; i < POSITION_COUNT; i++) {
+        const position = INDEX_TO_POSITION[i];
+        const weight = defaultZoneWeights[position];
+        teamAPriorities[i] = weight.priorityStat;
+        teamBPriorities[i] = weight.priorityStat;
     }
 
-    if (formationB[gkIdx] > 0 && available.length > 0) {
-        const gk = available.shift()!;
-        gk.assignedPosition = gkIdx;
-        gk.team = 'B';
-        teamB.positions[gkIdx].push(gk);
-        teamB.totalScore += gk.scores[gkIdx];
-        teamB.peakPotential += gk.bestScore;
-        teamB.playerCount++;
-        formationB[gkIdx]--;
-    }
-
-    // Phase 2: Assign remaining players with dynamic balancing
     // Pre-build comparators for each position
     const comparators = new Map<number, (a: FastPlayer, b: FastPlayer) => number>();
     for (let i = 0; i < POSITION_COUNT; i++) {
@@ -115,112 +101,69 @@ export function assignPlayersToTeams(
         : baseTopN;
 
     while (available.length > 0) {
-        // Choose team based on current balance
-        const aZones = getAvailableZones(formationA);
-        const bZones = getAvailableZones(formationB);
+        // Get available positions for each team (not zones)
+        const aPositions = getAvailablePositions(formationA);
+        const bPositions = getAvailablePositions(formationB);
 
-        if (aZones.length === 0 && bZones.length === 0) break;
+        if (aPositions.length === 0 && bPositions.length === 0) break;
 
-        const assignToA = aZones.length > 0 &&
-            (bZones.length === 0 || teamA.totalScore <= teamB.totalScore);
+        // Choose team based on current balance (unchanged logic)
+        const assignToA = aPositions.length > 0 &&
+            (bPositions.length === 0 || teamA.totalScore <= teamB.totalScore);
 
         const targetTeam = assignToA ? teamA : teamB;
         const targetFormation = assignToA ? formationA : formationB;
-        const availableZones = assignToA ? aZones : bZones;
+        const targetPriorities = assignToA ? teamAPriorities : teamBPriorities;
+        const availablePositions = assignToA ? aPositions : bPositions;
 
-        // RANDOMIZATION: Pick a random zone to fill using crypto random
-        const randomZone = availableZones[cryptoRandomInt(0, availableZones.length)];
-        const zonePositions = ZONE_POSITIONS[randomZone];
-
-        // Within the zone, still respect priority order
-        let assigned = false;
-
-        // Collect all available positions in this zone with their priorities
-        const availablePositions: { posIdx: number; priority: number }[] = [];
-        for (const posIdx of zonePositions) {
-            if (targetFormation[posIdx] > 0) {
-                const position = INDEX_TO_POSITION[posIdx];
-                const weight = defaultZoneWeights[position];
-                availablePositions.push({ posIdx, priority: weight.priorityStat });
+        // Find minimum priority among available positions
+        let minPriority = Infinity;
+        for (const posIdx of availablePositions) {
+            if (targetPriorities[posIdx] < minPriority) {
+                minPriority = targetPriorities[posIdx];
             }
         }
 
-        // Sort by priority (but randomize within same priority for more variety)
-        availablePositions.sort((a, b) => {
-            if (a.priority !== b.priority) {
-                return a.priority - b.priority;
-            }
-            // Add randomization for same priority positions using crypto random
-            return cryptoRandom() - 0.5;
-        });
-
-        // Try to assign to positions in this zone
-        for (const { posIdx } of availablePositions) {
-            if (assigned) break;
-
-            if (available.length > 0) {
-                // GUIDED RANDOMNESS: Select from top N candidates within proximity threshold
-                const player = selectPlayerWithProximity(
-                    available,
-                    posIdx,
-                    comparators.get(posIdx)!,
-                    proximityThreshold,
-                    topN,
-                    selectionWeights
-                );
-
-                // Remove selected player from available pool
-                const playerIndex = available.indexOf(player);
-                if (playerIndex > -1) {
-                    available.splice(playerIndex, 1);
-                }
-
-                const score = player.scores[posIdx];
-
-                player.assignedPosition = posIdx;
-                player.team = assignToA ? 'A' : 'B';
-                targetTeam.positions[posIdx].push(player);
-                targetTeam.totalScore += score;
-                targetTeam.peakPotential += player.bestScore;
-                targetTeam.playerCount++;
-                targetFormation[posIdx]--;
-
-                assigned = true;
+        // Collect all positions at minimum priority
+        const lowestPriorityPositions: number[] = [];
+        for (const posIdx of availablePositions) {
+            if (targetPriorities[posIdx] === minPriority) {
+                lowestPriorityPositions.push(posIdx);
             }
         }
 
-        if (!assigned && available.length > 0) {
+        // PURE RANDOM: Pick a position from those with lowest priority using crypto
+        const posIdx = lowestPriorityPositions[cryptoRandomInt(0, lowestPriorityPositions.length)];
 
-            // if (config.debugMode) {
-            //     console.warn("Could not assign player in zone", randomZone);
-            // }
-            // Try any position as fallback (still using guided randomness)
-            for (let posIdx = 0; posIdx < POSITION_COUNT; posIdx++) {
-                if (targetFormation[posIdx] > 0 && available.length > 0) {
-                    const player = selectPlayerWithProximity(
-                        available,
-                        posIdx,
-                        comparators.get(posIdx)!,
-                        proximityThreshold,
-                        topN,
-                        selectionWeights
-                    );
+        // Assign player to the selected position
+        if (available.length > 0) {
+            // GUIDED RANDOMNESS: Select from top N candidates within proximity threshold
+            const player = selectPlayerWithProximity(
+                available,
+                posIdx,
+                comparators.get(posIdx)!,
+                proximityThreshold,
+                topN,
+                selectionWeights
+            );
 
-                    const playerIndex = available.indexOf(player);
-                    if (playerIndex > -1) {
-                        available.splice(playerIndex, 1);
-                    }
-
-                    player.assignedPosition = posIdx;
-                    player.team = assignToA ? 'A' : 'B';
-                    targetTeam.positions[posIdx].push(player);
-                    targetTeam.totalScore += player.scores[posIdx];
-                    targetTeam.peakPotential += player.bestScore;
-                    targetTeam.playerCount++;
-                    targetFormation[posIdx]--;
-                    break;
-                }
+            // Remove selected player from available pool
+            const playerIndex = available.indexOf(player);
+            if (playerIndex > -1) {
+                available.splice(playerIndex, 1);
             }
+
+            const score = player.scores[posIdx];
+
+            player.assignedPosition = posIdx;
+            player.team = assignToA ? 'A' : 'B';
+            targetTeam.positions[posIdx].push(player);
+            targetTeam.totalScore += score;
+            targetTeam.peakPotential += player.bestScore;
+            targetTeam.playerCount++;
+            targetFormation[posIdx]--;
+            targetPriorities[posIdx] += 2; // Includes bonus for N >= 2
+
         }
     }
 
@@ -232,8 +175,7 @@ export function assignPlayersToTeams(
     for (let zoneIdx = 0; zoneIdx < 4; zoneIdx++) {
         for (const posIdx of ZONE_POSITIONS[zoneIdx]) {
             for (const player of teamA.positions[posIdx]) {
-                const score = player.scores[posIdx];
-                teamA.zoneScores[zoneIdx] += score;
+                teamA.zoneScores[zoneIdx] += (zoneIdx === 0 ? player.bestScore : player.scores[posIdx]);
                 teamA.zonePeakScores[zoneIdx] += player.bestScore;
 
                 // Track energy scores (stamina + work rate)
@@ -261,8 +203,7 @@ export function assignPlayersToTeams(
                 }
             }
             for (const player of teamB.positions[posIdx]) {
-                const score = player.scores[posIdx];
-                teamB.zoneScores[zoneIdx] += score;
+                teamB.zoneScores[zoneIdx] += (zoneIdx === 0 ? player.bestScore : player.scores[posIdx]);
                 teamB.zonePeakScores[zoneIdx] += player.bestScore;
 
                 // Track energy scores (stamina + work rate)

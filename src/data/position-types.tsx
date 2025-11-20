@@ -136,7 +136,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: true,
         absoluteYPosition: 1.0,
-        priorityStat: 10,
+        priorityStat: 100,
     },
 
     CB: {
@@ -182,7 +182,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: true,
         absoluteYPosition: 0.675,
-        priorityStat: 2,
+        priorityStat: 3,
     },
 
     FB: {
@@ -366,7 +366,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: false,
         absoluteYPosition: 0.4,
-        priorityStat: 5,
+        priorityStat: 4,
     },
 
     AM: {
@@ -504,7 +504,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: false,
         absoluteYPosition: 0.2,
-        priorityStat: 3,
+        priorityStat: 4,
     },
 } as const;
 

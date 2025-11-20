@@ -291,7 +291,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         energy: {
             perfect: 0.99,
             acceptable: 0.975,
-            poor: 0.95,
+            poor: 0.93,
         },
 
         // Creativity: Vision, passing, composure
@@ -311,7 +311,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
     algorithm: {
         // Only randomize between players within 5 points of best
-        proximityThreshold: 10,
+        proximityThreshold: 8,
 
         // Scale candidate pool with team size (20 players = top 4 candidates)
         topNScaling: true,
