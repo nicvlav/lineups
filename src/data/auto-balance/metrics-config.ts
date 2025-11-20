@@ -232,10 +232,10 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
             scoreBalance: 0.1,
 
             // #1 Priority: Top talent evenly distributed
-            starDistribution: 0.1,
+            starDistribution: 0.175,
 
             // #2 Priority: Each zone (DEF/MID/ATT) competitive
-            peakPotential: 0.225,
+            peakPotential: 0.2,
         },
         secondary: {
             // Peak potential matters less than actual scores
@@ -245,8 +245,8 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
             allStatBalance: 0.05,
 
             // Fine-tuning metrics
-            energy: 0.15,
-            creativity: 0.15,
+            energy: 0.125,
+            creativity: 0.125,
             striker: 0.125,
         }
     },
@@ -254,9 +254,9 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
     thresholds: {
         // Score balance: Within 1% = perfect, within 3% = acceptable, >10% = poor
         scoreBalance: {
-            perfect: 0.85,      // <1% difference (e.g., 400 vs 404 out of 800 total)
-            acceptable: 0.83,   // <3% difference (e.g., 400 vs 412)
-            poor: 0.80,         // >10% difference (e.g., 400 vs 440)
+            perfect: 0.88,      // <1% difference (e.g., 400 vs 404 out of 800 total)
+            acceptable: 0.85,   // <3% difference (e.g., 400 vs 412)
+            poor: 0.83,         // >10% difference (e.g., 400 vs 440)
         },
 
         // Star distribution: Perfect = equal split, acceptable = ±1 player, poor = ±3 players
@@ -315,13 +315,13 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
         // Scale candidate pool with team size (20 players = top 4 candidates)
         topNScaling: true,
-        baseTopN: 6,
+        baseTopN: 8,
 
         // Use priority-based position selection within zones
         zonePositionStrategy: 'priority',
 
         // Weighted probability for selecting from top N: [50%, 30%, 15%, 5%]
-        selectionWeights: [0.50, 0.2, 0.10, 0.10, 0.075, 0.025],
+        selectionWeights: [0.4, 0.2, 0.15, 0.1, 0.05, 0.05, 0.025, 0.025],
     },
 
     monteCarlo: {

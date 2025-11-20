@@ -196,7 +196,7 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
 
     // 3. Combine stamina and workrate
     // Stamina is slightly more important (55/45 split)
-    const rawCombined = staminaRatio * 0.4 + workrateRatio * 0.6;
+    const rawCombined = staminaRatio * workrateRatio;
 
     // Use calibrated scoring
     const energyBalanceRatio = calibratedScore(
@@ -575,7 +575,7 @@ function getNumPlayersForZone(zoneIdx: number, formation: Formation | null): num
  * @returns Array of average ratings per zone [GK, DEF, MID, ATT]
  */
 function calculateZoneAverageRatings(team: FastTeam): Float32Array {
-    const sums = team.zonePeakScores.map((val, i) => {
+    const sums = team.zoneScores.map((val, i) => {
         return val / getNumPlayersForZone(i, team.formation);
     });
 
@@ -611,6 +611,12 @@ function calculateMidfieldPreferencePenalty(zoneAverages: Float32Array, penaltyS
     if (midAvg >= maxZoneAvg) {
         return 1.0;
     }
+
+    return calibratedScore(
+        calculateBasicDifferenceRatio(maxZoneAvg , midAvg),
+        DEFAULT_BALANCE_CONFIG.thresholds.starDistribution,
+        Steepness.Steep
+    );
 
     // Calculate how far midfield is from the max
     const gap = maxZoneAvg - midAvg;
@@ -706,12 +712,12 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
     const teamBMidfieldPenalty = calculateMidfieldPreferencePenalty(teamBZoneAverages, midfieldPenaltyStrength, numPlayers);
 
     // Combined midfield penalty (average of both teams)
-    const combinedMidfieldPenalty= teamAMidfieldPenalty * teamBMidfieldPenalty;
+    const combinedMidfieldPenalty = teamAMidfieldPenalty * teamBMidfieldPenalty;
     calibratedScore(
         teamAMidfieldPenalty * teamBMidfieldPenalty,
         DEFAULT_BALANCE_CONFIG.thresholds.starDistribution,
         Steepness.VeryGentle
-    ); 
+    );
     const midDiffRatio = calibratedScore(
         calculateBasicDifferenceRatio(teamAZoneAverages[2], teamBZoneAverages[2]),
         DEFAULT_BALANCE_CONFIG.thresholds.starDistribution,
