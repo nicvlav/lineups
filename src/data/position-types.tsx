@@ -182,7 +182,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: true,
         absoluteYPosition: 0.675,
-        priorityStat: 1,
+        priorityStat: 2,
     },
 
     FB: {
@@ -228,7 +228,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: false,
         absoluteYPosition: 0.65,
-        priorityStat: 2,
+        priorityStat: 6,
     },
 
     DM: {
@@ -274,7 +274,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: true,
         absoluteYPosition: 0.5,
-        priorityStat: 1,
+        priorityStat: 2,
     },
 
     CM: {
@@ -320,7 +320,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: true,
         absoluteYPosition: 0.45,
-        priorityStat: 2,
+        priorityStat: 3,
     },
 
     WM: {
@@ -366,7 +366,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: false,
         absoluteYPosition: 0.4,
-        priorityStat: 6,
+        priorityStat: 5,
     },
 
     AM: {
@@ -412,7 +412,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: true,
         absoluteYPosition: 0.325,
-        priorityStat: 2,
+        priorityStat: 1,
     },
 
     ST: {
@@ -458,7 +458,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: true,
         absoluteYPosition: 0.175,
-        priorityStat: 1,
+        priorityStat: 2,
     },
 
     WR: {
@@ -504,7 +504,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: false,
         absoluteYPosition: 0.2,
-        priorityStat: 2,
+        priorityStat: 3,
     },
 } as const;
 
