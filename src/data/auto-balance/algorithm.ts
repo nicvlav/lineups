@@ -17,7 +17,8 @@ import { defaultZoneWeights, getPointForPosition } from "@/data/position-types";
 import { getFastFormation } from "./formation";
 import { createFastTeam, createPositionComparator, cryptoRandomInt, selectPlayerWithProximity, getAvailablePositions } from "./utils";
 import type { BalanceConfiguration } from "./metrics-config";
-import { calculateMetricsV3 } from "./metrics";
+import { calculateMetricsV3, calculateOptimalStarDistribution, calculateStarZonePenalty } from "./metrics";
+import { getStarCount } from "./debug-tools";
 
 /**
  * Core team assignment algorithm
@@ -283,15 +284,18 @@ export function runOptimizedMonteCarlo(
     config: BalanceConfiguration,
     verbose: boolean = false
 ): SimulationResult | null {
-    const results: SimulationResult[] = [];
     const maxIterations = config.monteCarlo.maxIterations;
 
     let bestScore = -Infinity;
     let bestResult: SimulationResult | null = null;
 
+    // Calculate optimal star distribution BEFORE Monte Carlo loop
+    const optimalStarPenalty = calculateOptimalStarDistribution(players, config);
+
     if (verbose) {
         console.log('🎲 Starting optimized Monte Carlo simulation...');
         console.log(`   Max iterations: ${maxIterations}`);
+        console.log(`   Optimal star distribution penalty: ${optimalStarPenalty.toFixed(3)}`);
     }
 
     for (let i = 0; i < maxIterations; i++) {
@@ -299,16 +303,35 @@ export function runOptimizedMonteCarlo(
         if (!result) continue;
 
         const metrics = calculateMetricsV3(result.teamA, result.teamB, config, false);
+
+        // Calculate star distribution multiplier
+        const starCountA = getStarCount(result.teamA, config.starPlayers.absoluteMinimum);
+        const starCountB = getStarCount(result.teamB, config.starPlayers.absoluteMinimum);
+        const starCountDiff = Math.abs(starCountA - starCountB);
+
+        // Star count penalty: >1 difference is unacceptable (0), 1 diff is bad (0.7), 0 diff is perfect (1.0)
+        const starCountPenalty = starCountDiff > 1 ? 0 : 1;
+
+        // Calculate actual star zone distribution penalty
+        const actualStarPenalty = calculateStarZonePenalty(result.teamA, result.teamB, config, false);
+
+        // Compare to optimal: how close are we to the best possible?
+        const starDistQuality = optimalStarPenalty > 0 ? actualStarPenalty / optimalStarPenalty : 1.0;
+
+        // Combined star multiplier: count * distribution quality
+        const starMultiplier = starCountPenalty * starDistQuality;
+
+        // Apply multiplier to get final score
+        const finalScore = metrics.score * starMultiplier;
+
         const simResult: SimulationResult = {
             teams: result,
-            score: metrics.score,
+            score: finalScore,
             metrics: metrics.details
         };
 
-        results.push(simResult);
-
-        if (metrics.score > bestScore) {
-            bestScore = metrics.score;
+        if (finalScore > bestScore) {
+            bestScore = finalScore;
             bestResult = simResult;
 
             if (verbose && i % 20 === 0) {

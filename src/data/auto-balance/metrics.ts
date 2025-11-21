@@ -884,6 +884,202 @@ function analyzeTeamStarDistribution(
 }
 
 /**
+ * Generates all combinations of size k from array of size n
+ * Uses iterative approach to avoid stack overflow for large n
+ *
+ * @param n Total number of items
+ * @param k Size of each combination
+ * @returns Array of combinations (each combination is array of indices)
+ */
+function generateCombinations(n: number, k: number): number[][] {
+    const results: number[][] = [];
+
+    // Handle edge cases
+    if (k > n || k <= 0) return [];
+    if (k === n) return [Array.from({length: n}, (_, i) => i)];
+
+    // Start with first combination [0, 1, 2, ..., k-1]
+    const current = Array.from({length: k}, (_, i) => i);
+    results.push([...current]);
+
+    // Generate remaining combinations
+    while (true) {
+        // Find rightmost element that can be incremented
+        let i = k - 1;
+        while (i >= 0 && current[i] === n - k + i) {
+            i--;
+        }
+
+        // If no element can be incremented, we're done
+        if (i < 0) break;
+
+        // Increment this element
+        current[i]++;
+
+        // Set all elements to the right
+        for (let j = i + 1; j < k; j++) {
+            current[j] = current[i] + (j - i);
+        }
+
+        results.push([...current]);
+    }
+
+    return results;
+}
+
+/**
+ * Calculates optimal star distribution penalty for a given player pool
+ *
+ * This analyzes ALL star players to determine the theoretical best possible
+ * distribution achievable with this specific set of players. This becomes the
+ * baseline for comparing actual team distributions in the Monte Carlo loop.
+ *
+ * Approach:
+ * 1. Identify all star players from the pool
+ * 2. Classify each by their defensive/attacking lean
+ * 3. Test ALL possible team splits combinatorially
+ * 4. Return the BEST penalty achievable (optimal for THIS player pool)
+ *
+ * @param players All available players
+ * @param config Balance configuration with star threshold
+ * @returns Optimal star zone penalty (0-1, higher is better)
+ */
+export function calculateOptimalStarDistribution(
+    players: FastPlayer[],
+    config: BalanceConfiguration
+): number {
+    const starThreshold = config.starPlayers.absoluteMinimum;
+
+    // Identify all star players
+    const starPlayers: FastPlayer[] = [];
+    for (const player of players) {
+        if (player.bestScore >= starThreshold) {
+            starPlayers.push(player);
+        }
+    }
+
+    // If no stars or only 1 star, optimal is perfect (1.0)
+    if (starPlayers.length <= 1) {
+        return 1.0;
+    }
+
+    // Classify all stars
+    const classifications = starPlayers.map(p => classifyStarPlayerByZone(p));
+
+    // Find the ACTUAL optimal split by testing all possible combinations
+    // For N stars, we need to split them into two teams as evenly as possible
+    const numStars = classifications.length;
+    const teamASize = Math.floor(numStars / 2);
+
+    // Generate all possible combinations of teamASize stars
+    const combinations = generateCombinations(numStars, teamASize);
+
+    let bestPenalty = -Infinity;
+
+    // Test each possible split
+    for (const teamAIndices of combinations) {
+        // Create team B with remaining indices
+        const teamBIndices: number[] = [];
+        for (let i = 0; i < numStars; i++) {
+            if (!teamAIndices.includes(i)) {
+                teamBIndices.push(i);
+            }
+        }
+
+        // Calculate metrics for this split
+        const teamAClassifications = teamAIndices.map(i => classifications[i]);
+        const teamBClassifications = teamBIndices.map(i => classifications[i]);
+
+        // Calculate quality-weighted leans for each team
+        let teamALeanSum = 0;
+        let teamAWeightSum = 0;
+        let teamADefQuality = 0;
+        let teamAAttQuality = 0;
+
+        for (const c of teamAClassifications) {
+            const lean = (c.bestAttackingScore - c.bestDefensiveScore) / (c.bestAttackingScore + c.bestDefensiveScore);
+            const weight = c.player.bestScore;
+
+            teamALeanSum += lean * weight;
+            teamAWeightSum += weight;
+
+            const defWeight = 0.5 - (lean * 0.5);
+            const attWeight = 0.5 + (lean * 0.5);
+
+            teamADefQuality += c.bestDefensiveScore * defWeight;
+            teamAAttQuality += c.bestAttackingScore * attWeight;
+        }
+
+        let teamBLeanSum = 0;
+        let teamBWeightSum = 0;
+        let teamBDefQuality = 0;
+        let teamBAttQuality = 0;
+
+        for (const c of teamBClassifications) {
+            const lean = (c.bestAttackingScore - c.bestDefensiveScore) / (c.bestAttackingScore + c.bestDefensiveScore);
+            const weight = c.player.bestScore;
+
+            teamBLeanSum += lean * weight;
+            teamBWeightSum += weight;
+
+            const defWeight = 0.5 - (lean * 0.5);
+            const attWeight = 0.5 + (lean * 0.5);
+
+            teamBDefQuality += c.bestDefensiveScore * defWeight;
+            teamBAttQuality += c.bestAttackingScore * attWeight;
+        }
+
+        // Calculate average leans
+        const teamAAvgLean = teamAWeightSum > 0 ? teamALeanSum / teamAWeightSum : 0;
+        const teamBAvgLean = teamBWeightSum > 0 ? teamBLeanSum / teamBWeightSum : 0;
+
+        // Calculate variances
+        let teamAVariance = 0;
+        for (const c of teamAClassifications) {
+            const lean = (c.bestAttackingScore - c.bestDefensiveScore) / (c.bestAttackingScore + c.bestDefensiveScore);
+            teamAVariance += Math.pow(lean - teamAAvgLean, 2);
+        }
+        teamAVariance = teamAClassifications.length > 0 ? teamAVariance / teamAClassifications.length : 0;
+
+        let teamBVariance = 0;
+        for (const c of teamBClassifications) {
+            const lean = (c.bestAttackingScore - c.bestDefensiveScore) / (c.bestAttackingScore + c.bestDefensiveScore);
+            teamBVariance += Math.pow(lean - teamBAvgLean, 2);
+        }
+        teamBVariance = teamBClassifications.length > 0 ? teamBVariance / teamBClassifications.length : 0;
+
+        const avgVariance = (teamAVariance + teamBVariance) / 2;
+
+        // Calculate penalties using same logic as calculateStarZonePenalty
+        const leanDifference = Math.abs(teamAAvgLean - teamBAvgLean);
+        const opposingLeans = (teamAAvgLean * teamBAvgLean) < 0;
+
+        const defQualityDiff = Math.abs(teamADefQuality - teamBDefQuality);
+        const attQualityDiff = Math.abs(teamAAttQuality - teamBAttQuality);
+
+        const normalizedDefQualityDiff = defQualityDiff / 100;
+        const normalizedAttQualityDiff = attQualityDiff / 100;
+
+        const leanPenalty = Math.sqrt(leanDifference) * 0.4;
+        const opposingPenalty = opposingLeans ? Math.pow(leanDifference, 1.5) * 0.5 : 0;
+        const clusteringPenalty = avgVariance < 0.001 ? 0.15 :
+            avgVariance < 0.003 ? 0.10 :
+                avgVariance < 0.01 ? 0.05 : 0;
+        const defQualityPenalty = Math.sqrt(normalizedDefQualityDiff) * 0.45;
+        const attQualityPenalty = Math.sqrt(normalizedAttQualityDiff) * 0.55;
+
+        const totalPenalty = leanPenalty + opposingPenalty + clusteringPenalty + defQualityPenalty + attQualityPenalty;
+        const penalty = Math.max(0, 1.0 - totalPenalty);
+
+        if (penalty > bestPenalty) {
+            bestPenalty = penalty;
+        }
+    }
+
+    return bestPenalty;
+}
+
+/**
  * Calculates star zone specialization penalty using gradient-based directional clustering
  *
  * Uses a sophisticated multi-factor approach:
@@ -906,7 +1102,7 @@ function analyzeTeamStarDistribution(
  * @param debug Enable debug output
  * @returns Penalty multiplier from 0 (harsh penalty) to 1 (no penalty)
  */
-function calculateStarZonePenalty(
+export function calculateStarZonePenalty(
     teamA: FastTeam,
     teamB: FastTeam,
     config: BalanceConfiguration,
@@ -1124,28 +1320,8 @@ export function calculateMetricsV3(
         talentDistributionBalance
     };
 
-    // Calculate star count penalty (existing)
-    const starCountA = getStarCount(teamA, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
-    const starCountB = getStarCount(teamB, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
-    const starCountPenalty = Math.abs(starCountA - starCountB) >= 2 ? 0.5 : 1.0;
-
-    // Calculate star zone specialization penalty (new)
-    const starZonePenalty = calculateStarZonePenalty(teamA, teamB, config, debug);
-
-    // Combined star penalty
-    const starPenalty = starCountPenalty * starZonePenalty;
-
-    if (debug) {
-        console.log('');
-        console.log('Star Player Penalty Summary:');
-        console.log(`  Star Count: A=${starCountA}, B=${starCountB}, Diff=${Math.abs(starCountA - starCountB)}`);
-        console.log(`  Star Count Penalty: ${starCountPenalty.toFixed(3)} ${starCountPenalty < 1.0 ? '(imbalanced count)' : '(balanced count)'}`);
-        console.log(`  Star Zone Penalty: ${starZonePenalty.toFixed(3)} ${starZonePenalty < 1.0 ? '(zone stacking detected)' : '(balanced zones)'}`);
-        console.log(`  Combined Star Penalty: ${starPenalty.toFixed(3)}`);
-        console.log('');
-    }
-
     // Calculate weighted score using NEW config structure
+    // Star distribution penalty moved to Monte Carlo loop for optimal comparison
     const weightedScore =
         config.weights.primary.peakPotential * metrics.overallStrengthBalance +
         config.weights.primary.scoreBalance * metrics.positionalScoreBalance +
@@ -1156,7 +1332,7 @@ export function calculateMetricsV3(
         config.weights.secondary.allStatBalance * metrics.allStatBalance +
         config.weights.primary.starDistribution * metrics.talentDistributionBalance;
 
-    const finalScore = (weightedScore * 0.5) + (starPenalty * 0.5);
+    const finalScore = weightedScore;
 
     if (debug) {
         console.log('');
