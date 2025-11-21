@@ -69,8 +69,46 @@ export function assignPlayersToTeams(
         player.team = null;
     }
 
+    // Phase 0: Assign worst players to GK first
+    // This prevents decent defenders from being placed at GK
+    const GK_INDEX = 0;
+    const numGKsNeeded = formationA[GK_INDEX] + formationB[GK_INDEX];
+
+    if (numGKsNeeded > 0 && available.length > 0) {
+        // Sort players by bestScore (ascending) to get worst players first
+        const sortedByWorst = [...available].sort((a, b) => a.bestScore - b.bestScore);
+
+        for (let i = 0; i < numGKsNeeded && i < sortedByWorst.length; i++) {
+            const player = sortedByWorst[i];
+
+            // Decide which team gets this GK
+            const assignToA = formationA[GK_INDEX] > 0 &&
+                (formationB[GK_INDEX] === 0 || teamA.totalScore <= teamB.totalScore);
+
+            const targetTeam = assignToA ? teamA : teamB;
+            const targetFormation = assignToA ? formationA : formationB;
+
+            if (targetFormation[GK_INDEX] > 0) {
+                const score = player.scores[GK_INDEX];
+
+                player.assignedPosition = GK_INDEX;
+                player.team = assignToA ? 'A' : 'B';
+                targetTeam.positions[GK_INDEX].push(player);
+                targetTeam.totalScore += score;
+                targetTeam.peakPotential += player.bestScore;
+                targetTeam.playerCount++;
+                targetFormation[GK_INDEX]--;
+
+                // Remove from available pool
+                const availableIndex = available.indexOf(player);
+                if (availableIndex > -1) {
+                    available.splice(availableIndex, 1);
+                }
+            }
+        }
+    }
+
     // Main Assignment Phase: Unified priority-based position filling
-    // GK (priority 10) will naturally fill last through this algorithm
 
     // Initialize dynamic priority tracking for each team
     const teamAPriorities = new Int8Array(POSITION_COUNT);
@@ -320,7 +358,7 @@ export function runOptimizedMonteCarlo(
 
         // Combined star multiplier: count * distribution quality
         const starMultiplier = starCountPenalty * starDistQuality;
-
+        
         // Apply multiplier to get final score
         const finalScore = metrics.score * starMultiplier;
 
