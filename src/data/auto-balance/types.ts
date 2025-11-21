@@ -187,8 +187,8 @@ export interface StarZoneClassification {
     /** The player being classified */
     player: FastPlayer;
 
-    /** Type of specialist: defensive, attacking, or all-rounder */
-    specialistType: 'defensive' | 'attacking' | 'all-rounder';
+    /** Type of specialist: defensive, attacking, midfielder, or all-rounder */
+    specialistType: 'defensive' | 'attacking' | 'midfielder' | 'all-rounder';
 
     /** How specialized they are (higher = more specialized in one zone) */
     specializationStrength: number;
@@ -218,6 +218,9 @@ export interface TeamStarDistribution {
 
     /** Number of all-rounders */
     allRounders: number;
+
+    /** Number of midfielders */
+    midfielders: number;
 
     /** Detailed classifications for each star player */
     classifications: StarZoneClassification[];

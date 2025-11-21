@@ -232,31 +232,31 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
             scoreBalance: 0.1,
 
             // #1 Priority: Top talent evenly distributed
-            starDistribution: 0.175,
+            starDistribution: 0.2,
 
             // #2 Priority: Each zone (DEF/MID/ATT) competitive
             peakPotential: 0.2,
         },
         secondary: {
             // Peak potential matters less than actual scores
-            zoneBalance: 0.1,
+            zoneBalance: 0.025,
 
             // All-stat balance ensures no hidden advantages
-            allStatBalance: 0.05,
+            allStatBalance: 0.025,
 
             // Fine-tuning metrics
             energy: 0.125,
             creativity: 0.125,
-            striker: 0.125,
+            striker: 0.2,
         }
     },
 
     thresholds: {
         // Score balance: Within 1% = perfect, within 3% = acceptable, >10% = poor
         scoreBalance: {
-            perfect: 0.88,      // <1% difference (e.g., 400 vs 404 out of 800 total)
-            acceptable: 0.85,   // <3% difference (e.g., 400 vs 412)
-            poor: 0.83,         // >10% difference (e.g., 400 vs 440)
+            perfect: 0.86,      // <1% difference (e.g., 400 vs 404 out of 800 total)
+            acceptable: 0.80,   // <3% difference (e.g., 400 vs 412)
+            poor: 0.70,         // >10% difference (e.g., 400 vs 440)
         },
 
         // Star distribution: Perfect = equal split, acceptable = ±1 player, poor = ±3 players
@@ -290,8 +290,8 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         // Energy: Stamina + work rate
         energy: {
             perfect: 0.99,
-            acceptable: 0.975,
-            poor: 0.93,
+            acceptable: 0.94,
+            poor: 0.90,
         },
 
         // Creativity: Vision, passing, composure
@@ -311,17 +311,17 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
     algorithm: {
         // Only randomize between players within 5 points of best
-        proximityThreshold: 8,
+        proximityThreshold: 5,
 
         // Scale candidate pool with team size (20 players = top 4 candidates)
-        topNScaling: true,
-        baseTopN: 8,
+        topNScaling: false,
+        baseTopN: 5,
 
         // Use priority-based position selection within zones
         zonePositionStrategy: 'priority',
 
         // Weighted probability for selecting from top N: [50%, 30%, 15%, 5%]
-        selectionWeights: [0.4, 0.2, 0.15, 0.1, 0.05, 0.05, 0.025, 0.025],
+        selectionWeights: [0.4, 0.3, 0.15, 0.1, 0.05],
     },
 
     monteCarlo: {

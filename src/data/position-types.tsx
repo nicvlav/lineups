@@ -504,7 +504,7 @@ export const defaultZoneWeights: Weighting = {
         },
         isCentral: false,
         absoluteYPosition: 0.2,
-        priorityStat: 4,
+        priorityStat: 3,
     },
 } as const;
 
@@ -585,60 +585,16 @@ export const formationTemplates: Record<number, Formation[]> = {
         },
     ],
     11: [
-        // {
-        //     name: "4-3-3",
-        //     positions: { GK: 1, CB: 2, FB: 2, DM: 1, CM: 2, WM: 0, AM: 0, ST: 1, WR: 2 }
-        // },
-        // {
-        //     name: "4-3-3 (2)",
-        //     positions: { GK: 1, CB: 2, FB: 2, DM: 0, CM: 2, WM: 0, AM: 1, ST: 1, WR: 2 }
-        // },
-        // {
-        //     name: "4-4-2",
-        //     positions: { GK: 1, CB: 2, FB: 2, DM: 0, CM: 2, WM: 2, AM: 0, ST: 2, WR: 0 }
-        // },
-        // {
-        //     name: "3-4-3",
-        //     positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 2, AM: 1, ST: 1, WR: 2 }
-        // },
-        // {
-        //     name: "3-6-1",
-        //     positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 0, AM: 3, ST: 1, WR: 2 }
-        // },
         {
             name: "3-4-3",
             positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 0, AM: 3, ST: 1, WR: 2 }
         },
-        // {
-        //     name: "3-3-4",
-        //     positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 2, WM: 0, AM: 0, ST: 2, WR: 2 }
-        // },
     ],
     12: [
-        // {
-        //     name: "3-5-3",
-        //     positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 2, WM: 2, AM: 0, ST: 1, WR: 2 }
-        // },
-        // {
-        //     name: "3-5-3 (1)",
-        //     positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 3, WM: 0, AM: 2, ST: 1, WR: 2 }
-        // },
-        // {
-        //     name: "3-5-3 (2)",
-        //     positions: { GK: 1, CB: 3, FB: 0, DM: 2, CM: 0, WM: 0, AM: 3, ST: 1, WR: 2 }
-        // },
         {
-            name: "3-5-3 (3)",
+            name: "3-5-3",
             positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 2, AM: 2, ST: 1, WR: 2 }
         },
-        // {
-        //     name: "3-4-4",
-        //     positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 2, AM: 1, ST: 2, WR: 2 }
-        // },
-        // {
-        //     name: "3-5-3",
-        //     positions: { GK: 1, CB: 3, FB: 0, DM: 0, CM: 2, WM: 0, AM: 3, ST: 1, WR: 2 }
-        // },
     ],
     13: [
         // {
