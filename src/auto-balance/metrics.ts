@@ -9,7 +9,7 @@
 
 import type { FastTeam, BalanceConfig, BalanceMetrics, FastPlayer, StarZoneClassification, TeamStarDistribution } from "./types";
 import type { BalanceConfiguration } from "./metrics-config"
-import type { Formation } from "@/data/position-types";
+import type { Formation } from "@/types/positions";
 import { ZONE_POSITIONS, INDEX_TO_POSITION, getMidfieldPenaltyPower, getInternalZoneSkillPower, POSITION_INDICES } from "./constants";
 import { calibratedScore, Steepness } from "./metric-transformations";
 import { DEFAULT_BALANCE_CONFIG } from "./metrics-config";

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useDrop, DropTargetMonitor } from 'react-dnd';
 import { usePlayers } from "@/context/players-provider"
 import { useGame } from "@/context/game-provider"
-import { ScoredGamePlayerWithThreat } from "@/data/player-types";
+import { ScoredGamePlayerWithThreat } from "@/types/players";
 
 import DraggablePlayer from '@/components/game/pitch/pitch-player'
 

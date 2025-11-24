@@ -1,3 +1,9 @@
+/**
+ * Player Stat Definitions
+ *
+ * Defines the 28 player attributes used throughout the system.
+ * Stats are grouped into 4 categories: Technical, Tactical, Mental, Physical
+ */
 
 export type StatsKey =
     | "anticipation"
@@ -91,7 +97,6 @@ export const statLabelMap: Record<StatsKey, string> = {
     concentration: "Concentration",
 } as const;
 
-
 export const statShortLabelMap: Record<StatsKey, string> = {
     anticipation: "ANT",
     defWorkrate: "DWR",
@@ -154,42 +159,21 @@ export const statColorsMap: Record<StatsKey, string> = {
     concentration: "bg-cyan-400",
 } as const;
 
+/**
+ * Player stats: 28 attributes, each 0-100
+ */
 export type PlayerStats = Record<StatsKey, number>;
 
+/**
+ * Default stat scores (all zeros)
+ */
 export const defaultStatScores: PlayerStats = Object.fromEntries(
-    ([
-        "anticipation",
-        "defWorkrate",
-        "composure",
-        "offTheBall",
-        "vision",
-        "firstTouch",
-        "passing",
-        "tackling",
-        "finishing",
-        "speed",
-        "strength",
-        "agility",
-        "attWorkrate",
-        "crossing",
-        "positioning",
-        "technique",
-        "dribbling",
-        "decisions",
-        "marking",
-        "heading",
-        "aggression",
-        "flair",
-        "longShots",
-        "stamina",
-        "teamwork",
-        "determination",
-        "leadership",
-        "concentration",
-    ] as const).map((key) => [key, 0])
+    statKeys.map((key) => [key, 0])
 ) as PlayerStats;
 
-
+/**
+ * Stat categories for grouping and display
+ */
 export type StatCategory = 'technical' | 'tactical' | 'physical' | "mental";
 
 export const StatCategoryKeys: StatCategory[] = [
@@ -206,7 +190,9 @@ export const StatCategoryNameMap: Record<StatCategory, string> = {
     mental: "Mental",
 } as const;
 
-
+/**
+ * Stats grouped by category
+ */
 export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
     technical: [
         "passing",

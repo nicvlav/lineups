@@ -31,7 +31,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
   return (
     <div className={cn(
       "flex items-center w-full",
-      "bg-gradient-to-r from-muted/10 via-muted/5 to-muted/10",
+      "bg-linear-to-r from-muted/10 via-muted/5 to-muted/10",
       "border border-border/50 rounded-2xl shadow-md backdrop-blur-sm",
       "dark:border-border/80 dark:shadow-lg dark:shadow-black/20",
       variant === 'compact' ? "p-2 h-12" : "p-3 h-14",

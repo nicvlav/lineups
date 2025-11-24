@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { usePlayers } from "@/context/players-provider";
-import { StatCategoryKeys, StatCategoryNameMap, } from "@/data/stat-types";
-import { getZoneAverages, getTopPositions, calculateScoresForStats } from "@/data/player-types";
-import { normalizedDefaultWeights } from "@/data/position-types";
+import { getZoneAverages, getTopPositions } from "@/types/players";
+import { calculateArchetypeScores } from "@/lib/positions/calculator";
 import PlayerCard from "@/components/players/player-card";
 import PlayerStatsRankings from "@/components/players/player-stats-rankings";
 import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
@@ -11,49 +10,39 @@ import Panel from "@/components/shared/panel";
 import { ActionBarTwoColumn } from "@/components/ui/action-bar";
 import { SquareUser, TrendingUp } from "lucide-react";
 
+export type CardViewMode = "minimal" | "archetypes" | "face-stats";
+
 const PlayerCards = () => {
     const { players, } = usePlayers();
-    const alphabeticalSortValue: string = "Alphabetical";
-    const overallSortValue: string = "Overall";
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [sortingMode, setSortingMode] = useState<string>(overallSortValue);
     const [activeTab, setActiveTab] = useState<"cards" | "leaderboard">("cards");
+    const [cardViewMode, setCardViewMode] = useState<CardViewMode>("archetypes");
 
     const filteredPlayers = Object.values(players).filter((p) =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     ).map((player) => {
-        const scores = calculateScoresForStats(player.stats, normalizedDefaultWeights);
-        const topScores = getTopPositions(scores);
+        const archetypeScores = calculateArchetypeScores(player.stats);
+        const topScores = getTopPositions(archetypeScores, 3);
+
+        // Convert to ZoneScores for backward compatibility
+        const zoneFit = Object.entries(archetypeScores).reduce((acc, [pos, data]) => {
+            acc[pos as keyof typeof acc] = data.bestScore;
+            return acc;
+        }, { GK: 0, CB: 0, FB: 0, DM: 0, CM: 0, WM: 0, AM: 0, ST: 0, WR: 0 });
 
         return {
-            player, overall: Math.max(...topScores.map((t) => t.score)),
-            zoneFit: scores, topPositions: topScores.slice(0, 3).map((t) => t.position).join(", "),
+            player,
+            overall: Math.max(...topScores.map((t) => t.score)),
+            zoneFit,
+            topPositions: topScores.slice(0, 3).map((t) => t.position).join(", "),
+            topScoresWithArchetypes: topScores, // Pass full archetype data
+            archetypeScores, // Pass full archetype breakdown
             averages: getZoneAverages(player)
         }
-    })
+    });
 
-    const getSorted = () => {
-        if (sortingMode !== alphabeticalSortValue && sortingMode !== overallSortValue) {
-            for (const key of StatCategoryKeys) {
-                if (StatCategoryNameMap[key] === sortingMode) {
-                    return [...filteredPlayers].sort((a, b) => {
-                        return b.averages[key] - a.averages[key];
-                    });
-                }
-            }
-        }
-        if (sortingMode === alphabeticalSortValue) {
-            return [...filteredPlayers].sort((a, b) => {
-                return a.player.name.localeCompare(b.player.name);
-            });
-        }
-
-        return [...filteredPlayers].sort((a, b) => {
-            return b.overall - a.overall;
-        });
-    };
-
-    const withScores = getSorted();
+    // Sort by overall descending (no sorting controls)
+    const sortedPlayers = [...filteredPlayers].sort((a, b) => b.overall - a.overall);
 
     return (
         <div className="flex flex-col h-full w-full overflow-hidden p-4 space-y-6">
@@ -65,7 +54,7 @@ const PlayerCards = () => {
                 </p>
             </div>
 
-            {/* Tab Navigation - Fixed height to match Generator */}
+            {/* Tab Navigation */}
             <div className="flex items-center justify-between h-10">
                 <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-xl">
                     <button
@@ -95,7 +84,7 @@ const PlayerCards = () => {
             <div className="flex-1 overflow-hidden">
                 {activeTab === "cards" ? (
                     <Panel>
-                        {/* Search and Sorting Controls - Now inside Panel to scroll away */}
+                        {/* Search + Card View Selector */}
                         <div className="pb-4">
                             <ActionBarTwoColumn
                                 variant="default"
@@ -109,37 +98,36 @@ const PlayerCards = () => {
                                     />
                                 }
                                 right={
-                                    <Select onValueChange={setSortingMode}>
+                                    <Select value={cardViewMode} onValueChange={(value) => setCardViewMode(value as CardViewMode)}>
                                         <SelectTrigger className="w-40 h-9">
-                                            <SelectValue placeholder="Sort by">{sortingMode}</SelectValue>
+                                            <SelectValue placeholder="Card View" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem key={overallSortValue} value={overallSortValue}>
-                                                {overallSortValue}
-                                            </SelectItem>
-                                            <SelectItem key={alphabeticalSortValue} value={alphabeticalSortValue}>
-                                                {alphabeticalSortValue}
-                                            </SelectItem>
-                                            {Object.entries(StatCategoryNameMap)
-                                                .filter(([category]) => category !== "morale")
-                                                .map(([key, name]) => (
-                                                    <SelectItem key={key} value={name}>
-                                                        {name}
-                                                    </SelectItem>
-                                                ))}
+                                            <SelectItem value="minimal">Minimal</SelectItem>
+                                            <SelectItem value="archetypes">Archetypes</SelectItem>
+                                            <SelectItem value="face-stats">Face Stats</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 }
                             />
                         </div>
-                        
+
                         {/* Player Cards Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-                            {withScores.map((item) => (
-                                <PlayerCard key={item.player.id} player={item.player} playerName={item.player.name}
-                                    stats={item.player.stats} overall={item.overall}
-                                    zoneFit={item.zoneFit} top3Positions={item.topPositions}
-                                    averages={item.averages} />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 items-start">
+                            {sortedPlayers.map((item) => (
+                                <PlayerCard
+                                    key={item.player.id}
+                                    player={item.player}
+                                    playerName={item.player.name}
+                                    stats={item.player.stats}
+                                    overall={item.overall}
+                                    zoneFit={item.zoneFit}
+                                    top3Positions={item.topPositions}
+                                    topScoresWithArchetypes={item.topScoresWithArchetypes}
+                                    archetypeScores={item.archetypeScores}
+                                    averages={item.averages}
+                                    viewMode={cardViewMode}
+                                />
                             ))}
                         </div>
                     </Panel>

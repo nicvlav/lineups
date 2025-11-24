@@ -4,8 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Save, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
-import { Player } from "@/data/player-types";
-import { StatsKey, statLabelMap, StatCategory, CategorizedStats, StatCategoryNameMap } from "@/data/stat-types";
+import { Player } from "@/types/players";
+import { StatsKey, statLabelMap, StatCategory, CategorizedStats, StatCategoryNameMap } from "@/types/stats";
 
 interface VoteData {
   playerId: string;

@@ -7,13 +7,13 @@
  */
 
 import type { FastPlayer, Teams, SimulationResult } from "./types";
-import type { ScoredGamePlayer } from "@/data/player-types";
+import type { ScoredGamePlayer } from "@/types/players";
 import {
     INDEX_TO_POSITION,
     POSITION_COUNT,
     ZONE_POSITIONS,
 } from "./constants";
-import { defaultZoneWeights, getPointForPosition } from "@/data/position-types";
+import { defaultZoneWeights, getPointForPosition } from "@/types/positions";
 import { getFastFormation } from "./formation";
 import { createFastTeam, createPositionComparator, cryptoRandomInt, selectPlayerWithProximity, getAvailablePositions } from "./utils";
 import type { BalanceConfiguration } from "./metrics-config";

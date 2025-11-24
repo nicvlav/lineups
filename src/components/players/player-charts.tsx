@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "@/context/theme-provider";
-import { StatCategory, StatCategoryNameMap, StatCategoryKeys } from "@/data/stat-types";
-import { Player, getZoneAverages, ZoneAverages } from "@/data/player-types";
+import { StatCategory, StatCategoryNameMap, StatCategoryKeys } from "@/types/stats";
+import { Player, getZoneAverages, ZoneAverages } from "@/types/players";
 import { } from "lucide-react";
 import { Radar } from "react-chartjs-2";
 import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from "chart.js";

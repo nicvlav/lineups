@@ -3,7 +3,7 @@ import Panel from "@/components/shared/panel"
 import { Button } from "@/components/ui/button"
 import { Share, Trash2 } from "lucide-react";
 import { useGame } from "@/context/game-provider"
-import { encodeStateToURL } from "@/data/state-manager";
+import { encodeStateToURL } from "@/lib/utils/url-state";
 import FormationSelector from "@/components/game/formation-selector"
 import { cn } from "@/lib/utils";
 import { ANIMATIONS } from "@/lib/design-tokens";

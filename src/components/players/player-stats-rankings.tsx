@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { usePlayers } from "@/context/players-provider";
-import { getZoneAverages, calculateScoresForStats, getTopPositions } from "@/data/player-types";
-import { normalizedDefaultWeights, PositionLabels, Position, positionKeys } from "@/data/position-types";
+import { getZoneAverages, getTopPositions } from "@/types/players";
+import { PositionLabels, Position, positionKeys } from "@/types/positions";
+import { calculateArchetypeScores } from '@/lib/positions/calculator';
 import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
 import Panel from "@/components/shared/panel";
 import { ActionBarTwoColumn } from "@/components/ui/action-bar";
@@ -20,6 +21,8 @@ interface PlayerRanking {
         value: number;
     }>;
     zoneFit: any;
+    topScoresWithArchetypes: any;
+    archetypeScores: any;
 }
 
 const PlayerStatsRankings = () => {
@@ -49,7 +52,7 @@ const PlayerStatsRankings = () => {
 
     // Calculate all players' stats and position scores
     const playersWithStats = Object.values(players).map((player) => {
-        const scores = calculateScoresForStats(player.stats, normalizedDefaultWeights);
+        const scores = calculateArchetypeScores(player.stats);
         const topScores = getTopPositions(scores);
         const averages = getZoneAverages(player);
 
@@ -59,9 +62,16 @@ const PlayerStatsRankings = () => {
         // Get top 3 categories for this player
         const topCategories = getTopCategories(averages);
 
+        // Convert archetypeScores to ZoneScores for backward compatibility
+        const zoneFit = Object.entries(scores).reduce((acc, [pos, data]) => {
+            acc[pos as keyof typeof acc] = data.bestScore;
+            return acc;
+        }, { GK: 0, CB: 0, FB: 0, DM: 0, CM: 0, WM: 0, AM: 0, ST: 0, WR: 0 });
+
         return {
             player,
             scores,
+            zoneFit,
             topScores,
             overall: Math.round(Math.max(...topScores.map((t) => t.score)) * 10) / 10, // Standard overall (highest position score) rounded to 1 decimal
             totalStatsAverage: Math.round(totalStatsAverage * 10) / 10,
@@ -83,11 +93,13 @@ const PlayerStatsRankings = () => {
                     topPositions: p.topPositions,
                     averages: p.averages,
                     topCategories: p.topCategories,
-                    zoneFit: p.scores
+                    zoneFit: p.zoneFit,
+                    topScoresWithArchetypes: p.topScores,
+                    archetypeScores: p.scores
                 }))
                 .sort((a, b) => b.score - a.score)
                 .slice(0, topCount);
-        } else if (selectedPosition === "total_average") {
+        } else { //if (selectedPosition === "total_average") {
             // Total stats average (excluding morale)
             return playersWithStats
                 .map(p => ({
@@ -97,25 +109,28 @@ const PlayerStatsRankings = () => {
                     topPositions: p.topPositions,
                     averages: p.averages,
                     topCategories: p.topCategories,
-                    zoneFit: p.scores
+                    zoneFit: p.zoneFit,
+                    topScoresWithArchetypes: p.topScores,
+                    archetypeScores: p.scores
                 }))
                 .sort((a, b) => b.score - a.score)
                 .slice(0, topCount);
-        } else {
-            // Specific position
-            return playersWithStats
-                .map(p => ({
-                    player: p.player,
-                    score: Math.round(p.scores[selectedPosition]),
-                    overall: p.overall,
-                    topPositions: p.topPositions,
-                    averages: p.averages,
-                    topCategories: p.topCategories,
-                    zoneFit: p.scores
-                }))
-                .sort((a, b) => b.score - a.score)
-                .slice(0, topCount);
-        }
+        } 
+        // else {
+        //     // Specific position
+        //     return playersWithStats
+        //         .map(p => ({
+        //             player: p.player,
+        //             score: Math.round(p.scores[selectedPosition]),
+        //             overall: p.overall,
+        //             topPositions: p.topPositions,
+        //             averages: p.averages,
+        //             topCategories: p.topCategories,
+        //             zoneFit: p.scores
+        //         }))
+        //         .sort((a, b) => b.score - a.score)
+        //         .slice(0, topCount);
+        // }
     };
 
     const rankings = getRankings();
@@ -215,7 +230,7 @@ const PlayerStatsRankings = () => {
                                         {/* Rank and Icon */}
                                         <div className="flex items-center gap-2 min-w-0">
                                             {getRankIcon(rank)}
-                                            <span className="font-bold text-lg min-w-[2rem] text-center">
+                                            <span className="font-bold text-lg min-w-8 text-center">
                                                 #{rank}
                                             </span>
                                         </div>
@@ -223,7 +238,7 @@ const PlayerStatsRankings = () => {
                                         {/* Player Info */}
                                         <div className="flex items-center gap-3 flex-1 min-w-0">
                                             {/* Avatar */}
-                                            <div className="relative w-10 h-10 flex-shrink-0">
+                                            <div className="relative w-10 h-10 shrink-0">
                                                 {ranking.player.avatar_url ? (
                                                     <img
                                                         src={ranking.player.avatar_url}
@@ -231,7 +246,7 @@ const PlayerStatsRankings = () => {
                                                         className="w-full h-full object-cover rounded-full shadow-lg border-2 border-background"
                                                     />
                                                 ) : (
-                                                    <div className="w-full h-full rounded-full bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/30 flex items-center justify-center">
+                                                    <div className="w-full h-full rounded-full bg-linear-to-br from-primary/20 to-primary/10 border-2 border-primary/30 flex items-center justify-center">
                                                         <span className="text-xs font-bold text-primary">
                                                             {ranking.player.name.slice(0, 2).toUpperCase()}
                                                         </span>
@@ -287,22 +302,27 @@ const PlayerStatsRankings = () => {
             </Panel>
 
             {/* Shared Player Stats Modal */}
-            {selectedPlayer && (
-                <SharedPlayerStatsModal
-                    player={selectedPlayer}
-                    isOpen={!!selectedPlayer}
-                    onClose={() => setSelectedPlayer(null)}
-                    overall={playersWithStats.find(p => p.player.id === selectedPlayer.id)?.overall ?? 0}
-                    zoneFit={playersWithStats.find(p => p.player.id === selectedPlayer.id)?.scores ?? {
-                        GK: 0, CB: 0, FB: 0, CM: 0, DM: 0, WM: 0, AM: 0, ST: 0, WR: 0
-                    }}
-                    top3Positions={playersWithStats.find(p => p.player.id === selectedPlayer.id)?.topPositions ?? ""}
-                    averages={playersWithStats.find(p => p.player.id === selectedPlayer.id)?.averages ?? {
-                        technical: 0, tactical: 0, physical: 0, mental: 0
-                    }}
-                    stats={selectedPlayer.stats}
-                />
-            )}
+            {selectedPlayer && (() => {
+                const playerStats = playersWithStats.find(p => p.player.id === selectedPlayer.id);
+                return (
+                    <SharedPlayerStatsModal
+                        player={selectedPlayer}
+                        isOpen={!!selectedPlayer}
+                        onClose={() => setSelectedPlayer(null)}
+                        overall={playerStats?.overall ?? 0}
+                        zoneFit={playerStats?.zoneFit ?? {
+                            GK: 0, CB: 0, FB: 0, CM: 0, DM: 0, WM: 0, AM: 0, ST: 0, WR: 0
+                        }}
+                        top3Positions={playerStats?.topPositions ?? ""}
+                        topScoresWithArchetypes={playerStats?.topScores ?? []}
+                        archetypeScores={playerStats?.scores ?? {}}
+                        averages={playerStats?.averages ?? {
+                            technical: 0, tactical: 0, physical: 0, mental: 0
+                        }}
+                        stats={selectedPlayer.stats}
+                    />
+                );
+            })()}
         </div>
     );
 };

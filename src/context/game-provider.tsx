@@ -6,10 +6,10 @@ import { useLocation } from "react-router-dom";
 import { v4 as uuidv4 } from 'uuid';
 import { openDB } from "idb";
 
-import { Formation, Point, Position, getPointForPosition, getThreatScore, normalizedDefaultWeights, emptyZoneScores } from "@/data/position-types";
-import { Player, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, GamePlayer } from "@/data/player-types";
-import { decodeStateFromURL } from "@/data/state-manager";
-import { autoBalanceV3 } from "@/data/auto-balance";
+import { Formation, Point, Position, getPointForPosition, getThreatScore, normalizedDefaultWeights, emptyZoneScores } from "@/types/positions";
+import { Player, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, GamePlayer } from "@/types/players";
+import { decodeStateFromURL } from "@/lib/utils/url-state";
+import { autoBalanceV3 } from "@/auto-balance";
 
 const DB_NAME = "GameDB";
 const STORE_NAME = "gameState";

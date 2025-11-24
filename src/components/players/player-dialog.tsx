@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { usePlayers } from "@/context/players-provider";
 import { useGame } from "@/context/game-provider";
-import { Player, ScoredGamePlayerWithThreat } from "@/data/player-types";
+import { Player, ScoredGamePlayerWithThreat } from "@/types/players";
 import { Button } from "@/components/ui/button"
 import Modal from "@/components/shared/modal";
 import AutoAlertDialog from "@/components/game/auto-alert-dialog";

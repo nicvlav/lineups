@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Player } from "@/data/player-types";
+import { Player } from "@/types/players";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Circle, Edit3 } from "lucide-react";

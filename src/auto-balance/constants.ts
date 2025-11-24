@@ -6,7 +6,7 @@
  * @module auto-balance/constants
  */
 
-import type { Position } from "@/data/position-types";
+import type { Position } from "@/types/positions";
 import type { BalanceConfig } from "./types";
 
 // Re-export new configuration system

@@ -1,5 +1,5 @@
 import { useGame } from "@/context/game-provider";
-import { formationTemplates } from "@/data/position-types";
+import { formationTemplates } from "@/types/positions";
 import { Select, SelectTrigger, SelectGroup, SelectItem, SelectLabel, SelectContent, SelectValue } from "@/components/ui/select";
 
 const FormationSelector = () => {

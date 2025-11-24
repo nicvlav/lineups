@@ -14,13 +14,13 @@
  *
  * ## Quick Start
  * ```typescript
- * import { autoCreateTeamsScored } from "@/data/auto-balance";
+ * import { autoCreateTeamsScored } from "@/auto-balance";
  *
  * // Basic usage (uses optimized defaults)
  * const teams = autoCreateTeamsScored(players, true); // true = debug mode
  *
  * // Advanced: custom configuration
- * import { autoBalanceWithConfig, DEFAULT_BALANCE_CONFIG } from "@/data/auto-balance";
+ * import { autoBalanceWithConfig, DEFAULT_BALANCE_CONFIG } from "@/auto-balance";
  *
  * const result = autoBalanceWithConfig(players, {
  *     weights: {
@@ -49,8 +49,8 @@
 import type {
     FilledGamePlayer,
     ScoredGamePlayer
-} from "@/data/player-types";
-import { normalizedDefaultWeights } from "@/data/position-types";
+} from "@/types/players";
+import { normalizedDefaultWeights } from "@/types/positions";
 
 // Import internal modules
 import type { BalanceMetrics } from "./types";
@@ -167,7 +167,7 @@ export function autoCreateTeamsFilled(
     debugMode: boolean = false
 ): { a: ScoredGamePlayer[]; b: ScoredGamePlayer[] } {
     // Import here to avoid circular dependency
-    const { calculateScoresForStats } = require("@/data/player-types");
+    const { calculateScoresForStats } = require("@/types/players");
 
     const scoredPlayers = players.map(player => ({
         ...player,

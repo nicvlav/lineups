@@ -6,8 +6,8 @@
  * @module auto-balance/types
  */
 
-import type { Formation } from "@/data/position-types";
-import type { ScoredGamePlayer } from "@/data/player-types";
+import type { Formation } from "@/types/positions";
+import type { ScoredGamePlayer } from "@/types/players";
 import type { BalanceConfiguration } from "./metrics-config";
 
 /**

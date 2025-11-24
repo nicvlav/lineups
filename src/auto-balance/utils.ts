@@ -6,7 +6,7 @@
  * @module auto-balance/utils
  */
 
-import type { ScoredGamePlayer } from "@/data/player-types";
+import type { ScoredGamePlayer } from "@/types/players";
 import type { FastPlayer, FastTeam } from "./types";
 import { INDEX_TO_POSITION, POSITION_COUNT } from "./constants";
 

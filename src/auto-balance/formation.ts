@@ -6,8 +6,8 @@
  * @module auto-balance/formation
  */
 
-import type { Formation } from "@/data/position-types";
-import { formationTemplates } from "@/data/position-types";
+import type { Formation } from "@/types/positions";
+import { formationTemplates } from "@/types/positions";
 import { INDEX_TO_POSITION, POSITION_COUNT } from "./constants";
 import { cryptoRandom } from "./utils";
 

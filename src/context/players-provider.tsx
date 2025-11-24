@@ -2,8 +2,8 @@ import React, { ReactNode, createContext, useContext, useState, useEffect, useRe
 import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4 } from 'uuid';
 import { handleDatabaseError } from "@/lib/session-manager";
-import { defaultStatScores, PlayerStats } from "@/data/stat-types";
-import { Player } from "@/data/player-types";
+import { defaultStatScores, PlayerStats } from "@/types/stats";
+import { Player } from "@/types/players";
 
 interface PlayersContextType {
     players: Record<string, Player>;

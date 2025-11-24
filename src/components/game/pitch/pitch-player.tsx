@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useDrag } from "react-dnd";
 import { User } from "lucide-react";
-import { ScoredGamePlayerWithThreat } from "@/data/player-types";
+import { ScoredGamePlayerWithThreat } from "@/types/players";
 import { usePlayers } from "@/context/players-provider";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
 // import Panel from "@/components/dialogs/panel"
