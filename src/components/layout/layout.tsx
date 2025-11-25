@@ -35,7 +35,6 @@ const LayoutContent = () => {
     const isStaging = window.location.hostname.includes('staging');
 
     const canVote = user !== null;
-    const showCards = isStaging || (user?.id === '24115871-04fe-4111-b048-18f7e3e976fc');
 
     // Check if current route is an auth route
     const isAuthRoute = location.pathname.startsWith('/auth');
@@ -115,8 +114,7 @@ const LayoutContent = () => {
                             <Route index element={<Game isCompact={isCompact} playerSize={(() => {
                                 return isCompact ? (width < 400 ? 40 : 60) : 70;
                             })()} />} />
-                            {showCards && <Route path="cards" element={<PlayerCards />} />}
-                            {!showCards && <Route path="cards" element={<Navigate to="/" />} />}
+                            <Route path="cards" element={<PlayerCards />} />
                             <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
                             {canVote && <Route path="vote" element={<VotingPage />} />}
                             {!canVote && <Route path="vote" element={<Navigate to="/" />} />}

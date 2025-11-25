@@ -61,14 +61,11 @@ export const getPlayerAccent = (rating: number) => {
     }; // Poor (<40)
 };
 
-// Check if user should see detailed stats
-const ADMIN_USER_ID = "1a1edae8-1d4f-4bb0-8e84-0c64ba65fa7d"; // Replace with your actual user ID
-const isDetailedMode = (userId: string | undefined): boolean => {
+// Check if user should see the Numbers button (admin only)
+const ADMIN_USER_ID = "24115871-04fe-4111-b048-18f7e3e976fc"; // Your user ID
+const isAdmin = (userId: string | undefined): boolean => {
     if (!userId) return false;
-    if (userId === ADMIN_USER_ID) return true;
-    // Check for staging/dev mode
-    if (import.meta.env.DEV || import.meta.env.MODE === 'staging') return true;
-    return false;
+    return userId === ADMIN_USER_ID;
 };
 
 const SharedPlayerStatsModal: React.FC<SharedPlayerStatsModalProps> = ({
@@ -76,8 +73,6 @@ const SharedPlayerStatsModal: React.FC<SharedPlayerStatsModalProps> = ({
     isOpen,
     onClose,
     overall,
-    top3Positions: _top3Positions,
-    topScoresWithArchetypes: _topScoresWithArchetypes,
     archetypeScores,
     averages,
     stats,
@@ -87,7 +82,7 @@ const SharedPlayerStatsModal: React.FC<SharedPlayerStatsModalProps> = ({
 
     if (!player) return null;
 
-    const showNumbers = isDetailedMode(user?.id) && showDetailedStats;
+    const showNumbers = isAdmin(user?.id) && showDetailedStats;
     const overallRounded = Math.round(overall);
 
     // Get all positions for expanded view
@@ -120,7 +115,7 @@ const SharedPlayerStatsModal: React.FC<SharedPlayerStatsModalProps> = ({
                             )}
                         </div>
 
-                        {isDetailedMode(user?.id) && (
+                        {isAdmin(user?.id) && (
                             <button
                                 onClick={() => setShowDetailedStats(!showDetailedStats)}
                                 className="text-xs ml-3 px-2 py-1 rounded bg-accent hover:bg-accent/80 transition-colors"
@@ -203,7 +198,7 @@ const SharedPlayerStatsModal: React.FC<SharedPlayerStatsModalProps> = ({
                 </div>
 
                 {/* Detailed Stats - Only for Admin when enabled */}
-                {isDetailedMode(user?.id) && showDetailedStats && (
+                {isAdmin(user?.id) && showDetailedStats && (
                     <div className="mt-6 pt-6 border-t border-border/40">
                         <h3 className="font-bold text-base tracking-wide mb-3 text-muted-foreground">RAW STATISTICS</h3>
 
