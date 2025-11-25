@@ -326,7 +326,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
     monteCarlo: {
         // Run up to 200 iterations
-        maxIterations: 10000,
+        maxIterations: 25000,
 
         // Track top 10 results
         trackTopN: 20,
