@@ -311,7 +311,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
     algorithm: {
         // Only randomize between players within 5 points of best
-        proximityThreshold: 6,
+        proximityThreshold: 5,
 
         // Scale candidate pool with team size (20 players = top 4 candidates)
         topNScaling: true,
