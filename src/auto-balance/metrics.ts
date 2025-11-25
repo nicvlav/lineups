@@ -290,7 +290,81 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
 
     const efficiency = calculateBasicDifferenceRatio(aSumScores + bSumScores, aPeakScores + bPeakScores);
 
-    // Use calibrated scoring instead of arbitrary Math.pow(diff, 16) and Math.pow(efficiency, 0.5)
+    // NEW: Detect major outliers (players WAY out of position)
+    // Example: ST specialist (78 at ST) playing CB (67) → 11 point gap is AWFUL
+    const detectOutliers = (team: FastTeam): { outlierPenalty: number; worstGap: number; worstPlayerName: string } => {
+        let totalOutlierPenalty = 0;
+        let worstGap = 0;
+        let worstPlayerName = '';
+
+        for (const positionGroup of team.positions) {
+            for (const player of positionGroup) {
+                if (player.assignedPosition < 0) continue; // Skip unassigned
+                if (player.assignedPosition === 0) continue; // Skip GK - no one is really good at that position
+
+                const assignedScore = player.scores[player.assignedPosition];
+                const bestScore = player.bestScore;
+                const gap = bestScore - assignedScore;
+
+                // Absolute gap thresholds - MASSIVE penalties for awful placements
+                if (gap >= 12) {
+                    // CATASTROPHIC outlier: 12+ point gap (e.g., ST at CB with 13 gap)
+                    // This should essentially disqualify the lineup
+                    const severity = gap / 10; // 13 gap = 1.3 severity
+                    totalOutlierPenalty += Math.pow(severity, 2.5); // Very steep: 13 gap → 2.19 penalty per player!
+
+                    if (gap > worstGap) {
+                        worstGap = gap;
+                        worstPlayerName = player.original.name;
+                    }
+                } else if (gap >= 8) {
+                    // Severe outlier: 8-11 point gap
+                    // Example: 78 best → 67 assigned = 11 gap
+                    const severity = gap / 10; // 10 gap = 1.0 severity
+                    totalOutlierPenalty += Math.pow(severity, 2.0); // Steep: 10 gap → 1.0 penalty
+
+                    if (gap > worstGap) {
+                        worstGap = gap;
+                        worstPlayerName = player.original.name;
+                    }
+                } else if (gap >= 5) {
+                    // Moderate outlier: 5-7 point gap
+                    const severity = gap / 15;
+                    totalOutlierPenalty += Math.pow(severity, 1.5); // 7 gap → 0.16 penalty
+
+                    if (gap > worstGap) {
+                        worstGap = gap;
+                        worstPlayerName = player.original.name;
+                    }
+                }
+
+                // Also check relative gap (for specialist players)
+                // A specialist with 1.8+ specialization ratio should NEVER be far from peak
+                if (player.specializationRatio >= 1.8 && gap >= 5) {
+                    // Specialist out of position is extra bad - add another multiplier
+                    const extraPenalty = gap >= 10 ? 1.0 : 0.5;
+                    totalOutlierPenalty += extraPenalty;
+                }
+            }
+        }
+
+        // Don't normalize by team size - we want absolute impact!
+        // A single catastrophic outlier should severely hurt the score
+        return { outlierPenalty: totalOutlierPenalty, worstGap, worstPlayerName };
+    };
+
+    const teamAOutliers = detectOutliers(teamA);
+    const teamBOutliers = detectOutliers(teamB);
+
+    // Combined outlier penalty (max of both teams - worst team determines score)
+    // Use max instead of average so one bad outlier tanks the whole lineup
+    const outlierPenalty = Math.max(teamAOutliers.outlierPenalty, teamBOutliers.outlierPenalty);
+
+    // Convert outlier penalty to score (0 penalty = 1.0 score, high penalty = low score)
+    // Use linear conversion with cap - 13 gap (2.19 penalty) should give ~0.0 score
+    const outlierScore = Math.max(0, 1.0 - outlierPenalty);
+
+    // Use calibrated scoring for efficiency (global average)
     const diffScore = calibratedScore(
         diff,
         DEFAULT_BALANCE_CONFIG.thresholds.scoreBalance,
@@ -302,9 +376,9 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
         Steepness.Gentle
     );
 
-    // Use configured weights instead of magic numbers (0.8, 0.2)
-    const formula = DEFAULT_BALANCE_CONFIG.formulas.positionalBalance;
-    const positionalBalanceRatio = diffScore * formula.diffWeight + efficiencyScore * formula.efficiencyWeight;
+    // Combine: efficiency (70%) + outlier detection (30%)
+    // Global average is still solid, but outliers now hurt the score
+    const finalScore = efficiencyScore * 0.5 + outlierScore * 0.5;
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.scoreBalance;
@@ -314,12 +388,16 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
         console.log(formatComparison('Diff  | Peak vs Placed | ', aRatio, bRatio, diff));
         console.log(formatComparison('Total | Peak vs Placed | ', aSumScores + bSumScores, bPeakScores + bPeakScores, efficiency));
         console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
-        console.log(`  Diff Score: ${diffScore.toFixed(3)} (weight: ${formula.diffWeight})`);
-        console.log(`  Efficiency Score: ${efficiencyScore.toFixed(3)} (weight: ${formula.efficiencyWeight})`);
-        console.log(`  Final: ${positionalBalanceRatio.toFixed(3)}`);
+        console.log(`  Diff Score: ${diffScore.toFixed(3)}`);
+        console.log(`  Efficiency Score: ${efficiencyScore.toFixed(3)}`);
+        console.log(`  Outlier Detection:`);
+        console.log(`    Team A: penalty=${teamAOutliers.outlierPenalty.toFixed(3)}, worst=${teamAOutliers.worstPlayerName} (${teamAOutliers.worstGap.toFixed(1)} gap)`);
+        console.log(`    Team B: penalty=${teamBOutliers.outlierPenalty.toFixed(3)}, worst=${teamBOutliers.worstPlayerName} (${teamBOutliers.worstGap.toFixed(1)} gap)`);
+        console.log(`    Outlier Score: ${outlierScore.toFixed(3)}`);
+        console.log(`  Final: ${efficiencyScore.toFixed(3)} × 0.70 + ${outlierScore.toFixed(3)} × 0.30 = ${finalScore.toFixed(3)}`);
     }
 
-    return efficiencyScore;//positionalBalanceRatio;
+    return finalScore;
 }
 
 /**
@@ -606,7 +684,7 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
     );
 
     // Combine: specialist count matters most (50%), viable count secondary (30%), quality tertiary (20%)
-    let strikerBalanceRatio = specialistBalance * 0.5 + viableBalance * 0.3 + qualityScore * 0.2;
+    const strikerBalanceRatio = specialistBalance * 0.5 + viableBalance * 0.3 + qualityScore * 0.2;
 
     // if one team has more specialists than the other
     // we want the team with less specialists
@@ -1154,7 +1232,6 @@ function calculateStarDistributionPenaltyOddStars(
     directionalClusteringPenalty: number;
     specialistDirectionalPenalty: number;
     totalQualitySkewPenalty: number;
-    unevenStarCountPenalty: number;
 } {
     const ODD_STAR_SCALE = 0.40; // 40% of normal penalties to keep scores in 0.10-0.90 range
 
@@ -1385,15 +1462,12 @@ function calculateStarDistributionPenaltyOddStars(
     const totalQualityDiff = Math.abs(teamATotalQuality - teamBTotalQuality);
     const totalQualitySkewPenalty = Math.pow(totalQualityDiff / 100, 1.2) * 0.30 * ODD_STAR_SCALE; // Increased from 0.25
 
-    // Unevenly sized teams penalty (inherent with odd stars, but minimal)
-    const unevenStarCountPenalty = Math.abs(teamAClassifications.length - teamBClassifications.length) > 0 ? 0.05 * ODD_STAR_SCALE : 0;
-
-    // Combine all penalties
+    // Combine all penalties (no unevenStarCountPenalty - inherent with odd stars, handled by separate routine)
     const totalPenalty = individualQualityPenalty + variancePenalty + highVariancePenalty +
                         specialistDistributionPenalty + specialistQualityImbalancePenalty +
                         specialistPairingPenalty +
                         directionalClusteringPenalty + specialistDirectionalPenalty +
-                        perZoneQualityPenalty + totalQualitySkewPenalty + unevenStarCountPenalty;
+                        perZoneQualityPenalty + totalQualitySkewPenalty;
 
     const penalty = Math.max(0, 1.0 - totalPenalty);
 
@@ -1430,7 +1504,6 @@ function calculateStarDistributionPenaltyOddStars(
         directionalClusteringPenalty,
         specialistDirectionalPenalty,
         totalQualitySkewPenalty,
-        unevenStarCountPenalty,
     };
 }
 
@@ -1488,7 +1561,6 @@ function calculateStarDistributionPenalty(
     directionalClusteringPenalty: number;
     specialistDirectionalPenalty: number;
     totalQualitySkewPenalty: number;
-    unevenStarCountPenalty: number;
 } {
     const totalStars = teamAClassifications.length + teamBClassifications.length;
 
@@ -1762,29 +1834,9 @@ function calculateStarDistributionPenalty(
     // Combine all specialist penalties
     const totalSpecialistPenalty = specialistDistributionPenalty + specialistPairingPenalty + specialistDirectionalPenalty;
 
-    // 7. UNEVEN STAR COUNT DIRECTIONAL PENALTY
-    // When star counts are uneven (3v2), the team with FEWER stars MUST have better quality
-    let unevenStarCountPenalty = 0;
-    const starCountA = teamAClassifications.length;
-    const starCountB = teamBClassifications.length;
-
-    if (config.unevenStarCount.enabled && starCountA !== starCountB) {
-        const teamWithMore = starCountA > starCountB ? 'A' : 'B';
-        const moreTeamHasHigherQuality = teamWithMore === 'A'
-            ? teamAAvgBestScore >= teamBAvgBestScore
-            : teamBAvgBestScore >= teamAAvgBestScore;
-
-        if (moreTeamHasHigherQuality) {
-            const qualityDiff = teamWithMore === 'A'
-                ? teamAAvgBestScore - teamBAvgBestScore
-                : teamBAvgBestScore - teamAAvgBestScore;
-            const normalizedDiff = Math.max(0, qualityDiff) / 10;
-            unevenStarCountPenalty = Math.pow(normalizedDiff, config.unevenStarCount.power) * config.unevenStarCount.weight;
-        }
-    }
-
-    // 8. TOTAL PENALTY
+    // 7. TOTAL PENALTY
     // NOTE: Specialist penalties can be > 1.0 (disqualifying) for severe imbalances!
+    // No unevenStarCountPenalty - even stars should always be perfectly split, odd stars use separate routine
     const totalPenalty = individualQualityPenalty +
         variancePenalty +
         highVariancePenalty +
@@ -1793,8 +1845,7 @@ function calculateStarDistributionPenalty(
         attQualityPenalty +
         totalQualitySkewPenalty +
         directionalClusteringPenalty +
-        totalSpecialistPenalty + // CRITICAL! Can exceed 1.0
-        unevenStarCountPenalty;
+        totalSpecialistPenalty; // CRITICAL! Can exceed 1.0
     const penalty = Math.max(0, 1.0 - totalPenalty);
 
     return {
