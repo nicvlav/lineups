@@ -89,7 +89,7 @@ export function assignPlayersToTeams(
             const targetFormation = assignToA ? formationA : formationB;
 
             if (targetFormation[GK_INDEX] > 0) {
-                const score = player.scores[GK_INDEX];
+                const score = player.bestScore;
 
                 player.assignedPosition = GK_INDEX;
                 player.team = assignToA ? 'A' : 'B';

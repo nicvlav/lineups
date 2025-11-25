@@ -72,6 +72,7 @@ export function playerWithArchetypesToScoredGamePlayer(
 
   return {
     id: player.id,
+    name: player.name,
     guest_name: null,
     team,
     position,

@@ -289,6 +289,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
             const gamePlayer: ScoredGamePlayerWithThreat = {
                 id: newID,
+                name: name,
                 team: placedTeam,
                 guest_name: null,
                 position,
@@ -310,6 +311,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
         const gamePlayer: ScoredGamePlayerWithThreat = {
             id: newID,
+            name: name,
             team: placedTeam,
             guest_name: name,
             position,
@@ -360,6 +362,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 const zoneFit = calculateScoresForStats(newPlayer.stats, normalizedDefaultWeights);
                 newGamePlayers[newID] = {
                     id: newPlayer.id,
+                    name: newPlayer.name,
                     guest_name: null,
                     team: oldPlayer.team,
                     position: oldPlayer.position,
@@ -389,6 +392,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             const gamePlayer: ScoredGamePlayerWithThreat = {
                 id: newID,
                 team: oldPlayer.team,
+                name: newName,
                 guest_name: null,
                 position: oldPlayer.position,
                 zoneFit,
@@ -428,6 +432,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                     const exactPosition = key as Position;
                     newTeamPlayers[newID] = {
                         id: newID,
+                        name: "[Player]",
                         guest_name: "[Player]",
                         team,
                         position,
@@ -484,6 +489,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             const zoneFit = calculateScoresForStats(player.stats, normalizedWeights);
             return {
                 id: player.id,
+                name: player.name,
                 guest_name: null,
                 team: "A",
                 position: position,

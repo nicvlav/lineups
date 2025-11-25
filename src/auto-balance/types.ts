@@ -29,8 +29,8 @@ export interface BalanceMetrics {
     energyBalance: number;
 
     /** Creativity balance (vision, passing, and teamwork balance between teams) */
-    creativityBalance: number;    
-    
+    creativityBalance: number;
+
     /** Striker balance (finishing, technique, etc between teams) */
     strikerBalance: number;
 
@@ -187,14 +187,17 @@ export interface StarZoneClassification {
     /** The player being classified */
     player: FastPlayer;
 
+    /** The player name being classified */
+    name: string;
+
     /** Type of specialist: defensive, attacking, midfielder, or all-rounder */
     specialistType: 'defensive' | 'attacking' | 'midfielder' | 'all-rounder';
 
-    /** How specialized they are (higher = more specialized in one zone) */
-    specializationStrength: number;
-
     /** Best defensive position score */
     bestDefensiveScore: number;
+
+    /** Best attacking position score */
+    bestMidfieldScore: number;
 
     /** Best attacking position score */
     bestAttackingScore: number;

@@ -208,7 +208,6 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
     const workrateRatio = cancellationFactor * attWRRatio * defWRRatio;
 
     // 3. Combine stamina and workrate
-    // Stamina is slightly more important (55/45 split)
     const rawCombined = staminaRatio * workrateRatio;
 
     // Use calibrated scoring
@@ -381,24 +380,14 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
 
     let totalImbalance = 1.0;
     const rawZoneRatios: number[] = [];
-    const scaledZoneRatios: number[] = [];
 
     // Apply calibrated scoring to EACH zone individually
     for (let zoneIdx = 0; zoneIdx < N; zoneIdx++) {
         const a = teamA.zoneScores[zoneIdx];
         const b = teamB.zoneScores[zoneIdx];
         const rawRatio = calculateBasicDifferenceRatio(a, b);
-
-        // Use calibrated scoring instead of no-op Math.pow(rawRatio, 1)
-        const scaledRatio = calibratedScore(
-            rawRatio,
-            DEFAULT_BALANCE_CONFIG.thresholds.zoneBalance,
-            Steepness.Gentle
-        );
-
         rawZoneRatios.push(rawRatio);
-        scaledZoneRatios.push(scaledRatio);
-        totalImbalance *= scaledRatio;
+        totalImbalance *= rawRatio;
     }
 
     const teamAZonalBalance = calculateSingleTeamZonalBalance(teamA.zonePeakScores);
@@ -409,7 +398,11 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
     const directionality = calculateZoneDirectionalPenalty(teamA, teamB);
 
     // Combine all factors
-    const zonalBalanceRatio = directionality.penalty * (totalImbalance + internalSkillRatio) / 2;
+    const zonalBalanceRatio = calibratedScore(
+       directionality.penalty * (totalImbalance + internalSkillRatio) / 2,
+        DEFAULT_BALANCE_CONFIG.thresholds.zoneBalance,
+        Steepness.VerySteep
+    );
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.zoneBalance;
@@ -418,7 +411,6 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
         console.log(formatZonePeakScores(teamA, teamB));
         console.log(formatZoneAverageRatings(teamA, teamB));
         console.log('  Per-Zone Raw Ratios (DEF, MID, ATT): ' + rawZoneRatios.map(r => r.toFixed(3)).join(', '));
-        console.log('  Per-Zone Calibrated Scores (DEF, MID, ATT): ' + scaledZoneRatios.map(r => r.toFixed(3)).join(', '));
         console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
         console.log(`  Zone Winners: ${directionality.winners.join(', ')}`);
         console.log(`  Directional Split: A=${directionality.teamAWins}, B=${directionality.teamBWins}, Neutral=${directionality.neutrals}`);
@@ -614,7 +606,14 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
     );
 
     // Combine: specialist count matters most (50%), viable count secondary (30%), quality tertiary (20%)
-    const strikerBalanceRatio = specialistBalance * 0.5 + viableBalance * 0.3 + qualityScore * 0.2;
+    let strikerBalanceRatio = specialistBalance * 0.5 + viableBalance * 0.3 + qualityScore * 0.2;
+
+    // if one team has more specialists than the other
+    // we want the team with less specialists
+    // to compensate with a higher overall score
+    // if (teamASpecialists != teamBSpecialists && ((teamASpecialists > teamBSpecialists) == (teamA.strikerScore > teamB.strikerScore))) {
+    //     strikerBalanceRatio *= 0.25;
+    // }
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.striker;
@@ -862,27 +861,27 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
  */
 function classifyStarPlayerByZone(player: FastPlayer): StarZoneClassification {
     // Position indices for different zones
-    // Pure Defensive: GK(0), CB(1), FB(2)
+    // Pure Defensive: CB(1), FB(2)
     // Pure Attacking: AM(6), ST(7), WR(8)
     // Midfield: DM(3), CM(4)
     // Wide: WM(5)
-    const pureDefensiveIndices = [POSITION_INDICES.GK, POSITION_INDICES.CB, POSITION_INDICES.FB];
-    const pureAttackingIndices = [POSITION_INDICES.AM, POSITION_INDICES.ST, POSITION_INDICES.WR];
-    const midfieldIndices = [POSITION_INDICES.DM, POSITION_INDICES.CM];
-    const wideIndices = [POSITION_INDICES.WM];
-
-    // For legacy metrics: defensive = GK+CB+FB+DM, attacking = AM+ST+WR
-    const defensivePositionIndices = [POSITION_INDICES.GK, POSITION_INDICES.CB, POSITION_INDICES.FB, POSITION_INDICES.DM];
-    const attackingPositionIndices = [POSITION_INDICES.AM, POSITION_INDICES.ST, POSITION_INDICES.WR];
+    const pureDefensiveIndices = [POSITION_INDICES.CB, POSITION_INDICES.FB, POSITION_INDICES.DM];
+    const pureAttackingIndices = [POSITION_INDICES.ST, POSITION_INDICES.WR, POSITION_INDICES.AM];
+    const midfieldIndices = [POSITION_INDICES.DM, POSITION_INDICES.CM, POSITION_INDICES.WM, POSITION_INDICES.AM];
 
     // Find best scores in defensive and attacking zones
     let bestDefensiveScore = 0;
-    for (const posIdx of defensivePositionIndices) {
+    for (const posIdx of pureDefensiveIndices) {
         bestDefensiveScore = Math.max(bestDefensiveScore, player.scores[posIdx]);
     }
 
+    let bestMidfieldScore = 0;
+    for (const posIdx of midfieldIndices) {
+        bestMidfieldScore = Math.max(bestMidfieldScore, player.scores[posIdx]);
+    }
+
     let bestAttackingScore = 0;
-    for (const posIdx of attackingPositionIndices) {
+    for (const posIdx of pureAttackingIndices) {
         bestAttackingScore = Math.max(bestAttackingScore, player.scores[posIdx]);
     }
 
@@ -907,56 +906,75 @@ function classifyStarPlayerByZone(player: FastPlayer): StarZoneClassification {
     }
     positionScores.sort((a, b) => b.score - a.score);
 
-    // Look at top 3 positions to determine specialization
-    const top3Positions = positionScores.slice(0, 3).map(p => p.idx);
+    // Use threshold-based approach instead of fixed top-3:
+    // - Best position must be above 90, OR
+    // - Position score is within 3 points of the top score
+    const bestScore = positionScores[0].score;
+    const qualifyingPositions: number[] = [];
+
+    for (const pos of positionScores) {
+        if ((pos.score >= 90) || (pos.score >= (bestScore - 3))) {
+            qualifyingPositions.push(pos.idx);
+        } else {
+            // Once we fall outside the range, we can stop
+            break;
+        }
+    }
 
     let pureDefCount = 0;
     let pureAttCount = 0;
     let midCount = 0;
-    let wideCount = 0;
 
-    for (const posIdx of top3Positions) {
+    for (const posIdx of qualifyingPositions) {
         if (pureDefensiveIndices.includes(posIdx as any)) {
             pureDefCount++;
-        } else if (pureAttackingIndices.includes(posIdx as any)) {
+        }
+        if (pureAttackingIndices.includes(posIdx as any)) {
             pureAttCount++;
-        } else if (midfieldIndices.includes(posIdx as any)) {
+        }
+        if (midfieldIndices.includes(posIdx as any)) {
             midCount++;
-        } else if (wideIndices.includes(posIdx as any)) {
-            wideCount++;
         }
     }
 
     let specialistType: 'defensive' | 'attacking' | 'midfielder' | 'all-rounder';
-    let specializationStrength: number;
 
-    // Classification logic:
-    // Key insight: Midfielders are players whose top positions include DM/CM
-    // Not just "balanced" players, but players whose BEST positions are midfield
-    if (midCount >= 2) {
-        // 2+ midfield positions in top 3 → midfielder specialist
+    const totalQualifying = pureDefCount + pureAttCount + midCount;
+
+    // Classification logic with dynamic thresholds based on number of qualifying positions:
+    // Use proportions instead of fixed counts to handle variable position counts
+    const midProportion = totalQualifying > 0 ? midCount / totalQualifying : 0;
+    const defProportion = totalQualifying > 0 ? pureDefCount / totalQualifying : 0;
+    const attProportion = totalQualifying > 0 ? pureAttCount / totalQualifying : 0;
+
+    const minProp = Math.min(midProportion, defProportion, attProportion);
+    const maxProp = Math.max(midProportion, defProportion, attProportion);
+
+    if (minProp !== 0 && minProp >= (maxProp - 0.05)) {
+        specialistType = 'all-rounder';
+    }
+
+    // A specialist needs at least 50% of their qualifying positions in one zone
+    else if (maxProp == midProportion && bestMidfieldScore >= bestAttackingScore && bestMidfieldScore >= bestDefensiveScore) {
+        // Majority midfield positions → midfielder specialist
         specialistType = 'midfielder';
-        specializationStrength = midCount / 3;
-    } else if (pureDefCount >= 2) {
-        // 2+ pure defensive positions (CB/FB/GK) in top 3 → defensive specialist
+    } else if (maxProp == defProportion && bestDefensiveScore >= bestAttackingScore && bestDefensiveScore >= bestMidfieldScore) {
+        // Majority pure defensive positions → defensive specialist
         specialistType = 'defensive';
-        specializationStrength = pureDefCount / 3;
-    } else if (pureAttCount >= 2) {
-        // 2+ pure attacking positions in top 3 → attacking specialist
+    } else if (maxProp == attProportion && bestAttackingScore >= bestDefensiveScore && bestAttackingScore >= bestMidfieldScore) {
+        // Majority pure attacking positions → attacking specialist
         specialistType = 'attacking';
-        specializationStrength = pureAttCount / 3;
     } else {
         // Mixed positions across zones → all-rounder
-        // Examples: CB+DM+ST, FB+WM+WR, CB+FB+AM
         specialistType = 'all-rounder';
-        specializationStrength = 1.0 - Math.max(pureDefCount, pureAttCount, midCount) / 3;
     }
 
     return {
         player,
+        name: player.original.name,
         specialistType,
-        specializationStrength,
         bestDefensiveScore,
+        bestMidfieldScore,
         bestAttackingScore,
         averageScore,
     };
@@ -989,9 +1007,11 @@ const STAR_DISTRIBUTION_PENALTY_CONFIG = {
         /** Power exponent for quality differences (0.7 = slightly sublinear) */
         power: 0.7,
         /** Weight for defensive quality imbalance */
-        defensiveWeight: 0.3,
+        defensiveWeight: 0.15,
+        /** Weight for midfield quality imbalance */
+        midfieldWeight: 0.35,
         /** Weight for attacking quality imbalance (highest priority!) */
-        attackingWeight: 0.4,
+        attackingWeight: 0.25,
     },
 
     /** Clustering penalties (when all stars lean the same direction) */
@@ -1037,6 +1057,7 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
     midfielderCount: number;
     allRounderCount: number;
     totalDefQuality: number;
+    totalMidQuality: number;
     totalAttQuality: number;
 } {
     if (classifications.length === 0) {
@@ -1046,6 +1067,7 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
             midfielderCount: 0,
             allRounderCount: 0,
             totalDefQuality: 0,
+            totalMidQuality: 0,
             totalAttQuality: 0
         };
     }
@@ -1055,6 +1077,7 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
     let midfielderCount = 0;
     let allRounderCount = 0;
     let totalDefQuality = 0;
+    let totalMidQuality = 0;
     let totalAttQuality = 0;
 
     // Count specialists and accumulate quality
@@ -1072,6 +1095,7 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
 
         // Accumulate total quality (simple sum - no weighting tricks)
         totalDefQuality += c.bestDefensiveScore;
+        totalMidQuality += c.bestMidfieldScore;
         totalAttQuality += c.bestAttackingScore;
     }
 
@@ -1081,6 +1105,7 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
         midfielderCount,
         allRounderCount,
         totalDefQuality,
+        totalMidQuality,
         totalAttQuality
     };
 }
@@ -1092,14 +1117,16 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
  * the theoretical best) and calculateStarZonePenalty (for evaluating actual teams).
  *
  * Analyzes a split of star players into two teams and calculates:
- * 1. Quality-weighted directional lean for each team
- * 2. Absolute defensive/attacking quality for each team
- * 3. Variance in player leans (clustering detection)
- * 4. Overall penalty based on lean differences, quality imbalances, and clustering
+ * 1. Specialist count imbalances (defensive/attacking/midfielder counts)
+ * 2. Per-zone quality imbalances (defensive/midfield/attacking quality points)
+ * 3. Overall quality skew (total quality across all zones)
+ * 4. Per-zone directional winners (which team wins each zone)
+ * 5. Directional clustering (one team winning multiple zones)
+ * 6. Specialist count directional bias (one team having more specialists across categories)
  *
  * @param teamAClassifications Star classifications for team A
  * @param teamBClassifications Star classifications for team B
- * @returns Penalty score from 0 (terrible split) to 1 (perfect split)
+ * @returns Penalty score from 0 (terrible split) to 1 (perfect split) with detailed metrics
  */
 function calculateStarDistributionPenalty(
     teamAClassifications: StarZoneClassification[],
@@ -1115,9 +1142,28 @@ function calculateStarDistributionPenalty(
     teamAAllRounders: number;
     teamBAllRounders: number;
     teamADefQuality: number;
+    teamAMidQuality: number;
     teamAAttQuality: number;
     teamBDefQuality: number;
+    teamBMidQuality: number;
     teamBAttQuality: number;
+    teamATotalQuality: number;
+    teamBTotalQuality: number;
+    teamAAvgBestScore: number;
+    teamBAvgBestScore: number;
+    teamAAvgRating: number;
+    teamBAvgRating: number;
+    teamAStdDev: number;
+    teamBStdDev: number;
+    teamAZoneWins: number;
+    teamBZoneWins: number;
+    neutralZones: number;
+    individualQualityPenalty: number;
+    variancePenalty: number;
+    highVariancePenalty: number;
+    directionalClusteringPenalty: number;
+    specialistDirectionalPenalty: number;
+    totalQualitySkewPenalty: number;
 } {
     const config = STAR_DISTRIBUTION_PENALTY_CONFIG;
 
@@ -1125,25 +1171,75 @@ function calculateStarDistributionPenalty(
     const teamAMetrics = calculateTeamStarMetrics(teamAClassifications);
     const teamBMetrics = calculateTeamStarMetrics(teamBClassifications);
 
-    // 1. SPECIALIST COUNT IMBALANCE
-    // Ideally: equal defensive specialists, attacking specialists, and midfielders on both teams
-    const defSpecialistDiff = Math.abs(teamAMetrics.defSpecialistCount - teamBMetrics.defSpecialistCount);
-    const attSpecialistDiff = Math.abs(teamAMetrics.attSpecialistCount - teamBMetrics.attSpecialistCount);
-    const midfielderDiff = Math.abs(teamAMetrics.midfielderCount - teamBMetrics.midfielderCount);
+    // 1. INDIVIDUAL PLAYER QUALITY BALANCE (CRITICAL!)
+    // Check if one team is getting the "better" individual stars overall
 
-    // Normalize by total number of each type (avoid divide by zero)
-    const totalDefSpec = teamAMetrics.defSpecialistCount + teamBMetrics.defSpecialistCount;
-    const totalAttSpec = teamAMetrics.attSpecialistCount + teamBMetrics.attSpecialistCount;
-    const totalMid = teamAMetrics.midfielderCount + teamBMetrics.midfielderCount;
+    // Calculate average bestScore for each team's stars
+    let teamABestScoreSum = 0;
+    let teamBBestScoreSum = 0;
 
-    const normalizedDefSpecDiff = totalDefSpec > 0 ? defSpecialistDiff / (totalDefSpec / 2) : 0;
-    const normalizedAttSpecDiff = totalAttSpec > 0 ? attSpecialistDiff / (totalAttSpec / 2) : 0;
-    const normalizedMidDiff = totalMid > 0 ? midfielderDiff / (totalMid / 2) : 0;
+    for (const c of teamAClassifications) {
+        teamABestScoreSum += c.player.bestScore;
+    }
+    for (const c of teamBClassifications) {
+        teamBBestScoreSum += c.player.bestScore;
+    }
 
-    const specialistCountPenalty = (normalizedDefSpecDiff + normalizedAttSpecDiff + normalizedMidDiff) * 0.15;
+    const teamAAvgBestScore = teamAClassifications.length > 0 ? teamABestScoreSum / teamAClassifications.length : 0;
+    const teamBAvgBestScore = teamBClassifications.length > 0 ? teamBBestScoreSum / teamBClassifications.length : 0;
 
-    // 2. QUALITY PENALTIES (most important!)
+    // Calculate average of averageScore (versatility metric - for variance calculation only)
+    let teamAAvgRatingSum = 0;
+    let teamBAvgRatingSum = 0;
+
+    for (const c of teamAClassifications) {
+        teamAAvgRatingSum += c.averageScore;
+    }
+    for (const c of teamBClassifications) {
+        teamBAvgRatingSum += c.averageScore;
+    }
+
+    const teamAAvgRating = teamAClassifications.length > 0 ? teamAAvgRatingSum / teamAClassifications.length : 0;
+    const teamBAvgRating = teamBClassifications.length > 0 ? teamBAvgRatingSum / teamBClassifications.length : 0;
+
+    // Penalize differences in average bestScore (peak individual quality)
+    // This is THE key metric for measuring if one team got better individual players
+    // For individual player averages, differences of 1-5 points are significant!
+    // Use a divisor of 10 instead of 100, and gentler power scaling (1.2 instead of 1.5)
+    const avgBestScoreDiff = Math.abs(teamAAvgBestScore - teamBAvgBestScore);
+    const normalizedBestScoreDiff = avgBestScoreDiff / 10; // 3-point diff = 0.3 (meaningful!)
+    const individualQualityPenalty = Math.pow(normalizedBestScoreDiff, 1.2) * 0.60; // Increased weight from 0.40 to 0.60!
+
+    // Calculate variance in individual player quality (detect "spiky" vs "flat" teams)
+    // A team with [1st, 2nd, 6th] best players is "spiky" (high variance in avgRating)
+    // A team with [3rd, 4th, 5th] best players is "flat" (low variance in avgRating)
+    let teamAVariance = 0;
+    for (const c of teamAClassifications) {
+        teamAVariance += Math.pow(c.averageScore - teamAAvgRating, 2);
+    }
+    teamAVariance = teamAClassifications.length > 0 ? teamAVariance / teamAClassifications.length : 0;
+    const teamAStdDev = Math.sqrt(teamAVariance);
+
+    let teamBVariance = 0;
+    for (const c of teamBClassifications) {
+        teamBVariance += Math.pow(c.averageScore - teamBAvgRating, 2);
+    }
+    teamBVariance = teamBClassifications.length > 0 ? teamBVariance / teamBClassifications.length : 0;
+    const teamBStdDev = Math.sqrt(teamBVariance);
+
+    // Penalize imbalance in variance (one team is "spiky", other is "flat")
+    // Spiky teams have unfair distribution - one superstar carrying weak players
+    const varianceDiff = Math.abs(teamAStdDev - teamBStdDev);
+    const normalizedVarianceDiff = varianceDiff / 5; // Std dev of 2-3 points is normal
+    const variancePenalty = Math.pow(normalizedVarianceDiff, 1.0) * 0.15;
+
+    // Also penalize teams with HIGH variance (spiky is bad regardless of balance)
+    const avgStdDev = (teamAStdDev + teamBStdDev) / 2;
+    const highVariancePenalty = avgStdDev > 3.0 ? Math.pow((avgStdDev - 3.0) / 5, 1.0) * 0.10 : 0;
+
+    // 2. QUALITY PENALTIES (per-zone)
     const defQualityDiff = Math.abs(teamAMetrics.totalDefQuality - teamBMetrics.totalDefQuality);
+    const midQualityDiff = Math.abs(teamAMetrics.totalMidQuality - teamBMetrics.totalMidQuality);
     const attQualityDiff = Math.abs(teamAMetrics.totalAttQuality - teamBMetrics.totalAttQuality);
 
     // Quality values are TOTALS across all stars
@@ -1151,13 +1247,107 @@ function calculateStarDistributionPenalty(
     const qualityNormalizationFactor = 100;
 
     const normalizedDefQualityDiff = defQualityDiff / qualityNormalizationFactor;
+    const normalizedMidQualityDiff = midQualityDiff / qualityNormalizationFactor;
     const normalizedAttQualityDiff = attQualityDiff / qualityNormalizationFactor;
 
     const defQualityPenalty = Math.pow(normalizedDefQualityDiff, config.quality.power) * config.quality.defensiveWeight;
+    const midQualityPenalty = Math.pow(normalizedMidQualityDiff, config.quality.power) * config.quality.midfieldWeight;
     const attQualityPenalty = Math.pow(normalizedAttQualityDiff, config.quality.power) * config.quality.attackingWeight;
 
-    // 3. TOTAL PENALTY
-    const totalPenalty = specialistCountPenalty + defQualityPenalty + attQualityPenalty;
+    // 3. OVERALL QUALITY SKEW PENALTY
+    // Check if one team has consistently higher quality across ALL zones
+    const teamATotalQuality = teamAMetrics.totalDefQuality + teamAMetrics.totalMidQuality + teamAMetrics.totalAttQuality;
+    const teamBTotalQuality = teamBMetrics.totalDefQuality + teamBMetrics.totalMidQuality + teamBMetrics.totalAttQuality;
+    const totalQualityDiff = Math.abs(teamATotalQuality - teamBTotalQuality);
+    const normalizedTotalQualityDiff = totalQualityDiff / (qualityNormalizationFactor * 3); // 3 zones
+    const totalQualitySkewPenalty = Math.pow(normalizedTotalQualityDiff, config.quality.power) * 0.25;
+
+    // 4. PER-ZONE DIRECTIONAL WINNER TRACKING
+    // Track which team wins each zone (not just the difference)
+    let teamAZoneWins = 0;
+    let teamBZoneWins = 0;
+    let neutralZones = 0;
+
+    // Threshold for considering a zone "neutral" (within 5% of normalization factor)
+    const zoneNeutralThreshold = qualityNormalizationFactor * 0.05;
+
+    if (Math.abs(teamAMetrics.totalDefQuality - teamBMetrics.totalDefQuality) <= zoneNeutralThreshold) {
+        neutralZones++;
+    } else if (teamAMetrics.totalDefQuality > teamBMetrics.totalDefQuality) {
+        teamAZoneWins++;
+    } else {
+        teamBZoneWins++;
+    }
+
+    if (Math.abs(teamAMetrics.totalMidQuality - teamBMetrics.totalMidQuality) <= zoneNeutralThreshold) {
+        neutralZones++;
+    } else if (teamAMetrics.totalMidQuality > teamBMetrics.totalMidQuality) {
+        teamAZoneWins++;
+    } else {
+        teamBZoneWins++;
+    }
+
+    if (Math.abs(teamAMetrics.totalAttQuality - teamBMetrics.totalAttQuality) <= zoneNeutralThreshold) {
+        neutralZones++;
+    } else if (teamAMetrics.totalAttQuality > teamBMetrics.totalAttQuality) {
+        teamAZoneWins++;
+    } else {
+        teamBZoneWins++;
+    }
+
+    // 5. DIRECTIONAL CLUSTERING PENALTY
+    // Heavily penalize when one team wins multiple/all zones
+    const maxZoneWins = Math.max(teamAZoneWins, teamBZoneWins);
+    let directionalClusteringPenalty = 0;
+
+    if (maxZoneWins === 3) {
+        // 3-0 zone split: one team dominates all zones (catastrophic!)
+        directionalClusteringPenalty = 0.50; // 50% penalty
+    } else if (maxZoneWins === 2 && neutralZones === 0) {
+        // 2-1 zone split: strong directional imbalance
+        directionalClusteringPenalty = 0.30; // 30% penalty
+    } else if (maxZoneWins === 2 && neutralZones === 1) {
+        // 2-0-1 split: two zones favor one team, one neutral
+        directionalClusteringPenalty = 0.20; // 20% penalty
+    }
+    // else: 1-1-1 or 0-0-3 (balanced) gets no penalty
+
+    // 6. SPECIALIST COUNT DIRECTIONAL PENALTY
+    // Check if one team dominates specialist counts across ALL categories
+    let teamASpecialistAdvantages = 0;
+    let teamBSpecialistAdvantages = 0;
+
+    if (teamAMetrics.defSpecialistCount > teamBMetrics.defSpecialistCount) teamASpecialistAdvantages++;
+    else if (teamBMetrics.defSpecialistCount > teamAMetrics.defSpecialistCount) teamBSpecialistAdvantages++;
+
+    if (teamAMetrics.attSpecialistCount > teamBMetrics.attSpecialistCount) teamASpecialistAdvantages++;
+    else if (teamBMetrics.attSpecialistCount > teamAMetrics.attSpecialistCount) teamBSpecialistAdvantages++;
+
+    if (teamAMetrics.midfielderCount > teamBMetrics.midfielderCount) teamASpecialistAdvantages++;
+    else if (teamBMetrics.midfielderCount > teamAMetrics.midfielderCount) teamBSpecialistAdvantages++;
+
+    // Penalize if one team has more specialists in 2+ categories
+    const maxSpecialistAdvantages = Math.max(teamASpecialistAdvantages, teamBSpecialistAdvantages);
+    let specialistDirectionalPenalty = 0;
+
+    if (maxSpecialistAdvantages === 3) {
+        // One team has more specialists in ALL categories
+        specialistDirectionalPenalty = 0.40; // 40% penalty
+    } else if (maxSpecialistAdvantages === 2) {
+        // One team has more specialists in 2 out of 3 categories
+        specialistDirectionalPenalty = 0.20; // 20% penalty
+    }
+
+    // 7. TOTAL PENALTY
+    const totalPenalty = individualQualityPenalty +
+        variancePenalty +
+        highVariancePenalty +
+        defQualityPenalty +
+        midQualityPenalty +
+        attQualityPenalty +
+        totalQualitySkewPenalty +
+        directionalClusteringPenalty +
+        specialistDirectionalPenalty;
     const penalty = Math.max(0, 1.0 - totalPenalty);
 
     return {
@@ -1171,9 +1361,28 @@ function calculateStarDistributionPenalty(
         teamAAllRounders: teamAMetrics.allRounderCount,
         teamBAllRounders: teamBMetrics.allRounderCount,
         teamADefQuality: teamAMetrics.totalDefQuality,
+        teamAMidQuality: teamAMetrics.totalMidQuality,
         teamAAttQuality: teamAMetrics.totalAttQuality,
         teamBDefQuality: teamBMetrics.totalDefQuality,
+        teamBMidQuality: teamBMetrics.totalMidQuality,
         teamBAttQuality: teamBMetrics.totalAttQuality,
+        teamATotalQuality,
+        teamBTotalQuality,
+        teamAAvgBestScore,
+        teamBAvgBestScore,
+        teamAAvgRating,
+        teamBAvgRating,
+        teamAStdDev,
+        teamBStdDev,
+        teamAZoneWins,
+        teamBZoneWins,
+        neutralZones,
+        individualQualityPenalty,
+        variancePenalty,
+        highVariancePenalty,
+        directionalClusteringPenalty,
+        specialistDirectionalPenalty,
+        totalQualitySkewPenalty,
     };
 }
 
@@ -1315,10 +1524,15 @@ export function calculateOptimalStarDistribution(
     // Generate all possible combinations of teamASize stars
     const combinations = generateCombinations(numStars, teamASize);
 
+    if (combinations.length === 0) {
+        return 1.0;
+    }
+
     let bestPenalty = -Infinity;
     let worstPenalty = Infinity;
     let totalPenalties = 0;
     let zeroCount = 0;
+    let indices = combinations.at(0);
 
     // Test each possible split
     for (const teamAIndices of combinations) {
@@ -1336,8 +1550,23 @@ export function calculateOptimalStarDistribution(
 
         const result = calculateStarDistributionPenalty(teamAClassifications, teamBClassifications);
 
+        // if (result.penalty > 0.4) {
+        //     console.log("==============Start Optimal Run==================", result.penalty);
+        //     teamAIndices.forEach((i => {
+        //         console.log("A: ", classifications[i]);
+        //     }));
+
+        //     teamBIndices.forEach((i => {
+        //         console.log("B: ", classifications[i]);
+        //     }));
+
+        //     console.log("Score", result.penalty);
+
+        //     console.log("==============End Optimal Run==================", result.penalty);
+        // }
         if (result.penalty > bestPenalty) {
             bestPenalty = result.penalty;
+            indices = teamAIndices;
         }
         if (result.penalty < worstPenalty) {
             worstPenalty = result.penalty;
@@ -1347,6 +1576,28 @@ export function calculateOptimalStarDistribution(
         }
         totalPenalties += result.penalty;
     }
+
+    if (indices) {
+        // Create team B with remaining indices
+        const bIndices: number[] = [];
+        for (let i = 0; i < numStars; i++) {
+            if (!indices.includes(i)) {
+                bIndices.push(i);
+            }
+        }
+
+        indices.forEach((i => {
+            console.log("A: ", classifications[i]);
+        }));
+
+        bIndices.forEach((i => {
+            console.log("B: ", classifications[i]);
+        }));
+    }
+
+
+
+
 
     const avgPenalty = totalPenalties / combinations.length;
 
@@ -1396,44 +1647,101 @@ export function calculateStarZonePenalty(
 
     if (debug) {
         console.log('Star Zone Specialization Analysis (NEW 4-Category Position-Based System):');
+        console.log('');
         console.log(`  Team A Stars: ${distA.totalStars} total`);
         console.log(`    Defensive specialists: ${result.teamADefSpecialists}`);
         console.log(`    Attacking specialists: ${result.teamAAttSpecialists}`);
         console.log(`    Midfielders: ${result.teamAMidfielders}`);
         console.log(`    All-rounders: ${result.teamAAllRounders}`);
+        console.log(`    Average Best Score (peak): ${result.teamAAvgBestScore.toFixed(1)}`);
+        console.log(`    Average Rating (overall): ${result.teamAAvgRating.toFixed(1)}`);
         console.log(`    Total Defensive Quality: ${result.teamADefQuality.toFixed(1)}`);
+        console.log(`    Total Midfield Quality: ${result.teamAMidQuality.toFixed(1)}`);
         console.log(`    Total Attacking Quality: ${result.teamAAttQuality.toFixed(1)}`);
+        console.log(`    TOTAL QUALITY (all zones): ${result.teamATotalQuality.toFixed(1)}`);
+        console.log('');
 
         console.log(`  Team B Stars: ${distB.totalStars} total`);
         console.log(`    Defensive specialists: ${result.teamBDefSpecialists}`);
         console.log(`    Attacking specialists: ${result.teamBAttSpecialists}`);
         console.log(`    Midfielders: ${result.teamBMidfielders}`);
         console.log(`    All-rounders: ${result.teamBAllRounders}`);
+        console.log(`    Average Best Score (peak): ${result.teamBAvgBestScore.toFixed(1)}`);
+        console.log(`    Average Rating (overall): ${result.teamBAvgRating.toFixed(1)}`);
         console.log(`    Total Defensive Quality: ${result.teamBDefQuality.toFixed(1)}`);
+        console.log(`    Total Midfield Quality: ${result.teamBMidQuality.toFixed(1)}`);
         console.log(`    Total Attacking Quality: ${result.teamBAttQuality.toFixed(1)}`);
+        console.log(`    TOTAL QUALITY (all zones): ${result.teamBTotalQuality.toFixed(1)}`);
+        console.log('');
 
-        console.log(`  Quality Imbalances:`);
+        console.log(`  ═══════════════════════════════════════════════════════════`);
+        console.log(`  INDIVIDUAL PLAYER QUALITY (MOST IMPORTANT!):`);
+        console.log(`  ═══════════════════════════════════════════════════════════`);
+        console.log(`    Team A Avg Best Score: ${result.teamAAvgBestScore.toFixed(1)}`);
+        console.log(`    Team B Avg Best Score: ${result.teamBAvgBestScore.toFixed(1)}`);
+        console.log(`    Best Score Diff: ${Math.abs(result.teamAAvgBestScore - result.teamBAvgBestScore).toFixed(1)}`);
+        console.log(`    Individual Quality Penalty: ${result.individualQualityPenalty.toFixed(3)} (0.60 weight) ${result.individualQualityPenalty > 0.05 ? '⚠️ MAJOR IMBALANCE' : '✓'}`);
+        console.log('');
+        console.log(`    Variance Analysis (based on averageScore across all positions):`);
+        console.log(`    Team A Avg Rating: ${result.teamAAvgRating.toFixed(1)} (σ=${result.teamAStdDev.toFixed(1)}) ${result.teamAStdDev > 3.0 ? '(SPIKY ⚠️)' : '(flat)'}`);
+        console.log(`    Team B Avg Rating: ${result.teamBAvgRating.toFixed(1)} (σ=${result.teamBStdDev.toFixed(1)}) ${result.teamBStdDev > 3.0 ? '(SPIKY ⚠️)' : '(flat)'}`);
+        console.log(`    Variance Imbalance Penalty: ${result.variancePenalty.toFixed(3)} (0.15 weight)`);
+        console.log(`    High Variance Penalty: ${result.highVariancePenalty.toFixed(3)} (0.10 weight)`);
+        console.log('');
+
+        console.log(`  Quality Imbalances (Per-Zone):`);
         console.log(`    Defensive quality diff: ${Math.abs(result.teamADefQuality - result.teamBDefQuality).toFixed(1)}`);
+        console.log(`    Midfield quality diff: ${Math.abs(result.teamAMidQuality - result.teamBMidQuality).toFixed(1)}`);
         console.log(`    Attacking quality diff: ${Math.abs(result.teamAAttQuality - result.teamBAttQuality).toFixed(1)}`);
+        console.log('');
+
+        console.log(`  OVERALL QUALITY SKEW:`);
+        console.log(`    Total quality diff: ${Math.abs(result.teamATotalQuality - result.teamBTotalQuality).toFixed(1)}`);
+        console.log(`    Total quality skew penalty: ${result.totalQualitySkewPenalty.toFixed(3)} (0.25 weight)`);
+        const qualityWinner = result.teamATotalQuality > result.teamBTotalQuality ? 'Team A' :
+            result.teamBTotalQuality > result.teamATotalQuality ? 'Team B' : 'Balanced';
+        console.log(`    Winner: ${qualityWinner} ${qualityWinner !== 'Balanced' ? '⚠️ SKEWED' : '✓'}`);
+        console.log('');
+
+        console.log(`  PER-ZONE DIRECTIONAL BALANCE:`);
+        console.log(`    DEF winner: ${result.teamADefQuality > result.teamBDefQuality ? 'Team A' : result.teamBDefQuality > result.teamADefQuality ? 'Team B' : 'Neutral'}`);
+        console.log(`    MID winner: ${result.teamAMidQuality > result.teamBMidQuality ? 'Team A' : result.teamBMidQuality > result.teamAMidQuality ? 'Team B' : 'Neutral'}`);
+        console.log(`    ATT winner: ${result.teamAAttQuality > result.teamBAttQuality ? 'Team A' : result.teamBAttQuality > result.teamAAttQuality ? 'Team B' : 'Neutral'}`);
+        console.log(`    Zone wins: Team A=${result.teamAZoneWins}, Team B=${result.teamBZoneWins}, Neutral=${result.neutralZones}`);
+        console.log(`    Directional clustering penalty: ${result.directionalClusteringPenalty.toFixed(3)}`);
+        const maxZoneWins = Math.max(result.teamAZoneWins, result.teamBZoneWins);
+        if (maxZoneWins === 3) {
+            console.log(`    Status: 3-0 ZONE SWEEP ⚠️⚠️⚠️ CATASTROPHIC`);
+        } else if (maxZoneWins === 2) {
+            console.log(`    Status: 2-${result.neutralZones > 0 ? '0-1' : '1'} zone split ⚠️ IMBALANCED`);
+        } else {
+            console.log(`    Status: Balanced ✓`);
+        }
+        console.log('');
+
+        console.log(`  SPECIALIST COUNT IMBALANCES:`);
         console.log(`    Def specialist count diff: ${Math.abs(result.teamADefSpecialists - result.teamBDefSpecialists)}`);
         console.log(`    Att specialist count diff: ${Math.abs(result.teamAAttSpecialists - result.teamBAttSpecialists)}`);
         console.log(`    Midfielder count diff: ${Math.abs(result.teamAMidfielders - result.teamBMidfielders)}`);
+        console.log(`    Specialist directional penalty: ${result.specialistDirectionalPenalty.toFixed(3)}`);
+        console.log('');
 
-        console.log(`  Final Penalty: ${result.penalty.toFixed(3)}`);
+        console.log(`  FINAL PENALTY: ${result.penalty.toFixed(3)}`);
+        console.log('');
 
         if (distA.classifications.length > 0) {
-            console.log('  Team A Star Classifications (by top 3 positions):');
+            console.log('  Team A Star Classifications:');
             for (const c of distA.classifications) {
                 const playerName = c.player.original.guest_name || c.player.original.id;
-                console.log(`    ${playerName}: ${c.specialistType} (DEF:${c.bestDefensiveScore.toFixed(1)}, ATT:${c.bestAttackingScore.toFixed(1)})`);
+                console.log(`    ${playerName}: ${c.specialistType} (DEF:${c.bestDefensiveScore.toFixed(1)}, MID:${c.bestMidfieldScore.toFixed(1)}, ATT:${c.bestAttackingScore.toFixed(1)})`);
             }
         }
 
         if (distB.classifications.length > 0) {
-            console.log('  Team B Star Classifications (by top 3 positions):');
+            console.log('  Team B Star Classifications:');
             for (const c of distB.classifications) {
                 const playerName = c.player.original.guest_name || c.player.original.id;
-                console.log(`    ${playerName}: ${c.specialistType} (DEF:${c.bestDefensiveScore.toFixed(1)}, ATT:${c.bestAttackingScore.toFixed(1)})`);
+                console.log(`    ${playerName}: ${c.specialistType} (DEF:${c.bestDefensiveScore.toFixed(1)}, MID:${c.bestMidfieldScore.toFixed(1)}, ATT:${c.bestAttackingScore.toFixed(1)})`);
             }
         }
     }

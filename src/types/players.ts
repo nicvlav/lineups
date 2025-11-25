@@ -77,6 +77,7 @@ export interface PlayerWithArchetypes {
  */
 export interface GamePlayer {
   id: string;
+  name: string;
   guest_name: string | null;
   team: string;
   position: Point;
