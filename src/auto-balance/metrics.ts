@@ -1312,8 +1312,89 @@ function calculateStarDistributionPenalty(
     }
     // else: 1-1-1 or 0-0-3 (balanced) gets no penalty
 
-    // 6. SPECIALIST COUNT DIRECTIONAL PENALTY
-    // Check if one team dominates specialist counts across ALL categories
+    // 6. SPECIALIST DISTRIBUTION PENALTY (CRITICAL!)
+    // This is THE MOST IMPORTANT metric for team balance!
+    //
+    // Key Rules:
+    // 1. Def/Att specialists should be PAIRED on same team (they cancel each other out)
+    // 2. Midfielders/All-rounders should be on the OTHER team (balance)
+    // 3. Even splits are MANDATORY - any imbalance is heavily penalized
+    // 4. Odd total specialists: 1-diff is acceptable but needs compensation
+
+    const defDiff = Math.abs(teamAMetrics.defSpecialistCount - teamBMetrics.defSpecialistCount);
+    const attDiff = Math.abs(teamAMetrics.attSpecialistCount - teamBMetrics.attSpecialistCount);
+    const midDiff = Math.abs(teamAMetrics.midfielderCount - teamBMetrics.midfielderCount);
+
+    // Count total specialists to detect odd/even cases
+    const totalDefSpecialists = teamAMetrics.defSpecialistCount + teamBMetrics.defSpecialistCount;
+    const totalAttSpecialists = teamAMetrics.attSpecialistCount + teamBMetrics.attSpecialistCount;
+    const totalMidfielders = teamAMetrics.midfielderCount + teamBMetrics.midfielderCount;
+    const totalSpecialists = totalDefSpecialists + totalAttSpecialists + totalMidfielders;
+
+    let specialistDistributionPenalty = 0;
+
+    // A. UNEVEN SPECIALIST SPLITS (SEVERE PENALTY!)
+    // For even totals: difference > 0 is unacceptable
+    // For odd totals: difference > 1 is unacceptable
+
+    if (totalDefSpecialists % 2 === 0 && defDiff > 0) {
+        // Even number of def specialists but uneven split - CATASTROPHIC!
+        specialistDistributionPenalty += 0.80; // 80% penalty - almost disqualifying
+    } else if (totalDefSpecialists % 2 === 1 && defDiff > 1) {
+        // Odd number but difference is 2+ - still very bad
+        specialistDistributionPenalty += 0.60;
+    } else if (totalDefSpecialists % 2 === 1 && defDiff === 1) {
+        // Odd number with 1-diff - acceptable but needs quality compensation
+        specialistDistributionPenalty += 0.05; // Small penalty to prefer even when possible
+    }
+
+    if (totalAttSpecialists % 2 === 0 && attDiff > 0) {
+        // Even number of att specialists but uneven split - CATASTROPHIC!
+        specialistDistributionPenalty += 0.80;
+    } else if (totalAttSpecialists % 2 === 1 && attDiff > 1) {
+        // Odd number but difference is 2+ - very bad
+        specialistDistributionPenalty += 0.60;
+    } else if (totalAttSpecialists % 2 === 1 && attDiff === 1) {
+        // Odd number with 1-diff - acceptable but needs compensation
+        specialistDistributionPenalty += 0.05;
+    }
+
+    if (totalMidfielders % 2 === 0 && midDiff > 0) {
+        // Even number of midfielders but uneven split - SEVERE!
+        specialistDistributionPenalty += 0.60; // Slightly less critical than def/att
+    } else if (totalMidfielders % 2 === 1 && midDiff > 1) {
+        // Odd number but difference is 2+
+        specialistDistributionPenalty += 0.40;
+    } else if (totalMidfielders % 2 === 1 && midDiff === 1) {
+        // Odd number with 1-diff - acceptable
+        specialistDistributionPenalty += 0.03;
+    }
+
+    // B. SPECIALIST PAIRING PENALTY
+    // Def + Att specialists should be on SAME team (they balance each other)
+    // Check if they're incorrectly split across teams
+
+    let specialistPairingPenalty = 0;
+
+    // If we have both def and att specialists, check their distribution
+    if (totalDefSpecialists > 0 && totalAttSpecialists > 0) {
+        // Ideal: If Team A has def specialists, they should also have att specialists
+        // Bad: Team A has all def, Team B has all att (they don't cancel out)
+
+        // Check if specialists are concentrated on opposite teams
+        const teamAHasMoreDef = teamAMetrics.defSpecialistCount > teamBMetrics.defSpecialistCount;
+        const teamAHasMoreAtt = teamAMetrics.attSpecialistCount > teamBMetrics.attSpecialistCount;
+
+        // If opposite specialists lean to opposite teams, that's wrong!
+        if (teamAHasMoreDef !== teamAHasMoreAtt && defDiff > 0 && attDiff > 0) {
+            // They're leaning opposite directions - heavily penalize
+            const avgImbalance = (defDiff + attDiff) / 2;
+            specialistPairingPenalty = Math.min(0.50, avgImbalance * 0.25); // Up to 50% penalty
+        }
+    }
+
+    // C. DIRECTIONAL SPECIALIST CLUSTERING
+    // One team having more specialists in ALL categories is very bad
     let teamASpecialistAdvantages = 0;
     let teamBSpecialistAdvantages = 0;
 
@@ -1326,19 +1407,51 @@ function calculateStarDistributionPenalty(
     if (teamAMetrics.midfielderCount > teamBMetrics.midfielderCount) teamASpecialistAdvantages++;
     else if (teamBMetrics.midfielderCount > teamAMetrics.midfielderCount) teamBSpecialistAdvantages++;
 
-    // Penalize if one team has more specialists in 2+ categories
     const maxSpecialistAdvantages = Math.max(teamASpecialistAdvantages, teamBSpecialistAdvantages);
     let specialistDirectionalPenalty = 0;
 
-    if (maxSpecialistAdvantages === 3) {
-        // One team has more specialists in ALL categories
-        specialistDirectionalPenalty = 0.40; // 40% penalty
-    } else if (maxSpecialistAdvantages === 2) {
-        // One team has more specialists in 2 out of 3 categories
-        specialistDirectionalPenalty = 0.20; // 20% penalty
+    // Only apply if total is even (for odd totals, 1-diff is unavoidable)
+    if (totalSpecialists % 2 === 0) {
+        if (maxSpecialistAdvantages === 3) {
+            specialistDirectionalPenalty = 0.50; // 50% - one team has all types
+        } else if (maxSpecialistAdvantages === 2) {
+            specialistDirectionalPenalty = 0.25; // 25% - one team dominates
+        }
+    } else {
+        // Odd total - be more lenient
+        if (maxSpecialistAdvantages === 3) {
+            specialistDirectionalPenalty = 0.30; // Still bad but unavoidable
+        } else if (maxSpecialistAdvantages === 2) {
+            specialistDirectionalPenalty = 0.10; // Mild penalty
+        }
     }
 
-    // 7. TOTAL PENALTY
+    // Combine all specialist penalties
+    const totalSpecialistPenalty = specialistDistributionPenalty + specialistPairingPenalty + specialistDirectionalPenalty;
+
+    // 7. UNEVEN STAR COUNT DIRECTIONAL PENALTY
+    // When star counts are uneven (3v2), the team with FEWER stars MUST have better quality
+    let unevenStarCountPenalty = 0;
+    const starCountA = teamAClassifications.length;
+    const starCountB = teamBClassifications.length;
+
+    if (config.unevenStarCount.enabled && starCountA !== starCountB) {
+        const teamWithMore = starCountA > starCountB ? 'A' : 'B';
+        const moreTeamHasHigherQuality = teamWithMore === 'A'
+            ? teamAAvgBestScore >= teamBAvgBestScore
+            : teamBAvgBestScore >= teamAAvgBestScore;
+
+        if (moreTeamHasHigherQuality) {
+            const qualityDiff = teamWithMore === 'A'
+                ? teamAAvgBestScore - teamBAvgBestScore
+                : teamBAvgBestScore - teamAAvgBestScore;
+            const normalizedDiff = Math.max(0, qualityDiff) / 10;
+            unevenStarCountPenalty = Math.pow(normalizedDiff, config.unevenStarCount.power) * config.unevenStarCount.weight;
+        }
+    }
+
+    // 8. TOTAL PENALTY
+    // NOTE: Specialist penalties can be > 1.0 (disqualifying) for severe imbalances!
     const totalPenalty = individualQualityPenalty +
         variancePenalty +
         highVariancePenalty +
@@ -1347,7 +1460,8 @@ function calculateStarDistributionPenalty(
         attQualityPenalty +
         totalQualitySkewPenalty +
         directionalClusteringPenalty +
-        specialistDirectionalPenalty;
+        totalSpecialistPenalty + // CRITICAL! Can exceed 1.0
+        unevenStarCountPenalty;
     const penalty = Math.max(0, 1.0 - totalPenalty);
 
     return {
