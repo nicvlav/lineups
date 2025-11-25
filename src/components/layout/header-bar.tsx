@@ -28,9 +28,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
 
     const canVote = user !== null;
     
-    // Only show Cards to me!
-    const showCards = isStaging || (user?.id === '24115871-04fe-4111-b048-18f7e3e976fc');
-
     const handleSignOut = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -125,9 +122,9 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                             aria-label="Main navigation"
                         >
                             <TabIcon icon={Home} to="/" label="Home" />
-                            {showCards && (
-                                <TabIcon icon={SquareUser} to="/cards" label="Cards" />
-                            )}
+            
+                            <TabIcon icon={SquareUser} to="/cards" label="Cards" />
+                           
                             <TabIcon icon={ListChecks } to="/generate" label="Generate Teams" />
                             {canVote && (
                                 <TabIcon icon={Vote} to="/vote" label="Vote" />
