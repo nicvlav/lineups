@@ -73,9 +73,6 @@ export interface AlgorithmConfig {
     /** Base number of candidates to consider (before scaling) */
     baseTopN: number;
 
-    /** How to select positions within a zone */
-    zonePositionStrategy: 'random' | 'priority' | 'weighted';
-
     /** Probability weights for selecting from top N candidates [1st, 2nd, 3rd, 4th...] */
     selectionWeights: number[];
 }
@@ -94,27 +91,6 @@ export interface MonteCarloConfig {
 export interface StarPlayerThresholds {
     /** Minimum absolute threshold for "star" classification */
     absoluteMinimum: number;
-
-    /** Use statistical quartile (75th percentile) if higher than absolute */
-    useQuartile: boolean;
-
-    /** Points above threshold to classify as "superstar" */
-    superstarBonus: number;
-
-    /** Points below threshold still considered "solid" */
-    solidRange: number;
-
-    /** Zone specialization thresholds */
-    zoneSpecialization: {
-        /** Minimum score difference between best zone and average to be considered a specialist */
-        specialistGapThreshold: number;
-
-        /** Minimum score difference between defensive and attacking zones for all-rounder classification */
-        allRounderBalanceThreshold: number;
-
-        /** Penalty multiplier per extra specialist in same zone beyond balanced distribution */
-        zoneStackingPenalty: number;
-    };
 }
 
 /**
@@ -308,9 +284,6 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         topNScaling: false,
         baseTopN: 8,
 
-        // Use priority-based position selection within zones
-        zonePositionStrategy: 'priority',
-
         // Weighted probability for selecting from top N
         selectionWeights: [0.4, 0.3, 0.1, 0.05, 0.05, 0.05, 0.025, 0.025],
     },
@@ -323,30 +296,6 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
     starPlayers: {
         // Minimum 87 rating to be considered "star"
         absoluteMinimum: 87,
-
-        // Also use 75th percentile if higher than 87
-        useQuartile: true,
-
-        // +3 points above threshold = "superstar" (typically 90+)
-        superstarBonus: 3,
-
-        // -5 points below threshold still "solid" (82-86)
-        solidRange: 5,
-
-        // Zone specialization configuration
-        zoneSpecialization: {
-            // A star is a specialist if their best zone is 8+ points above their average
-            // Example: CB 95, other positions 80s = specialist defender
-            specialistGapThreshold: 6,
-
-            // All-rounder if defensive and attacking scores are within 5 points
-            // Example: DEF 90, ATT 88 = balanced all-rounder
-            allRounderBalanceThreshold: 5,
-
-            // Apply 0.15 penalty multiplier per extra stacked specialist beyond balance
-            // Example: Team A has 3 defensive specialists, Team B has 1 → 2 extra → 0.7 penalty
-            zoneStackingPenalty: 0.15,
-        },
     },
 
     formulas: {
