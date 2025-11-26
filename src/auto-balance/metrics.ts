@@ -205,9 +205,30 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
     // Floor of 0.1 means even worst-case imbalances can still be compared (10% weight on raw ratios)
     cancellationFactor = Math.max(0.1, cancellationFactor);
 
-    // Combine: if perfect cancellation (both teams balanced differently), still penalize raw differences
-    // If no cancellation (same team ahead in both), use total ratio directly
-    const workrateRatio = cancellationFactor * attWRRatio * defWRRatio;
+    // SMART BLENDING: Combine raw quality with cancellation bonus
+    //
+    // Strategy: When overall balance is bad, give cancellation more weight as a tiebreaker
+    // When overall balance is good, rely more on raw quality
+    //
+    // Two components:
+    // 1. Raw quality score: How good are the individual metrics? (ignores cancellation)
+    // 2. Cancellation-adjusted score: Rewards compensation between att/def
+    //
+    // Blend based on how bad the raw quality is:
+    // - Good raw quality (>0.9): Mostly use raw (cancellation is just a small bonus)
+    // - Poor raw quality (<0.7): Give cancellation more weight as a tiebreaker
+
+    const rawQuality = attWRRatio * defWRRatio; // Pure quality, no cancellation bonus
+    const cancellationAdjusted = cancellationFactor * rawQuality; // Quality with cancellation multiplier
+
+    // Adaptive blend weight: worse raw quality = more weight on cancellation
+    // If rawQuality is 0.95: blendWeight = 0.2 (mostly raw)
+    // If rawQuality is 0.70: blendWeight = 0.5 (50/50 blend)
+    // If rawQuality is 0.50: blendWeight = 0.7 (mostly cancellation)
+    const blendWeight = Math.min(0.8, Math.max(0.2, 1.0 - rawQuality));
+
+    // Blend: bad scenarios lean on cancellation, good scenarios lean on raw quality
+    const workrateRatio = rawQuality * (1 - blendWeight) + cancellationAdjusted * blendWeight;
 
     // 3. Combine stamina and workrate
     const rawCombined = staminaRatio * workrateRatio;
@@ -226,8 +247,11 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
         console.log(formatComparison('Att Workrate', aAttWR, bAttWR, calculateBasicDifferenceRatio(aAttWR, bAttWR)));
         console.log(formatComparison('Def Workrate', aDefWR, bDefWR, calculateBasicDifferenceRatio(aDefWR, bDefWR)));
         console.log(formatComparison('Total Workrate', aTotalWR, bTotalWR, totalWRRatio));
-        console.log(`  Cancellation: ${cancellationFactor} (att favor: ${aAttAdvantage.toFixed(1)}, def favor: ${aDefAdvantage.toFixed(1)})`);
-        console.log(`  Combined Workrate Ratio: ${workrateRatio.toFixed(3)}`);
+        console.log(`  Cancellation Factor: ${cancellationFactor.toFixed(3)} (att: ${aAttAdvantage.toFixed(1)}, def: ${aDefAdvantage.toFixed(1)})`);
+        console.log(`  Raw Quality (no cancel): ${rawQuality.toFixed(3)}`);
+        console.log(`  Cancellation-Adjusted: ${cancellationAdjusted.toFixed(3)}`);
+        console.log(`  Blend Weight: ${blendWeight.toFixed(3)} (higher = more cancellation influence)`);
+        console.log(`  Final Workrate Ratio: ${workrateRatio.toFixed(3)}`);
         console.log(`  Raw Combined: ${rawCombined.toFixed(3)}`);
         console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
         console.log(`  Calibrated Score: ${energyBalanceRatio.toFixed(3)}`);
@@ -508,7 +532,7 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
 
     // Combine all factors
     const zonalBalanceRatio = calibratedScore(
-       directionality.penalty * (totalImbalance + internalSkillRatio) / 2,
+        directionality.penalty * (totalImbalance + internalSkillRatio) / 2,
         DEFAULT_BALANCE_CONFIG.thresholds.zoneBalance,
         Steepness.VerySteep
     );
@@ -621,13 +645,17 @@ function calculateCreativityBalance(teamA: FastTeam, teamB: FastTeam, debug: boo
  */
 function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
     const ST_INDEX = POSITION_INDICES.ST;
-    const EPSILON = 3.0; // Score must be within 3 points of best score to count as viable striker
-
+    const EPSILON = 0.00001; // Score must be within 3 points of best score to count as viable striker
+    const VIABLE_DIFFERENCE = 3.0;
+    const HIGH_SCORE_THRESHOLD = 90;
+    const MEDIUM_SCORE_THRESHOLD = 80;
+    const MIN_THRESHOLD = 65;
     // Weighted striker scoring system:
-    // +2 points: ST is their BEST position (specialist striker)
+    // +3 points: ST is their BEST position (specialist striker)
+    // +2 points: ST is really high >= 90
     // +1 point:  ST is viable (within EPSILON of best score) but not their best
-    let teamAStrikerScore = 0;
-    let teamBStrikerScore = 0;
+    let teamAStrikerPoints = 0;
+    let teamBStrikerPoints = 0;
 
     // Track counts for debug output
     let teamASpecialists = 0;
@@ -639,15 +667,24 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
         for (const player of positionPlayers) {
             const stScore = player.scores[ST_INDEX];
             const bestScore = player.bestScore;
-            const isViable = Math.abs(stScore - bestScore) <= EPSILON;
 
-            if (Math.abs(stScore - bestScore) < 0.01) {
+            if (stScore < MIN_THRESHOLD || Math.abs(stScore - bestScore) > VIABLE_DIFFERENCE) continue;
+
+            if (player.isSpecialist && Math.abs(stScore - bestScore) < EPSILON) {
                 // ST is their best position (specialist)
-                teamAStrikerScore += 2;
+                teamAStrikerPoints += 6;
                 teamASpecialists++;
-            } else if (isViable) {
+            } else if (stScore >= HIGH_SCORE_THRESHOLD) {
                 // ST is viable but not their best
-                teamAStrikerScore += 1;
+                teamAStrikerPoints += 4;
+                teamAViable++;
+            } else if (stScore >= MEDIUM_SCORE_THRESHOLD) {
+                // ST is viable but not their best
+                teamAStrikerPoints += 2;
+                teamAViable++;
+            } else {
+                // ST is viable but not their best
+                teamAStrikerPoints += 1;
                 teamAViable++;
             }
         }
@@ -657,30 +694,43 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
         for (const player of positionPlayers) {
             const stScore = player.scores[ST_INDEX];
             const bestScore = player.bestScore;
-            const isViable = Math.abs(stScore - bestScore) <= EPSILON;
 
-            if (Math.abs(stScore - bestScore) < 0.01) {
+            if (stScore < MIN_THRESHOLD || Math.abs(stScore - bestScore) > VIABLE_DIFFERENCE) continue;
+
+            if (player.isSpecialist && Math.abs(stScore - bestScore) < EPSILON) {
                 // ST is their best position (specialist)
-                teamBStrikerScore += 2;
+                teamBStrikerPoints += 6;
                 teamBSpecialists++;
-            } else if (isViable) {
+            } else if (stScore >= HIGH_SCORE_THRESHOLD) {
                 // ST is viable but not their best
-                teamBStrikerScore += 1;
+                teamBStrikerPoints += 4;
+                teamBViable++;
+            } else if (stScore >= MEDIUM_SCORE_THRESHOLD) {
+                // ST is viable but not their best
+                teamBStrikerPoints += 2;
+                teamBViable++;
+            } else {
+                // ST is viable but not their best
+                teamBStrikerPoints += 1;
                 teamBViable++;
             }
         }
     }
-
     // 1. Specialist striker balance (most important - need true strikers!)
-    const specialistBalance = calculateBasicDifferenceRatio(teamASpecialists, teamBSpecialists);
-    // const specialistBalance = calibratedScore(
-    //     specialistRatio,
-    //     DEFAULT_BALANCE_CONFIG.thresholds.striker,
-    //     Steepness.VerySteep
-    // );
+    let specialistBalance = 0;
+
+    const totalSpecialists = teamASpecialists + teamBSpecialists;
+
+    if (totalSpecialists == 0) {
+        specialistBalance = 1.0;
+    } else if (totalSpecialists % 2 === 1) {
+        specialistBalance = (teamASpecialists > teamBSpecialists) == (teamAStrikerPoints > teamBStrikerPoints) ? 0.0 : 1.0;
+    } else {
+        specialistBalance = calculateBasicDifferenceRatio(teamASpecialists, teamBSpecialists);
+    }
 
     // 2. Viable striker balance (secondary - can fill in at striker)
-    const viableBalance = calculateBasicDifferenceRatio(teamAViable, teamBViable);
+    const viableBalance = calculateBasicDifferenceRatio(teamAStrikerPoints, teamBStrikerPoints);
 
     // 3. Overall striker quality balance (legacy metric)
     const qualityRatio = calculateBasicDifferenceRatio(teamA.strikerScore, teamB.strikerScore);
@@ -691,7 +741,7 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
     );
 
     // Combine: specialist count matters most (50%), viable count secondary (30%), quality tertiary (20%)
-    const strikerBalanceRatio = specialistBalance * 0.5 + viableBalance * 0.3 + qualityScore * 0.2;
+    const strikerBalanceRatio = specialistBalance * 0.4 + viableBalance * 0.5 + qualityScore * 0.1;
 
     // if one team has more specialists than the other
     // we want the team with less specialists
@@ -703,12 +753,12 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.striker;
         console.log('Striker Balance (3-Factor System):');
-        console.log(`  Team A: ${teamAStrikerScore} points (${teamASpecialists} specialists [2pt], ${teamAViable} viable [1pt])`);
-        console.log(`  Team B: ${teamBStrikerScore} points (${teamBSpecialists} specialists [2pt], ${teamBViable} viable [1pt])`);
+        console.log(`  Team A: ${teamAStrikerPoints} points (${teamASpecialists} specialists, ${teamAViable} viable)`);
+        console.log(`  Team B: ${teamBStrikerPoints} points (${teamBSpecialists} specialists, ${teamBViable} viable)`);
         console.log('');
         console.log(formatComparison('  Specialist Strikers', teamASpecialists, teamBSpecialists, specialistBalance));
         console.log(`    Specialist Balance: ${specialistBalance.toFixed(3)} (weight: 50%)`);
-        console.log(formatComparison('  Viable Strikers', teamAViable, teamBViable, viableBalance));
+        console.log(formatComparison('  Viable Strikers', teamAStrikerPoints, teamBStrikerPoints, viableBalance));
         console.log(`    Viable Balance: ${viableBalance.toFixed(3)} (weight: 30%)`);
         console.log(formatComparison('  Striker Quality', teamA.strikerScore, teamB.strikerScore, qualityRatio));
         console.log(`    Quality Balance: ${qualityScore.toFixed(3)} (weight: 20%)`);
@@ -1409,11 +1459,11 @@ function calculateStarDistributionPenaltyOddStars(
     let neutralZones = 0;
 
     const defWinner = teamAMetrics.totalDefQuality > teamBMetrics.totalDefQuality ? 'A' :
-                      teamBMetrics.totalDefQuality > teamAMetrics.totalDefQuality ? 'B' : 'neutral';
+        teamBMetrics.totalDefQuality > teamAMetrics.totalDefQuality ? 'B' : 'neutral';
     const midWinner = teamAMetrics.totalMidQuality > teamBMetrics.totalMidQuality ? 'A' :
-                      teamBMetrics.totalMidQuality > teamAMetrics.totalMidQuality ? 'B' : 'neutral';
+        teamBMetrics.totalMidQuality > teamAMetrics.totalMidQuality ? 'B' : 'neutral';
     const attWinner = teamAMetrics.totalAttQuality > teamBMetrics.totalAttQuality ? 'A' :
-                      teamBMetrics.totalAttQuality > teamAMetrics.totalAttQuality ? 'B' : 'neutral';
+        teamBMetrics.totalAttQuality > teamAMetrics.totalAttQuality ? 'B' : 'neutral';
 
     if (defWinner === 'A') teamAZoneWins++;
     else if (defWinner === 'B') teamBZoneWins++;
@@ -1467,10 +1517,10 @@ function calculateStarDistributionPenaltyOddStars(
 
     // Combine all penalties (no unevenStarCountPenalty - inherent with odd stars, handled by separate routine)
     const totalPenalty = individualQualityPenalty + variancePenalty + highVariancePenalty +
-                        specialistDistributionPenalty + specialistQualityImbalancePenalty +
-                        specialistPairingPenalty +
-                        directionalClusteringPenalty + specialistDirectionalPenalty +
-                        perZoneQualityPenalty + totalQualitySkewPenalty;
+        specialistDistributionPenalty + specialistQualityImbalancePenalty +
+        specialistPairingPenalty +
+        directionalClusteringPenalty + specialistDirectionalPenalty +
+        perZoneQualityPenalty + totalQualitySkewPenalty;
 
     const penalty = Math.max(0, 1.0 - totalPenalty);
 

@@ -6,8 +6,9 @@
  * @module auto-balance/utils
  */
 
-import type { ScoredGamePlayer } from "@/types/players";
+import type { ScoredGamePlayer} from "@/types/players";
 import type { FastPlayer, FastTeam } from "./types";
+import { isPositionSpecialist } from "@/types/players";
 import { INDEX_TO_POSITION, POSITION_COUNT } from "./constants";
 
 /**
@@ -41,7 +42,6 @@ export function toFastPlayer(player: ScoredGamePlayer): FastPlayer {
         bestScore,
         bestPosition,
         secondBestScore,
-        specializationRatio: secondBestScore > 0 ? bestScore / secondBestScore : Infinity,
         assignedPosition: -1,
         team: null,
         // Pre-calculated analytics (initialized to 0, calculated by preCalculatePlayerAnalytics)
@@ -55,7 +55,7 @@ export function toFastPlayer(player: ScoredGamePlayer): FastPlayer {
         primaryZone: 0,
         isStarPlayer: false,
         starTier: 0,
-        isSpecialist: false,
+        isSpecialist: isPositionSpecialist(bestScore, secondBestScore),
         starClassification: null
     };
 }
@@ -92,8 +92,7 @@ export function createFastTeam(): FastTeam {
  * MASSIVELY prefers specialists over versatile players
  */
 export function createPositionComparator(
-    positionIdx: number,
-    dominanceRatio: number
+    positionIdx: number
 ): (a: FastPlayer, b: FastPlayer) => number {
     return (a: FastPlayer, b: FastPlayer): number => {
         const aScore = a.scores[positionIdx];
@@ -101,8 +100,8 @@ export function createPositionComparator(
 
         // Calculate specialization for THIS specific position
         // A specialist is someone whose score at this position dominates their other scores
-        const aIsPositionSpecialist = a.bestPosition === positionIdx && a.specializationRatio >= dominanceRatio;
-        const bIsPositionSpecialist = b.bestPosition === positionIdx && b.specializationRatio >= dominanceRatio;
+        const aIsPositionSpecialist = a.bestPosition === positionIdx && a.isSpecialist;
+        const bIsPositionSpecialist = b.bestPosition === positionIdx && b.isSpecialist;
 
         // Priority 1: MASSIVE preference for specialists at this exact position
         if (aIsPositionSpecialist !== bIsPositionSpecialist) {
@@ -113,7 +112,7 @@ export function createPositionComparator(
         // Priority 2: If both are specialists for this position, prefer stronger specialization
         if (aIsPositionSpecialist && bIsPositionSpecialist) {
             // Higher specialization ratio = more specialized
-            const ratioDiff = b.specializationRatio - a.specializationRatio;
+            const ratioDiff = (b.bestScore - b.secondBestScore) - (a.bestScore - a.secondBestScore);
             // Even tiny differences matter for specialists
             if (Math.abs(ratioDiff) > 0.01) {
                 return ratioDiff > 0 ? 100 : -100;

@@ -190,21 +190,14 @@ export function getBestArchetypeForPosition(
  * Check if player is specialist (>97% threshold for one position)
  */
 export function isPositionSpecialist(
-  archetypeScores: PlayerArchetypeScores,
-  threshold: number = 0.97
-): { isSpecialist: boolean; position?: Position; score?: number } {
-  const sorted = getTopPositions(archetypeScores, 2);
-  if (sorted.length < 2) return { isSpecialist: false };
+  best: number,
+  secondBest: number,
+  threshold: number = 3
+): boolean {
 
-  const [best, second] = sorted;
-  const isSpecialist = second.score <= best.score * threshold;
-
-  return {
-    isSpecialist,
-    position: isSpecialist ? best.position : undefined,
-    score: isSpecialist ? best.score : undefined
-  };
+  return (best - secondBest) >= threshold;
 }
+
 
 // Re-export legacy utility functions for backward compatibility
 export {

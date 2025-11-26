@@ -87,7 +87,7 @@ function initializeAssignmentContext(
     // Pre-build comparators for each position
     const comparators = new Map<number, (a: FastPlayer, b: FastPlayer) => number>();
     for (let i = 0; i < POSITION_COUNT; i++) {
-        comparators.set(i, createPositionComparator(i, 1.03));
+        comparators.set(i, createPositionComparator(i));
     }
 
     // Get configuration for guided randomness

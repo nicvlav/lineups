@@ -11,6 +11,7 @@ import type { BalanceConfiguration } from './metrics-config';
 import { POSITION_COUNT, INDEX_TO_POSITION, ZONE_POSITIONS } from './constants';
 import { getPositionScores } from '@/lib/positions/calculator';
 import { classifyStarPlayerByZone } from './metrics';
+import { isPositionSpecialist } from "@/types/players";
 
 /**
  * Convert player with archetype scores to FastPlayer for auto-balance
@@ -50,7 +51,6 @@ export function archetypeScoresToFastPlayer(
     bestScore,
     bestPosition,
     secondBestScore,
-    specializationRatio: secondBestScore > 0 ? bestScore / secondBestScore : 1,
     assignedPosition: -1,
     team: null,
     // Pre-calculated analytics (initialized to 0, calculated by preCalculatePlayerAnalytics)
@@ -64,7 +64,7 @@ export function archetypeScoresToFastPlayer(
     primaryZone: 0,
     isStarPlayer: false,
     starTier: 0,
-    isSpecialist: false,
+    isSpecialist: isPositionSpecialist(bestScore, secondBestScore),
     starClassification: null
   };
 }
@@ -206,9 +206,6 @@ export function preCalculatePlayerAnalytics(
     } else {
       player.starTier = 0; // Not a star
     }
-
-    // Specialist detection (specialization ratio >= 1.8)
-    player.isSpecialist = player.specializationRatio >= 1.8;
 
     // Star zone classification (expensive - only do for star players!)
     if (player.isStarPlayer) {

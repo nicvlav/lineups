@@ -296,7 +296,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         striker: {
             perfect: 0.99,
             acceptable: 0.94,
-            poor: 0.85,
+            poor: 0.90,
         },
     },
 
@@ -306,18 +306,18 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
         // Scale candidate pool with team size (20 players = top 4 candidates)
         topNScaling: false,
-        baseTopN: 6,
+        baseTopN: 8,
 
         // Use priority-based position selection within zones
         zonePositionStrategy: 'priority',
 
         // Weighted probability for selecting from top N
-        selectionWeights: [0.4, 0.3, 0.15, 0.05, 0.05, 0.05],
+        selectionWeights: [0.4, 0.3, 0.1, 0.05, 0.05, 0.05, 0.025, 0.025],
     },
 
     monteCarlo: {
         // Run up to 200 iterations
-        maxIterations: 30000,
+        maxIterations: 40000,
     },
 
     starPlayers: {

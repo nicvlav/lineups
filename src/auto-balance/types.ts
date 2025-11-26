@@ -61,9 +61,6 @@ export interface FastPlayer {
     /** Second best score for versatility calculation */
     secondBestScore: number;
 
-    /** Specialization ratio (best/secondBest) */
-    specializationRatio: number;
-
     /** Currently assigned position index (-1 if unassigned) */
     assignedPosition: number;
 
@@ -102,7 +99,7 @@ export interface FastPlayer {
     /** Pre-calculated star tier (0=not star, 1=good, 2=elite, 3=world-class) */
     starTier: number;
 
-    /** Pre-calculated specialist status (specializationRatio >= 1.8) */
+    /** Pre-calculated specialist status */
     isSpecialist: boolean;
 
     /** Pre-calculated star zone classification (only relevant if isStarPlayer = true) */
