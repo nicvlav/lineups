@@ -278,123 +278,128 @@ function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug
  * @returns Balance score from 0 (imbalanced) to 1 (perfectly balanced)
  */
 function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
-    const aPeakScores = teamA.peakPotential;
-    const bPeakScores = teamB.peakPotential;
-
-    const aSumScores = teamA.totalScore - teamA.zoneScores[0] - teamA.zoneScores[0];
-    const bSumScores = teamB.totalScore - teamB.zoneScores[0] - teamB.zoneScores[0];
-
-    const aRatio = calculateBasicDifferenceRatio(aSumScores, aPeakScores);
-    const bRatio = calculateBasicDifferenceRatio(bSumScores, bPeakScores);
-    const diff = calculateBasicDifferenceRatio(aRatio, bRatio);
-
-    const efficiency = calculateBasicDifferenceRatio(aSumScores + bSumScores, aPeakScores + bPeakScores);
-
-    // NEW: Detect major outliers (players WAY out of position)
-    // Example: ST specialist (78 at ST) playing CB (67) → 11 point gap is AWFUL
-    const detectOutliers = (team: FastTeam): { outlierPenalty: number; worstGap: number; worstPlayerName: string } => {
-        let totalOutlierPenalty = 0;
+    // Single-pass analysis: calculate peak vs placed scores AND variance penalty
+    const analyzeTeam = (team: FastTeam) => {
+        let peakTotal = 0;
+        let placedTotal = 0;
+        const gaps: number[] = [];
         let worstGap = 0;
         let worstPlayerName = '';
 
         for (const positionGroup of team.positions) {
             for (const player of positionGroup) {
                 if (player.assignedPosition < 0) continue; // Skip unassigned
-                if (player.assignedPosition === 0) continue; // Skip GK - no one is really good at that position
 
                 const assignedScore = player.scores[player.assignedPosition];
                 const bestScore = player.bestScore;
                 const gap = bestScore - assignedScore;
 
-                // Absolute gap thresholds - MASSIVE penalties for awful placements
-                if (gap >= 12) {
-                    // CATASTROPHIC outlier: 12+ point gap (e.g., ST at CB with 13 gap)
-                    // This should essentially disqualify the lineup
-                    const severity = gap / 10; // 13 gap = 1.3 severity
-                    totalOutlierPenalty += Math.pow(severity, 2.5); // Very steep: 13 gap → 2.19 penalty per player!
-
-                    if (gap > worstGap) {
-                        worstGap = gap;
-                        worstPlayerName = player.original.name;
-                    }
-                } else if (gap >= 8) {
-                    // Severe outlier: 8-11 point gap
-                    // Example: 78 best → 67 assigned = 11 gap
-                    const severity = gap / 10; // 10 gap = 1.0 severity
-                    totalOutlierPenalty += Math.pow(severity, 2.0); // Steep: 10 gap → 1.0 penalty
-
-                    if (gap > worstGap) {
-                        worstGap = gap;
-                        worstPlayerName = player.original.name;
-                    }
-                } else if (gap >= 5) {
-                    // Moderate outlier: 5-7 point gap
-                    const severity = gap / 15;
-                    totalOutlierPenalty += Math.pow(severity, 1.5); // 7 gap → 0.16 penalty
-
-                    if (gap > worstGap) {
-                        worstGap = gap;
-                        worstPlayerName = player.original.name;
-                    }
+                // Accumulate scores (skip GK from peak since nobody is good at it)
+                if (player.assignedPosition !== 0) {
+                    peakTotal += bestScore;
+                    placedTotal += assignedScore;
                 }
 
-                // Also check relative gap (for specialist players)
-                // A specialist with 1.8+ specialization ratio should NEVER be far from peak
-                if (player.specializationRatio >= 1.8 && gap >= 5) {
-                    // Specialist out of position is extra bad - add another multiplier
-                    const extraPenalty = gap >= 10 ? 1.0 : 0.5;
-                    totalOutlierPenalty += extraPenalty;
+                // Track gap for variance calculation
+                gaps.push(gap);
+
+                if (gap > worstGap) {
+                    worstGap = gap;
+                    worstPlayerName = player.original.name;
                 }
             }
         }
 
-        // Don't normalize by team size - we want absolute impact!
-        // A single catastrophic outlier should severely hurt the score
-        return { outlierPenalty: totalOutlierPenalty, worstGap, worstPlayerName };
+        // Calculate variance of gaps - punishes general spread
+        const meanGap = gaps.reduce((sum, g) => sum + g, 0) / gaps.length;
+        const variance = gaps.reduce((sum, g) => sum + Math.pow(g - meanGap, 2), 0) / gaps.length;
+        const stdDev = Math.sqrt(variance);
+
+        // Calculate mean absolute deviation (MAD) - more robust to outliers
+        const mad = gaps.reduce((sum, g) => sum + Math.abs(g - meanGap), 0) / gaps.length;
+
+        return {
+            peakTotal,
+            placedTotal,
+            gaps,
+            meanGap,
+            stdDev,
+            mad,
+            worstGap,
+            worstPlayerName
+        };
     };
 
-    const teamAOutliers = detectOutliers(teamA);
-    const teamBOutliers = detectOutliers(teamB);
+    const teamAStats = analyzeTeam(teamA);
+    const teamBStats = analyzeTeam(teamB);
 
-    // Combined outlier penalty (max of both teams - worst team determines score)
-    // Use max instead of average so one bad outlier tanks the whole lineup
-    const outlierPenalty = Math.max(teamAOutliers.outlierPenalty, teamBOutliers.outlierPenalty);
-
-    // Convert outlier penalty to score (0 penalty = 1.0 score, high penalty = low score)
-    // Use linear conversion with cap - 13 gap (2.19 penalty) should give ~0.0 score
-    const outlierScore = Math.max(0, 1.0 - outlierPenalty);
-
-    // Use calibrated scoring for efficiency (global average)
-    const diffScore = calibratedScore(
-        diff,
-        DEFAULT_BALANCE_CONFIG.thresholds.scoreBalance,
-        Steepness.VerySteep
+    // Calculate efficiency scores
+    const aRatio = calculateBasicDifferenceRatio(teamAStats.placedTotal, teamAStats.peakTotal);
+    const bRatio = calculateBasicDifferenceRatio(teamBStats.placedTotal, teamBStats.peakTotal);
+    const diff = calculateBasicDifferenceRatio(aRatio, bRatio);
+    const efficiency = calculateBasicDifferenceRatio(
+        teamAStats.placedTotal + teamBStats.placedTotal,
+        teamAStats.peakTotal + teamBStats.peakTotal
     );
+
     const efficiencyScore = calibratedScore(
         efficiency,
         DEFAULT_BALANCE_CONFIG.thresholds.scoreBalance,
         Steepness.Gentle
     );
 
-    // Combine: efficiency (70%) + outlier detection (30%)
-    // Global average is still solid, but outliers now hurt the score
-    const finalScore = efficiencyScore * 0.5 + outlierScore * 0.5;
+    // Variance penalty: punish high spread in positional gaps
+    // Combined variance across both teams
+    const combinedGaps = [...teamAStats.gaps, ...teamBStats.gaps];
+    const combinedMean = combinedGaps.reduce((sum, g) => sum + g, 0) / combinedGaps.length;
+    const combinedVariance = combinedGaps.reduce((sum, g) => sum + Math.pow(g - combinedMean, 2), 0) / combinedGaps.length;
+    const combinedStdDev = Math.sqrt(combinedVariance);
+
+    // Convert variance to penalty
+    // StdDev of 0 = perfect (all same gap), StdDev of 3+ = very bad
+    // Use exponential curve: low variance is fine, high variance gets punished hard
+    const variancePenalty = Math.min(1.0, Math.pow(combinedStdDev / 4.0, 1.8));
+    const varianceScore = 1.0 - variancePenalty;
+
+    // Mean gap penalty: punish having a high average gap
+    // Mean gap of 0 = perfect, 5+ = terrible
+    const meanGapPenalty = Math.min(1.0, Math.pow(combinedMean / 6.0, 2.0));
+    const meanGapScore = 1.0 - meanGapPenalty;
+
+    // Worst outlier penalty: still keep some punishment for catastrophic placements
+    const worstOverallGap = Math.max(teamAStats.worstGap, teamBStats.worstGap);
+    const worstGapPenalty = Math.min(1.0, Math.pow(worstOverallGap / 12.0, 2.5));
+    const worstGapScore = 1.0 - worstGapPenalty;
+
+    // Combine scores:
+    // - 40% efficiency (global peak vs placed)
+    // - 25% variance (punish uneven gaps)
+    // - 20% mean gap (punish high average gaps)
+    // - 15% worst outlier (catastrophic placements still matter)
+    const finalScore =
+        efficiencyScore * 0.40 +
+        varianceScore * 0.25 +
+        meanGapScore * 0.20 +
+        worstGapScore * 0.15;
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.scoreBalance;
         console.log('Positional Score Balance:');
-        console.log(formatComparison('A     | Peak vs Placed | ', aPeakScores, aSumScores, aRatio));
-        console.log(formatComparison('B     | Peak vs Placed | ', bPeakScores, bSumScores, bRatio));
+        console.log(formatComparison('A     | Peak vs Placed | ', teamAStats.peakTotal, teamAStats.placedTotal, aRatio));
+        console.log(formatComparison('B     | Peak vs Placed | ', teamBStats.peakTotal, teamBStats.placedTotal, bRatio));
         console.log(formatComparison('Diff  | Peak vs Placed | ', aRatio, bRatio, diff));
-        console.log(formatComparison('Total | Peak vs Placed | ', aSumScores + bSumScores, bPeakScores + bPeakScores, efficiency));
+        console.log(formatComparison('Total | Peak vs Placed | ', teamAStats.placedTotal + teamBStats.placedTotal, teamAStats.peakTotal + teamBStats.peakTotal, efficiency));
         console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
-        console.log(`  Diff Score: ${diffScore.toFixed(3)}`);
         console.log(`  Efficiency Score: ${efficiencyScore.toFixed(3)}`);
-        console.log(`  Outlier Detection:`);
-        console.log(`    Team A: penalty=${teamAOutliers.outlierPenalty.toFixed(3)}, worst=${teamAOutliers.worstPlayerName} (${teamAOutliers.worstGap.toFixed(1)} gap)`);
-        console.log(`    Team B: penalty=${teamBOutliers.outlierPenalty.toFixed(3)}, worst=${teamBOutliers.worstPlayerName} (${teamBOutliers.worstGap.toFixed(1)} gap)`);
-        console.log(`    Outlier Score: ${outlierScore.toFixed(3)}`);
-        console.log(`  Final: ${efficiencyScore.toFixed(3)} × 0.70 + ${outlierScore.toFixed(3)} × 0.30 = ${finalScore.toFixed(3)}`);
+        console.log(`  Gap Statistics:`);
+        console.log(`    Team A: mean=${teamAStats.meanGap.toFixed(2)}, stdDev=${teamAStats.stdDev.toFixed(2)}, worst=${teamAStats.worstPlayerName} (${teamAStats.worstGap.toFixed(1)})`);
+        console.log(`    Team B: mean=${teamBStats.meanGap.toFixed(2)}, stdDev=${teamBStats.stdDev.toFixed(2)}, worst=${teamBStats.worstPlayerName} (${teamBStats.worstGap.toFixed(1)})`);
+        console.log(`    Combined: mean=${combinedMean.toFixed(2)}, stdDev=${combinedStdDev.toFixed(2)}, worst=${worstOverallGap.toFixed(1)}`);
+        console.log(`  Component Scores:`);
+        console.log(`    Variance Score: ${varianceScore.toFixed(3)} (penalty=${variancePenalty.toFixed(3)})`);
+        console.log(`    Mean Gap Score: ${meanGapScore.toFixed(3)} (penalty=${meanGapPenalty.toFixed(3)})`);
+        console.log(`    Worst Gap Score: ${worstGapScore.toFixed(3)} (penalty=${worstGapPenalty.toFixed(3)})`);
+        console.log(`  Final: ${efficiencyScore.toFixed(3)}×0.40 + ${varianceScore.toFixed(3)}×0.25 + ${meanGapScore.toFixed(3)}×0.20 + ${worstGapScore.toFixed(3)}×0.15 = ${finalScore.toFixed(3)}`);
     }
 
     return finalScore;
