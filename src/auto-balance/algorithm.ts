@@ -469,7 +469,10 @@ export function runOptimizedMonteCarlo(
     for (let i = 0; i < maxIterations; i++) {
         // Pick random formations from cached arrays (very fast!)
         const formationA = cachedFormationsA[Math.floor(Math.random() * cachedFormationsA.length)];
-        const formationB = cachedFormationsB[Math.floor(Math.random() * cachedFormationsB.length)];
+        // CONSISTENCY: If both teams have same size, use the same formation for fairness
+        const formationB = teamASize === teamBSize
+            ? formationA
+            : cachedFormationsB[Math.floor(Math.random() * cachedFormationsB.length)];
 
         const result = assignPlayersToTeams(players, config, formationA, formationB);
         if (!result) continue;
