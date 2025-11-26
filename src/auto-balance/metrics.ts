@@ -971,9 +971,9 @@ export function classifyStarPlayerByZone(player: FastPlayer): StarZoneClassifica
     // Pure Attacking: AM(6), ST(7), WR(8)
     // Midfield: DM(3), CM(4)
     // Wide: WM(5)
-    const pureDefensiveIndices = [POSITION_INDICES.CB, POSITION_INDICES.FB, POSITION_INDICES.DM];
+    const pureDefensiveIndices = [POSITION_INDICES.CB, POSITION_INDICES.FB];
     const pureAttackingIndices = [POSITION_INDICES.ST, POSITION_INDICES.WR, POSITION_INDICES.AM];
-    const midfieldIndices = [POSITION_INDICES.DM, POSITION_INDICES.CM, POSITION_INDICES.WM, POSITION_INDICES.AM];
+    const midfieldIndices = [POSITION_INDICES.DM, POSITION_INDICES.CM, POSITION_INDICES.WM];
 
     // Find best scores in defensive and attacking zones
     let bestDefensiveScore = 0;

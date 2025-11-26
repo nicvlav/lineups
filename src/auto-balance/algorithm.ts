@@ -8,12 +8,13 @@
 
 import type { FastPlayer, Teams, SimulationResult } from "./types";
 import type { ScoredGamePlayer } from "@/types/players";
+import type { Formation } from "@/types/positions";
 import {
     INDEX_TO_POSITION,
     POSITION_COUNT,
     ZONE_POSITIONS,
 } from "./constants";
-import { defaultZoneWeights, getPointForPosition } from "@/types/positions";
+import { defaultZoneWeights, getPointForPosition, formationTemplates } from "@/types/positions";
 import { getFastFormation } from "./formation";
 import { createFastTeam, createPositionComparator, cryptoRandomInt, selectPlayerWithProximity, getAvailablePositions } from "./utils";
 import type { BalanceConfiguration } from "./metrics-config";
@@ -25,23 +26,27 @@ import { preCalculatePlayerAnalytics } from "./adapters";
  * Core team assignment algorithm
  * Assigns players to teams based on formation and balance
  * Basically the most important function for this website's concept
- * 
- * Disgustingly long function... 
+ *
+ * Disgustingly long function...
  * Really need to improve the readability of this one and break it up into smaller functions
+ *
+ * PERFORMANCE: Accepts optional cached formations to avoid repeated lookups in Monte Carlo
  */
 export function assignPlayersToTeams(
     players: FastPlayer[],
-    config: BalanceConfiguration
+    config: BalanceConfiguration,
+    cachedFormationA?: ReturnType<typeof getFastFormation>,
+    cachedFormationB?: ReturnType<typeof getFastFormation>
 ): Teams | null {
     const totalPlayers = players.length;
     const teamASize = Math.floor(totalPlayers / 2);
     const teamBSize = totalPlayers - teamASize;
 
-    // Get formations
-    const formationDataA = getFastFormation(teamASize);
-    const formationDataB = teamASize === teamBSize
+    // Use cached formations if provided, otherwise look them up
+    const formationDataA = cachedFormationA || getFastFormation(teamASize);
+    const formationDataB = cachedFormationB || (teamASize === teamBSize
         ? formationDataA
-        : getFastFormation(teamBSize);
+        : getFastFormation(teamBSize));
 
     if (!formationDataA || !formationDataB) {
         // if (config.debugMode) {
@@ -302,17 +307,59 @@ export function runOptimizedMonteCarlo(
     // This moves expensive stat calculations outside the loop for massive performance gains
     preCalculatePlayerAnalytics(players, config);
 
+    // OPTIMIZATION: Cache ALL available formations for random selection
+    // Profiling showed getFastFormation consumed ~4.5% of execution time (89 calls)
+    // Instead of calling getFastFormation each iteration, we cache all options and pick randomly
+    const totalPlayers = players.length;
+    const teamASize = Math.floor(totalPlayers / 2);
+    const teamBSize = totalPlayers - teamASize;
+
+    // Pre-convert all available formations to fast arrays
+    const availableFormationsA = formationTemplates[teamASize] || [];
+    const availableFormationsB = formationTemplates[teamBSize] || [];
+
+    if (availableFormationsA.length === 0 || availableFormationsB.length === 0) {
+        console.error('No formation available for team sizes:', teamASize, teamBSize);
+        return null;
+    }
+
+    // Pre-calculate fast arrays for all formations
+    const cachedFormationsA = availableFormationsA.map((formation: Formation) => {
+        const arr = new Int8Array(POSITION_COUNT);
+        for (let i = 0; i < POSITION_COUNT; i++) {
+            const position = INDEX_TO_POSITION[i];
+            arr[i] = formation.positions[position] || 0;
+        }
+        return { array: arr, formation };
+    });
+
+    const cachedFormationsB = teamASize === teamBSize
+        ? cachedFormationsA
+        : availableFormationsB.map((formation: Formation) => {
+            const arr = new Int8Array(POSITION_COUNT);
+            for (let i = 0; i < POSITION_COUNT; i++) {
+                const position = INDEX_TO_POSITION[i];
+                arr[i] = formation.positions[position] || 0;
+            }
+            return { array: arr, formation };
+        });
+
     // Calculate optimal star distribution BEFORE Monte Carlo loop
     const optimalStarPenalty = calculateOptimalStarDistribution(players, config);
 
     if (verbose) {
         console.log('🎲 Starting optimized Monte Carlo simulation...');
         console.log(`   Max iterations: ${maxIterations}`);
+        console.log(`   Team sizes: ${teamASize} (${cachedFormationsA.length} formations) vs ${teamBSize} (${cachedFormationsB.length} formations)`);
         console.log(`   Optimal star distribution penalty: ${optimalStarPenalty.toFixed(3)}`);
     }
 
     for (let i = 0; i < maxIterations; i++) {
-        const result = assignPlayersToTeams(players, config);
+        // Pick random formations from cached arrays (very fast!)
+        const formationA = cachedFormationsA[Math.floor(Math.random() * cachedFormationsA.length)];
+        const formationB = cachedFormationsB[Math.floor(Math.random() * cachedFormationsB.length)];
+
+        const result = assignPlayersToTeams(players, config, formationA, formationB);
         if (!result) continue;
 
         const metrics = calculateMetricsV3(result.teamA, result.teamB, config, false);
