@@ -16,7 +16,7 @@ import {
 } from "./constants";
 import { defaultZoneWeights, getPointForPosition, formationTemplates } from "@/types/positions";
 import { getFastFormation } from "./formation";
-import { createFastTeam, createPositionComparator, cryptoRandomInt, selectPlayerWithProximity, getAvailablePositions } from "./utils";
+import { createFastTeam, createPositionComparator, cryptoRandomInt, selectPlayerWithProximity, getAvailablePositions, removePlayerFast } from "./utils";
 import type { BalanceConfiguration } from "./metrics-config";
 import { calculateMetricsV3, calculateOptimalStarDistribution, calculateStarZonePenalty } from "./metrics";
 import { getStarCount } from "./debug-tools";
@@ -158,11 +158,8 @@ function assignGoalkeepers(context: AssignmentContext): void {
             targetTeam.playerCount++;
             targetFormation[GK_INDEX]--;
 
-            // Remove from available pool
-            const availableIndex = context.available.indexOf(player);
-            if (availableIndex > -1) {
-                context.available.splice(availableIndex, 1);
-            }
+            // Remove from available pool (O(1) swap-and-pop)
+            removePlayerFast(context.available, player);
         }
     }
 }
@@ -193,18 +190,19 @@ function assignOutfieldPlayers(context: AssignmentContext): void {
         const targetPriorities = assignToA ? context.teamAPriorities : context.teamBPriorities;
         const availablePositions = assignToA ? aPositions : bPositions;
 
-        // Find minimum priority among available positions
+        // OPTIMIZATION: Single-pass find minimum priority and collect positions
         let minPriority = Infinity;
-        for (const posIdx of availablePositions) {
-            if (targetPriorities[posIdx] < minPriority) {
-                minPriority = targetPriorities[posIdx];
-            }
-        }
-
-        // Collect all positions at minimum priority
         const lowestPriorityPositions: number[] = [];
+
         for (const posIdx of availablePositions) {
-            if (targetPriorities[posIdx] === minPriority) {
+            const priority = targetPriorities[posIdx];
+            if (priority < minPriority) {
+                // Found new minimum - reset array and update min
+                minPriority = priority;
+                lowestPriorityPositions.length = 0;
+                lowestPriorityPositions.push(posIdx);
+            } else if (priority === minPriority) {
+                // Same as current minimum - add to array
                 lowestPriorityPositions.push(posIdx);
             }
         }
@@ -222,11 +220,8 @@ function assignOutfieldPlayers(context: AssignmentContext): void {
             context.selectionWeights
         );
 
-        // Remove selected player from available pool
-        const playerIndex = context.available.indexOf(player);
-        if (playerIndex > -1) {
-            context.available.splice(playerIndex, 1);
-        }
+        // Remove selected player from available pool (O(1) swap-and-pop)
+        removePlayerFast(context.available, player);
 
         const score = player.scores[posIdx];
 

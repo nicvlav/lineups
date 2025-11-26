@@ -149,6 +149,37 @@ export function sortWorstInPlace(players: FastPlayer[]): void {
 }
 
 /**
+ * Fast O(1) player removal using swap-and-pop technique
+ *
+ * OPTIMIZATION: Replaces O(n) indexOf + splice with O(n) indexOf + O(1) swap-and-pop
+ * This is faster because we don't need to maintain array order in the available pool.
+ *
+ * How it works:
+ * 1. Find player index (still O(n), but unavoidable)
+ * 2. Swap player with last element (O(1))
+ * 3. Pop last element (O(1))
+ *
+ * Trade-off: Array order is not preserved, but we don't need it!
+ *
+ * @param array Array to remove from
+ * @param player Player to remove
+ * @returns true if player was removed, false if not found
+ */
+export function removePlayerFast(array: FastPlayer[], player: FastPlayer): boolean {
+    const idx = array.indexOf(player);
+    if (idx === -1) return false;
+
+    // Swap with last element (unless already last)
+    if (idx < array.length - 1) {
+        array[idx] = array[array.length - 1];
+    }
+
+    // Remove last element
+    array.pop();
+    return true;
+}
+
+/**
  * Cryptographically secure random number generator
  * Returns a random float between 0 (inclusive) and 1 (exclusive)
  * Uses crypto.getRandomValues for better randomness than Math.random()
