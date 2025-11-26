@@ -251,6 +251,36 @@ export function assignPlayersToTeams(
 }
 
 /**
+ * Normalizes player assignment data to match the team structure
+ *
+ * This ensures that player.assignedPosition and player.team match their actual
+ * position in the team structure, regardless of mutations during Monte Carlo iterations.
+ *
+ * This is a defensive programming measure that makes the code robust to:
+ * - Player object mutations across Monte Carlo iterations
+ * - Any downstream code that relies on assignedPosition/team properties
+ *
+ * @param teams The team assignments to normalize
+ */
+function normalizePlayerAssignments(teams: Teams): void {
+    // Team A
+    for (let posIdx = 0; posIdx < teams.teamA.positions.length; posIdx++) {
+        for (const player of teams.teamA.positions[posIdx]) {
+            player.assignedPosition = posIdx;
+            player.team = 'A';
+        }
+    }
+
+    // Team B
+    for (let posIdx = 0; posIdx < teams.teamB.positions.length; posIdx++) {
+        for (const player of teams.teamB.positions[posIdx]) {
+            player.assignedPosition = posIdx;
+            player.team = 'B';
+        }
+    }
+}
+
+/**
  * Runs Monte Carlo simulation to find optimal team balance
  *
  * @deprecated Use runOptimizedMonteCarlo for better performance
@@ -276,6 +306,11 @@ export function runMonteCarlo(
             bestScore = metrics.score;
             bestResult = { teams: result, score: metrics.score, metrics: metrics.details };
         }
+    }
+
+    // Normalize player assignments to match team structure before returning
+    if (bestResult) {
+        normalizePlayerAssignments(bestResult.teams);
     }
 
     return bestResult;
@@ -405,6 +440,11 @@ export function runOptimizedMonteCarlo(
         console.log(`   Best score: ${bestScore.toFixed(3)}`);
         console.log(`   Score balance: ${bestResult.metrics.positionalScoreBalance.toFixed(3)}`);
         console.log(`   Star distribution: ${bestResult.metrics.talentDistributionBalance.toFixed(3)}`);
+    }
+
+    // Normalize player assignments to match team structure before returning
+    if (bestResult) {
+        normalizePlayerAssignments(bestResult.teams);
     }
 
     return bestResult;

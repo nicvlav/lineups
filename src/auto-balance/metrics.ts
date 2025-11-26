@@ -286,26 +286,27 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
         let worstGap = 0;
         let worstPlayerName = '';
 
-        for (const positionGroup of team.positions) {
+        for (let posIdx = 0; posIdx < team.positions.length; posIdx++) {
+            const positionGroup = team.positions[posIdx];
             for (const player of positionGroup) {
-                if (player.assignedPosition < 0) continue; // Skip unassigned
-
-                const assignedScore = player.scores[player.assignedPosition];
+                // Use the position index from the team structure, not player.assignedPosition
+                // which may have been mutated by subsequent Monte Carlo iterations
+                const assignedScore = player.scores[posIdx];
                 const bestScore = player.bestScore;
                 const gap = bestScore - assignedScore;
 
                 // Accumulate scores (skip GK from peak since nobody is good at it)
-                if (player.assignedPosition !== 0) {
+                if (posIdx !== 0) {
                     peakTotal += bestScore;
                     placedTotal += assignedScore;
-                }
 
-                // Track gap for variance calculation
-                gaps.push(gap);
+                    // Track gap for variance calculation (also skip GKs)
+                    gaps.push(gap);
 
-                if (gap > worstGap) {
-                    worstGap = gap;
-                    worstPlayerName = player.original.name;
+                    if (gap > worstGap) {
+                        worstGap = gap;
+                        worstPlayerName = player.original.name;
+                    }
                 }
             }
         }
@@ -826,12 +827,12 @@ function calculatePlayerScoreStdDev(team: FastTeam): number {
     const playerScores: number[] = [];
 
     // Collect all player scores from all positions
-    for (const positionPlayers of team.positions) {
+    for (let posIdx = 0; posIdx < team.positions.length; posIdx++) {
+        const positionPlayers = team.positions[posIdx];
         for (const player of positionPlayers) {
-            // Use the player's assigned position score
-            if (player.assignedPosition >= 0) {
-                playerScores.push(player.scores[player.assignedPosition]);
-            }
+            // Use the position index from the team structure, not player.assignedPosition
+            // which may have been mutated by subsequent Monte Carlo iterations
+            playerScores.push(player.scores[posIdx]);
         }
     }
 
