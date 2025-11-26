@@ -965,7 +965,7 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
  * @param player The star player to classify
  * @returns Classification with specialist type and lean
  */
-function classifyStarPlayerByZone(player: FastPlayer): StarZoneClassification {
+export function classifyStarPlayerByZone(player: FastPlayer): StarZoneClassification {
     // Position indices for different zones
     // Pure Defensive: CB(1), FB(2)
     // Pure Attacking: AM(6), ST(7), WR(8)
@@ -1921,7 +1921,7 @@ function calculateStarDistributionPenalty(
  */
 function analyzeTeamStarDistribution(
     team: FastTeam,
-    starThreshold: number
+    _starThreshold: number // Unused - kept for API compatibility, uses pre-calculated player.isStarPlayer instead
 ): TeamStarDistribution {
     const classifications: StarZoneClassification[] = [];
     let defensiveSpecialists = 0;
@@ -1930,10 +1930,11 @@ function analyzeTeamStarDistribution(
     let allRounders = 0;
 
     // Iterate through all positions and find star players
+    // Use PRE-CALCULATED starClassification instead of recalculating!
     for (const positionPlayers of team.positions) {
         for (const player of positionPlayers) {
-            if (player.bestScore >= starThreshold) {
-                const classification = classifyStarPlayerByZone(player);
+            if (player.isStarPlayer && player.starClassification) {
+                const classification = player.starClassification;
                 classifications.push(classification);
 
                 if (classification.specialistType === 'defensive') {

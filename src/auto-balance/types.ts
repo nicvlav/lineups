@@ -115,6 +115,41 @@ export interface FastPlayer {
 
     /** Assigned team */
     team: 'A' | 'B' | null;
+
+    // ===== PRE-CALCULATED ANALYTICS (calculated once before Monte Carlo) =====
+
+    /** Pre-calculated weighted creativity score (vision, teamwork, decisions, passing, composure) */
+    creativityScore: number;
+
+    /** Pre-calculated weighted striker score (finishing, offTheBall, technique, attWorkrate) */
+    strikerScore: number;
+
+    /** Pre-calculated stamina score */
+    staminaScore: number;
+
+    /** Pre-calculated attacking workrate score */
+    attWorkrateScore: number;
+
+    /** Pre-calculated defensive workrate score */
+    defWorkrateScore: number;
+
+    /** Pre-calculated best score by zone [GK, DEF, MID, ATT] - for star classification */
+    zoneScores: Float32Array;
+
+    /** Pre-calculated primary zone index (0=GK, 1=DEF, 2=MID, 3=ATT) */
+    primaryZone: number;
+
+    /** Pre-calculated star player status (bestScore >= threshold) */
+    isStarPlayer: boolean;
+
+    /** Pre-calculated star tier (0=not star, 1=good, 2=elite, 3=world-class) */
+    starTier: number;
+
+    /** Pre-calculated specialist status (specializationRatio >= 1.8) */
+    isSpecialist: boolean;
+
+    /** Pre-calculated star zone classification (only relevant if isStarPlayer = true) */
+    starClassification: StarZoneClassification | null;
 }
 
 /**

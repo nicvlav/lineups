@@ -44,6 +44,18 @@ export function toFastPlayer(player: ScoredGamePlayer): FastPlayer {
         specializationRatio: secondBestScore > 0 ? bestScore / secondBestScore : Infinity,
         assignedPosition: -1,
         team: null,
+        // Pre-calculated analytics (initialized to 0, calculated by preCalculatePlayerAnalytics)
+        creativityScore: 0,
+        strikerScore: 0,
+        staminaScore: 0,
+        attWorkrateScore: 0,
+        defWorkrateScore: 0,
+        zoneScores: new Float32Array(4),
+        primaryZone: 0,
+        isStarPlayer: false,
+        starTier: 0,
+        isSpecialist: false,
+        starClassification: null
     };
 }
 

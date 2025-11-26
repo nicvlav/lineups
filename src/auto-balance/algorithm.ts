@@ -19,6 +19,7 @@ import { createFastTeam, createPositionComparator, cryptoRandomInt, selectPlayer
 import type { BalanceConfiguration } from "./metrics-config";
 import { calculateMetricsV3, calculateOptimalStarDistribution, calculateStarZonePenalty } from "./metrics";
 import { getStarCount } from "./debug-tools";
+import { preCalculatePlayerAnalytics } from "./adapters";
 
 /**
  * Core team assignment algorithm
@@ -206,68 +207,35 @@ export function assignPlayersToTeams(
         }
     }
 
-    // Get formula weights from configuration
-    const creativityFormula = config.formulas.creativity;
-    const strikerFormula = config.formulas.striker;
-
-    // Calculate zone scores and attack/defense scores
+    // Calculate zone scores and aggregate pre-calculated stats
     for (let zoneIdx = 0; zoneIdx < 4; zoneIdx++) {
         for (const posIdx of ZONE_POSITIONS[zoneIdx]) {
+            // Team A
             for (const player of teamA.positions[posIdx]) {
                 teamA.zoneScores[zoneIdx] += (zoneIdx === 0 ? player.bestScore : player.scores[posIdx]);
                 teamA.zonePeakScores[zoneIdx] += player.bestScore;
 
-                // Track energy scores (stamina + work rate)
-                const stats = player.original.stats;
-                if (stats) {
-                    teamA.staminaScore += stats.stamina;
-                    teamA.attWorkrateScore += stats.attWorkrate;
-                    teamA.defWorkrateScore += stats.defWorkrate;
-                    teamA.workrateScore += stats.attWorkrate; // deprecated - kept for compatibility
-
-                    // Creativity score using configured formula
-                    teamA.creativityScore +=
-                        stats.vision * creativityFormula.vision +
-                        stats.teamwork * creativityFormula.teamwork +
-                        stats.decisions * creativityFormula.decisions +
-                        stats.passing * creativityFormula.passing +
-                        stats.composure * creativityFormula.composure;
-
-                    // Striker score using configured formula
-                    teamA.strikerScore +=
-                        stats.finishing * strikerFormula.finishing +
-                        stats.offTheBall * strikerFormula.offTheBall +
-                        stats.technique * strikerFormula.technique +
-                        stats.attWorkrate * strikerFormula.attWorkrate;
-                }
+                // Accumulate pre-calculated scores (much faster than recalculating!)
+                teamA.staminaScore += player.staminaScore;
+                teamA.attWorkrateScore += player.attWorkrateScore;
+                teamA.defWorkrateScore += player.defWorkrateScore;
+                teamA.workrateScore += player.attWorkrateScore; // deprecated - kept for compatibility
+                teamA.creativityScore += player.creativityScore;
+                teamA.strikerScore += player.strikerScore;
             }
+
+            // Team B
             for (const player of teamB.positions[posIdx]) {
                 teamB.zoneScores[zoneIdx] += (zoneIdx === 0 ? player.bestScore : player.scores[posIdx]);
                 teamB.zonePeakScores[zoneIdx] += player.bestScore;
 
-                // Track energy scores (stamina + work rate)
-                const stats = player.original.stats;
-                if (stats) {
-                    teamB.staminaScore += stats.stamina;
-                    teamB.attWorkrateScore += stats.attWorkrate;
-                    teamB.defWorkrateScore += stats.defWorkrate;
-                    teamB.workrateScore += stats.attWorkrate; // deprecated - kept for compatibility
-
-                    // Creativity score using configured formula
-                    teamB.creativityScore +=
-                        stats.vision * creativityFormula.vision +
-                        stats.teamwork * creativityFormula.teamwork +
-                        stats.decisions * creativityFormula.decisions +
-                        stats.passing * creativityFormula.passing +
-                        stats.composure * creativityFormula.composure;
-
-                    // Striker score using configured formula
-                    teamB.strikerScore +=
-                        stats.finishing * strikerFormula.finishing +
-                        stats.offTheBall * strikerFormula.offTheBall +
-                        stats.technique * strikerFormula.technique +
-                        stats.attWorkrate * strikerFormula.attWorkrate;
-                }
+                // Accumulate pre-calculated scores (much faster than recalculating!)
+                teamB.staminaScore += player.staminaScore;
+                teamB.attWorkrateScore += player.attWorkrateScore;
+                teamB.defWorkrateScore += player.defWorkrateScore;
+                teamB.workrateScore += player.attWorkrateScore; // deprecated - kept for compatibility
+                teamB.creativityScore += player.creativityScore;
+                teamB.strikerScore += player.strikerScore;
             }
         }
     }
@@ -288,6 +256,9 @@ export function runMonteCarlo(
 ): SimulationResult | null {
     let bestResult: SimulationResult | null = null;
     let bestScore = -Infinity;
+
+    // Pre-calculate player analytics before Monte Carlo loop
+    preCalculatePlayerAnalytics(players, config);
 
     for (let i = 0; i < config.monteCarlo.maxIterations; i++) {
         const result = assignPlayersToTeams(players, config);
@@ -326,6 +297,10 @@ export function runOptimizedMonteCarlo(
 
     let bestScore = -Infinity;
     let bestResult: SimulationResult | null = null;
+
+    // PRE-CALCULATION PHASE: Calculate all invariant player analytics ONCE before Monte Carlo
+    // This moves expensive stat calculations outside the loop for massive performance gains
+    preCalculatePlayerAnalytics(players, config);
 
     // Calculate optimal star distribution BEFORE Monte Carlo loop
     const optimalStarPenalty = calculateOptimalStarDistribution(players, config);
