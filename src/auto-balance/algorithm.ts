@@ -18,7 +18,7 @@ import { defaultZoneWeights, getPointForPosition, formationTemplates } from "@/t
 import { getFastFormation } from "./formation";
 import { createFastTeam, createPositionComparator, cryptoRandomInt, selectPlayerWithProximity, getAvailablePositions, removePlayerFast } from "./utils";
 import type { BalanceConfiguration } from "./metrics-config";
-import { calculateMetricsV3, calculateOptimalStarDistribution, calculateStarZonePenalty } from "./metrics";
+import { calculateMetrics, calculateOptimalStarDistribution, calculateStarZonePenalty } from "./metrics";
 import { getStarCount } from "./debug-tools";
 import { preCalculatePlayerAnalytics } from "./adapters";
 
@@ -377,7 +377,7 @@ export function runMonteCarlo(
 
         if (!result) continue;
 
-        const metrics = calculateMetricsV3(result.teamA, result.teamB, config, false);
+        const metrics = calculateMetrics(result.teamA, result.teamB, config, false);
 
         if (metrics.score > bestScore) {
             bestScore = metrics.score;
@@ -477,7 +477,7 @@ export function runOptimizedMonteCarlo(
         const result = assignPlayersToTeams(players, config, formationA, formationB);
         if (!result) continue;
 
-        const metrics = calculateMetricsV3(result.teamA, result.teamB, config, false);
+        const metrics = calculateMetrics(result.teamA, result.teamB, config, false);
 
         // Calculate star distribution multiplier
         const starCountA = getStarCount(result.teamA, config.starPlayers.absoluteMinimum);
@@ -530,102 +530,6 @@ export function runOptimizedMonteCarlo(
     return bestResult;
 }
 
-/**
- * Recursive optimization for better results
-
-export function runRecursiveOptimization(
-    players: FastPlayer[],
-    config: BalanceConfig
-): SimulationResult | null {
-    // Run initial optimization
-    let bestResult: SimulationResult | null = null;
-    let bestScore = -Infinity;
-
-    // Recursive refinement - focus heavily on talent distribution and consistency
-    const subConfig: BalanceConfig = {
-        ...config,
-        recursiveDepth: 50,
-        recursive: false,
-        weights: {
-            overallStrengthBalance: 0.0,
-            positionalScoreBalance: 0.3,
-            zonalDistributionBalance: 0.2,
-            energyBalance: 0.033,
-            creativityBalance: 0.033,
-            strikerBalance: 0.033,
-            allStatBalance: 0.1,
-            talentDistributionBalance: 0.3      
-        },
-    };
-
-    for (let depth = 0; depth < config.recursiveDepth; depth++) {
-        const refined = runMonteCarlo(players, subConfig);
-
-        if (!refined) continue;
-
-        const metrics = calculateMetrics(refined.teams.teamA, refined.teams.teamB, config, false);
-
-        if (metrics.score > bestScore) {
-            bestScore = metrics.score;
-            bestResult = { teams: refined.teams, score: metrics.score, metrics: metrics.details };
-        }
-    }
-
-    return bestResult;
-}
- */
-/**
- * Recursive optimization for better results
-
-export function runTopLevelRecursiveOptimization(
-    players: FastPlayer[],
-    config: BalanceConfig
-): SimulationResult | null {
-    let bestResult: SimulationResult | null = null;
-    let bestScore = -Infinity;
-
-    // Recursive refinement - focus heavily on talent distribution and consistency
-    const subConfig: BalanceConfig = {
-        ...config,
-        recursiveDepth: 100,
-        weights: {
-            overallStrengthBalance: 0.0,
-            positionalScoreBalance: 0.05,
-            zonalDistributionBalance: 0.2,
-            energyBalance: 0.15,
-            creativityBalance: 0.15,
-            strikerBalance: 0.15,
-            allStatBalance: 0.2,
-            talentDistributionBalance: 0.1
-        },
-        recursive: true,
-    };
-
-    for (let depth = 0; depth < config.recursiveDepth; depth++) {
-        const refined = runMonteCarlo(players, subConfig);
-
-        if (!refined) continue;
-
-        const metrics = calculateMetrics(refined.teams.teamA, refined.teams.teamB, config, false);
-
-        // if (
-        //     metrics.score >= 0.95 &&
-        //     metrics.details.positionalScoreBalance >= 0.925 &&
-        //     metrics.details.talentDistributionBalance >= 0.925 &&
-        //     (Math.abs(refined.teams.teamA.peakPotential - refined.teams.teamB.peakPotential) < 5)) {
-        //     return { teams: refined.teams, score: metrics.score, metrics: metrics.details };
-        // }
-
-        if (metrics.score > bestScore) {
-            bestScore = metrics.score;
-            bestResult = { teams: refined.teams, score: metrics.score, metrics: metrics.details };
-        }
-        console.log("Run ", depth, config.recursiveDepth, metrics);
-    }
-
-    return bestResult;
-}
- */
 /**
  * Converts optimized result back to original format
  */

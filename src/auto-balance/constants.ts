@@ -7,7 +7,6 @@
  */
 
 import type { Position } from "@/types/positions";
-import type { BalanceConfig } from "./types";
 
 // Re-export new configuration system
 export { DEFAULT_BALANCE_CONFIG, type BalanceConfiguration } from "./metrics-config";
@@ -167,21 +166,3 @@ export function getInternalZoneSkillPower(numPlayers: number): number {
 export function getInternalVariancePower(numPlayers: number): number {
     return getScaledPower(numPlayers, 0.75, 1.5);
 }
-
-/** Default Monte Carlo configuration */
-export const DEFAULT_CONFIG: BalanceConfig = {
-    weights: {
-        overallStrengthBalance: 0.3,          // Peak potential balance between teams
-        positionalScoreBalance: 0.1,          // Actual score balance between teams
-        zonalDistributionBalance: 0.05,        // Zone distribution balance within teams
-        energyBalance: 0.066,                   // Energy balance (stamina + work rates) between teams
-        creativityBalance: 0.066,                // Creativity balance between teams
-        strikerBalance: 0.066,                // Creativity balance between teams
-        allStatBalance: 0.15,                   // All-stat balance (sum of all stats) between teams
-        talentDistributionBalance: 0.2,        // Talent distribution balance (std dev of player scores) - THE SECRET SAUCE
-    },
-    dominanceRatio: 1.03,  // Very low threshold: 5% better = specialist (e.g., 77 vs 73)
-    recursive: true,
-    recursiveDepth: 500,
-    debugMode: false,  // Use ENABLE_DEBUG flag instead
-} as const;

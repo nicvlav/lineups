@@ -86,15 +86,6 @@ export interface AlgorithmConfig {
 export interface MonteCarloConfig {
     /** Maximum iterations before stopping */
     maxIterations: number;
-
-    /** Number of top results to track */
-    trackTopN: number;
-
-    /** Enable refinement pass on best result */
-    enableRefinement: boolean;
-
-    /** Iterations for refinement pass */
-    refinementIterations: number;
 }
 
 /**
@@ -232,22 +223,22 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
             scoreBalance: 0.1,
 
             // #1 Priority: Top talent evenly distributed
-            starDistribution: 0.15,
+            starDistribution: 0.1,
 
             // #2 Priority: Each zone (DEF/MID/ATT) competitive
-            peakPotential: 0.2,
+            peakPotential: 0.25,
         },
         secondary: {
             // Peak potential matters less than actual scores
-            zoneBalance: 0.025,
+            zoneBalance: 0.02,
 
             // All-stat balance ensures no hidden advantages
             allStatBalance: 0.05,
 
             // Fine-tuning metrics
-            energy: 0.15,
-            creativity: 0.125,
-            striker: 0.2,
+            energy: 0.17,
+            creativity: 0.16,
+            striker: 0.15,
         }
     },
 
@@ -263,7 +254,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         starDistribution: {
             perfect: 0.99,
             acceptable: 0.975,
-            poor: 0.95,
+            poor: 0.9,
         },
 
         // Peak potential: Theoretical max strength
@@ -277,7 +268,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         zoneBalance: {
             perfect: 0.97,      // All zones within 5% of each other
             acceptable: 0.93,   // Most zones balanced, one slightly off
-            poor: 0.90,         // Multiple zones significantly imbalanced
+            poor: 0.80,         // Multiple zones significantly imbalanced
         },
 
         // Peak potential: Theoretical max strength
@@ -291,21 +282,21 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         energy: {
             perfect: 0.99,
             acceptable: 0.94,
-            poor: 0.90,
+            poor: 0.85,
         },
 
         // Creativity: Vision, passing, composure
         creativity: {
             perfect: 0.99,
             acceptable: 0.975,
-            poor: 0.95,
+            poor: 0.90,
         },
 
         // Energy: Stamina + work rate
         striker: {
             perfect: 0.99,
             acceptable: 0.94,
-            poor: 0.93,
+            poor: 0.85,
         },
     },
 
@@ -314,26 +305,19 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         proximityThreshold: 5,
 
         // Scale candidate pool with team size (20 players = top 4 candidates)
-        topNScaling: true,
-        baseTopN: 8,
+        topNScaling: false,
+        baseTopN: 6,
 
         // Use priority-based position selection within zones
         zonePositionStrategy: 'priority',
 
         // Weighted probability for selecting from top N
-        selectionWeights: [0.4, 0.25, 0.1, 0.05, 0.05, 0.05, 0.05, 0.05],
+        selectionWeights: [0.4, 0.3, 0.15, 0.05, 0.05, 0.05],
     },
 
     monteCarlo: {
         // Run up to 200 iterations
-        maxIterations: 25000,
-
-        // Track top 10 results
-        trackTopN: 20,
-
-        // Enable refinement pass on best result
-        enableRefinement: true,
-        refinementIterations: 50,
+        maxIterations: 30000,
     },
 
     starPlayers: {

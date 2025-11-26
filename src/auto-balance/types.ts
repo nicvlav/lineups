@@ -42,52 +42,6 @@ export interface BalanceMetrics {
 }
 
 /**
- * Configuration for the auto-balance algorithm
- *
- * @deprecated Use BalanceConfiguration from metrics-config.ts instead
- * This is kept for backwards compatibility during migration
- */
-export interface BalanceConfig {
-    /** Weights for different optimization criteria (must sum to 1.0) */
-    weights: BalanceMetrics;
-
-    /** Ratio for specialist detection (higher = stricter) */
-    dominanceRatio: number;
-
-    /** Enable recursive optimization for better results */
-    recursive: boolean;
-
-    /** Depth of recursive optimization */
-    recursiveDepth: number;
-
-    /** Enable debug logging */
-    debugMode: boolean;
-}
-
-/**
- * Convert new BalanceConfiguration to legacy BalanceConfig
- * Helper for gradual migration
- */
-export function convertToLegacyConfig(config: BalanceConfiguration): BalanceConfig {
-    return {
-        weights: {
-            overallStrengthBalance: config.weights.primary.peakPotential,
-            positionalScoreBalance: config.weights.primary.scoreBalance,
-            zonalDistributionBalance: config.weights.secondary.zoneBalance,
-            energyBalance: config.weights.secondary.energy,
-            creativityBalance: config.weights.secondary.creativity,
-            strikerBalance: config.weights.secondary.striker,
-            allStatBalance: config.weights.secondary.allStatBalance,
-            talentDistributionBalance: config.weights.primary.starDistribution,
-        },
-        dominanceRatio: 1.03, // Keep default
-        recursive: config.monteCarlo.enableRefinement,
-        recursiveDepth: config.monteCarlo.maxIterations,
-        debugMode: false,
-    };
-}
-
-/**
  * Performance-optimized player representation
  * Uses TypedArrays for cache-friendly access patterns
  */

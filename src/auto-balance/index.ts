@@ -1,16 +1,16 @@
 /**
- * Auto-Balance System v3 - OPTIMIZED & PROFESSIONAL
+ * Auto-Balance System - OPTIMIZED & PROFESSIONAL
  *
  * Professional-grade team balancing algorithm with calibrated metrics.
  * **100x faster** than v2 using guided randomness and smart Monte Carlo.
  *
  * ## Key Features
- * - ⚡ **100x faster**: 200-250 iterations (vs 5M in v2)
- * - 🎯 **Guided randomness**: Weighted top-N selection with proximity filtering
- * - 📊 **Calibrated metrics**: Threshold-based scoring (no more arbitrary Math.pow!)
- * - 🔧 **Professional config**: Zero magic numbers, all parameters documented
- * - 🐛 **Debug tools**: Comprehensive diagnostics and introspection
- * - ✅ **Better results**: "Consistently good" instead of "amazing OR awful"
+ * - **100x faster**: 200-250 iterations (vs 5M in v2)
+ * - **Guided randomness**: Weighted top-N selection with proximity filtering
+ * - **Calibrated metrics**: Threshold-based scoring (no more arbitrary Math.pow!)
+ * - **Professional config**: Zero magic numbers, all parameters documented
+ * - **Debug tools**: Comprehensive diagnostics and introspection
+ * - **Better results**: "Consistently good" instead of "amazing OR awful"
  *
  * ## Quick Start
  * ```typescript
@@ -47,10 +47,8 @@
  */
 
 import type {
-    FilledGamePlayer,
     ScoredGamePlayer
 } from "@/types/players";
-import { normalizedDefaultWeights } from "@/types/positions";
 
 // Import internal modules
 import type { BalanceMetrics } from "./types";
@@ -60,15 +58,14 @@ import {
     runOptimizedMonteCarlo,
     convertToGamePlayers
 } from "./algorithm";
-import { calculateMetricsV3 } from "./metrics";
+import { calculateMetrics } from "./metrics";
 import { diagnosticReport } from "./debug-tools";
 
 // Re-export types for external use
-export type { BalanceConfig, BalanceMetrics } from "./types";
 export type { BalanceConfiguration } from "./metrics-config";
 
 // Re-export modern metrics API
-export { calculateMetricsV3 } from "./metrics";
+export { calculateMetrics } from "./metrics";
 
 // Re-export new configuration system
 export { DEFAULT_BALANCE_CONFIG } from "./metrics-config";
@@ -88,106 +85,8 @@ export const toArrayScoredGamePlayers = (players: ScoredGamePlayer[]) => players
 export const assignPositions = (players: ScoredGamePlayer[]) => players;
 export const calculateScores = (players: ScoredGamePlayer[]) => players;
 
-/**
- * Main entry point for team auto-balancing
- *
- * Uses the NEW optimized Monte Carlo system:
- * - 100x faster (200-250 iterations vs 5M)
- * - Guided randomness with proximity filtering
- * - Calibrated metrics with interpretable thresholds
- * - Professional configuration system
- *
- * @param players - Array of scored players to balance
- * @param debugMode - Enable debug logging and diagnostic reports
- * @returns Balanced teams with assigned positions
- * @throws Error if player count is invalid
- *
- * @example
- * ```typescript
- * const teams = autoCreateTeamsScored(players, true); // Enable debug
- * console.log(`Team A: ${teams.a.length} players`);
- * console.log(`Team B: ${teams.b.length} players`);
- * ```
- */
-export function autoCreateTeamsScored(
-    players: ScoredGamePlayer[],
-    debugMode: boolean = false
-): { a: ScoredGamePlayer[]; b: ScoredGamePlayer[] } {
-    // Validate input
-    if (players.length < 10) {
-        throw new Error("Not enough players to form teams (minimum: 10)");
-    }
-    if (players.length > 26) {
-        throw new Error("Too many players to form teams (maximum: 24)");
-    }
-
-    // Convert to optimized format
-    const fastPlayers = players.map(toFastPlayer);
-
-    if (debugMode) {
-        console.log("\n╔═══════════════════════════════════════════════════════════╗");
-        console.log("║       OPTIMIZED AUTO-BALANCE (100x FASTER!)              ║");
-        console.log("╚═══════════════════════════════════════════════════════════╝");
-        console.log(`\n🎲 Running optimized Monte Carlo for ${players.length} players...`);
-        console.log(`   Using new calibrated metrics system`);
-        console.log(`   Max iterations: ${DEFAULT_BALANCE_CONFIG.monteCarlo.maxIterations}`);
-    }
-
-    // Run NEW optimized Monte Carlo (100x faster!)
-    const result = runOptimizedMonteCarlo(fastPlayers, DEFAULT_BALANCE_CONFIG, debugMode);
-
-    if (!result) {
-        throw new Error("Failed to balance teams - no valid formation found");
-    }
-
-    // Show comprehensive diagnostic if debugging
-    if (debugMode) {
-        console.log(diagnosticReport(
-            result.teams.teamA,
-            result.teams.teamB,
-            result.metrics,
-            result.score,
-            DEFAULT_BALANCE_CONFIG
-        ));
-    }
-
-    // Convert and return
-    return convertToGamePlayers(result);
-}
 
 /**
- * Convenience wrapper for filled game players
- *
- * @param players - Array of players with stats
- * @param debugMode - Enable debug logging
- * @returns Balanced teams with assigned positions
- */
-export function autoCreateTeamsFilled(
-    players: FilledGamePlayer[],
-    debugMode: boolean = false
-): { a: ScoredGamePlayer[]; b: ScoredGamePlayer[] } {
-    // Import here to avoid circular dependency
-    const { calculateScoresForStats } = require("@/types/players");
-
-    const scoredPlayers = players.map(player => ({
-        ...player,
-        zoneFit: calculateScoresForStats(player.stats, normalizedDefaultWeights),
-    })) as ScoredGamePlayer[];
-
-    return autoCreateTeamsScored(scoredPlayers, debugMode);
-}
-
-/**
- * MODERN V3 API - NO LEGACY CONFIGS! 🎉
- *
- * Uses the professional calibrated metrics system throughout with:
- * - Zero magic numbers (all thresholds configured)
- * - Calibrated transformations (no arbitrary Math.pow)
- * - Enhanced debug output with threshold context
- * - Direct use of BalanceConfiguration (no legacy conversion)
- *
- * This is the recommended API for new code.
- *
  * @param players - Array of scored players to balance
  * @param customConfig - Optional custom configuration (merges with defaults)
  * @param debugMode - Enable detailed debug logging with metrics explanations
@@ -196,12 +95,12 @@ export function autoCreateTeamsFilled(
  * @example
  * ```typescript
  * // Basic usage with detailed debug output
- * const result = autoBalanceV3(players, undefined, true);
+ * const result = autoBalance(players, undefined, true);
  * console.log(`Score: ${result.score.toFixed(3)}`);
  * console.log(result.diagnostic);
  *
  * // Custom configuration
- * const result = autoBalanceV3(players, {
+ * const result = autoBalance(players, {
  *     weights: {
  *         primary: {
  *             starDistribution: 0.40,  // Emphasize star balance
@@ -215,7 +114,7 @@ export function autoCreateTeamsFilled(
  * }, true);
  * ```
  */
-export function autoBalanceV3(
+export function autoBalance(
     players: ScoredGamePlayer[],
     customConfig?: Partial<BalanceConfiguration>,
     debugMode: boolean = false
@@ -271,7 +170,7 @@ export function autoBalanceV3(
 
     if (debugMode) {
         console.log("\n╔══════════════════════════════════════════════════════════════════════╗");
-        console.log("║       AUTO-BALANCE V3 - PROFESSIONAL CALIBRATED SYSTEM 🚀           ║");
+        console.log("║       AUTO-BALANCE - PROFESSIONAL CALIBRATED SYSTEM 🚀           ║");
         console.log("╚══════════════════════════════════════════════════════════════════════╝");
         console.log(`\nConfiguration:`);
         console.log(`   Players: ${players.length}`);
@@ -294,8 +193,8 @@ export function autoBalanceV3(
         throw new Error("Failed to balance teams - no valid formation found");
     }
 
-    // Calculate metrics using NEW V3 API (no legacy!)
-    const metricsResult = calculateMetricsV3(
+    // Calculate metrics
+    const metricsResult = calculateMetrics(
         result.teams.teamA,
         result.teams.teamB,
         config,

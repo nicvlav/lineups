@@ -7,7 +7,7 @@
  * @module auto-balance/debug-tools
  */
 
-import type { FastTeam, BalanceMetrics } from "./types";
+import type { FastTeam, BalanceMetrics} from "./types";
 import type { BalanceConfiguration, MetricWeights } from "./metrics-config";
 import { getTotalWeight } from "./metrics-config";
 

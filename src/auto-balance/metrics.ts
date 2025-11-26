@@ -7,13 +7,12 @@
  * @module auto-balance/metrics
  */
 
-import type { FastTeam, BalanceConfig, BalanceMetrics, FastPlayer, StarZoneClassification, TeamStarDistribution } from "./types";
+import type { FastTeam, BalanceMetrics, FastPlayer, StarZoneClassification, TeamStarDistribution } from "./types";
 import type { BalanceConfiguration } from "./metrics-config"
 import type { Formation } from "@/types/positions";
 import { ZONE_POSITIONS, INDEX_TO_POSITION, getMidfieldPenaltyPower, getInternalZoneSkillPower, POSITION_INDICES } from "./constants";
 import { calibratedScore, Steepness } from "./metric-transformations";
 import { DEFAULT_BALANCE_CONFIG } from "./metrics-config";
-import { getStarCount } from "./debug-tools";
 
 /**
  * Helper function to format a simple comparison for debug output
@@ -185,8 +184,6 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
     const aTotalWR = aAttWR + aDefWR;
     const bTotalWR = bAttWR + bDefWR;
 
-
-
     // Raw balance of total workrate
     const attWRRatio = calculateBasicDifferenceRatio(aAttWR, aAttWR);
     const defWRRatio = calculateBasicDifferenceRatio(aDefWR, bDefWR);
@@ -197,11 +194,16 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
     const aDefAdvantage = Math.min(1, Math.max(-1, aDefWR - bDefWR)); // positive if A has more def WR
     const aWrAdvantage = Math.min(1, Math.max(-1, aTotalWR - bTotalWR)); // positive if A has more def WR
     const aStaminaAdvantage = Math.min(1, Math.max(-1, teamA.staminaScore - teamB.staminaScore)); // positive if A has more def WR
-    let cancellationFactor = 1.0 - (Math.abs(aWrAdvantage + aStaminaAdvantage)) / 2.0; // 1 if opposite signs (cancellation)
+    let cancellationFactor = 1.0 - (Math.abs(aWrAdvantage + aStaminaAdvantage)) / 4.0; // 1 if opposite signs (cancellation)
 
     if (aAttAdvantage !== 0 && aDefAdvantage !== 0) {
-        cancellationFactor *= 1.0 - (Math.abs(aAttAdvantage + aDefAdvantage)) / 2.0;
+        cancellationFactor *= 1.0 - (Math.abs(aAttAdvantage + aDefAdvantage)) / 4.0;
     }
+
+    // IMPORTANT: Add a floor to cancellationFactor to allow differentiation in all-bad scenarios
+    // Without this, perfect balance in one metric (ratio=1.0) zeros out the entire score
+    // Floor of 0.1 means even worst-case imbalances can still be compared (10% weight on raw ratios)
+    cancellationFactor = Math.max(0.1, cancellationFactor);
 
     // Combine: if perfect cancellation (both teams balanced differently), still penalize raw differences
     // If no cancellation (same team ahead in both), use total ratio directly
@@ -870,11 +872,7 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
         DEFAULT_BALANCE_CONFIG.thresholds.starDistribution,
         Steepness.VeryGentle
     );
-    const midDiffRatio = calibratedScore(
-        calculateBasicDifferenceRatio(teamAZoneAverages[2], teamBZoneAverages[2]),
-        DEFAULT_BALANCE_CONFIG.thresholds.starDistribution,
-        Steepness.Gentle
-    );
+    const midDiffRatio = calculateBasicDifferenceRatio(teamAZoneAverages[2], teamBZoneAverages[2]);
 
     const midRatio = midDiffRatio * combinedMidfieldPenalty;
 
@@ -2257,7 +2255,6 @@ export function calculateStarZonePenalty(
  * Calculates comprehensive balance metrics using NEW configuration system
  *
  * Uses calibrated transformations and professional configuration.
- * This is the modern API - use this instead of calculateMetrics().
  *
  * @param teamA First team
  * @param teamB Second team
@@ -2265,7 +2262,7 @@ export function calculateStarZonePenalty(
  * @param debug Enable detailed debug output with threshold context
  * @returns Combined score and detailed metrics
  */
-export function calculateMetricsV3(
+export function calculateMetrics(
     teamA: FastTeam,
     teamB: FastTeam,
     config: BalanceConfiguration,
@@ -2328,112 +2325,6 @@ export function calculateMetricsV3(
         console.log('─────────────────────────────────────────────────────────────────────');
         console.log(`  FINAL WEIGHTED SCORE:  ${finalScore.toFixed(3)}`);
         console.log('╚═══════════════════════════════════════════════════════════════════╝');
-        console.log('');
-    }
-
-    return { score: finalScore, details: metrics };
-}
-
-/**
- * Calculates comprehensive balance metrics (LEGACY API)
- *
- * @deprecated Use calculateMetricsV3() with BalanceConfiguration instead
- *
- * A well-balanced team assignment needs to satisfy multiple criteria:
- * - Similar overall strength (peak potential)
- * - Similar positional scores
- * - Balanced internal zone distribution
- * - Similar attack/defense distribution
- * - Similar energy levels (stamina and work rates)
- *
- * @param teamA First team
- * @param teamB Second team
- * @param config Balance configuration with weights for each metric
- * @returns Combined score and detailed metrics
- */
-export function calculateMetrics(
-    teamA: FastTeam,
-    teamB: FastTeam,
-    config: BalanceConfig,
-    debug: boolean
-): { score: number; details: BalanceMetrics } {
-    // Calculate each metric independently (always calculate all metrics)
-    const overallStrengthBalance = calculateOverallStrengthBalance(teamA, teamB, debug);
-    const positionalScoreBalance = calculatePositionalScoreBalance(teamA, teamB, debug);
-    const zonalDistributionBalance = calculateZonalDistributionBalance(teamA, teamB, debug);
-    const energyBalance = calculateEnergyBalance(teamA, teamB, debug);
-    const creativityBalance = calculateCreativityBalance(teamA, teamB, debug);
-    const strikerBalance = calculateStrikerBalance(teamA, teamB, debug);
-    const allStatBalance = calculateAllStatBalance(teamA, teamB, debug);
-    const talentDistributionBalance = calculateTalentDistributionBalance(teamA, teamB, debug);
-
-    // Assemble detailed metrics
-    const metrics: BalanceMetrics = {
-        overallStrengthBalance,
-        positionalScoreBalance,
-        zonalDistributionBalance,
-        energyBalance,
-        creativityBalance,
-        strikerBalance,
-        allStatBalance,
-        talentDistributionBalance
-    };
-
-    // Calculate weighted score based on config
-    const weightedScore =
-        config.weights.overallStrengthBalance * metrics.overallStrengthBalance +
-        config.weights.positionalScoreBalance * metrics.positionalScoreBalance +
-        config.weights.zonalDistributionBalance * metrics.zonalDistributionBalance +
-        config.weights.energyBalance * metrics.energyBalance +
-        config.weights.creativityBalance * metrics.creativityBalance +
-        config.weights.strikerBalance * metrics.strikerBalance +
-        config.weights.allStatBalance * metrics.allStatBalance +
-        config.weights.talentDistributionBalance * metrics.talentDistributionBalance;
-
-    // Calculate consistency penalty to favor results where all metrics are close to 1.0
-    const metricValues = [
-        metrics.overallStrengthBalance,
-        metrics.positionalScoreBalance,
-        metrics.zonalDistributionBalance,
-        metrics.energyBalance,
-        metrics.creativityBalance,
-        metrics.strikerBalance,
-        metrics.allStatBalance,
-        metrics.talentDistributionBalance
-    ];
-
-    const starCountA = getStarCount(teamA, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
-    const starCountB = getStarCount(teamB, DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum);
-    const starPenalty = Math.abs(starCountA - starCountB) >= 2 ? 0.5 : 1.0;
-
-    // Calculate standard deviation of the metrics
-    const mean = metricValues.reduce((a, b) => a + b, 0) / metricValues.length;
-    const variance = metricValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / metricValues.length;
-    const stdDev = Math.sqrt(variance);
-    const finalScore = weightedScore * starPenalty;// * Math.pow(1-stdDev, 1.5);
-
-    if (debug) {
-        console.log('');
-        console.log('================================================================');
-        console.log('FINAL BALANCE METRICS SUMMARY');
-        console.log('================================================================');
-        console.log(`  Overall Strength:         ${metrics.overallStrengthBalance.toFixed(3)} (weight: ${config.weights.overallStrengthBalance.toFixed(2)}) = ${(config.weights.overallStrengthBalance * metrics.overallStrengthBalance).toFixed(3)}`);
-        console.log(`  Positional Score:         ${metrics.positionalScoreBalance.toFixed(3)} (weight: ${config.weights.positionalScoreBalance.toFixed(2)}) = ${(config.weights.positionalScoreBalance * metrics.positionalScoreBalance).toFixed(3)}`);
-        console.log(`  Zonal Distribution:       ${metrics.zonalDistributionBalance.toFixed(3)} (weight: ${config.weights.zonalDistributionBalance.toFixed(2)}) = ${(config.weights.zonalDistributionBalance * metrics.zonalDistributionBalance).toFixed(3)}`);
-        console.log(`  Energy Balance:           ${metrics.energyBalance.toFixed(3)} (weight: ${config.weights.energyBalance.toFixed(2)}) = ${(config.weights.energyBalance * metrics.energyBalance).toFixed(3)}`);
-        console.log(`  Creativity Balance:       ${metrics.creativityBalance.toFixed(3)} (weight: ${config.weights.creativityBalance.toFixed(2)}) = ${(config.weights.creativityBalance * metrics.creativityBalance).toFixed(3)}`);
-        console.log(`  Striker Balance:          ${metrics.strikerBalance.toFixed(3)} (weight: ${config.weights.strikerBalance.toFixed(2)}) = ${(config.weights.strikerBalance * metrics.strikerBalance).toFixed(3)}`);
-        console.log(`  All-Stat Balance:         ${metrics.allStatBalance.toFixed(3)} (weight: ${config.weights.allStatBalance.toFixed(2)}) = ${(config.weights.allStatBalance * metrics.allStatBalance).toFixed(3)}`);
-        console.log(`  Talent Distribution:      ${metrics.talentDistributionBalance.toFixed(3)} (weight: ${config.weights.talentDistributionBalance.toFixed(2)}) = ${(config.weights.talentDistributionBalance * metrics.talentDistributionBalance).toFixed(3)}`);
-        console.log('----------------------------------------------------------------');
-        console.log(`  WEIGHTED SCORE:           ${weightedScore.toFixed(3)}`);
-        console.log('');
-        console.log(`  Consistency Analysis:`);
-        console.log(`    Metric Mean:            ${mean.toFixed(3)}`);
-        console.log(`    Metric Std Dev:         ${stdDev.toFixed(3)}`);
-        console.log('----------------------------------------------------------------');
-        console.log(`  FINAL SCORE:              ${finalScore.toFixed(3)}`);
-        console.log('================================================================');
         console.log('');
     }
 
