@@ -54,6 +54,7 @@ export function archetypeScoresToFastPlayer(
     assignedPosition: -1,
     team: null,
     // Pre-calculated analytics (initialized to 0, calculated by preCalculatePlayerAnalytics)
+    allStatsScore: 0,
     creativityScore: 0,
     strikerScore: 0,
     staminaScore: 0,
@@ -139,6 +140,9 @@ export function preCalculatePlayerAnalytics(
 
     // Calculate weighted stat scores (if stats exist)
     if (stats) {
+      // All stats score: sum of all individual stats (pre-calculated for performance)
+      player.allStatsScore = Object.values(stats).reduce((sum, val) => sum + val, 0);
+
       // Creativity score (vision + teamwork + decisions + passing + composure)
       player.creativityScore =
         stats.vision * creativityFormula.vision +
@@ -160,6 +164,7 @@ export function preCalculatePlayerAnalytics(
       player.defWorkrateScore = stats.defWorkrate;
     } else {
       // No stats available - set to 0
+      player.allStatsScore = 0;
       player.creativityScore = 0;
       player.strikerScore = 0;
       player.staminaScore = 0;

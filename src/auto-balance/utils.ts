@@ -45,6 +45,7 @@ export function toFastPlayer(player: ScoredGamePlayer): FastPlayer {
         assignedPosition: -1,
         team: null,
         // Pre-calculated analytics (initialized to 0, calculated by preCalculatePlayerAnalytics)
+        allStatsScore: 0,
         creativityScore: 0,
         strikerScore: 0,
         staminaScore: 0,
@@ -82,6 +83,7 @@ export function createFastTeam(): FastTeam {
         workrateScore: 0,
         creativityScore: 0,
         strikerScore: 0,
+        allStatsScore: 0,
     };
 }
 

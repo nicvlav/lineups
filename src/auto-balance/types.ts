@@ -119,6 +119,9 @@ export interface FastPlayer {
     // ===== PRE-CALCULATED ANALYTICS (calculated once before Monte Carlo) =====
 
     /** Pre-calculated weighted creativity score (vision, teamwork, decisions, passing, composure) */
+    allStatsScore: number;
+
+    /** Pre-calculated weighted creativity score (vision, teamwork, decisions, passing, composure) */
     creativityScore: number;
 
     /** Pre-calculated weighted striker score (finishing, offTheBall, technique, attWorkrate) */
@@ -194,6 +197,9 @@ export interface FastTeam {
 
     /** Striker score for striker balance calculation */
     strikerScore: number;
+
+    /** Stamina score for energy balance calculation */
+    allStatsScore: number;
 }
 
 /**

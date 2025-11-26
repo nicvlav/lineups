@@ -547,31 +547,9 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
  * @returns Balance score from 0 (imbalanced) to 1 (perfectly balanced)
  */
 function calculateAllStatBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
-    // Sum all individual player stats for team A
-    let teamATotal = 0;
-    let teamAPlayerCount = 0;
-    for (const positionPlayers of teamA.positions) {
-        for (const player of positionPlayers) {
-            if (player.original.stats) {
-                // Sum all stat values from the player's stats object
-                teamATotal += Object.values(player.original.stats).reduce((sum, val) => sum + val, 0);
-                teamAPlayerCount++;
-            }
-        }
-    }
-
-    // Sum all individual player stats for team B
-    let teamBTotal = 0;
-    let teamBPlayerCount = 0;
-    for (const positionPlayers of teamB.positions) {
-        for (const player of positionPlayers) {
-            if (player.original.stats) {
-                // Sum all stat values from the player's stats object
-                teamBTotal += Object.values(player.original.stats).reduce((sum, val) => sum + val, 0);
-                teamBPlayerCount++;
-            }
-        }
-    }
+    // Use pre-calculated allStatsScore from teams (much faster than recalculating!)
+    const teamATotal = teamA.allStatsScore;
+    const teamBTotal = teamB.allStatsScore;
 
     const rawRatio = calculateBasicDifferenceRatio(teamATotal, teamBTotal);
 
@@ -586,8 +564,6 @@ function calculateAllStatBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
         const t = DEFAULT_BALANCE_CONFIG.thresholds.allStatBalance;
         console.log('All-Stat Balance (Sum of Every Player Stat):');
         console.log(formatComparison('Total All Stats', teamATotal, teamBTotal, rawRatio));
-        console.log(`  Team A: ${teamAPlayerCount} players, avg ${(teamATotal / teamAPlayerCount).toFixed(1)} total stats/player`);
-        console.log(`  Team B: ${teamBPlayerCount} players, avg ${(teamBTotal / teamBPlayerCount).toFixed(1)} total stats/player`);
         console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
         console.log(`  Calibrated Score: ${allStatBalanceRatio.toFixed(3)}`);
     }

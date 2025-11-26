@@ -227,6 +227,7 @@ export function assignPlayersToTeams(
                 teamA.workrateScore += player.attWorkrateScore; // deprecated - kept for compatibility
                 teamA.creativityScore += player.creativityScore;
                 teamA.strikerScore += player.strikerScore;
+                teamA.allStatsScore += player.allStatsScore;
             }
 
             // Team B
@@ -241,6 +242,7 @@ export function assignPlayersToTeams(
                 teamB.workrateScore += player.attWorkrateScore; // deprecated - kept for compatibility
                 teamB.creativityScore += player.creativityScore;
                 teamB.strikerScore += player.strikerScore;
+                teamB.allStatsScore += player.allStatsScore;
             }
         }
     }
