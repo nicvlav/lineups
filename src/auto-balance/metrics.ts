@@ -355,11 +355,33 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
     const combinedVariance = combinedGaps.reduce((sum, g) => sum + Math.pow(g - combinedMean, 2), 0) / combinedGaps.length;
     const combinedStdDev = Math.sqrt(combinedVariance);
 
+    // Progressive gap penalty: penalize gaps more as they get larger in groups of 3
+    // Gap 0-2: baseline penalty (1x)
+    // Gap 3-5: moderate penalty (1.5x)
+    // Gap 6-8: severe penalty (2.5x)
+    // Gap 9-11: very severe penalty (4x)
+    // Gap 12+: catastrophic penalty (6x)
+    const calculateGapPenalty = (gap: number): number => {
+        if (gap < 3) return gap * 1.0;
+        if (gap < 6) return gap * 1.5;
+        if (gap < 9) return gap * 2.5;
+        if (gap < 12) return gap * 4.0;
+        return gap * 6.0;
+    };
+
+    // Apply progressive penalty to each gap
+    const weightedGapSum = combinedGaps.reduce((sum, gap) => sum + calculateGapPenalty(gap), 0);
+    const avgWeightedGap = weightedGapSum / combinedGaps.length;
+
     // Convert variance to penalty
     // StdDev of 0 = perfect (all same gap), StdDev of 3+ = very bad
     // Use exponential curve: low variance is fine, high variance gets punished hard
-    const variancePenalty = Math.min(1.0, Math.pow(combinedStdDev / 4.0, 1.8));
+    const variancePenalty = Math.min(1.0, Math.pow(combinedStdDev / 4.0, 2.2));
     const varianceScore = 1.0 - variancePenalty;
+
+    // Weighted gap penalty (uses the progressive multipliers)
+    const weightedGapPenalty = Math.min(1.0, avgWeightedGap / 30.0);
+    const weightedGapScore = 1.0 - weightedGapPenalty;
 
     // Mean gap penalty: punish having a high average gap
     // Mean gap of 0 = perfect, 5+ = terrible
@@ -372,14 +394,14 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
     const worstGapScore = 1.0 - worstGapPenalty;
 
     // Combine scores:
-    // - 40% efficiency (global peak vs placed)
-    // - 25% variance (punish uneven gaps)
-    // - 20% mean gap (punish high average gaps)
+    // - 35% efficiency (global peak vs placed)
+    // - 30% variance (punish uneven gaps - INCREASED)
+    // - 20% weighted gap (progressive penalty by gap size - REPLACES mean gap)
     // - 15% worst outlier (catastrophic placements still matter)
     const finalScore =
-        efficiencyScore * 0.40 +
-        varianceScore * 0.25 +
-        meanGapScore * 0.20 +
+        efficiencyScore * 0.35 +
+        varianceScore * 0.30 +
+        weightedGapScore * 0.20 +
         worstGapScore * 0.15;
 
     if (debug) {
@@ -396,10 +418,11 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
         console.log(`    Team B: mean=${teamBStats.meanGap.toFixed(2)}, stdDev=${teamBStats.stdDev.toFixed(2)}, worst=${teamBStats.worstPlayerName} (${teamBStats.worstGap.toFixed(1)})`);
         console.log(`    Combined: mean=${combinedMean.toFixed(2)}, stdDev=${combinedStdDev.toFixed(2)}, worst=${worstOverallGap.toFixed(1)}`);
         console.log(`  Component Scores:`);
-        console.log(`    Variance Score: ${varianceScore.toFixed(3)} (penalty=${variancePenalty.toFixed(3)})`);
-        console.log(`    Mean Gap Score: ${meanGapScore.toFixed(3)} (penalty=${meanGapPenalty.toFixed(3)})`);
-        console.log(`    Worst Gap Score: ${worstGapScore.toFixed(3)} (penalty=${worstGapPenalty.toFixed(3)})`);
-        console.log(`  Final: ${efficiencyScore.toFixed(3)}×0.40 + ${varianceScore.toFixed(3)}×0.25 + ${meanGapScore.toFixed(3)}×0.20 + ${worstGapScore.toFixed(3)}×0.15 = ${finalScore.toFixed(3)}`);
+        console.log(`    Variance Score: ${varianceScore.toFixed(3)} (stdDev=${combinedStdDev.toFixed(2)}, penalty=${variancePenalty.toFixed(3)})`);
+        console.log(`    Weighted Gap Score: ${weightedGapScore.toFixed(3)} (avgWeighted=${avgWeightedGap.toFixed(2)}, penalty=${weightedGapPenalty.toFixed(3)})`);
+        console.log(`    Mean Gap Score: ${meanGapScore.toFixed(3)} (mean=${combinedMean.toFixed(2)}, penalty=${meanGapPenalty.toFixed(3)}) [not used]`);
+        console.log(`    Worst Gap Score: ${worstGapScore.toFixed(3)} (worst=${worstOverallGap.toFixed(1)}, penalty=${worstGapPenalty.toFixed(3)})`);
+        console.log(`  Final: ${efficiencyScore.toFixed(3)}×0.35 + ${varianceScore.toFixed(3)}×0.30 + ${weightedGapScore.toFixed(3)}×0.20 + ${worstGapScore.toFixed(3)}×0.15 = ${finalScore.toFixed(3)}`);
     }
 
     return finalScore;
