@@ -270,3 +270,35 @@ export interface TeamStarDistribution {
     classifications: StarZoneClassification[];
 }
 
+/**
+ * Context object for the team assignment algorithm
+ * Encapsulates all state needed during the assignment process
+ */
+export interface AssignmentContext {
+    // Input configuration
+    config: BalanceConfiguration;
+
+    // Teams being built
+    teamA: FastTeam;
+    teamB: FastTeam;
+
+    // Formation arrays (mutable - decremented as positions are filled)
+    formationA: Int8Array;
+    formationB: Int8Array;
+
+    // Available players pool (mutable - players removed as assigned)
+    available: FastPlayer[];
+
+    // Position priorities (mutable - incremented as positions are filled)
+    teamAPriorities: Int8Array;
+    teamBPriorities: Int8Array;
+
+    // Pre-built comparators for each position
+    comparators: Map<number, (a: FastPlayer, b: FastPlayer) => number>;
+
+    // Algorithm configuration
+    proximityThreshold: number;
+    selectionWeights: number[];
+    topN: number;
+}
+

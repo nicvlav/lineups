@@ -6,7 +6,7 @@
  * @module auto-balance/algorithm
  */
 
-import type { FastPlayer, Teams, SimulationResult } from "./types";
+import type { FastPlayer, FastTeam, Teams, SimulationResult, AssignmentContext } from "./types";
 import type { ScoredGamePlayer } from "@/types/players";
 import type { Formation } from "@/types/positions";
 import {
@@ -23,21 +23,20 @@ import { getStarCount } from "./debug-tools";
 import { preCalculatePlayerAnalytics } from "./adapters";
 
 /**
- * Core team assignment algorithm
- * Assigns players to teams based on formation and balance
- * Basically the most important function for this website's concept
+ * Initialize the assignment context with all necessary state
  *
- * Disgustingly long function...
- * Really need to improve the readability of this one and break it up into smaller functions
- *
- * PERFORMANCE: Accepts optional cached formations to avoid repeated lookups in Monte Carlo
+ * @param players Player pool to assign
+ * @param config Balance configuration
+ * @param cachedFormationA Optional cached formation for team A
+ * @param cachedFormationB Optional cached formation for team B
+ * @returns Initialized context, or null if no valid formations exist
  */
-export function assignPlayersToTeams(
+function initializeAssignmentContext(
     players: FastPlayer[],
     config: BalanceConfiguration,
     cachedFormationA?: ReturnType<typeof getFastFormation>,
     cachedFormationB?: ReturnType<typeof getFastFormation>
-): Teams | null {
+): AssignmentContext | null {
     const totalPlayers = players.length;
     const teamASize = Math.floor(totalPlayers / 2);
     const teamBSize = totalPlayers - teamASize;
@@ -49,12 +48,10 @@ export function assignPlayersToTeams(
         : getFastFormation(teamBSize));
 
     if (!formationDataA || !formationDataB) {
-        // if (config.debugMode) {
-        //     console.warn(`No formation available for ${teamASize}/${teamBSize} players`);
-        // }
         return null;
     }
 
+    // Clone formation arrays (will be mutated during assignment)
     const formationA = formationDataA.array.slice();
     const formationB = formationDataB.array.slice();
 
@@ -74,47 +71,6 @@ export function assignPlayersToTeams(
         player.assignedPosition = -1;
         player.team = null;
     }
-
-    // Phase 0: Assign worst players to GK first
-    // This prevents decent defenders from being placed at GK
-    const GK_INDEX = 0;
-    const numGKsNeeded = formationA[GK_INDEX] + formationB[GK_INDEX];
-
-    if (numGKsNeeded > 0 && available.length > 0) {
-        // Sort players by bestScore (ascending) to get worst players first
-        const sortedByWorst = [...available].sort((a, b) => a.bestScore - b.bestScore);
-
-        for (let i = 0; i < numGKsNeeded && i < sortedByWorst.length; i++) {
-            const player = sortedByWorst[i];
-
-            // Decide which team gets this GK
-            const assignToA = formationA[GK_INDEX] > 0 &&
-                (formationB[GK_INDEX] === 0 || teamA.totalScore <= teamB.totalScore);
-
-            const targetTeam = assignToA ? teamA : teamB;
-            const targetFormation = assignToA ? formationA : formationB;
-
-            if (targetFormation[GK_INDEX] > 0) {
-                const score = player.bestScore;
-
-                player.assignedPosition = GK_INDEX;
-                player.team = assignToA ? 'A' : 'B';
-                targetTeam.positions[GK_INDEX].push(player);
-                targetTeam.totalScore += score;
-                targetTeam.peakPotential += player.bestScore;
-                targetTeam.playerCount++;
-                targetFormation[GK_INDEX]--;
-
-                // Remove from available pool
-                const availableIndex = available.indexOf(player);
-                if (availableIndex > -1) {
-                    available.splice(availableIndex, 1);
-                }
-            }
-        }
-    }
-
-    // Main Assignment Phase: Unified priority-based position filling
 
     // Initialize dynamic priority tracking for each team
     const teamAPriorities = new Int8Array(POSITION_COUNT);
@@ -145,20 +101,96 @@ export function assignPlayersToTeams(
         ? Math.min(baseTopN, Math.floor(totalPlayers / 5))
         : baseTopN;
 
-    while (available.length > 0) {
-        // Get available positions for each team (not zones)
-        const aPositions = getAvailablePositions(formationA);
-        const bPositions = getAvailablePositions(formationB);
+    return {
+        config,
+        teamA,
+        teamB,
+        formationA,
+        formationB,
+        available,
+        teamAPriorities,
+        teamBPriorities,
+        comparators,
+        proximityThreshold,
+        selectionWeights,
+        topN
+    };
+}
+
+/**
+ * Assign worst players to goalkeeper positions
+ *
+ * This prevents decent defenders from being wasted at GK.
+ * Modifies context.teamA, context.teamB, and context.available in-place.
+ *
+ * @param context Assignment context
+ */
+function assignGoalkeepers(context: AssignmentContext): void {
+    const GK_INDEX = 0;
+    const numGKsNeeded = context.formationA[GK_INDEX] + context.formationB[GK_INDEX];
+
+    if (numGKsNeeded === 0 || context.available.length === 0) {
+        return;
+    }
+
+    // Sort players by bestScore (ascending) to get worst players first
+    const sortedByWorst = [...context.available].sort((a, b) => a.bestScore - b.bestScore);
+
+    for (let i = 0; i < numGKsNeeded && i < sortedByWorst.length; i++) {
+        const player = sortedByWorst[i];
+
+        // Decide which team gets this GK (balance total score)
+        const assignToA = context.formationA[GK_INDEX] > 0 &&
+            (context.formationB[GK_INDEX] === 0 || context.teamA.totalScore <= context.teamB.totalScore);
+
+        const targetTeam = assignToA ? context.teamA : context.teamB;
+        const targetFormation = assignToA ? context.formationA : context.formationB;
+
+        if (targetFormation[GK_INDEX] > 0) {
+            const score = player.bestScore;
+
+            // Assign player to GK
+            player.assignedPosition = GK_INDEX;
+            player.team = assignToA ? 'A' : 'B';
+            targetTeam.positions[GK_INDEX].push(player);
+            targetTeam.totalScore += score;
+            targetTeam.peakPotential += player.bestScore;
+            targetTeam.playerCount++;
+            targetFormation[GK_INDEX]--;
+
+            // Remove from available pool
+            const availableIndex = context.available.indexOf(player);
+            if (availableIndex > -1) {
+                context.available.splice(availableIndex, 1);
+            }
+        }
+    }
+}
+
+/**
+ * Assign all outfield players using priority-based position filling
+ *
+ * Uses guided randomness to select players for positions, balancing between
+ * finding the best fit and introducing controlled randomness for variety.
+ * Modifies context teams and available pool in-place.
+ *
+ * @param context Assignment context
+ */
+function assignOutfieldPlayers(context: AssignmentContext): void {
+    while (context.available.length > 0) {
+        // Get available positions for each team
+        const aPositions = getAvailablePositions(context.formationA);
+        const bPositions = getAvailablePositions(context.formationB);
 
         if (aPositions.length === 0 && bPositions.length === 0) break;
 
-        // Choose team based on current balance (unchanged logic)
+        // Choose team based on current balance
         const assignToA = aPositions.length > 0 &&
-            (bPositions.length === 0 || teamA.totalScore <= teamB.totalScore);
+            (bPositions.length === 0 || context.teamA.totalScore <= context.teamB.totalScore);
 
-        const targetTeam = assignToA ? teamA : teamB;
-        const targetFormation = assignToA ? formationA : formationB;
-        const targetPriorities = assignToA ? teamAPriorities : teamBPriorities;
+        const targetTeam = assignToA ? context.teamA : context.teamB;
+        const targetFormation = assignToA ? context.formationA : context.formationB;
+        const targetPriorities = assignToA ? context.teamAPriorities : context.teamBPriorities;
         const availablePositions = assignToA ? aPositions : bPositions;
 
         // Find minimum priority among available positions
@@ -180,39 +212,48 @@ export function assignPlayersToTeams(
         // PURE RANDOM: Pick a position from those with lowest priority using crypto
         const posIdx = lowestPriorityPositions[cryptoRandomInt(0, lowestPriorityPositions.length)];
 
-        // Assign player to the selected position
-        if (available.length > 0) {
-            // GUIDED RANDOMNESS: Select from top N candidates within proximity threshold
-            const player = selectPlayerWithProximity(
-                available,
-                posIdx,
-                comparators.get(posIdx)!,
-                proximityThreshold,
-                topN,
-                selectionWeights
-            );
+        // GUIDED RANDOMNESS: Select from top N candidates within proximity threshold
+        const player = selectPlayerWithProximity(
+            context.available,
+            posIdx,
+            context.comparators.get(posIdx)!,
+            context.proximityThreshold,
+            context.topN,
+            context.selectionWeights
+        );
 
-            // Remove selected player from available pool
-            const playerIndex = available.indexOf(player);
-            if (playerIndex > -1) {
-                available.splice(playerIndex, 1);
-            }
-
-            const score = player.scores[posIdx];
-
-            player.assignedPosition = posIdx;
-            player.team = assignToA ? 'A' : 'B';
-            targetTeam.positions[posIdx].push(player);
-            targetTeam.totalScore += score;
-            targetTeam.peakPotential += player.bestScore;
-            targetTeam.playerCount++;
-            targetFormation[posIdx]--;
-            targetPriorities[posIdx] += 2; // Includes bonus for N >= 2
-
+        // Remove selected player from available pool
+        const playerIndex = context.available.indexOf(player);
+        if (playerIndex > -1) {
+            context.available.splice(playerIndex, 1);
         }
-    }
 
-    // Calculate zone scores and aggregate pre-calculated stats
+        const score = player.scores[posIdx];
+
+        // Assign player to position
+        player.assignedPosition = posIdx;
+        player.team = assignToA ? 'A' : 'B';
+        targetTeam.positions[posIdx].push(player);
+        targetTeam.totalScore += score;
+        targetTeam.peakPotential += player.bestScore;
+        targetTeam.playerCount++;
+        targetFormation[posIdx]--;
+        targetPriorities[posIdx] += 2; // Increment priority
+    }
+}
+
+/**
+ * Calculate zone scores and aggregate pre-calculated player stats
+ *
+ * Iterates through all players on both teams and aggregates:
+ * - Zone scores (GK, DEF, MID, ATT)
+ * - Peak potential scores by zone
+ * - Pre-calculated stats (stamina, workrate, creativity, striker, allStats)
+ *
+ * @param teamA First team
+ * @param teamB Second team
+ */
+function aggregateTeamStats(teamA: FastTeam, teamB: FastTeam): void {
     for (let zoneIdx = 0; zoneIdx < 4; zoneIdx++) {
         for (const posIdx of ZONE_POSITIONS[zoneIdx]) {
             // Team A
@@ -246,9 +287,48 @@ export function assignPlayersToTeams(
             }
         }
     }
+}
+
+/**
+ * Core team assignment algorithm
+ * Assigns players to teams based on formation and balance
+ *
+ * This is a clean, modular implementation broken into distinct phases:
+ * 1. Initialize context (formations, teams, priorities, comparators)
+ * 2. Assign goalkeepers (worst players first)
+ * 3. Assign outfield players (priority-based with guided randomness)
+ * 4. Aggregate team stats (zone scores, pre-calculated analytics)
+ *
+ * PERFORMANCE: Accepts optional cached formations to avoid repeated lookups in Monte Carlo
+ *
+ * @param players Player pool to assign
+ * @param config Balance configuration
+ * @param cachedFormationA Optional cached formation for team A
+ * @param cachedFormationB Optional cached formation for team B
+ * @returns Assigned teams, or null if no valid formations exist
+ */
+export function assignPlayersToTeams(
+    players: FastPlayer[],
+    config: BalanceConfiguration,
+    cachedFormationA?: ReturnType<typeof getFastFormation>,
+    cachedFormationB?: ReturnType<typeof getFastFormation>
+): Teams | null {
+    // Phase 1: Initialize assignment context
+    const context = initializeAssignmentContext(players, config, cachedFormationA, cachedFormationB);
+    if (!context) return null;
+
+    // Phase 2: Assign goalkeepers
+    assignGoalkeepers(context);
+
+    // Phase 3: Assign outfield players
+    assignOutfieldPlayers(context);
+
+    // Phase 4: Aggregate team stats
+    aggregateTeamStats(context.teamA, context.teamB);
+
     return {
-        teamA,
-        teamB
+        teamA: context.teamA,
+        teamB: context.teamB
     };
 }
 
