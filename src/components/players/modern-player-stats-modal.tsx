@@ -102,12 +102,15 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
 
   return (
     <Modal title={player.name} isOpen={isOpen} onClose={onClose}>
-      <div className="flex flex-col h-[85vh] min-w-[300px] max-w-[1100px] overflow-y-auto p-4">
+      <div className="flex flex-col h-[85vh] min-w-[300px] max-w-[1100px] ">
         {/* ============ HEADER: Quality + Zone Classification ============ */}
         <div className="sticky top-0 bg-background/95 sm z-10 pb-4 border-b border-border/40 space-y-3">
+          <div>
+            
+          </div>
           {/* Quality Badge + Zone Badge */}
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2 pt-4 ">
+          <div className="flex justify-between flex-wrap">
+            <div className="flex items-center">
               <PlayerQualityIndicator overall={overallRounded} size="md" variant="badge" />
               <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border/40">
                 <span className="text-xs font-semibold text-foreground">{zoneClassification.specialistType}</span>
@@ -144,7 +147,7 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
         </div>
 
         {/* ============ MAIN CONTENT ============ */}
-        <div className="mt-4 space-y-4 pb-4">
+        <div className="mt-4 space-y-4 pb-4 pr-4 pl-4 overflow-y-auto">
           {/* Top Position Groups with Relative Archetype Bars */}
           <PanelSection
             title="Position Fit"
@@ -159,7 +162,7 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
               </button>
             }
           >
-            <div className="space-y-3">
+            <div className="space-y-3 ">
               {(showAllPositions ? allPositionGroups : topPositionGroups).map((posGroup) => {
                 // Handle both data structures
                 const position = posGroup.position;
