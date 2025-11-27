@@ -7,9 +7,10 @@
  * @module auto-balance/metrics
  */
 
-import type { FastTeam, BalanceMetrics, FastPlayer, StarZoneClassification, TeamStarDistribution } from "./types";
+import type { FastTeam, BalanceMetrics, FastPlayer, TeamStarDistribution } from "./types";
 import type { BalanceConfiguration } from "./metrics-config"
-import type { Formation } from "@/types/positions";
+import type { Formation, StarZoneClassification } from "@/types/positions";
+import { classifyPlayerByZone } from '@/lib/player-quality';
 import { ZONE_POSITIONS, INDEX_TO_POSITION, getMidfieldPenaltyPower, getInternalZoneSkillPower, POSITION_INDICES } from "./constants";
 import { calibratedScore, Steepness } from "./metric-transformations";
 import { DEFAULT_BALANCE_CONFIG } from "./metrics-config";
@@ -977,141 +978,6 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 }
 
 /**
- * Classifies a star player by their zone specialization using relative weighting
- *
- * Uses a gradient system instead of hard thresholds:
- * - Calculates defensive vs attacking lean as a continuous value (-1 to +1)
- * - -1.0 = pure defensive specialist
- * - +1.0 = pure attacking specialist
- * -  0.0 = perfectly balanced all-rounder
- *
- * Classification labels are just for readability - the lean value is what matters.
- *
- * @param player The star player to classify
- * @returns Classification with specialist type and lean
- */
-export function classifyStarPlayerByZone(player: FastPlayer): StarZoneClassification {
-    // Position indices for different zones
-    // Pure Defensive: CB(1), FB(2)
-    // Pure Attacking: AM(6), ST(7), WR(8)
-    // Midfield: DM(3), CM(4)
-    // Wide: WM(5)
-    const pureDefensiveIndices = [POSITION_INDICES.CB, POSITION_INDICES.FB];
-    const pureAttackingIndices = [POSITION_INDICES.ST, POSITION_INDICES.WR, POSITION_INDICES.AM];
-    const midfieldIndices = [POSITION_INDICES.DM, POSITION_INDICES.CM, POSITION_INDICES.WM];
-
-    // Find best scores in defensive and attacking zones
-    let bestDefensiveScore = 0;
-    for (const posIdx of pureDefensiveIndices) {
-        bestDefensiveScore = Math.max(bestDefensiveScore, player.scores[posIdx]);
-    }
-
-    let bestMidfieldScore = 0;
-    for (const posIdx of midfieldIndices) {
-        bestMidfieldScore = Math.max(bestMidfieldScore, player.scores[posIdx]);
-    }
-
-    let bestAttackingScore = 0;
-    for (const posIdx of pureAttackingIndices) {
-        bestAttackingScore = Math.max(bestAttackingScore, player.scores[posIdx]);
-    }
-
-    // Calculate average across all positions
-    let totalScore = 0;
-    for (let i = 0; i < player.scores.length; i++) {
-        totalScore += player.scores[i];
-    }
-    const averageScore = totalScore / player.scores.length;
-
-    // NEW 4-CATEGORY APPROACH:
-    // 1. Check if player is a MIDFIELDER (strong DM/CM)
-    // 2. Check if player is DEFENSIVE (strong CB/FB/GK, weak at midfield)
-    // 3. Check if player is ATTACKING (strong AM/ST/WR, weak at midfield)
-    // 4. Otherwise ALL-ROUNDER (versatile across zones)
-
-    // Get all positions sorted by score
-    type PositionScore = { score: number; idx: number };
-    const positionScores: PositionScore[] = [];
-    for (let i = 0; i < player.scores.length; i++) {
-        positionScores.push({ score: player.scores[i], idx: i });
-    }
-    positionScores.sort((a, b) => b.score - a.score);
-
-    // Use threshold-based approach instead of fixed top-3:
-    // - Best position must be above 90, OR
-    // - Position score is within 3 points of the top score
-    const bestScore = positionScores[0].score;
-    const qualifyingPositions: number[] = [];
-
-    for (const pos of positionScores) {
-        if ((pos.score >= 90) || (pos.score >= (bestScore - 3))) {
-            qualifyingPositions.push(pos.idx);
-        } else {
-            // Once we fall outside the range, we can stop
-            break;
-        }
-    }
-
-    let pureDefCount = 0;
-    let pureAttCount = 0;
-    let midCount = 0;
-
-    for (const posIdx of qualifyingPositions) {
-        if (pureDefensiveIndices.includes(posIdx as any)) {
-            pureDefCount++;
-        }
-        if (pureAttackingIndices.includes(posIdx as any)) {
-            pureAttCount++;
-        }
-        if (midfieldIndices.includes(posIdx as any)) {
-            midCount++;
-        }
-    }
-
-    let specialistType: 'defensive' | 'attacking' | 'midfielder' | 'all-rounder';
-
-    const totalQualifying = pureDefCount + pureAttCount + midCount;
-
-    // Classification logic with dynamic thresholds based on number of qualifying positions:
-    // Use proportions instead of fixed counts to handle variable position counts
-    const midProportion = totalQualifying > 0 ? midCount / totalQualifying : 0;
-    const defProportion = totalQualifying > 0 ? pureDefCount / totalQualifying : 0;
-    const attProportion = totalQualifying > 0 ? pureAttCount / totalQualifying : 0;
-
-    const minProp = Math.min(midProportion, defProportion, attProportion);
-    const maxProp = Math.max(midProportion, defProportion, attProportion);
-
-    if (minProp !== 0 && minProp >= (maxProp - 0.05)) {
-        specialistType = 'all-rounder';
-    }
-
-    // A specialist needs at least 50% of their qualifying positions in one zone
-    else if (maxProp == midProportion && bestMidfieldScore >= bestAttackingScore && bestMidfieldScore >= bestDefensiveScore) {
-        // Majority midfield positions → midfielder specialist
-        specialistType = 'midfielder';
-    } else if (maxProp == defProportion && bestDefensiveScore >= bestAttackingScore && bestDefensiveScore >= bestMidfieldScore) {
-        // Majority pure defensive positions → defensive specialist
-        specialistType = 'defensive';
-    } else if (maxProp == attProportion && bestAttackingScore >= bestDefensiveScore && bestAttackingScore >= bestMidfieldScore) {
-        // Majority pure attacking positions → attacking specialist
-        specialistType = 'attacking';
-    } else {
-        // Mixed positions across zones → all-rounder
-        specialistType = 'all-rounder';
-    }
-
-    return {
-        player,
-        name: player.original.name,
-        specialistType,
-        bestDefensiveScore,
-        bestMidfieldScore,
-        bestAttackingScore,
-        averageScore,
-    };
-}
-
-/**
  * Configuration for star distribution penalty calculation
  *
  * These weights control how harshly different types of imbalances are penalized.
@@ -1214,11 +1080,11 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
     // Count specialists and accumulate quality
     for (const c of classifications) {
         // Count specialist types
-        if (c.specialistType === 'defensive') {
+        if (c.specialistType === 'Defender') {
             defSpecialistCount++;
-        } else if (c.specialistType === 'attacking') {
+        } else if (c.specialistType === 'Attacker') {
             attSpecialistCount++;
-        } else if (c.specialistType === 'midfielder') {
+        } else if (c.specialistType === 'Midfielder') {
             midfielderCount++;
         } else {
             allRounderCount++;
@@ -1296,10 +1162,10 @@ function calculateStarDistributionPenaltyOddStars(
     let teamABestScoreSum = 0;
     let teamBBestScoreSum = 0;
     for (const c of teamAClassifications) {
-        teamABestScoreSum += c.player.bestScore;
+        teamABestScoreSum += c.bestScore;
     }
     for (const c of teamBClassifications) {
-        teamBBestScoreSum += c.player.bestScore;
+        teamBBestScoreSum += c.bestScore;
     }
 
     const teamAAvgBestScore = teamAClassifications.length > 0 ? teamABestScoreSum / teamAClassifications.length : 0;
@@ -1637,10 +1503,10 @@ function calculateStarDistributionPenalty(
     let teamBBestScoreSum = 0;
 
     for (const c of teamAClassifications) {
-        teamABestScoreSum += c.player.bestScore;
+        teamABestScoreSum += c.bestScore;
     }
     for (const c of teamBClassifications) {
-        teamBBestScoreSum += c.player.bestScore;
+        teamBBestScoreSum += c.bestScore;
     }
 
     const teamAAvgBestScore = teamAClassifications.length > 0 ? teamABestScoreSum / teamAClassifications.length : 0;
@@ -1962,11 +1828,11 @@ function analyzeTeamStarDistribution(
                 const classification = player.starClassification;
                 classifications.push(classification);
 
-                if (classification.specialistType === 'defensive') {
+                if (classification.specialistType === 'Defender') {
                     defensiveSpecialists++;
-                } else if (classification.specialistType === 'attacking') {
+                } else if (classification.specialistType === 'Attacker') {
                     attackingSpecialists++;
-                } else if (classification.specialistType === 'midfielder') {
+                } else if (classification.specialistType === 'Midfielder') {
                     midfielders++;
                 } else {
                     allRounders++;
@@ -2066,7 +1932,7 @@ export function calculateOptimalStarDistribution(
     }
 
     // Classify all stars
-    const classifications = starPlayers.map(p => classifyStarPlayerByZone(p));
+    const classifications = starPlayers.map(p => classifyPlayerByZone(p.original.zoneFit));
 
     // Find the ACTUAL optimal split by testing all possible combinations
     // For N stars, we need to split them into two teams as evenly as possible
@@ -2284,16 +2150,14 @@ export function calculateStarZonePenalty(
         if (distA.classifications.length > 0) {
             console.log('  Team A Star Classifications:');
             for (const c of distA.classifications) {
-                const playerName = c.player.original.guest_name || c.player.original.id;
-                console.log(`    ${playerName}: ${c.specialistType} (DEF:${c.bestDefensiveScore.toFixed(1)}, MID:${c.bestMidfieldScore.toFixed(1)}, ATT:${c.bestAttackingScore.toFixed(1)})`);
+                console.log(`    STAR: ${c.specialistType} (DEF:${c.bestDefensiveScore.toFixed(1)}, MID:${c.bestMidfieldScore.toFixed(1)}, ATT:${c.bestAttackingScore.toFixed(1)})`);
             }
         }
 
         if (distB.classifications.length > 0) {
             console.log('  Team B Star Classifications:');
             for (const c of distB.classifications) {
-                const playerName = c.player.original.guest_name || c.player.original.id;
-                console.log(`    ${playerName}: ${c.specialistType} (DEF:${c.bestDefensiveScore.toFixed(1)}, MID:${c.bestMidfieldScore.toFixed(1)}, ATT:${c.bestAttackingScore.toFixed(1)})`);
+                console.log(`    STAR: ${c.specialistType} (DEF:${c.bestDefensiveScore.toFixed(1)}, MID:${c.bestMidfieldScore.toFixed(1)}, ATT:${c.bestAttackingScore.toFixed(1)})`);
             }
         }
     }

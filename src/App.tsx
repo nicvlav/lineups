@@ -22,7 +22,7 @@ const App = () => {
 
   return (
     <SupabaseProvider>
-      <div className="h-[100dvh] flex flex-col">
+      <div className="h-dvh flex flex-col">
         <AuthProvider url={urlState}>
           <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
             <Layout />

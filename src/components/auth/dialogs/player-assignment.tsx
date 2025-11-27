@@ -99,7 +99,7 @@ export function PlayerAssignment({ open, onClose, mandatory = false }: PlayerAss
 
             <div className="bg-muted p-3 rounded-lg">
               <div className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
                 <div className="text-sm text-muted-foreground">
                   <p className="font-medium mb-1">Almost Done!</p>
                   <p className="text-xs">

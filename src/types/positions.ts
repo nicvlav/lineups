@@ -22,6 +22,30 @@ export const positionKeys: Position[] = [
 ] as const;
 
 /**
+ * Star player zone classification
+ * Categorizes a star player as defensive, attacking, or all-rounder specialist
+ */
+export interface StarZoneClassification {
+  /** Type of specialist: defensive, attacking, midfielder, or all-rounder */
+  specialistType: 'Defender' | 'Attacker' | 'Midfielder' | 'All-rounder';
+
+  /** Best defensive position score */
+  bestDefensiveScore: number;
+
+  /** Best attacking position score */
+  bestMidfieldScore: number;
+
+  /** Best attacking position score */
+  bestAttackingScore: number;
+
+  /** Average score across all positions */
+  bestScore: number;
+
+  /** Average score across all positions */
+  averageScore: number;
+}
+
+/**
  * Static position metadata
  * Defines intrinsic properties of each position
  */

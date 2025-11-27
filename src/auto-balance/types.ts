@@ -6,7 +6,7 @@
  * @module auto-balance/types
  */
 
-import type { Formation } from "@/types/positions";
+import type { Formation, StarZoneClassification } from "@/types/positions";
 import type { ScoredGamePlayer } from "@/types/players";
 import type { BalanceConfiguration } from "./metrics-config";
 
@@ -169,33 +169,6 @@ export interface SimulationResult {
     teams: Teams;
     score: number;
     metrics: BalanceMetrics;
-}
-
-/**
- * Star player zone classification
- * Categorizes a star player as defensive, attacking, or all-rounder specialist
- */
-export interface StarZoneClassification {
-    /** The player being classified */
-    player: FastPlayer;
-
-    /** The player name being classified */
-    name: string;
-
-    /** Type of specialist: defensive, attacking, midfielder, or all-rounder */
-    specialistType: 'defensive' | 'attacking' | 'midfielder' | 'all-rounder';
-
-    /** Best defensive position score */
-    bestDefensiveScore: number;
-
-    /** Best attacking position score */
-    bestMidfieldScore: number;
-
-    /** Best attacking position score */
-    bestAttackingScore: number;
-
-    /** Average score across all positions */
-    averageScore: number;
 }
 
 /**

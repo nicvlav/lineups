@@ -109,7 +109,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
             <div className="flex flex-col h-full space-y-4">
                 {/* Modern Header */}
                 <div className="space-y-2">
-                    <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                    <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                         Team Generator
                     </h1>
                     <p className="text-muted-foreground">
@@ -158,7 +158,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                 </ActionBarSingle>
 
                 {/* Modern Player Selection Grid */}
-                <Card className="flex-1 overflow-hidden bg-gradient-to-br from-card to-muted/20">
+                <Card className="flex-1 overflow-hidden bg-linear-to-r from-card to-muted/20">
                     <CardContent className="h-full p-4">
                         <div className="h-full overflow-y-auto pr-2 custom-scrollbar">
                             {columns.length > 0 ? (
@@ -226,7 +226,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                         "transition-all duration-300",
                         canGenerate && "shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]",
                         canGenerate 
-                            ? "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70" 
+                            ? "bg-linear-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70" 
                             : "opacity-50"
                     )}
                 >

@@ -7,7 +7,8 @@ import { Position } from "@/types/positions";
 import { ZoneScores } from "@/types/positions";
 import { getArchetypeById } from "@/types/archetypes";
 import { getTopArchetypes } from "@/lib/positions/calculator";
-import SharedPlayerStatsModal, { getBarColor } from "@/components/players/shared-player-stats-modal";
+import ModernPlayerStatsModal from "@/components/players/modern-player-stats-modal";
+import { getBarColor } from "@/components/players/shared-player-stats-modal";
 import type { CardViewMode } from "./player-cards";
 
 interface PlayerCardProps {
@@ -37,8 +38,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     player,
     playerName,
     overall,
-    zoneFit,
-    top3Positions,
+    zoneFit: _zoneFit,
+    top3Positions: _top3Positions,
     topScoresWithArchetypes: _topScoresWithArchetypes,
     archetypeScores,
     averages,
@@ -148,19 +149,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 )}
             </div>
 
-            {/* Shared Player Stats Modal */}
-            <SharedPlayerStatsModal
+            {/* Modern Player Stats Modal */}
+            <ModernPlayerStatsModal
                 player={player}
                 isOpen={open}
                 onClose={() => setOpen(false)}
                 overall={overall}
-                zoneFit={zoneFit}
-                top3Positions={top3Positions}
-                topScoresWithArchetypes={topArchetypes.map(({ position, archetypeId, score }) => ({
-                    position,
-                    archetypeId,
-                    score
-                }))}
                 archetypeScores={archetypeScores}
                 averages={averages}
                 stats={stats}

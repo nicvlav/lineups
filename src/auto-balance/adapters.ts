@@ -10,7 +10,7 @@ import type { FastPlayer } from './types';
 import type { BalanceConfiguration } from './metrics-config';
 import { POSITION_COUNT, INDEX_TO_POSITION, ZONE_POSITIONS } from './constants';
 import { getPositionScores } from '@/lib/positions/calculator';
-import { classifyStarPlayerByZone } from './metrics';
+import { classifyPlayerByZone } from '@/lib/player-quality';
 import { isPositionSpecialist } from "@/types/players";
 
 /**
@@ -209,7 +209,7 @@ export function preCalculatePlayerAnalytics(
 
     // Star zone classification (expensive - only do for star players!)
     if (player.isStarPlayer) {
-      player.starClassification = classifyStarPlayerByZone(player);
+      player.starClassification = classifyPlayerByZone(player.original.zoneFit);
     } else {
       player.starClassification = null;
     }
