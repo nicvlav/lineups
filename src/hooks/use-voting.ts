@@ -139,7 +139,9 @@ async function fetchUserVotes(userId: string | undefined): Promise<Map<string, a
 
 // Submit vote to database
 async function submitVoteToDatabase(voteData: VoteData, userProfileId: string) {
+    const startTime = performance.now();
     console.log("🗳️ VOTING: Starting vote submission for player:", voteData.playerId);
+    console.log("📊 VOTING: User profile ID:", userProfileId);
 
     const dbVoteData: any = {
         voter_user_profile_id: userProfileId,
@@ -155,38 +157,62 @@ async function submitVoteToDatabase(voteData: VoteData, userProfileId: string) {
         }
     }
 
+    console.log("📊 VOTING: Vote data size:", JSON.stringify(dbVoteData).length, "bytes");
+
     // Create a fresh AbortController for each attempt (important for retries)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
+        const elapsed = performance.now() - startTime;
         console.error("❌ VOTING: Request timed out after 15 seconds");
+        console.error("⏱️ VOTING: Elapsed time:", elapsed.toFixed(2), "ms");
         controller.abort();
-    }, 15000); // Increased to 15 seconds
+    }, 15000);
 
     try {
-        const { error } = await supabase
+        const requestStart = performance.now();
+        console.log("📡 VOTING: Sending UPSERT request to Supabase...");
+
+        const { error, status, statusText } = await supabase
             .from("player_votes")
             .upsert(dbVoteData, {
                 onConflict: "player_id,voter_user_profile_id",
             })
             .abortSignal(controller.signal);
 
+        const requestEnd = performance.now();
+        const requestTime = requestEnd - requestStart;
+        console.log("📡 VOTING: Supabase request completed in", requestTime.toFixed(2), "ms");
+        console.log("📡 VOTING: HTTP Status:", status, statusText);
+
         clearTimeout(timeoutId);
 
         if (error) {
             console.error("❌ VOTING: Supabase error:", error);
+            console.error("❌ VOTING: Error code:", error.code);
+            console.error("❌ VOTING: Error message:", error.message);
+            console.error("❌ VOTING: Error details:", error.details);
+            console.error("❌ VOTING: Error hint:", error.hint);
             throw error;
         }
 
+        const totalTime = performance.now() - startTime;
         console.log("✅ VOTING: Vote successfully submitted");
+        console.log("⏱️ VOTING: Total operation time:", totalTime.toFixed(2), "ms");
+
+        if (totalTime > 5000) {
+            console.warn("⚠️ VOTING: Slow vote submission detected (>5s) - check database performance");
+        }
     } catch (err: any) {
         clearTimeout(timeoutId);
 
-        // Better error logging
-        const errorMessage = err?.message || String(err);
-        console.error("❌ VOTING: Submission failed:", errorMessage);
+        const totalTime = performance.now() - startTime;
+        console.error("❌ VOTING: Submission failed after", totalTime.toFixed(2), "ms");
+        console.error("❌ VOTING: Error name:", err?.name);
+        console.error("❌ VOTING: Error message:", err?.message);
+        console.error("❌ VOTING: Full error:", err);
 
         // Convert abort errors to more descriptive errors
-        if (err.name === "AbortError" || errorMessage.includes("aborted")) {
+        if (err.name === "AbortError" || err?.message?.includes("aborted")) {
             throw new Error("Request timed out - please try again");
         }
 
@@ -266,9 +292,10 @@ export function useSubmitVote() {
             const player = players[voteData.playerId];
             const toastId = toast.loading(`Submitting vote for ${player?.name || "player"}...`, {
                 icon: "⏳",
+                duration: Infinity, // Prevent auto-dismiss
             });
 
-            return { previousVotes, toastId };
+            return { previousVotes, toastId, playerName: player?.name || "player" };
         },
         onError: (err, voteData, context) => {
             console.error("❌ VOTING: onError triggered for player:", voteData.playerId, err);
@@ -278,15 +305,9 @@ export function useSubmitVote() {
                 queryClient.setQueryData(votingKeys.userVotes(user?.id), context.previousVotes);
             }
 
-            // Dismiss loading toast
-            if (context?.toastId) {
-                toast.dismiss(context.toastId);
-            }
-
-            // Show error toast
-            const player = players[voteData.playerId];
+            // Show error toast (onSettled will dismiss loading toast)
             const errorMessage = err instanceof Error ? err.message : String(err);
-            toast.error(`Failed to submit vote for ${player?.name || "player"}`, {
+            toast.error(`Failed to submit vote for ${context?.playerName || "player"}`, {
                 description: errorMessage,
                 duration: 4000,
                 icon: "❌",
@@ -295,14 +316,8 @@ export function useSubmitVote() {
         onSuccess: (_, voteData, context) => {
             console.log("✅ VOTING: onSuccess - Vote submitted successfully for player:", voteData.playerId);
 
-            // Dismiss loading toast
-            if (context?.toastId) {
-                toast.dismiss(context.toastId);
-            }
-
-            // Show success toast
-            const player = players[voteData.playerId];
-            toast.success(`Vote submitted for ${player?.name || "player"}`, {
+            // Show success toast (onSettled will dismiss loading toast)
+            toast.success(`Vote submitted for ${context?.playerName || "player"}`, {
                 duration: 2000,
                 icon: "✅",
             });
@@ -312,11 +327,16 @@ export function useSubmitVote() {
             queryClient.invalidateQueries({ queryKey: votingKeys.playersWithVotes() });
             queryClient.invalidateQueries({ queryKey: votingKeys.stats() });
         },
-        onSettled: (_data, error, voteData) => {
+        onSettled: (_data, error, voteData, context) => {
             console.log("🏁 VOTING: onSettled - Mutation completed for player:", voteData.playerId, {
                 success: !error,
                 error: error?.message,
             });
+
+            // CRITICAL: Always dismiss toast when mutation completes (success or failure)
+            if (context?.toastId) {
+                toast.dismiss(context.toastId);
+            }
         },
         retry: (failureCount, error: any) => {
             console.log(`🔄 VOTING: Retry check - attempt ${failureCount}/3`, error?.message);
