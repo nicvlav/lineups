@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/lib/supabase";
 import { User, Session, AuthError } from "@supabase/supabase-js";
 import { refreshSession, checkSessionHealth, clearCorruptedAppData, clearVoteData } from "@/lib/session-manager";
+import { useQueryClient } from "@tanstack/react-query";
+import { userProfileKeys, squadKeys } from "@/hooks/use-user-profile";
 
 interface Squad {
     id: string;
@@ -66,6 +68,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children, url }: AuthProviderProps) => {
+    const queryClient = useQueryClient();
     const [user, setUser] = useState<AuthUser | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [canVote, setCanVote] = useState(false);
@@ -571,6 +574,9 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                 }
             } : null);
 
+            // Invalidate TanStack Query cache
+            queryClient.invalidateQueries({ queryKey: userProfileKeys.detail(user.id) });
+
             return { error: null };
         } catch (error) {
             return { error: error as AuthError };
@@ -579,12 +585,24 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
     const getAvailableSquads = async (): Promise<Squad[]> => {
         try {
+            // Try to get from TanStack Query cache first
+            const cachedSquads = queryClient.getQueryData<Squad[]>(squadKeys.list());
+            if (cachedSquads) {
+                console.log('AUTH: Returning cached squads');
+                return cachedSquads;
+            }
+
+            // If not in cache, fetch and cache
             const { data, error } = await supabase
                 .from('squads')
                 .select('*')
                 .order('name');
 
             if (error) throw error;
+
+            // Cache the result
+            queryClient.setQueryData(squadKeys.list(), data || []);
+
             return data || [];
         } catch (error) {
             console.error('Error fetching squads:', error);
@@ -651,6 +669,9 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                 }
             } : null);
 
+            // Invalidate TanStack Query cache
+            queryClient.invalidateQueries({ queryKey: userProfileKeys.detail(user.id) });
+
             return { error: null };
         } catch (error) {
             return { error: error as AuthError };
@@ -692,6 +713,9 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                     updated_at: new Date().toISOString()
                 }
             } : null);
+
+            // Invalidate TanStack Query cache
+            queryClient.invalidateQueries({ queryKey: userProfileKeys.detail(user.id) });
 
             return { error: null };
         } catch (error) {
@@ -785,6 +809,9 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                     updated_at: new Date().toISOString()
                 }
             } : null);
+
+            // Invalidate TanStack Query cache
+            queryClient.invalidateQueries({ queryKey: userProfileKeys.detail(user.id) });
 
             return { error: null };
         } catch (error) {
