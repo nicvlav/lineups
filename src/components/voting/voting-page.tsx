@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Vote, CheckCircle, Users, Search, ArrowUpDown } from "lucide-react";
+import { Vote, CheckCircle, ArrowUpDown } from "lucide-react";
 import { ActionBarSingle } from "@/components/ui/action-bar";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ type SortType = 'name' | 'votes';
 export default function VotingPage() {
   const { user, canVote, isVerified } = useAuth();
   const { players: playersRecord } = usePlayers();
-  const { votingStats, userVotes } = useVoting();
+  const { userVotes } = useVoting();
 
   const players = Object.values(playersRecord);
 
