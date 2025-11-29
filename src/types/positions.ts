@@ -21,6 +21,8 @@ export const positionKeys: Position[] = [
   'WR',
 ] as const;
 
+export const positionsSet = new Set<Position>(positionKeys);
+
 /**
  * Star player zone classification
  * Categorizes a star player as defensive, attacking, or all-rounder specialist
@@ -40,9 +42,6 @@ export interface StarZoneClassification {
 
   /** Average score across all positions */
   bestScore: number;
-
-  /** Average score across all positions */
-  averageScore: number;
 }
 
 /**

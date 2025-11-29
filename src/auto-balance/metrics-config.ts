@@ -285,7 +285,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         baseTopN: 8,
 
         // Weighted probability for selecting from top N
-        selectionWeights: [0.4, 0.3, 0.1, 0.05, 0.05, 0.05, 0.025, 0.025],
+        selectionWeights: [0.45, 0.3, 0.1, 0.05, 0.025, 0.025, 0.025, 0.025],
     },
 
     monteCarlo: {

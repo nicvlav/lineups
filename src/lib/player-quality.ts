@@ -6,9 +6,10 @@
  */
 
 import type { Position, StarZoneClassification } from '@/types/positions';
-import type { PlayerArchetypeScores } from '@/types/players';
+import type { ZoneScores, PlayerArchetypeScores } from "@/types/players";
 import { getArchetypeById } from '@/types/archetypes';
-import type { ZoneScores } from "@/types/players";
+import { positionsSet } from '@/types/positions';
+
 
 // ============ Quality Tiers ============
 
@@ -166,11 +167,31 @@ const POSITION_ZONE_WEIGHTS: Record<Position, { def: number; mid: number; att: n
   GK: { def: 0.0, mid: 0.0, att: 0.0 }
 };
 
-export function classifyPlayerByZone(zoneFit: ZoneScores): StarZoneClassification {
-  // Find best scores in defensive and attacking zones
-  const bestDefensiveScore = Math.max(zoneFit.CB, zoneFit.FB);
-  const bestMidfieldScore = Math.max(zoneFit.DM, zoneFit.CM, zoneFit.WM);
-  const bestAttackingScore = Math.max(zoneFit.ST, zoneFit.WR, zoneFit.AM);
+export function classifyPlayerByZone(zoneFit: ZoneScores, availablePositions: Set<Position> = positionsSet): StarZoneClassification {
+  // Now recalculate best scores ONLY for positions that exist in the formation
+  const defensivePositions: Position[] = ['CB', 'FB'];
+  const midfieldPositions: Position[] = ['DM', 'CM', 'WM'];
+  const attackingPositions: Position[] = ['ST', 'WR', 'AM'];
+
+  // Filter to only available positions and get max scores
+  const bestDefensiveScore = defensivePositions
+    .filter(pos => availablePositions.has(pos))
+    .reduce((prev, curr) => {
+      return Math.max(prev, zoneFit[curr]);
+    }, 0)
+
+  const bestMidfieldScore = midfieldPositions
+    .filter(pos => availablePositions.has(pos))
+    .reduce((prev, curr) => {
+      return Math.max(prev, zoneFit[curr]);
+    }, 0)
+
+  const bestAttackingScore = attackingPositions
+    .filter(pos => availablePositions.has(pos))
+    .reduce((prev, curr) => {
+      return Math.max(prev, zoneFit[curr]);
+    }, 0)
+
   const bestScore = Math.max(bestDefensiveScore, bestMidfieldScore, bestAttackingScore);
   let sum = 0;
   let count = 0;
@@ -186,8 +207,6 @@ export function classifyPlayerByZone(zoneFit: ZoneScores): StarZoneClassificatio
       qualifyingPositions.push(pos);
     }
   });
-
-  const averageScore = count > 0 ? sum / count : 0.0;
 
   // Calculate weighted zone scores
   let defScore = 0;
@@ -237,8 +256,7 @@ export function classifyPlayerByZone(zoneFit: ZoneScores): StarZoneClassificatio
     bestDefensiveScore,
     bestMidfieldScore,
     bestAttackingScore,
-    bestScore,
-    averageScore,
+    bestScore
   };
 }
 

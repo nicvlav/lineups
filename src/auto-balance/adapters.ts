@@ -6,8 +6,10 @@
  */
 
 import type { PlayerArchetypeScores, ScoredGamePlayer } from '@/types/players';
+import type { Position } from '@/types/positions';
 import type { FastPlayer } from './types';
 import type { BalanceConfiguration } from './metrics-config';
+import { getFormationsForCount, } from '@/types/formations';
 import { POSITION_COUNT, INDEX_TO_POSITION, ZONE_POSITIONS } from './constants';
 import { getPositionScores } from '@/lib/positions/calculator';
 import { classifyPlayerByZone } from '@/lib/player-quality';
@@ -207,9 +209,22 @@ export function preCalculatePlayerAnalytics(
       player.starTier = 0; // Not a star
     }
 
+    // Build set of available positions from formation
+    const formations = getFormationsForCount(Math.floor(players.length / 2))
+    const availablePositions = new Set<Position>();
+
+    formations.forEach((formation) => {
+      for (const [pos, count] of Object.entries(formation.positions)) {
+        const position = pos as Position;
+        if (!availablePositions.has(position) && count > 0) {
+          availablePositions.add(position);
+        }
+      }
+    });
+
     // Star zone classification (expensive - only do for star players!)
     if (player.isStarPlayer) {
-      player.starClassification = classifyPlayerByZone(player.original.zoneFit);
+      player.starClassification = classifyPlayerByZone(player.original.zoneFit, availablePositions);
     } else {
       player.starClassification = null;
     }

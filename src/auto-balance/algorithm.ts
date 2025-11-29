@@ -18,7 +18,7 @@ import { defaultZoneWeights, getPointForPosition, formationTemplates } from "@/t
 import { getFastFormation } from "./formation";
 import { createFastTeam, createPositionComparator, cryptoRandomInt, selectPlayerWithProximity, getAvailablePositions, removePlayerFast } from "./utils";
 import type { BalanceConfiguration } from "./metrics-config";
-import { calculateMetrics, calculateOptimalStarDistribution, calculateStarZonePenalty } from "./metrics";
+import { calculateMetrics, calculateOptimalStarDistribution, calculateStarDistributionBreakdown, calculateShapedPenaltyScore } from "./metrics";
 import { getStarCount } from "./debug-tools";
 import { preCalculatePlayerAnalytics } from "./adapters";
 
@@ -358,42 +358,6 @@ function normalizePlayerAssignments(teams: Teams): void {
 }
 
 /**
- * Runs Monte Carlo simulation to find optimal team balance
- *
- * @deprecated Use runOptimizedMonteCarlo for better performance
- */
-export function runMonteCarlo(
-    players: FastPlayer[],
-    config: BalanceConfiguration
-): SimulationResult | null {
-    let bestResult: SimulationResult | null = null;
-    let bestScore = -Infinity;
-
-    // Pre-calculate player analytics before Monte Carlo loop
-    preCalculatePlayerAnalytics(players, config);
-
-    for (let i = 0; i < config.monteCarlo.maxIterations; i++) {
-        const result = assignPlayersToTeams(players, config);
-
-        if (!result) continue;
-
-        const metrics = calculateMetrics(result.teamA, result.teamB, config, false);
-
-        if (metrics.score > bestScore) {
-            bestScore = metrics.score;
-            bestResult = { teams: result, score: metrics.score, metrics: metrics.details };
-        }
-    }
-
-    // Normalize player assignments to match team structure before returning
-    if (bestResult) {
-        normalizePlayerAssignments(bestResult.teams);
-    }
-
-    return bestResult;
-}
-
-/**
  * Optimized Monte Carlo simulation with early termination
  *
  * Replaces triple nested loop (500×100×100 = 5M iterations) with
@@ -456,14 +420,18 @@ export function runOptimizedMonteCarlo(
             return { array: arr, formation };
         });
 
-    // Calculate optimal star distribution BEFORE Monte Carlo loop
-    const optimalStarPenalty = calculateOptimalStarDistribution(players, config);
+    // Calculate optimal star distribution statistics BEFORE Monte Carlo loop
+    const optimalStats = calculateOptimalStarDistribution(players, config);
 
     if (verbose) {
         console.log('🎲 Starting optimized Monte Carlo simulation...');
         console.log(`   Max iterations: ${maxIterations}`);
         console.log(`   Team sizes: ${teamASize} (${cachedFormationsA.length} formations) vs ${teamBSize} (${cachedFormationsB.length} formations)`);
-        console.log(`   Optimal star distribution penalty: ${optimalStarPenalty.toFixed(3)}`);
+        console.log(`   Optimal star distribution stats:`);
+        console.log(`     Best:  ${optimalStats.best.toFixed(4)}`);
+        console.log(`     Mean:  ${optimalStats.mean.toFixed(4)}`);
+        console.log(`     Worst: ${optimalStats.worst.toFixed(4)}`);
+        console.log(`     Stars: ${optimalStats.numStars} (${optimalStats.combinations} combinations tested)`);
     }
 
     for (let i = 0; i < maxIterations; i++) {
@@ -487,15 +455,19 @@ export function runOptimizedMonteCarlo(
         // Star count penalty: >1 difference is unacceptable (0), 1 diff is bad (0.7), 0 diff is perfect (1.0)
         const starCountPenalty = starCountDiff > 1 ? 0 : 1;
 
-        // Calculate actual star zone distribution penalty
-        const actualStarPenalty = calculateStarZonePenalty(result.teamA, result.teamB, config, false);
+        // Get full star distribution penalty breakdown for smart scaling
+        const starBreakdown = calculateStarDistributionBreakdown(result.teamA, result.teamB, config);
 
-        // Compare to optimal: how close are we to the best possible?
-        const starDistQuality = optimalStarPenalty > 0 ? actualStarPenalty / optimalStarPenalty : 1.0;
+        // Calculate shaped penalty score that exponentially penalizes deviation from optimal
+        // Maps the actual penalty to a score using the distribution statistics:
+        // - At best (optimal): score = 1.0
+        // - At mean: score ≈ 0.05 (heavily penalized)
+        // - Below mean: score ≈ 0.0 (essentially eliminated)
+        const shapedPenaltyScore = calculateShapedPenaltyScore(starBreakdown.penalty, optimalStats, 6.0);
 
-        // Combined star multiplier: count * distribution quality
-        const starMultiplier = starCountPenalty * starDistQuality;
-        
+        // Combined star multiplier: count * smart component multiplier * shaped distribution score
+        const starMultiplier = starCountPenalty * shapedPenaltyScore;
+
         // Apply multiplier to get final score
         const finalScore = metrics.score * starMultiplier;
 
