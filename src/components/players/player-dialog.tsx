@@ -114,7 +114,7 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({
                         {filteredPlayers.map((p) => (
                             <li
                                 key={p.id}
-                                className={`p-2 cursor-pointer flex justify-between  hover:bg-accent items-center break-words whitespace-normal w-full ${playerIsInGame(p) ? "text-red-500" : ""
+                                className={`p-2 cursor-pointer flex justify-between  hover:bg-accent items-center wrap-break-word whitespace-normal w-full ${playerIsInGame(p) ? "text-red-500" : ""
                                     }`}
                                 onClick={() => handlePlayerSelection(p)}
                             >
