@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import Panel from "@/components/shared/panel";
 import { Vote, CheckCircle, Users, Search, ArrowUpDown } from "lucide-react";
+import { ActionBarSingle } from "@/components/ui/action-bar";
+import { cn } from "@/lib/utils";
 
 type TabType = 'not-voted' | 'voted';
 type SortType = 'name' | 'votes';
@@ -21,7 +22,7 @@ export default function VotingPage() {
   const players = Object.values(playersRecord);
 
   const [activeTab, setActiveTab] = useState<TabType>('not-voted');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortType>('name');
 
   // Filter out user's associated player
@@ -47,8 +48,8 @@ export default function VotingPage() {
 
     // Apply search filter
     let filtered = playersToShow;
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
+    if (searchQuery) {
+      const lowerSearch = searchQuery.toLowerCase();
       filtered = playersToShow.filter(p =>
         p.name.toLowerCase().includes(lowerSearch)
       );
@@ -63,7 +64,7 @@ export default function VotingPage() {
         return (a.vote_count || 0) - (b.vote_count || 0);
       }
     });
-  }, [activeTab, votedPlayers, notVotedPlayers, searchTerm, sortBy]);
+  }, [activeTab, votedPlayers, notVotedPlayers, searchQuery, sortBy]);
 
   const progressPercent = eligiblePlayers.length > 0
     ? (votedPlayers.length / eligiblePlayers.length) * 100
@@ -121,46 +122,40 @@ export default function VotingPage() {
   }
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden p-4 gap-4">
+    <div className={cn("flex flex-col h-full w-full p-4 space-y-4")}>
       {/* Header Section */}
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Player Evaluation</h1>
-          <p className="text-muted-foreground">
-            Vote for any player, any time. Your votes help build fair teams.
-          </p>
-        </div>
-
-        {/* Stats Bar */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">
-                {votedPlayers.length}/{eligiblePlayers.length} rated
-              </span>
-              <span className="text-muted-foreground">
-                ({progressPercent.toFixed(0)}%)
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Users className="h-4 w-4" />
-              <span>{votingStats.totalVoters} voters</span>
-            </div>
-          </div>
-        </div>
-
-        {associatedPlayer && (
-          <p className="text-xs text-blue-600 dark:text-blue-400">
-            Excluding {associatedPlayer.name} (your profile)
-          </p>
-        )}
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">Player Evaluation</h1>
+        <p className="text-muted-foreground">
+          Vote for any player, any time. Your votes help build fair teams.
+        </p>
       </div>
 
+      {/* Stats Bar */}
+      <ActionBarSingle className='h-15'>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-3">
+            <Input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search players..."
+              className="w-full"
+            />
+          </div>
+
+          {associatedPlayer && (
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              Excluding {associatedPlayer.name} (your profile)
+            </p>
+          )}
+        </div>
+      </ActionBarSingle>
+
       {/* Tabbed Panel */}
-      <div className="flex-1 min-h-0 flex flex-col">
-        <Panel>
-          <div className="space-y-4">
+      <Card className="flex-1 flex flex-col min-h-0 bg-linear-to-r from-card to-muted/20 overflow-hidden">
+        <CardHeader className="text-center">
+          <CardTitle>
             {/* Tab Buttons */}
             <div className="flex gap-2">
               <Button
@@ -186,26 +181,31 @@ export default function VotingPage() {
                 </Badge>
               </Button>
             </div>
-
-            {/* Search and Sort */}
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search players..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 h-full p-0">
+          <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
+            <div className="flex gap-3 text-center">
+              <CheckCircle className="w-4 text-muted-foreground" />
+              <span className="font-medium">
+                {votedPlayers.length}/{eligiblePlayers.length} rated
+              </span>
+              <span className="text-muted-foreground">
+                ({progressPercent.toFixed(0)}%)
+              </span>
               <Button
                 variant="outline"
-                size="icon"
+                size="sm"
                 onClick={() => setSortBy(sortBy === 'name' ? 'votes' : 'name')}
                 title={sortBy === 'name' ? 'Sort by vote count' : 'Sort by name'}
               >
-                <ArrowUpDown className="h-4 w-4" />
+                <ArrowUpDown className="" />
               </Button>
+            </div>
+
+            {/* Search and Sort */}
+            <div className="flex gap-2">
+
             </div>
 
             {/* Sort indicator */}
@@ -217,9 +217,9 @@ export default function VotingPage() {
             <div className="space-y-2">
               {filteredAndSortedPlayers.length === 0 ? (
                 <div className="text-center py-12">
-                  {searchTerm ? (
+                  {searchQuery ? (
                     <p className="text-muted-foreground">
-                      No players found matching "{searchTerm}"
+                      No players found matching "{searchQuery}"
                     </p>
                   ) : activeTab === 'voted' ? (
                     <div className="space-y-2">
@@ -255,8 +255,8 @@ export default function VotingPage() {
               )}
             </div>
           </div>
-        </Panel>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

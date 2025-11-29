@@ -5,8 +5,9 @@ import { calculateArchetypeScores } from "@/lib/positions/calculator";
 import PlayerCard from "@/components/players/player-card";
 import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import Panel from "@/components/shared/panel";
-import { ActionBarTwoColumn } from "@/components/ui/action-bar";
+import { ActionBarSingle } from "@/components/ui/action-bar";
+import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 
 export type CardViewMode = "minimal" | "archetypes" | "face-stats";
 
@@ -42,7 +43,7 @@ const PlayerCards = () => {
     const sortedPlayers = [...filteredPlayers].sort((a, b) => b.overall - a.overall);
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden p-4 space-y-6">
+        <div className={cn("flex flex-col h-full w-full p-4 space-y-4")}>
             {/* Section Header */}
             <div className="space-y-2">
                 <h1 className="text-2xl font-bold tracking-tight">Player Database</h1>
@@ -51,55 +52,57 @@ const PlayerCards = () => {
                 </p>
             </div>
 
-                <Panel>
-                    {/* Search + Card View Selector */}
-                    <div className="pb-4">
-                        <ActionBarTwoColumn
-                            variant="default"
-                            left={
-                                <Input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search players..."
-                                    className="w-full max-w-sm"
-                                />
-                            }
-                            right={
-                                <Select value={cardViewMode} onValueChange={(value) => setCardViewMode(value as CardViewMode)}>
-                                    <SelectTrigger className="w-40 h-9">
-                                        <SelectValue placeholder="Card View" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="minimal">Minimal</SelectItem>
-                                        <SelectItem value="archetypes">Archetypes</SelectItem>
-                                        <SelectItem value="face-stats">Face Stats</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            }
+            {/* Search + Card View Selector */}
+            <ActionBarSingle className='h-15'>
+                <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-3">
+                        <Input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search players..."
+                            className="w-full"
                         />
                     </div>
 
-                    {/* Player Cards Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 items-start">
-                        {sortedPlayers.map((item) => (
-                            <PlayerCard
-                                key={item.player.id}
-                                player={item.player}
-                                playerName={item.player.name}
-                                stats={item.player.stats}
-                                overall={item.overall}
-                                zoneFit={item.zoneFit}
-                                top3Positions={item.topPositions}
-                                topScoresWithArchetypes={item.topScoresWithArchetypes}
-                                archetypeScores={item.archetypeScores}
-                                averages={item.averages}
-                                viewMode={cardViewMode}
-                            />
-                        ))}
+                    <Select value={cardViewMode} onValueChange={(value) => setCardViewMode(value as CardViewMode)}>
+                        <SelectTrigger className="w-40 h-9">
+                            <SelectValue placeholder="Card View" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="minimal">Minimal</SelectItem>
+                            <SelectItem value="archetypes">Archetypes</SelectItem>
+                            <SelectItem value="face-stats">Face Stats</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </ActionBarSingle>
+
+            {/* Player Cards Grid */}
+            <Card className="flex-1 flex flex-col min-h-0 bg-linear-to-r from-card to-muted/20 overflow-hidden">
+                <CardContent className="flex-1 h-full p-0">
+                    <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 items-start">
+                            {sortedPlayers.map((item) => (
+                                <PlayerCard
+                                    key={item.player.id}
+                                    player={item.player}
+                                    playerName={item.player.name}
+                                    stats={item.player.stats}
+                                    overall={item.overall}
+                                    zoneFit={item.zoneFit}
+                                    top3Positions={item.topPositions}
+                                    topScoresWithArchetypes={item.topScoresWithArchetypes}
+                                    archetypeScores={item.archetypeScores}
+                                    averages={item.averages}
+                                    viewMode={cardViewMode}
+                                />
+                            ))}
+                        </div>
                     </div>
-                </Panel>
-            </div>
+                </CardContent>
+            </Card>
+        </div>
     );
 
 
