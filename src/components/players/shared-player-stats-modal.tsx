@@ -6,6 +6,7 @@ import { getArchetypeById } from "@/types/archetypes";
 import { getAllPositionArchetypeGroups } from "@/lib/positions/calculator";
 import Modal from "@/components/shared/modal";
 import { useAuth } from "@/context/auth-context";
+import { getStatBarColor, getStatTextColor } from "@/lib/color-system";
 
 interface SharedPlayerStatsModalProps {
     player: Player | null;
@@ -20,18 +21,10 @@ interface SharedPlayerStatsModalProps {
     stats: Record<StatsKey, number>;
 }
 
-// Simple modern coloring system for stats popup
-export const getStatColor = (value: number) => {
-    if (value >= 75) return "text-emerald-500"; // Good (green)
-    if (value >= 50) return "text-amber-500"; // Average (yellow/amber)
-    return "text-red-500"; // Poor (red)
-};
-
-export const getBarColor = (value: number) => {
-    if (value >= 75) return "bg-emerald-500"; // Good (green)
-    if (value >= 50) return "bg-amber-500"; // Average (yellow/amber)
-    return "bg-red-500"; // Poor (red)
-};
+// Color functions now imported from unified color system
+// Legacy exports maintained for backwards compatibility
+export const getStatColor = getStatTextColor;
+export const getBarColor = getStatBarColor;
 
 // Modern minimal card accent system for player cards
 export const getPlayerAccent = (rating: number) => {

@@ -12,6 +12,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { getArchetypeById } from '@/types/archetypes';
+import { getArchetypeBarColor, getArchetypeTextColor } from '@/lib/color-system';
 
 interface ArchetypeScore {
   archetypeId: string;
@@ -46,30 +47,7 @@ function applyExponentialScaling(relativePercent: number, exp: number = 2.5): nu
   return scaled * 100;
 }
 
-/**
- * Modern color palette for relative bars
- * Colors based on relation to the GLOBAL best score (the player's absolute best archetype)
- * This ensures consistent coloring across all positions
- */
-const getRelativeBarColor = (score: number, globalBestScore: number): string => {
-  const difference = globalBestScore - score;
-
-  if (difference <= 3) return 'bg-gradient-to-r from-emerald-500 to-emerald-400';
-  if (difference <= 7) return 'bg-gradient-to-r from-blue-500 to-blue-400';
-  if (difference <= 12) return 'bg-gradient-to-r from-cyan-500 to-cyan-400';
-  if (difference <= 20) return 'bg-gradient-to-r from-amber-500 to-amber-400';
-  return 'bg-gradient-to-r from-slate-500 to-slate-400';
-};
-
-const getRelativeTextColor = (score: number, globalBestScore: number): string => {
-  const difference = globalBestScore - score;
-
-  if (difference <= 3) return 'text-emerald-400';
-  if (difference <= 7) return 'text-blue-400';
-  if (difference <= 12) return 'text-cyan-400';
-  if (difference <= 20) return 'text-amber-400';
-  return 'text-slate-400';
-};
+// Color functions now imported from unified color system
 
 const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
   archetypes,
@@ -135,7 +113,7 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
                   initial={{ width: 0 }}
                   animate={{ width: `${visualWidth}%` }}
                   transition={{ duration: 0.5, ease: 'easeOut' }}
-                  className={`h-1.5 rounded-full ${getRelativeBarColor(
+                  className={`h-1.5 rounded-full ${getArchetypeBarColor(
                     score,
                     bestScore
                   )}`}
@@ -146,7 +124,7 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
               {showNumbers && (
                 <div className="flex items-center gap-1">
                   <span
-                    className={`text-xs font-semibold w-8 text-right tabular-nums ${getRelativeTextColor(
+                    className={`text-xs font-semibold w-8 text-right tabular-nums ${getArchetypeTextColor(
                       score,
                       bestScore
                     )}`}

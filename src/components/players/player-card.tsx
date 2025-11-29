@@ -8,7 +8,7 @@ import { ZoneScores } from "@/types/positions";
 import { getArchetypeById } from "@/types/archetypes";
 import { getTopArchetypes } from "@/lib/positions/calculator";
 import ModernPlayerStatsModal from "@/components/players/modern-player-stats-modal";
-import { getBarColor } from "@/components/players/shared-player-stats-modal";
+import { getCardUnderlineColor, getStatBarColor } from "@/lib/color-system";
 import type { CardViewMode } from "./player-cards";
 
 interface PlayerCardProps {
@@ -23,16 +23,6 @@ interface PlayerCardProps {
     stats: Record<StatsKey, number>;
     viewMode: CardViewMode;
 }
-
-// Get subtle accent color for separator
-const getAccentColor = (rating: number): string => {
-    if (rating >= 90) return 'bg-emerald-400/30';
-    if (rating >= 80) return 'bg-blue-400/30';
-    if (rating >= 70) return 'bg-amber-400/30';
-    if (rating >= 60) return 'bg-orange-400/30';
-    if (rating >= 40) return 'bg-red-400/30';
-    return 'bg-slate-400/30';
-};
 
 const PlayerCard: React.FC<PlayerCardProps> = ({
     player,
@@ -54,7 +44,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     };
 
     const overallRounded = Math.round(overall);
-    const accentColor = getAccentColor(overallRounded);
+    const accentColor = getCardUnderlineColor(overallRounded);
 
     // Get top 5 archetypes sorted by score (no threshold, just top 5)
     // Use 999 as threshold to effectively disable threshold filtering
@@ -138,7 +128,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                                     </span>
                                     <div className="flex-1 h-1 bg-muted rounded-full">
                                         <div
-                                            className={`${getBarColor(statRounded)} h-1 rounded-full transition-all duration-300`}
+                                            className={`${getStatBarColor(statRounded)} h-1 rounded-full transition-all duration-300`}
                                             style={{ width: `${Math.min(statRounded, 100)}%` }}
                                         />
                                     </div>

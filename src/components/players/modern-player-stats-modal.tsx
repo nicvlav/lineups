@@ -22,6 +22,7 @@ import { emptyZoneScores, Position } from '@/types/positions';
 import { ZoneAverages, Player, PlayerArchetypeScores } from '@/types/players';
 import { getArchetypeById } from '@/types/archetypes';
 import { getTopPositionGroups, getAllPositionArchetypeGroups } from '@/lib/positions/calculator';
+import { getStatBarColor, getStatTextColor } from '@/lib/color-system';
 
 interface ModernPlayerStatsModalProps {
   player: Player | null;
@@ -40,18 +41,7 @@ const isAdmin = (userId: string | undefined): boolean => {
   return userId === ADMIN_USER_ID;
 };
 
-// Color utilities for stats
-const getStatColor = (value: number) => {
-  if (value >= 75) return 'text-emerald-500';
-  if (value >= 50) return 'text-amber-500';
-  return 'text-red-500';
-};
-
-const getBarColor = (value: number) => {
-  if (value >= 75) return 'bg-emerald-500';
-  if (value >= 50) return 'bg-amber-500';
-  return 'bg-red-500';
-};
+// Color utilities now imported from unified color system
 
 const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
   player,
@@ -185,7 +175,7 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                         <span className="font-bold text-base text-foreground">{position}</span>
                         {showDetailedStats && bestArchetype && (
                           <span
-                            className={`text-sm font-semibold ${getStatColor(
+                            className={`text-sm font-semibold ${getStatTextColor(
                               bestArchetype.score
                             )}`}
                           >
@@ -227,7 +217,7 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                     <span className="text-sm font-medium text-muted-foreground">
                       Overall Rating:
                     </span>
-                    <span className={`text-sm font-bold ${getStatColor(overallRounded)}`}>
+                    <span className={`text-sm font-bold ${getStatTextColor(overallRounded)}`}>
                       {overallRounded}
                     </span>
                   </div>
@@ -235,7 +225,7 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                     <span className="text-sm font-medium text-muted-foreground">
                       Avg Stat:
                     </span>
-                    <span className={`text-sm font-bold ${getStatColor(allStatAverage)}`}>
+                    <span className={`text-sm font-bold ${getStatTextColor(allStatAverage)}`}>
                       {Math.round(allStatAverage)}
                     </span>
                   </div>
@@ -256,7 +246,7 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                             <h4 className="font-bold text-sm uppercase tracking-wide text-foreground">
                               {category}
                             </h4>
-                            <span className={`text-sm font-bold ${getStatColor(avgRounded)}`}>
+                            <span className={`text-sm font-bold ${getStatTextColor(avgRounded)}`}>
                               {avgRounded}
                             </span>
                           </div>
@@ -264,7 +254,7 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                           {/* Category Progress Bar */}
                           <div className="w-full h-2 bg-muted rounded-full">
                             <div
-                              className={`${getBarColor(avgRounded)} h-2 rounded-full`}
+                              className={`${getStatBarColor(avgRounded)} h-2 rounded-full`}
                               style={{ width: `${Math.min(avgRounded, 100)}%` }}
                             />
                           </div>
@@ -284,7 +274,7 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                                     {statLabelMap[key]}
                                   </span>
                                   <span
-                                    className={`text-xs font-bold ${getStatColor(statRounded)}`}
+                                    className={`text-xs font-bold ${getStatTextColor(statRounded)}`}
                                   >
                                     {statRounded}
                                   </span>
