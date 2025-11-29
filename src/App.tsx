@@ -1,37 +1,38 @@
-
 import { SupabaseProvider } from "@/context/supabase-provider";
 import { AuthProvider } from "@/context/auth-context";
-import { ThemeProvider } from "@/context/theme-provider"
+import { ThemeProvider } from "@/context/theme-provider";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { queryClient } from "@/lib/query-client";
 import { useEffect } from "react";
 import Layout from "@/components/layout/layout";
 import { Toaster } from "sonner";
 
 const App = () => {
-  const currentUrl = new URL(window.location.href);
-  const urlState = currentUrl.search;
+    const currentUrl = new URL(window.location.href);
+    const urlState = currentUrl.search;
 
-  // console.log("STATE", urlState);
+    useEffect(() => {
+        if (urlState) {
+            window.history.replaceState(null, "", currentUrl.pathname);
+        }
+    }, [urlState]);
 
-  // Clean up the URL after extracting the state
-
-  useEffect(() => {
-    if (urlState) {
-      window.history.replaceState(null, "", currentUrl.pathname);
-    }
-  }, [urlState]);
-
-  return (
-    <SupabaseProvider>
-      <div className="h-dvh flex flex-col">
-        <AuthProvider url={urlState}>
-          <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-            <Layout />
-            <Toaster />
-          </ThemeProvider>
-        </AuthProvider>
-      </div>
-    </SupabaseProvider>
-  );
+    return (
+        <QueryClientProvider client={queryClient}>
+            <SupabaseProvider>
+                <div className="h-dvh flex flex-col">
+                    <AuthProvider url={urlState}>
+                        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+                            <Layout />
+                            <Toaster />
+                        </ThemeProvider>
+                    </AuthProvider>
+                </div>
+            </SupabaseProvider>
+            {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        </QueryClientProvider>
+    );
 };
 
 export default App;
