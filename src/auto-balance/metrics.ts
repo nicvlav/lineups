@@ -1111,6 +1111,7 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
     bestMidScore: number;
     bestAttScore: number;
     bestScore: number;
+    bestScoreSum: number;
 } {
     if (classifications.length === 0) {
         return {
@@ -1124,7 +1125,8 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
             bestDefScore: 0,
             bestMidScore: 0,
             bestAttScore: 0,
-            bestScore: 0
+            bestScore: 0,
+            bestScoreSum: 0
         };
     }
 
@@ -1139,6 +1141,8 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
     let bestDefScore = 0;
     let bestMidScore = 0;
     let bestAttScore = 0;
+
+    let bestScoreSum = 0;
 
     // Count specialists and accumulate quality
     for (const c of classifications) {
@@ -1169,7 +1173,7 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
         totalDefQuality += c.bestDefensiveScore;
         totalMidQuality += c.bestMidfieldScore;
         totalAttQuality += c.bestAttackingScore;
-
+        bestScoreSum += c.bestScore;
 
     }
 
@@ -1184,7 +1188,8 @@ function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
         bestDefScore,
         bestMidScore,
         bestAttScore,
-        bestScore: Math.max(bestDefScore, bestMidScore, bestAttScore)
+        bestScore: Math.max(bestDefScore, bestMidScore, bestAttScore),
+        bestScoreSum
     };
 }
 
@@ -1289,33 +1294,35 @@ function calculateStarDistributionPenalty(
         }
     }
 
-    let oddBestZonePenalty = 0.0;
+    let generalQualityPenalty = 0.0;
     if (oddTotal) {
         specialistDistributionPenalty *= 0.5;
         const aIsSmaller = teamAClassifications.length < teamBClassifications.length;
         teamAClassifications.length + teamBClassifications.length
         const smaller = aIsSmaller ? teamAMetrics : teamBMetrics;
         const larger = aIsSmaller ? teamBMetrics : teamAMetrics;
-        
+
         if (smaller.bestDefScore < larger.bestDefScore) {
-            oddBestZonePenalty += 0.2;
+            generalQualityPenalty += 0.2;
         }
 
         if (smaller.bestMidScore < larger.bestMidScore) {
-            oddBestZonePenalty += 0.2;
+            generalQualityPenalty += 0.2;
         }
 
         if (smaller.bestAttScore < larger.bestAttScore) {
-            oddBestZonePenalty += 0.2;
-        }        
-        
-        if (smaller.bestScore < larger.bestScore) {
-            oddBestZonePenalty += 0.2;
+            generalQualityPenalty += 0.2;
         }
+
+        if (smaller.bestScore < larger.bestScore) {
+            generalQualityPenalty += 0.2;
+        }
+    } else {
+        generalQualityPenalty = 1.0 - Math.pow(calculateBasicDifferenceRatio(teamAMetrics.bestScoreSum, teamBMetrics.bestScoreSum), 10);
     }
 
     // 10. TOTAL PENALTY CALCULATION
-    const totalPenalty = diffPenalty * specialistPairingPenalty * (1.0 - specialistDistributionPenalty) * (1.0 - oddBestZonePenalty);
+    const totalPenalty = diffPenalty * specialistPairingPenalty * (1.0 - specialistDistributionPenalty) * (1.0 - generalQualityPenalty);
     const penalty = Math.max(totalPenalty, 0.0);
 
     return {
@@ -1688,10 +1695,6 @@ export function calculateOptimalStarDistribution(
             console.log("B: ", classifications[i]);
         }));
     }
-
-
-
-
 
     const avgPenalty = totalPenalties / combinations.length;
 
