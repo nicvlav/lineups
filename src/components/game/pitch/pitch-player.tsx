@@ -99,7 +99,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
   return (
     <div>
       <div
-        onDoubleClick={handleOpenDialog}
+        onClick={handleOpenDialog}
         onContextMenu={handleOpenDialog}
         className={`
           absolute flex flex-col items-center touch-none z-0
