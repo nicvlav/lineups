@@ -82,8 +82,6 @@ interface GameContextType {
     switchToRealPlayer: (oldPlayer: ScoredGamePlayerWithThreat, newID: string) => void;
     switchToNewPlayer: (oldPlayer: ScoredGamePlayerWithThreat, newName: string, guest: boolean) => void;
 
-    updateGamePlayerPosition: (gamePlayer: GamePlayer, newPosition: { x: number; y: number }) => void;
-
     applyFormation: (formation: Formation) => void;
     generateTeams: (filteredPlayers: Player[]) => void;
     rebalanceCurrentGame: () => void;
@@ -287,14 +285,20 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             const position = { x: dropX, y: dropY } as Point;
             const zoneFit = calculateScoresForStats(players[newID].stats, normalizedDefaultWeights);
 
+            // Determine best position based on zone scores
+            const bestPosition = (Object.entries(zoneFit) as [Position, number][])
+                .reduce((best, [pos, score]) => score > best.score ? { position: pos, score } : best,
+                    { position: 'CM' as Position, score: 0 }).position;
+
             const gamePlayer: ScoredGamePlayerWithThreat = {
                 id: newID,
                 name: name,
                 team: placedTeam,
                 guest_name: null,
                 position,
+                exactPosition: bestPosition,
                 zoneFit,
-                threatScore: getThreatScore(position, zoneFit, null)
+                threatScore: getThreatScore(position, zoneFit, bestPosition)
             };
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
@@ -309,14 +313,18 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         const position = { x: dropX, y: dropY } as Point;
         const zoneFit = structuredClone(emptyZoneScores);
 
+        // Default guest players to CM position
+        const exactPosition: Position = 'CM';
+
         const gamePlayer: ScoredGamePlayerWithThreat = {
             id: newID,
             name: name,
             team: placedTeam,
             guest_name: name,
             position,
+            exactPosition,
             zoneFit,
-            threatScore: getThreatScore(position, zoneFit)
+            threatScore: getThreatScore(position, zoneFit, exactPosition)
         };
         setGamePlayers(prevGamePlayers => {
             const newGamePlayers = { ...prevGamePlayers };
@@ -360,14 +368,21 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
                 const zoneFit = calculateScoresForStats(newPlayer.stats, normalizedDefaultWeights);
+
+                // Determine best position based on zone scores
+                const bestPosition = (Object.entries(zoneFit) as [Position, number][])
+                    .reduce((best, [pos, score]) => score > best.score ? { position: pos, score } : best,
+                        { position: 'CM' as Position, score: 0 }).position;
+
                 newGamePlayers[newID] = {
                     id: newPlayer.id,
                     name: newPlayer.name,
                     guest_name: null,
                     team: oldPlayer.team,
                     position: oldPlayer.position,
+                    exactPosition: bestPosition,
                     zoneFit,
-                    threatScore: getThreatScore(oldPlayer.position, zoneFit, oldPlayer.exactPosition)
+                    threatScore: getThreatScore(oldPlayer.position, zoneFit, bestPosition)
                 };
                 delete newGamePlayers[oldPlayer.id];
                 return newGamePlayers;
@@ -389,14 +404,20 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
             const zoneFit = calculateScoresForStats(players[newID].stats, normalizedDefaultWeights);
 
+            // Determine best position based on zone scores
+            const bestPosition = (Object.entries(zoneFit) as [Position, number][])
+                .reduce((best, [pos, score]) => score > best.score ? { position: pos, score } : best,
+                    { position: 'CM' as Position, score: 0 }).position;
+
             const gamePlayer: ScoredGamePlayerWithThreat = {
                 id: newID,
                 team: oldPlayer.team,
                 name: newName,
                 guest_name: null,
                 position: oldPlayer.position,
+                exactPosition: bestPosition,
                 zoneFit,
-                threatScore: getThreatScore(oldPlayer.position, zoneFit, oldPlayer.exactPosition)
+                threatScore: getThreatScore(oldPlayer.position, zoneFit, bestPosition)
             };
             setGamePlayers(prevGamePlayers => {
                 const newGamePlayers = { ...prevGamePlayers };
@@ -487,12 +508,19 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         handleGenerateTeams(filteredPlayers.map(player => {
             const position = { x: 0.5, y: 0.5 } as Point;
             const zoneFit = calculateScoresForStats(player.stats, normalizedWeights);
+
+            // Determine best position based on zone scores (will be replaced by auto-balance)
+            const bestPosition = (Object.entries(zoneFit) as [Position, number][])
+                .reduce((best, [pos, score]) => score > best.score ? { position: pos, score } : best,
+                    { position: 'CM' as Position, score: 0 }).position;
+
             return {
                 id: player.id,
                 name: player.name,
                 guest_name: null,
                 team: "A",
                 position: position,
+                exactPosition: bestPosition,
                 zoneFit: zoneFit,
                 threatScore: 0,
                 stats: player.stats
@@ -516,23 +544,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         await handleGenerateTeams(filteredPlayers);
     };
 
-    // Update game player position (for drag-and-drop) - CRITICAL for smooth UX
-    const updateGamePlayerPosition = (gamePlayer: GamePlayer, newPosition: { x: number; y: number }) => {
-        const playerId = gamePlayer.id;
-        if (!playerId) return;
-
-        setGamePlayers(prev => {
-            const updated = { ...prev };
-            if (updated[playerId]) {
-                updated[playerId] = {
-                    ...updated[playerId],
-                    position: newPosition
-                };
-            }
-            return updated;
-        });
-    };
-
     return (
         <GameContext.Provider value={{
             gamePlayers,
@@ -544,8 +555,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             removeFromGame,
             switchToRealPlayer,
             switchToNewPlayer,
-
-            updateGamePlayerPosition,
 
             applyFormation,
             generateTeams,

@@ -74,6 +74,7 @@ export interface PlayerWithArchetypes {
 
 /**
  * Player in a game session (local-only attributes)
+ * Position is stored as Point for rendering, exactPosition is required for analysis
  */
 export interface GamePlayer {
   id: string;
@@ -81,7 +82,7 @@ export interface GamePlayer {
   guest_name: string | null;
   team: string;
   position: Point;
-  exactPosition?: Position | null;
+  exactPosition: Position;
 }
 
 /**

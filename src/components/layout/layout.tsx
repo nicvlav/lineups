@@ -1,8 +1,4 @@
 import { useState, useEffect } from "react";
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import { TouchBackend } from 'react-dnd-touch-backend';
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/auth-context";
 import { PlayersProvider } from "@/context/players-provider";
 import { GameProvider } from "@/context/game-provider";
@@ -29,7 +25,6 @@ import DataDeletionPage from "@/components/auth/pages/data-deletion";
 const LayoutContent = () => {
     const { needsVerification, user } = useAuth();
     const location = useLocation();
-    const isMobile = useIsMobile();
 
     // Detect if we're on staging
     const isStaging = window.location.hostname.includes('staging');
@@ -64,26 +59,14 @@ const LayoutContent = () => {
 
     const { width } = useWindowSize();
 
-    // Separate concerns: width-based responsive design vs touch device detection
-    const isCompact = width < 768; // Responsive layout based on viewport width
-    const backend = isMobile ? TouchBackend : HTML5Backend; // Touch events based on device capability
-    const options = isMobile
-        ? {
-            enableMouseEvents: false, // Prevents conflicts
-            enableTouchEvents: true,
-            // delayTouchStart: 10, // Adds a small delay before drag starts
-            ignoreContextMenu: true, // Prevents issues with right-click
-            usePointerEvents: true,
-            preview: true,
-        }
-        : {}; // No extra options for desktop
+    // Responsive layout based on viewport width
+    const isCompact = width < 768;
 
     return (
         <PitchAnimationProvider>
             <PlayersProvider>
                 <GameProvider>
                     <VotingProvider>
-                        <DndProvider backend={backend} options={options}>
                     {/* Staging environment banner */}
                     {isStaging && (
                         <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-center py-1 px-4 text-sm font-medium z-50 relative">
@@ -146,7 +129,6 @@ const LayoutContent = () => {
                             )}
                         </>
                     )}
-                        </DndProvider>
                     </VotingProvider>
                 </GameProvider>
             </PlayersProvider>

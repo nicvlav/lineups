@@ -87,13 +87,18 @@ export function playerWithArchetypesToScoredGamePlayer(
 ): ScoredGamePlayer {
   const positionScores = getPositionScores(player.archetypeScores);
 
+  // Use CM as placeholder - will be replaced by auto-balance
+  const bestPosition: Position = (Object.entries(positionScores) as [Position, number][])
+    .reduce((best, [pos, score]) => score > best.score ? { position: pos, score } : best,
+      { position: 'CM' as Position, score: 0 }).position;
+
   return {
     id: player.id,
     name: player.name,
     guest_name: null,
     team,
     position,
-    exactPosition: null,
+    exactPosition: bestPosition,
     zoneFit: positionScores,
     stats: player.rawStats
   };

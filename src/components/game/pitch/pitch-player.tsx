@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { useDrag } from "react-dnd";
 import { User } from "lucide-react";
 import { ScoredGamePlayerWithThreat } from "@/types/players";
 import { usePlayers } from "@/context/players-provider";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
-// import Panel from "@/components/dialogs/panel"
 import PlayerDialog from "@/components/players/player-dialog";
 
 interface PitchPlayerProps {
@@ -15,7 +13,6 @@ interface PitchPlayerProps {
   initialTop: number;
   containerWidth: number;
   containerHeight: number;
-  onPositionChange?: (player: ScoredGamePlayerWithThreat, newX: number, newY: number) => void;
 }
 
 const PitchPlayer: React.FC<PitchPlayerProps> = ({
@@ -26,7 +23,6 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
   initialTop,
   containerWidth,
   containerHeight,
-  onPositionChange,
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { players } = usePlayers();
@@ -36,30 +32,6 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 
   // Get the full Player data (with avatar_url) from the players record
   const fullPlayer = player.id ? players[player.id] : null;
-
-  const getRelativePosition = (x: number, y: number) => ({
-    x: Math.max(0, Math.min(1, x / containerWidth)),
-    y: Math.max(0, Math.min(1, y / containerHeight)),
-  });
-
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: "PLAYER",
-    item: player,
-    collect: (monitor) => ({ isDragging: !!monitor.isDragging() }),
-    end: (_, monitor) => {
-      const dropResult = monitor.getDropResult();
-      if (dropResult) return;
-
-      const initialOffset = monitor.getInitialClientOffset();
-      const currentOffset = monitor.getClientOffset();
-      if (initialOffset && currentOffset) {
-        const deltaX = currentOffset.x - initialOffset.x;
-        const deltaY = currentOffset.y - initialOffset.y;
-        const { x, y } = getRelativePosition(initialLeft + deltaX, initialTop + deltaY);
-        onPositionChange?.(player, x, y);
-      }
-    },
-  }), [player.id, initialLeft, initialTop, containerWidth, containerHeight]);
 
   const handleOpenDialog = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -91,10 +63,10 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 
   // Track if position actually changed (not just a re-render)
   useEffect(() => {
-    const positionChanged = 
+    const positionChanged =
       Math.abs(previousPositionRef.current.left - clampedLeft) > 1 ||
       Math.abs(previousPositionRef.current.top - clampedTop) > 1;
-    
+
     if (positionChanged && shouldAnimate && !hasAnimated) {
       // Position changed and we should animate
       setHasAnimated(true);
@@ -109,33 +81,29 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
   // Calculate animation delay based on player index (staggered effect)
   const getAnimationDelay = () => {
     if (!shouldAnimate || !hasAnimated) return 0;
-    
+
     // Use player ID to generate a consistent but pseudo-random delay
     const hashCode = (player.id || '').split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    
+
     const baseDelay = animationSource === 'formation' ? 20 : 10;
     const maxDelay = animationSource === 'formation' ? 300 : 200;
     return Math.abs(hashCode) % maxDelay + baseDelay;
   };
 
   const animationDelay = getAnimationDelay();
-  const shouldPlayAnimation = shouldAnimate && hasAnimated && !isDragging;
+  const shouldPlayAnimation = shouldAnimate && hasAnimated;
 
   return (
     <div>
       <div
-        ref={(node) => {
-          if (node) drag(node);
-        }}
+        onClick={handleOpenDialog}
         onContextMenu={handleOpenDialog}
-        onDoubleClick={handleOpenDialog}
         className={`
           absolute flex flex-col items-center touch-none z-0
-          ${isDragging ? "opacity-50" : "opacity-100"}
-          cursor-grab
+          cursor-pointer hover:scale-105
           ${shouldPlayAnimation ? 'transition-all duration-500' : 'transition-all duration-300'}
         `}
         style={{
@@ -149,7 +117,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
       >
         <div
           className={`
-    absolute text-foreground drop-shadow-lg text-xs font-bold rounded-md  
+    absolute text-foreground drop-shadow-lg text-xs font-bold rounded-md
     p pointer-events-none text-center flex flex-col
   `}
           style={{ top: `${adjustedNameOffset}px` }}
@@ -164,8 +132,8 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 
         <div
           className={`z-200 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden transition-all duration-200 ${
-            player.team === 'A' 
-              ? 'bg-cyan-400 border-cyan-500 text-white shadow-cyan-400/20' 
+            player.team === 'A'
+              ? 'bg-cyan-400 border-cyan-500 text-white shadow-cyan-400/20'
               : 'bg-lime-400 border-lime-500 text-gray-900 shadow-lime-400/20'
           }`}
           style={{

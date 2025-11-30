@@ -85,6 +85,7 @@ export function getPointForPosition(
 }
 
 /**
+ * @deprecated No longer used - kept for reference only
  * Calculate proximity score between a point and a position
  */
 function getProximityScore(absolutePosition: Point, position: PositionLike): number {
@@ -109,6 +110,7 @@ interface PositionWithWeight {
 }
 
 /**
+ * @deprecated No longer used - kept for reference only
  * Filter positions by vertical proximity
  */
 function filterByVerticalProximity(positions: PositionWithWeight[], y: number): PositionWithWeight[] {
@@ -136,9 +138,11 @@ function filterByVerticalProximity(positions: PositionWithWeight[], y: number): 
 }
 
 /**
+ * @deprecated No longer used - kept for reference only
  * Get positions with proximity weights for a point
  */
-function getProximityPositions(point: Point): PositionWithWeight[] {
+// @ts-ignore - Kept for reference only
+function _getProximityPositions(point: Point): PositionWithWeight[] {
   const zonePositions: PositionWithWeight[] = [];
 
   for (const position of Object.values(POSITIONS)) {
@@ -175,33 +179,16 @@ function getProximityPositions(point: Point): PositionWithWeight[] {
 /**
  * Calculate threat score for a player at a specific point
  * Used for pitch heat visualization
+ *
+ * Now simplified: always uses exactPosition since all players have rigid positions
  */
 export function getThreatScore(
-  point: Point,
+  _point: Point,
   playerScores: ZoneScores,
-  exactPosition?: Position | null
+  exactPosition: Position
 ): number {
-  // If we have an exact position, return the score for that position directly
-  if (exactPosition) {
-    return playerScores[exactPosition] / 100;
-  }
-
-  const proximityPositions = getProximityPositions(point);
-
-  // Normalize weights to sum to 1
-  const sum = proximityPositions.reduce((acc, w) => acc + w.weight, 0);
-  if (sum === 0) return 0;
-
-  proximityPositions.forEach((position) => {
-    position.weight = position.weight / sum;
-  });
-
-  const threat = proximityPositions.reduce((acc, w) => {
-    const score = playerScores[w.positionKey];
-    return acc + (score * w.weight / 100);
-  }, 0);
-
-  return threat;
+  // Direct score lookup - no proximity calculations needed
+  return playerScores[exactPosition] / 100;
 }
 
 /**

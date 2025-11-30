@@ -1,17 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
-import { useDrop, DropTargetMonitor } from 'react-dnd';
 import { usePlayers } from "@/context/players-provider"
-import { useGame } from "@/context/game-provider"
 import { ScoredGamePlayerWithThreat } from "@/types/players";
 
-import DraggablePlayer from '@/components/game/pitch/pitch-player'
-
-const mergeRefs = (...refs: (React.Ref<any> | null)[]) => (el: any) => {
-  refs.forEach((ref) => {
-    if (typeof ref === "function") ref(el);
-    else if (ref) ref.current = el;
-  });
-};
+import PitchPlayer from '@/components/game/pitch/pitch-player'
 
 interface PlayerContainerProps {
   team: string;
@@ -38,7 +29,6 @@ const getPlayerPosition = (player: ScoredGamePlayerWithThreat, playerSize: numbe
 const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, playerSize }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { players } = usePlayers();
-  const { addExisitingPlayerToGame, updateGamePlayerPosition } = useGame();
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   // Update container size on mount, resize, and whenever the container might change
@@ -75,35 +65,6 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
     };
   }, []);
 
-  // Handle movement of existing player within the container
-  const handlePlayerMove = (player: ScoredGamePlayerWithThreat, newX: number, newY: number) => {
-    updateGamePlayerPosition(player, { x: newX, y: newY });
-  };
-
-  // Handle drop interactions
-  const [, drop] = useDrop({
-    accept: 'PLAYER',
-    drop: (item: ScoredGamePlayerWithThreat, monitor: DropTargetMonitor) => {
-      const dropOffset = monitor.getClientOffset();
-      if (!containerRef.current || !dropOffset) return;
-
-      const containerRect = containerRef.current.getBoundingClientRect();
-
-      // Calculate drop position relative to container
-      const dropX = (dropOffset.x - containerRect.left) / containerRect.width;
-      const dropY = (dropOffset.y - containerRect.top) / containerRect.height;
-
-      handleMainPlayerDrop(item, dropX, dropY);
-
-      // Return drop result to let the drag source know the drop was successful
-      return { team };
-    },
-  });
-
-  const handleMainPlayerDrop = (player: ScoredGamePlayerWithThreat, dropX: number, dropY: number) => {
-    addExisitingPlayerToGame(player, team, dropX, dropY);
-  };
-
   const findPlayerName = (player: ScoredGamePlayerWithThreat) => {
     if (player.guest_name !== null) {
       return player.guest_name;
@@ -113,10 +74,6 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
     return "[Player]"
   };
 
-  // Combine refs for both drag and drop
-  const combinedRef = mergeRefs(containerRef, drop as unknown as React.Ref<any>);
-
-
   // Define enhanced pitch styles with better contrast and differentiation
   const pitchColor = team === 'A'
     ? 'linear-gradient(135deg, hsl(200 100% 85%/0.15), hsl(200 100% 85%/0.08))' // Aqua blue tint - more contrast
@@ -124,7 +81,7 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
 
   return (
     <div
-      ref={combinedRef}
+      ref={containerRef}
       style={{
         position: 'relative',
         width: '100%',
@@ -146,7 +103,7 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
         );
 
         return (
-          <DraggablePlayer
+          <PitchPlayer
             key={player.id || -1}
             player={player}
             name={findPlayerName(player)}
@@ -155,7 +112,6 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
             initialTop={top}
             containerWidth={containerSize.width}
             containerHeight={containerSize.height}
-            onPositionChange={handlePlayerMove}
           />
         );
       })}
