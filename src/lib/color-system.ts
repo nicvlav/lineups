@@ -6,7 +6,20 @@
  * - Archetype bars
  * - Admin stats
  *
- * Uses a more nuanced 5-tier system with gradient support
+ * Uses the traditional red→yellow→green spectrum with modern OKLCH refinement:
+ * - Elite (90+): Vibrant green (145° - success, excellence)
+ * - Excellent (80-89): Spring green (130° - strong performance)
+ * - Great (70-79): Lime/yellow-green (95° - above average)
+ * - Good (60-69): Amber/yellow (65° - adequate, room to grow)
+ * - Solid (<60): Warm orange (35° - needs attention, not "bad")
+ *
+ * Color philosophy:
+ * - 110° hue rotation (orange→yellow→green) for intuitive understanding
+ * - Higher quality = greener (positive)
+ * - Lower quality = warmer orange (attention needed, not punishing)
+ * - Perceptually balanced lightness (~0.75-0.78) for visual consistency
+ * - No harsh reds - orange is lowest tier, maintaining encouragement
+ * - Independent from pitch team colors
  */
 
 // ============ Color Tiers ============
@@ -28,54 +41,55 @@ export interface ColorScheme {
 }
 
 /**
- * Unified color palette - more ambiguous and harmonious
- * Uses softer, more similar colors than before
+ * Unified color palette derived from pitch gradients
+ * Creates a smooth monochromatic progression from blue to green
+ * Uses CSS custom properties for theme-aware colors
  */
 const COLOR_SCHEMES: Record<ColorTier, ColorScheme> = {
   elite: {
     tier: 'elite',
     label: 'Elite',
-    solid: 'bg-emerald-400',
-    solidBg: 'bg-emerald-500',
-    text: 'text-emerald-400',
-    gradient: 'bg-gradient-to-r from-emerald-500 to-emerald-400',
-    subtle: 'bg-emerald-400/30',
+    solid: 'bg-[var(--quality-elite)]',
+    solidBg: 'bg-[var(--quality-elite)]',
+    text: 'text-[var(--quality-elite)]',
+    gradient: 'bg-gradient-to-r from-[var(--quality-elite)] to-[var(--quality-elite)]',
+    subtle: 'bg-[var(--quality-elite-soft)]',
   },
   excellent: {
     tier: 'excellent',
     label: 'Excellent',
-    solid: 'bg-blue-400',
-    solidBg: 'bg-blue-500',
-    text: 'text-blue-400',
-    gradient: 'bg-gradient-to-r from-blue-500 to-blue-400',
-    subtle: 'bg-blue-400/30',
+    solid: 'bg-[var(--quality-excellent)]',
+    solidBg: 'bg-[var(--quality-excellent)]',
+    text: 'text-[var(--quality-excellent)]',
+    gradient: 'bg-gradient-to-r from-[var(--quality-excellent)] to-[var(--quality-excellent)]',
+    subtle: 'bg-[var(--quality-excellent-soft)]',
   },
   great: {
     tier: 'great',
     label: 'Great',
-    solid: 'bg-cyan-400',
-    solidBg: 'bg-cyan-500',
-    text: 'text-cyan-400',
-    gradient: 'bg-gradient-to-r from-cyan-500 to-cyan-400',
-    subtle: 'bg-cyan-400/30',
+    solid: 'bg-[var(--quality-great)]',
+    solidBg: 'bg-[var(--quality-great)]',
+    text: 'text-[var(--quality-great)]',
+    gradient: 'bg-gradient-to-r from-[var(--quality-great)] to-[var(--quality-great)]',
+    subtle: 'bg-[var(--quality-great-soft)]',
   },
   good: {
     tier: 'good',
     label: 'Good',
-    solid: 'bg-amber-400',
-    solidBg: 'bg-amber-500',
-    text: 'text-amber-400',
-    gradient: 'bg-gradient-to-r from-amber-500 to-amber-400',
-    subtle: 'bg-amber-400/30',
+    solid: 'bg-[var(--quality-good)]',
+    solidBg: 'bg-[var(--quality-good)]',
+    text: 'text-[var(--quality-good)]',
+    gradient: 'bg-gradient-to-r from-[var(--quality-good)] to-[var(--quality-good)]',
+    subtle: 'bg-[var(--quality-good-soft)]',
   },
   solid: {
     tier: 'solid',
     label: 'Solid',
-    solid: 'bg-slate-400',
-    solidBg: 'bg-slate-500',
-    text: 'text-slate-400',
-    gradient: 'bg-gradient-to-r from-slate-500 to-slate-400',
-    subtle: 'bg-slate-400/30',
+    solid: 'bg-[var(--quality-solid)]',
+    solidBg: 'bg-[var(--quality-solid)]',
+    text: 'text-[var(--quality-solid)]',
+    gradient: 'bg-gradient-to-r from-[var(--quality-solid)] to-[var(--quality-solid)]',
+    subtle: 'bg-[var(--quality-solid-soft)]',
   },
 };
 

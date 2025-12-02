@@ -39,8 +39,30 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  --pitch-a: 'radial-gradient(ellipse at center, #3161a1, #1e3c61)'
-  --pitch-b: 'radial-gradient(ellipse at center, #89db46, #4d7a27)'
+  --pitch-a: 'radial-gradient(ellipse at center, #3161a1, #1e3c61)';
+  --pitch-b: 'radial-gradient(ellipse at center, #89db46, #4d7a27)';
+
+  /* Pitch color extraction - base colors from gradients */
+  --pitch-blue-bright: oklch(0.46 0.12 258);    /* From #3161a1 */
+  --pitch-blue-deep: oklch(0.28 0.08 252);      /* From #1e3c61 */
+  --pitch-green-bright: oklch(0.80 0.19 130);   /* From #89db46 */
+  --pitch-green-deep: oklch(0.48 0.12 128);     /* From #4d7a27 */
+
+  /* Quality tiers - traditional red→yellow→green spectrum */
+  /* Uses classic traffic light psychology with modern OKLCH refinement */
+  /* 120° hue rotation (from red through yellow to green) */
+  /* Higher quality = greener, lower = warmer (orange/red) */
+  /* Perceptually balanced lightness for accessibility */
+  --quality-elite: oklch(0.78 0.17 145);        /* Vibrant green (success, excellence) */
+  --quality-elite-soft: oklch(0.78 0.17 145 / 0.3);
+  --quality-excellent: oklch(0.75 0.16 130);    /* Spring green (strong performance) */
+  --quality-excellent-soft: oklch(0.75 0.16 130 / 0.3);
+  --quality-great: oklch(0.78 0.15 95);         /* Lime/yellow-green (good, above average) */
+  --quality-great-soft: oklch(0.78 0.15 95 / 0.3);
+  --quality-good: oklch(0.78 0.14 65);          /* Amber/yellow (adequate, room to grow) */
+  --quality-good-soft: oklch(0.78 0.14 65 / 0.3);
+  --quality-solid: oklch(0.68 0.17 35);         /* Warm orange (needs attention, not "bad") */
+  --quality-solid-soft: oklch(0.68 0.17 35 / 0.3);
 }
 
 .dark {
@@ -76,6 +98,18 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+
+  /* Dark mode adjustments - slightly reduce lightness, boost chroma for vibrancy */
+  --quality-elite: oklch(0.70 0.18 145);
+  --quality-elite-soft: oklch(0.70 0.18 145 / 0.3);
+  --quality-excellent: oklch(0.68 0.17 130);
+  --quality-excellent-soft: oklch(0.68 0.17 130 / 0.3);
+  --quality-great: oklch(0.72 0.16 95);
+  --quality-great-soft: oklch(0.72 0.16 95 / 0.3);
+  --quality-good: oklch(0.74 0.15 65);
+  --quality-good-soft: oklch(0.74 0.15 65 / 0.3);
+  --quality-solid: oklch(0.65 0.18 35);
+  --quality-solid-soft: oklch(0.65 0.18 35 / 0.3);
 } 
 
 @theme inline { 
