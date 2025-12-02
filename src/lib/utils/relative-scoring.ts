@@ -55,7 +55,15 @@ export function calculateRelativeScore(currentScore: number, bestScore: number):
   if (bestScore === 0) return 0;
   if (currentScore >= bestScore) return 100;
 
-  return 100 - (bestScore - currentScore);
+  const percentage = (100 - (bestScore - currentScore)) / 100;
+
+  if (currentScore > 85) return percentage * 100;
+
+  if (currentScore > 75) return Math.pow(percentage, 1.25) * 100;
+
+  if (currentScore > 60) return Math.pow(percentage, 1.5) * 100;
+
+  return Math.pow(percentage, 3) * 90;
 }
 
 /**
