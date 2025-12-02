@@ -4,6 +4,7 @@ import { ScoredGamePlayer } from "@/types/players";
 import { usePlayers } from "@/context/players-provider";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
 import PitchPlayerDialog from "@/components/players/player-dialog";
+import { useTapHandler } from "@/hooks/use-tap-handler";
 
 interface PitchPlayerProps {
   player: ScoredGamePlayer;
@@ -33,10 +34,11 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
   // Get the full Player data (with avatar_url) from the players record
   const fullPlayer = player.id ? players[player.id] : null;
 
-  const handleOpenDialog = (event: React.MouseEvent) => {
-    event.preventDefault();
-    setIsDialogOpen(true);
-  };
+  // Use tap handler to distinguish between tap and scroll
+  const tapHandlers = useTapHandler({
+    onTap: () => setIsDialogOpen(true),
+    threshold: 10, // 10px movement threshold
+  });
 
   const circleSize = Math.max(playerSize * 0.8, 40);
   const iconSize = circleSize * 0.4;
@@ -99,10 +101,9 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
   return (
     <div>
       <div
-        onClick={handleOpenDialog}
-        onContextMenu={handleOpenDialog}
+        {...tapHandlers}
         className={`
-          absolute flex flex-col items-center touch-none z-0
+          absolute flex flex-col items-center z-0
           cursor-pointer hover:scale-105
           ${shouldPlayAnimation ? 'transition-all duration-500' : 'transition-all duration-300'}
         `}

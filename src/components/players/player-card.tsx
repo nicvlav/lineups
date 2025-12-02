@@ -10,6 +10,7 @@ import { getTopArchetypes } from "@/lib/positions/calculator";
 import PlayerStatsModal from "@/components/players/player-stats-modal";
 import { getCardUnderlineColor, getStatBarColor } from "@/lib/color-system";
 import type { CardViewMode } from "./player-cards";
+import { useTapHandler } from "@/hooks/use-tap-handler";
 
 interface PlayerCardProps {
     player: Player;
@@ -38,10 +39,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 }) => {
     const [open, setOpen] = useState(false);
 
-    const handleOpenDialog = (e: React.MouseEvent) => {
-        e.preventDefault();
-        setOpen(true);
-    };
+    // Use tap handler to distinguish between tap and scroll
+    const tapHandlers = useTapHandler({
+        onTap: () => setOpen(true),
+        threshold: 10, // 10px movement threshold
+    });
 
     const overallRounded = Math.round(overall);
     const accentColor = getCardUnderlineColor(overallRounded);
@@ -53,9 +55,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     return (
         <>
             <div
+                {...tapHandlers}
                 className="select-none flex flex-col bg-card/95 hover:bg-card hover:shadow-lg border border-border/30 hover:border-border/50 transition-all duration-200 rounded-lg p-3 cursor-pointer group"
-                onContextMenu={handleOpenDialog}
-                onDoubleClick={handleOpenDialog}
             >
                 {/* Name + Avatar Row */}
                 <div className="flex items-center gap-2 mb-2">
