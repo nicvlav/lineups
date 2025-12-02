@@ -73,6 +73,7 @@ const clearCorruptedDB = async () => {
 
 interface GameContextType {
     gamePlayers: Record<string, ScoredGamePlayerWithThreat>;
+    currentFormation: Formation | null;
 
     clearGame: () => void;
     addNewRealPlayerToGame: (placedTeam: string, name: string, dropX: number, dropY: number) => void;
@@ -104,6 +105,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         location.pathname === '/data-deletion';
 
     const [gamePlayers, setGamePlayers] = useState<Record<string, ScoredGamePlayerWithThreat>>({});
+    const [currentFormation, setCurrentFormation] = useState<Formation | null>(null);
     const loadingState = useRef(false);
 
     // Create unique tab key per browser tab (survives refresh but not tab sharing)
@@ -162,9 +164,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         setTimeout(cleanupOldTabs, 5000);
     }, []);
 
-    const loadJSONGamePlayers = async (newGamePlayers: Record<string, GamePlayer>) => {
+    const loadJSONGamePlayers = async (newGamePlayers: Record<string, GamePlayer>, formation?: Formation | null) => {
         if (!newGamePlayers) {
             setGamePlayers({});
+            setCurrentFormation(null);
             return;
         }
 
@@ -181,8 +184,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 return [key, { ...value, zoneFit, threatScore }];
             })
         );
-        saveState(updatedPlayers);
+        saveState(updatedPlayers, formation || null);
         setGamePlayers(updatedPlayers);
+        setCurrentFormation(formation || null);
     };
 
     // Initialize game state
@@ -200,7 +204,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 const decoded = decodeStateFromURL(urlState);
 
                 if (decoded) {
-                    await loadJSONGamePlayers(decoded.gamePlayers);
+                    await loadJSONGamePlayers(decoded.gamePlayers, decoded.currentFormation);
                     currentUrl.searchParams.delete("state");
                     window.history.replaceState({}, "", currentUrl.toString());
                 }
@@ -216,7 +220,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 try {
                     const parsedData = JSON.parse(savedState);
                     console.log('GAME: Loaded game state from IndexedDB:', parsedData.gamePlayers ? Object.keys(parsedData.gamePlayers).length : 0, 'players');
-                    await loadJSONGamePlayers(parsedData.gamePlayers);
+                    await loadJSONGamePlayers(parsedData.gamePlayers, parsedData.currentFormation);
                 } catch (error) {
                     console.error('GAME: Error loading from IndexedDB:', error);
                 }
@@ -244,19 +248,23 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         if (isStaticRoute) return;
 
         if (!loadingState.current && Object.keys(gamePlayers).length > 0) {
-            saveState(gamePlayers);
+            saveState(gamePlayers, currentFormation);
         }
-    }, [gamePlayers, isStaticRoute]);
+    }, [gamePlayers, currentFormation, isStaticRoute]);
 
-    const saveState = async (gamePlayersToSave: Record<string, ScoredGamePlayerWithThreat>) => {
-        const stateObject = { gamePlayers: gamePlayersToSave };
-        console.log('GAME: Saving game state with tab key:', tabKeyRef.current, 'players:', Object.keys(gamePlayersToSave).length);
+    const saveState = async (gamePlayersToSave: Record<string, ScoredGamePlayerWithThreat>, formation: Formation | null = null) => {
+        const stateObject = {
+            gamePlayers: gamePlayersToSave,
+            currentFormation: formation
+        };
+        console.log('GAME: Saving game state with tab key:', tabKeyRef.current, 'players:', Object.keys(gamePlayersToSave).length, 'formation:', formation?.name || 'none');
         await saveToDB(tabKeyRef.current, JSON.stringify(stateObject));
     };
 
     // Clear game data
     const clearGame = async () => {
         setGamePlayers({});
+        setCurrentFormation(null);
     };
 
     // Add existing player to game
@@ -475,16 +483,20 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         triggerAnimation('formation');
 
         setGamePlayers({ ...teamA, ...teamB });
+        setCurrentFormation(formation);
     };
 
     const handleGenerateTeams = async (gamePlayersWithScores: ScoredGamePlayerWithThreat[]) => {
         let teamA: ScoredGamePlayer[] = [];
         let teamB: ScoredGamePlayer[] = [];
+        let formation: Formation | undefined;
 
         try {
             const balanced = autoBalance(gamePlayersWithScores);
             teamA = balanced.teams.a;
             teamB = balanced.teams.b;
+            // Both teams should use the same formation (they're the same size after balancing)
+            formation = balanced.formationA || balanced.formationB;
         } catch (error) {
             console.error(error);
             return;
@@ -501,6 +513,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         triggerAnimation('generation');
 
         setGamePlayers(playerRecord);
+        setCurrentFormation(formation || null);
     };
 
     const generateTeams = async (filteredPlayers: Player[]) => {
@@ -547,6 +560,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return (
         <GameContext.Provider value={{
             gamePlayers,
+            currentFormation,
 
             clearGame,
             addNewRealPlayerToGame,

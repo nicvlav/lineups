@@ -18,11 +18,11 @@ interface GameProps {
 }
 
 const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
-    const { clearGame, gamePlayers } = useGame();
+    const { clearGame, gamePlayers, currentFormation } = useGame();
 
     const handleShare = async () => {
         try {
-            const shareUrl = encodeStateToURL(gamePlayers);
+            const shareUrl = encodeStateToURL(gamePlayers, currentFormation);
             await navigator.clipboard.writeText(shareUrl);
             toast.success("Link copied to clipboard!", {
                 description: "Share this link to let others see your lineup",

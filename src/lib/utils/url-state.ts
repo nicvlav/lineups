@@ -7,6 +7,7 @@
 
 import LZString from "lz-string";
 import type { GamePlayer } from "@/types/players";
+import type { Formation } from "@/types/positions";
 
 /**
  * Decode game state from URL search params
@@ -28,8 +29,11 @@ export const decodeStateFromURL = (search: string) => {
 /**
  * Encode game state to URL
  */
-export const encodeStateToURL = (gamePlayers: Record<string, GamePlayer>) => {
-  const stateObject = { gamePlayers };
+export const encodeStateToURL = (gamePlayers: Record<string, GamePlayer>, currentFormation: Formation | null = null) => {
+  const stateObject = {
+    gamePlayers,
+    currentFormation
+  };
   const jsonString = JSON.stringify(stateObject);
   const compressed = LZString.compressToEncodedURIComponent(jsonString);
 

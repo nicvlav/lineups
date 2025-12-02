@@ -3,7 +3,7 @@ import { formationTemplates } from "@/types/positions";
 import { Select, SelectTrigger, SelectGroup, SelectItem, SelectLabel, SelectContent, SelectValue } from "@/components/ui/select";
 
 const FormationSelector = () => {
-    const { applyFormation } = useGame();
+    const { applyFormation, currentFormation } = useGame();
 
     const handleChange = (value: string) => {
         if (!value) return;
@@ -17,10 +17,12 @@ const FormationSelector = () => {
     };
 
     return (
-        <Select onValueChange={handleChange}>
+        <Select onValueChange={handleChange} value={currentFormation?.name || undefined}>
             {/* Trigger button for the select */}
             <SelectTrigger className="w-full">
-                <SelectValue placeholder="Set Formation">Set Formation</SelectValue>
+                <SelectValue placeholder="Set Formation">
+                    {currentFormation?.name || "Set Formation"}
+                </SelectValue>
             </SelectTrigger>
 
             {/* Dropdown content with dynamically grouped formations */}

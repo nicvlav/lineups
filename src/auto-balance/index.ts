@@ -49,6 +49,7 @@
 import type {
     ScoredGamePlayer
 } from "@/types/players";
+import type { Formation } from "@/types/positions";
 
 // Import internal modules
 import type { BalanceMetrics } from "./types";
@@ -120,6 +121,8 @@ export function autoBalance(
     debugMode: boolean = false
 ): {
     teams: { a: ScoredGamePlayer[]; b: ScoredGamePlayer[] };
+    formationA: Formation | undefined;
+    formationB: Formation | undefined;
     metrics: BalanceMetrics;
     score: number;
     diagnostic: string;
@@ -214,8 +217,12 @@ export function autoBalance(
         console.log(diagnostic);
     // }
 
+    const convertedTeams = convertToGamePlayers(result);
+
     return {
-        teams: convertToGamePlayers(result),
+        teams: { a: convertedTeams.a, b: convertedTeams.b },
+        formationA: convertedTeams.formationA,
+        formationB: convertedTeams.formationB,
         metrics: metricsResult.details,
         score: metricsResult.score,
         diagnostic,
@@ -254,6 +261,8 @@ export function autoBalanceWithConfig(
     verbose: boolean = false
 ): {
     teams: { a: ScoredGamePlayer[]; b: ScoredGamePlayer[] };
+    formationA: Formation | undefined;
+    formationB: Formation | undefined;
     metrics: BalanceMetrics;
     score: number;
     diagnostic?: string;
@@ -323,8 +332,12 @@ export function autoBalanceWithConfig(
         console.log(diagnostic);
     }
 
+    const convertedTeams = convertToGamePlayers(result);
+
     return {
-        teams: convertToGamePlayers(result),
+        teams: { a: convertedTeams.a, b: convertedTeams.b },
+        formationA: convertedTeams.formationA,
+        formationB: convertedTeams.formationB,
         metrics: result.metrics,
         score: result.score,
         diagnostic,

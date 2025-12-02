@@ -507,7 +507,7 @@ export function runOptimizedMonteCarlo(
  */
 export function convertToGamePlayers(
     result: SimulationResult
-): { a: ScoredGamePlayer[]; b: ScoredGamePlayer[] } {
+): { a: ScoredGamePlayer[]; b: ScoredGamePlayer[]; formationA: Formation | undefined; formationB: Formation | undefined } {
     const teamA: ScoredGamePlayer[] = [];
     const teamB: ScoredGamePlayer[] = [];
 
@@ -553,5 +553,10 @@ export function convertToGamePlayers(
         });
     }
 
-    return { a: teamA, b: teamB };
+    return {
+        a: teamA,
+        b: teamB,
+        formationA: result.teams.teamA.formation || undefined,
+        formationB: result.teams.teamB.formation || undefined
+    };
 }
