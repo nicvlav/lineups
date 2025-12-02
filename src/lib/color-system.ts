@@ -1,25 +1,28 @@
 /**
- * Unified Color System
+ * Unified Color System - COOL SPECTRUM (Green→Blue)
  *
  * Provides consistent color theming across all player visualizations:
  * - Card underlines
  * - Archetype bars
  * - Admin stats
  *
- * Uses the traditional red→yellow→green spectrum with modern OKLCH refinement:
- * - Elite (90+): Vibrant green (145° - success, excellence)
- * - Excellent (80-89): Spring green (130° - strong performance)
- * - Great (70-79): Lime/yellow-green (95° - above average)
- * - Good (60-69): Amber/yellow (65° - adequate, room to grow)
- * - Solid (<60): Warm orange (35° - needs attention, not "bad")
+ * TIGHT COOL RANGE: Compressed green→blue journey, staying in cool zone
+ * - Elite (90+): Classic lime-green (128° - pitch player blend, chroma 0.18)
+ * - Excellent (80-89): Cyan-green (175° - bridge color, chroma 0.16)
+ * - Great (70-79): Muted blue (220° - closer to blue than purple, chroma 0.13)
+ * - Good (60-69): Muted blue-purple (255° - blue-leaning, chroma 0.10)
+ * - Solid (<60): Muted indigo-purple (270° - heavily subdued, chroma 0.08)
  *
  * Color philosophy:
- * - 110° hue rotation (orange→yellow→green) for intuitive understanding
- * - Higher quality = greener (positive)
- * - Lower quality = warmer orange (attention needed, not punishing)
- * - Perceptually balanced lightness (~0.75-0.78) for visual consistency
- * - No harsh reds - orange is lowest tier, maintaining encouragement
- * - Independent from pitch team colors
+ * - 142° TIGHT rotation (lime→cyan→blue→indigo) - all cool tones
+ * - Elite matches pitch player icon green (lime-400) for cohesion
+ * - Reduced chroma on Elite (0.18 vs 0.20) - less electric, more natural
+ * - Stays closer to blue (220-270°) rather than wild purples/magentas
+ * - Aggressive progressive muting: 0.18 → 0.16 → 0.13 → 0.10 → 0.08
+ * - Lower tiers recede dramatically via LOW chroma + darker lightness
+ * - Top is vibrant but natural, bottom whispers (indigo fades)
+ * - Clean, professional, modern - avoids "too futuristic" or neon feel
+ * - Dark mode: Top brightens slightly, bottom darkens into near-invisibility
  */
 
 // ============ Color Tiers ============
