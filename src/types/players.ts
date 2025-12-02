@@ -79,7 +79,7 @@ export interface PlayerWithArchetypes {
 export interface GamePlayer {
   id: string;
   name: string;
-  guest_name: string | null;
+  isGuest: boolean;
   team: string;
   position: Point;
   exactPosition: Position;
@@ -100,12 +100,6 @@ export interface ScoredGamePlayer extends GamePlayer {
   stats?: PlayerStats;
 }
 
-/**
- * Scored game player with threat visualization
- */
-export interface ScoredGamePlayerWithThreat extends ScoredGamePlayer {
-  threatScore: number;
-}
 
 // ============ Formation-Specific Player Types ============
 
@@ -128,13 +122,6 @@ export interface PositionedFilledGamePlayer extends PositionedGamePlayer {
  */
 export interface PositionedScoredGamePlayer extends PositionedGamePlayer {
   zoneFit: ZoneScores;
-}
-
-/**
- * Positioned scored player with threat
- */
-export interface PositionedScoredGamePlayerWithThreat extends PositionedScoredGamePlayer {
-  threatScore: number;
 }
 
 // ============ Helper Types ============

@@ -177,21 +177,6 @@ function _getProximityPositions(point: Point): PositionWithWeight[] {
 }
 
 /**
- * Calculate threat score for a player at a specific point
- * Used for pitch heat visualization
- *
- * Now simplified: always uses exactPosition since all players have rigid positions
- */
-export function getThreatScore(
-  _point: Point,
-  playerScores: ZoneScores,
-  exactPosition: Position
-): number {
-  // Direct score lookup - no proximity calculations needed
-  return playerScores[exactPosition] / 100;
-}
-
-/**
  * Empty zone scores (all zeros)
  */
 export const emptyZoneScores: ZoneScores = {

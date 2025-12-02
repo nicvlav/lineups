@@ -193,7 +193,6 @@ export type { Formation } from './formations';
 // Re-export legacy utilities for backward compatibility
 export {
   getPointForPosition,
-  getThreatScore,
   emptyZoneScores
 } from '../lib/utils/pitch-rendering';
 

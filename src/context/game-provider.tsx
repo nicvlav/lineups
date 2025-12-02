@@ -6,8 +6,8 @@ import { useLocation } from "react-router-dom";
 import { v4 as uuidv4 } from 'uuid';
 import { openDB } from "idb";
 
-import { Formation, Point, Position, getPointForPosition, getThreatScore, normalizedDefaultWeights, emptyZoneScores } from "@/types/positions";
-import { Player, ScoredGamePlayer, ScoredGamePlayerWithThreat, calculateScoresForStats, GamePlayer } from "@/types/players";
+import { Formation, Point, Position, getPointForPosition, normalizedDefaultWeights, emptyZoneScores } from "@/types/positions";
+import { Player, ScoredGamePlayer, calculateScoresForStats, GamePlayer } from "@/types/players";
 import { decodeStateFromURL } from "@/lib/utils/url-state";
 import { autoBalance } from "@/auto-balance";
 
@@ -72,17 +72,12 @@ const clearCorruptedDB = async () => {
 };
 
 interface GameContextType {
-    gamePlayers: Record<string, ScoredGamePlayerWithThreat>;
+    gamePlayers: Record<string, ScoredGamePlayer>;
     currentFormation: Formation | null;
 
     clearGame: () => void;
-    addNewRealPlayerToGame: (placedTeam: string, name: string, dropX: number, dropY: number) => void;
-    addNewGuestPlayerToGame: (placedTeam: string, name: string, dropX: number, dropY: number) => void;
-    addExisitingPlayerToGame: (player: ScoredGamePlayerWithThreat, team: string, dropX: number, dropY: number) => void;
-    removeFromGame: (playerToRemove: ScoredGamePlayerWithThreat) => void;
-    switchToRealPlayer: (oldPlayer: ScoredGamePlayerWithThreat, newID: string) => void;
-    switchToNewPlayer: (oldPlayer: ScoredGamePlayerWithThreat, newName: string, guest: boolean) => void;
-
+    removeFromGame: (playerToRemove: ScoredGamePlayer) => void;
+    switchToRealPlayer: (oldPlayer: ScoredGamePlayer, newID: string) => void;
     applyFormation: (formation: Formation) => void;
     generateTeams: (filteredPlayers: Player[]) => void;
     rebalanceCurrentGame: () => void;
@@ -96,7 +91,7 @@ interface GameProviderProps {
 
 export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const { urlState, clearUrlState } = useAuth();
-    const { players, addPlayer } = usePlayers();
+    const { players } = usePlayers();
     const { triggerAnimation } = usePitchAnimation();
     const location = useLocation();
 
@@ -104,7 +99,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const isStaticRoute = location.pathname.startsWith('/auth') ||
         location.pathname === '/data-deletion';
 
-    const [gamePlayers, setGamePlayers] = useState<Record<string, ScoredGamePlayerWithThreat>>({});
+    const [gamePlayers, setGamePlayers] = useState<Record<string, ScoredGamePlayer>>({});
     const [currentFormation, setCurrentFormation] = useState<Formation | null>(null);
     const loadingState = useRef(false);
 
@@ -171,17 +166,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             return;
         }
 
-        const updatedPlayers: Record<string, ScoredGamePlayerWithThreat> = Object.fromEntries(
+        const updatedPlayers: Record<string, ScoredGamePlayer> = Object.fromEntries(
             Object.entries(newGamePlayers).map(([key, value]) => {
                 if (!players[value.id]) {
-                    return [key, { ...value, zoneFit: structuredClone(emptyZoneScores), threatScore: 0 }];
+                    return [key, { ...value, zoneFit: structuredClone(emptyZoneScores) }];
                 }
 
                 const realPlayer = players[value.id];
                 const zoneFit = calculateScoresForStats(realPlayer.stats, normalizedDefaultWeights);
-                const threatScore = getThreatScore(value.position, zoneFit, value.exactPosition);
 
-                return [key, { ...value, zoneFit, threatScore }];
+                return [key, { ...value, zoneFit }];
             })
         );
         saveState(updatedPlayers, formation || null);
@@ -252,7 +246,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         }
     }, [gamePlayers, currentFormation, isStaticRoute]);
 
-    const saveState = async (gamePlayersToSave: Record<string, ScoredGamePlayerWithThreat>, formation: Formation | null = null) => {
+    const saveState = async (gamePlayersToSave: Record<string, ScoredGamePlayer>, formation: Formation | null = null) => {
         const stateObject = {
             gamePlayers: gamePlayersToSave,
             currentFormation: formation
@@ -267,89 +261,32 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         setCurrentFormation(null);
     };
 
-    // Add existing player to game
-    const addExisitingPlayerToGame = async (player: ScoredGamePlayerWithThreat, team: string, dropX: number, dropY: number) => {
-        if (player.id in gamePlayers) {
-            setGamePlayers(prevGamePlayers => {
-                const newGamePlayers = { ...prevGamePlayers };
-                const position = { x: dropX, y: dropY };
-                newGamePlayers[player.id] = {
-                    ...newGamePlayers[player.id],
-                    team,
-                    position,
-                    threatScore: getThreatScore(position, newGamePlayers[player.id].zoneFit, newGamePlayers[player.id].exactPosition)
-                };
-                return newGamePlayers;
-            });
-        }
-    };
-
-    const addNewRealPlayerToGame = async (placedTeam: string, name: string, dropX: number, dropY: number) => {
-        const newID = uuidv4();
-
-        addPlayer({ id: newID, name }, () => {
-            if (!(newID in players)) return;
-
-            const position = { x: dropX, y: dropY } as Point;
-            const zoneFit = calculateScoresForStats(players[newID].stats, normalizedDefaultWeights);
-
-            // Determine best position based on zone scores
-            const bestPosition = (Object.entries(zoneFit) as [Position, number][])
-                .reduce((best, [pos, score]) => score > best.score ? { position: pos, score } : best,
-                    { position: 'CM' as Position, score: 0 }).position;
-
-            const gamePlayer: ScoredGamePlayerWithThreat = {
-                id: newID,
-                name: name,
-                team: placedTeam,
-                guest_name: null,
-                position,
-                exactPosition: bestPosition,
-                zoneFit,
-                threatScore: getThreatScore(position, zoneFit, bestPosition)
-            };
-            setGamePlayers(prevGamePlayers => {
-                const newGamePlayers = { ...prevGamePlayers };
-                newGamePlayers[gamePlayer.id] = gamePlayer;
-                return newGamePlayers;
-            });
-        });
-    };
-
-    const addNewGuestPlayerToGame = async (placedTeam: string, name: string, dropX: number, dropY: number) => {
-        const newID = uuidv4();
-        const position = { x: dropX, y: dropY } as Point;
-        const zoneFit = structuredClone(emptyZoneScores);
-
-        // Default guest players to CM position
-        const exactPosition: Position = 'CM';
-
-        const gamePlayer: ScoredGamePlayerWithThreat = {
-            id: newID,
-            name: name,
-            team: placedTeam,
-            guest_name: name,
-            position,
-            exactPosition,
-            zoneFit,
-            threatScore: getThreatScore(position, zoneFit, exactPosition)
-        };
-        setGamePlayers(prevGamePlayers => {
-            const newGamePlayers = { ...prevGamePlayers };
-            newGamePlayers[gamePlayer.id] = gamePlayer;
-            return newGamePlayers;
-        });
-    };
-
-    const removeFromGame = async (playerToRemove: ScoredGamePlayerWithThreat) => {
+    // switch a player to a dummy player
+    const removeFromGame = async (playerToRemove: ScoredGamePlayer) => {
         setGamePlayers(prevGamePlayers => {
             const newGamePlayers = { ...prevGamePlayers };
             delete newGamePlayers[playerToRemove.id];
             return newGamePlayers;
         });
+
+        setGamePlayers(prevGamePlayers => {
+            const newGamePlayers = { ...prevGamePlayers };
+            const newID = uuidv4();
+            newGamePlayers[newID] = {
+                id: newID,
+                name: "[Player]",
+                isGuest: true,
+                team: playerToRemove.team,
+                position: playerToRemove.position,
+                exactPosition: playerToRemove.exactPosition,
+                zoneFit: structuredClone(emptyZoneScores),
+            };
+            delete newGamePlayers[playerToRemove.id];
+            return newGamePlayers;
+        });
     };
 
-    const switchToRealPlayer = async (oldPlayer: ScoredGamePlayerWithThreat, newID: string) => {
+    const switchToRealPlayer = async (oldPlayer: ScoredGamePlayer, newID: string) => {
         if (oldPlayer.id === newID || !(oldPlayer.id in gamePlayers) || !(newID in players)) return;
 
         if (newID in gamePlayers) {
@@ -361,13 +298,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                     ...oldPlayer,
                     team: newPlayer.team,
                     position: newPlayer.position,
-                    threatScore: getThreatScore(newPlayer.position, oldPlayer.zoneFit, oldPlayer.exactPosition)
+                    exactPosition: newPlayer.exactPosition,
                 };
                 newGamePlayers[newID] = {
                     ...newPlayer,
                     team: oldPlayer.team,
                     position: oldPlayer.position,
-                    threatScore: getThreatScore(oldPlayer.position, newPlayer.zoneFit, newPlayer.exactPosition)
+                    exactPosition: oldPlayer.exactPosition,
                 };
                 return newGamePlayers;
             });
@@ -377,20 +314,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 const newGamePlayers = { ...prevGamePlayers };
                 const zoneFit = calculateScoresForStats(newPlayer.stats, normalizedDefaultWeights);
 
-                // Determine best position based on zone scores
-                const bestPosition = (Object.entries(zoneFit) as [Position, number][])
-                    .reduce((best, [pos, score]) => score > best.score ? { position: pos, score } : best,
-                        { position: 'CM' as Position, score: 0 }).position;
-
                 newGamePlayers[newID] = {
                     id: newPlayer.id,
                     name: newPlayer.name,
-                    guest_name: null,
+                    isGuest: false,
                     team: oldPlayer.team,
                     position: oldPlayer.position,
-                    exactPosition: bestPosition,
+                    exactPosition: oldPlayer.exactPosition,
                     zoneFit,
-                    threatScore: getThreatScore(oldPlayer.position, zoneFit, bestPosition)
                 };
                 delete newGamePlayers[oldPlayer.id];
                 return newGamePlayers;
@@ -398,47 +329,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         }
     };
 
-    const switchToNewPlayer = async (oldPlayer: ScoredGamePlayerWithThreat, newName: string, guest: boolean = false) => {
-        if (!(oldPlayer.id in gamePlayers)) return;
-
-        if (guest) {
-            return;
-        }
-
-        const newID = uuidv4();
-
-        addPlayer({ id: newID, name: newName }, () => {
-            if (!(newID in players)) return;
-
-            const zoneFit = calculateScoresForStats(players[newID].stats, normalizedDefaultWeights);
-
-            // Determine best position based on zone scores
-            const bestPosition = (Object.entries(zoneFit) as [Position, number][])
-                .reduce((best, [pos, score]) => score > best.score ? { position: pos, score } : best,
-                    { position: 'CM' as Position, score: 0 }).position;
-
-            const gamePlayer: ScoredGamePlayerWithThreat = {
-                id: newID,
-                team: oldPlayer.team,
-                name: newName,
-                guest_name: null,
-                position: oldPlayer.position,
-                exactPosition: bestPosition,
-                zoneFit,
-                threatScore: getThreatScore(oldPlayer.position, zoneFit, bestPosition)
-            };
-            setGamePlayers(prevGamePlayers => {
-                const newGamePlayers = { ...prevGamePlayers };
-                newGamePlayers[gamePlayer.id] = gamePlayer;
-                delete newGamePlayers[oldPlayer.id];
-                return newGamePlayers;
-            });
-        });
-    };
-
     const applyFormationToTeam = (team: string, formation: Formation) => {
         const teamPlayers = Object.values(gamePlayers).filter((player) => player.team === team);
-        const newTeamPlayers: Record<string, ScoredGamePlayerWithThreat> = {};
+        const newTeamPlayers: Record<string, ScoredGamePlayer> = {};
 
         for (const [key, value] of Object.entries(formation.positions)) {
             for (let i = 0; i < value; i++) {
@@ -447,13 +340,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
                 if (player) {
                     const exactPosition = key as Position;
-                    const threatScore = getThreatScore(position, player.zoneFit, exactPosition);
                     newTeamPlayers[player.id] = {
                         ...player,
                         team,
                         position,
-                        exactPosition,
-                        threatScore
+                        exactPosition
                     }
                 } else {
                     const newID = uuidv4();
@@ -462,12 +353,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                     newTeamPlayers[newID] = {
                         id: newID,
                         name: "[Player]",
-                        guest_name: "[Player]",
+                        isGuest: true,
                         team,
                         position,
                         zoneFit,
-                        exactPosition,
-                        threatScore: getThreatScore(position, zoneFit, exactPosition)
+                        exactPosition
                     }
                 }
             }
@@ -486,7 +376,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         setCurrentFormation(formation);
     };
 
-    const handleGenerateTeams = async (gamePlayersWithScores: ScoredGamePlayerWithThreat[]) => {
+    const handleGenerateTeams = async (gamePlayersWithScores: ScoredGamePlayer[]) => {
         let teamA: ScoredGamePlayer[] = [];
         let teamB: ScoredGamePlayer[] = [];
         let formation: Formation | undefined;
@@ -502,12 +392,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             return;
         }
 
-        const playerRecord: Record<string, ScoredGamePlayerWithThreat> = {};
+        const playerRecord: Record<string, ScoredGamePlayer> = {};
         teamA.forEach(player => {
-            playerRecord[player.id] = { ...player, threatScore: getThreatScore(player.position, player.zoneFit, player.exactPosition) };
+            playerRecord[player.id] = { ...player };
         });
         teamB.forEach(player => {
-            playerRecord[player.id] = { ...player, threatScore: getThreatScore(player.position, player.zoneFit, player.exactPosition) };
+            playerRecord[player.id] = { ...player };
         });
 
         triggerAnimation('generation');
@@ -530,19 +420,18 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             return {
                 id: player.id,
                 name: player.name,
-                guest_name: null,
+                isGuest: false,
                 team: "A",
                 position: position,
                 exactPosition: bestPosition,
                 zoneFit: zoneFit,
-                threatScore: 0,
                 stats: player.stats
-            } as ScoredGamePlayerWithThreat;
+            } as ScoredGamePlayer;
         }));
     };
 
     const rebalanceCurrentGame = async () => {
-        const filteredPlayers: ScoredGamePlayerWithThreat[] = [];
+        const filteredPlayers: ScoredGamePlayer[] = [];
 
         Object.entries(gamePlayers).forEach(([id, player]) => {
             if (!(id in players)) return;
@@ -563,13 +452,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             currentFormation,
 
             clearGame,
-            addNewRealPlayerToGame,
-            addNewGuestPlayerToGame,
-            addExisitingPlayerToGame,
             removeFromGame,
             switchToRealPlayer,
-            switchToNewPlayer,
-
             applyFormation,
             generateTeams,
             rebalanceCurrentGame,

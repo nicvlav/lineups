@@ -72,11 +72,9 @@ export type {
   GamePlayer,
   FilledGamePlayer,
   ScoredGamePlayer,
-  ScoredGamePlayerWithThreat,
   PositionedGamePlayer,
   PositionedFilledGamePlayer,
   PositionedScoredGamePlayer,
-  PositionedScoredGamePlayerWithThreat,
   PositionAndScore,
   ZoneAverages
 } from './players';

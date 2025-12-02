@@ -13,10 +13,12 @@ import { motion } from 'framer-motion';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { getArchetypeById } from '@/types/archetypes';
 import { getArchetypeBarColor, getArchetypeTextColor } from '@/lib/color-system';
+import { calculateRelativeScore, applyVisualScaling } from '@/lib/utils/relative-scoring';
 
 interface ArchetypeScore {
   archetypeId: string;
   score: number;
+  relativeScore: number;
   visualWidth: number; // Logarithmically scaled for display (0-100)
 }
 
@@ -28,26 +30,8 @@ interface RelativeArchetypeBarsProps {
   compact?: boolean;
 }
 
-/**
- * Apply logarithmic scaling to visual bar width
- * Makes small differences more visible while keeping 100% at 100%
- *
- * Uses formula: scaled = 100 * log(1 + x * k) / log(1 + k)
- * where k controls the curve steepness
- */
-function applyExponentialScaling(relativePercent: number, exp: number = 2.5): number {
-  if (relativePercent <= 0) return 0;
-  if (relativePercent >= 100) return 100;
-
-  const x = relativePercent / 100; // Normalize to 0-1
-
-  // Logarithmic transform
-  const scaled = Math.pow(x, exp);
-
-  return scaled * 100;
-}
-
-// Color functions now imported from unified color system
+// Visual scaling and relative scoring now imported from unified system
+// This ensures consistency with player dialog and all other components
 
 const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
   archetypes,
@@ -60,12 +44,14 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
 
   const processedArchetypes: ArchetypeScore[] = archetypes
     .map(({ archetypeId, score }) => {
-      const distance = 100 - (bestScore - score);
+      // Use unified relative score calculation
+      const relativeScore = calculateRelativeScore(score, bestScore);
 
       return {
         archetypeId,
         score,
-        visualWidth: applyExponentialScaling(distance),
+        relativeScore,
+        visualWidth: applyVisualScaling(relativeScore),
       };
     })
     .sort((a, b) => b.score - a.score); // Sort by actual score
@@ -77,11 +63,14 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
 
   const displayedArchetypes = expanded ? processedArchetypes : visibleArchetypes;
 
-  const isPrimary = true;
+  const relativeMax = visibleArchetypes
+    .reduce((prev, curr) => {
+      return Math.max(prev, curr.score);
+    }, 0)
 
   return (
     <div className="space-y-1.5">
-      {displayedArchetypes.map(({ archetypeId, score, visualWidth }) => {
+      {displayedArchetypes.map(({ archetypeId, score, relativeScore, visualWidth }) => {
         const archetype = getArchetypeById(archetypeId);
         if (!archetype) return null;
 
@@ -97,7 +86,7 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
             {/* Archetype Name & Badges */}
             <div className="flex items-center gap-1.5 min-w-[140px]">
               <span
-                className={`text-xs ${isPrimary
+                className={`text-xs ${score == relativeMax
                   ? 'font-semibold text-foreground'
                   : 'font-normal text-muted-foreground'
                   } ${compact ? 'text-[11px]' : ''}`}
@@ -114,8 +103,7 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
                   animate={{ width: `${visualWidth}%` }}
                   transition={{ duration: 0.5, ease: 'easeOut' }}
                   className={`h-1.5 rounded-full ${getArchetypeBarColor(
-                    score,
-                    bestScore
+                    relativeScore
                   )}`}
                 />
               </div>
@@ -125,8 +113,7 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
                 <div className="flex items-center gap-1">
                   <span
                     className={`text-xs font-semibold w-8 text-right tabular-nums ${getArchetypeTextColor(
-                      score,
-                      bestScore
+                      relativeScore
                     )}`}
                   >
                     {Math.round(score)}

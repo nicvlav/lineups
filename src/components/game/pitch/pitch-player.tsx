@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { User } from "lucide-react";
-import { ScoredGamePlayerWithThreat } from "@/types/players";
+import { ScoredGamePlayer } from "@/types/players";
 import { usePlayers } from "@/context/players-provider";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
-import PlayerDialog from "@/components/players/player-dialog";
+import PitchPlayerDialog from "@/components/players/player-dialog";
 
 interface PitchPlayerProps {
-  player: ScoredGamePlayerWithThreat;
+  player: ScoredGamePlayer;
   name: string;
   playerSize: number;
   initialLeft: number;
@@ -164,7 +164,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
         </div>
       </div>
 
-      <PlayerDialog
+      <PitchPlayerDialog
         player={player}
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}

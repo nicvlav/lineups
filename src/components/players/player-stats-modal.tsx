@@ -22,8 +22,8 @@ import { emptyZoneScores, Position } from '@/types/positions';
 import { ZoneAverages, Player, PlayerArchetypeScores } from '@/types/players';
 import { getArchetypeById } from '@/types/archetypes';
 import { getTopPositionGroups, getAllPositionArchetypeGroups } from '@/lib/positions/calculator';
-import { getStatBarColor, getStatTextColor } from '@/lib/color-system';
-
+import { getStatBarColor, getStatTextColor, getArchetypeTextColor } from '@/lib/color-system';
+import { calculateRelativeScore } from '@/lib/utils/relative-scoring';
 interface ModernPlayerStatsModalProps {
   player: Player | null;
   isOpen: boolean;
@@ -43,7 +43,7 @@ const isAdmin = (userId: string | undefined): boolean => {
 
 // Color utilities now imported from unified color system
 
-const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
+const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
   player,
   isOpen,
   onClose,
@@ -96,7 +96,7 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
         {/* ============ HEADER: Quality + Zone Classification ============ */}
         <div className="sticky top-0 bg-background/95 sm z-10 pb-4 border-b border-border/40 space-y-3">
           <div>
-            
+
           </div>
           {/* Quality Badge + Zone Badge */}
           <div className="flex justify-between flex-wrap">
@@ -175,8 +175,8 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                         <span className="font-bold text-base text-foreground">{position}</span>
                         {showDetailedStats && bestArchetype && (
                           <span
-                            className={`text-sm font-semibold ${getStatTextColor(
-                              bestArchetype.score
+                            className={`text-sm font-semibold ${getArchetypeTextColor(
+                              calculateRelativeScore(bestArchetype.score, bestScore)
                             )}`}
                           >
                             {Math.round(bestArchetype.score)}
@@ -295,4 +295,4 @@ const ModernPlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
   );
 };
 
-export default ModernPlayerStatsModal;
+export default PlayerStatsModal;

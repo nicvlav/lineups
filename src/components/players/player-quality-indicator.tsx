@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { getQualityInfo } from '@/lib/player-quality';
+import { getRatingTierScheme } from '@/lib/color-system';
 
 interface PlayerQualityIndicatorProps {
   overall: number;
@@ -23,7 +23,7 @@ const PlayerQualityIndicator: React.FC<PlayerQualityIndicatorProps> = ({
   size = 'md',
   variant = 'default'
 }) => {
-  const quality = getQualityInfo(overall);
+  const quality = getRatingTierScheme(overall);
 
   // Size configurations
   const sizeConfig = {
@@ -53,7 +53,7 @@ const PlayerQualityIndicator: React.FC<PlayerQualityIndicatorProps> = ({
   if (variant === 'badge') {
     return (
       <div
-        className={`inline-flex items-center ${config.gap} ${config.padding} rounded-full ${quality.color} border ${quality.borderColor} font-semibold ${config.text}`}
+        className={`inline-flex items-center ${config.gap} ${config.padding} rounded-full ${quality.subtle} border ${quality.solid} font-semibold ${config.text}`}
       >
         <span>{quality.label}</span>
       </div>
@@ -62,7 +62,7 @@ const PlayerQualityIndicator: React.FC<PlayerQualityIndicatorProps> = ({
 
   if (variant === 'compact') {
     return (
-      <div className={`inline-flex items-center ${config.gap} ${quality.color}`}>
+      <div className={`inline-flex items-center ${config.gap} ${quality.solidBg}`}>
         {showLabel && <span className={`font-semibold ${config.text}`}>{quality.label}</span>}
       </div>
     );
@@ -73,13 +73,13 @@ const PlayerQualityIndicator: React.FC<PlayerQualityIndicatorProps> = ({
     <div className={`flex flex-col ${config.gap}`}>
       <div className={`flex items-center ${config.gap}`}>
         {showLabel && (
-          <span className={`font-semibold ${config.text} ${quality.color}`}>
+          <span className={`font-semibold ${config.text} ${quality.solidBg}`}>
             {quality.label}
           </span>
         )}
       </div>
       {showDescription && (
-        <span className={`text-xs text-muted-foreground`}>{quality.description}</span>
+        <span className={`text-xs text-muted-foreground`}>{quality.label}</span>
       )}
     </div>
   );

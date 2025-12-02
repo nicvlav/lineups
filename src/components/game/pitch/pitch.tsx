@@ -1,16 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { usePlayers } from "@/context/players-provider"
-import { ScoredGamePlayerWithThreat } from "@/types/players";
+import { ScoredGamePlayer } from "@/types/players";
 
 import PitchPlayer from '@/components/game/pitch/pitch-player'
 
 interface PlayerContainerProps {
   team: string;
-  teamPlayers: ScoredGamePlayerWithThreat[];
+  teamPlayers: ScoredGamePlayer[];
   playerSize: number;
 }
 
-const getPlayerPosition = (player: ScoredGamePlayerWithThreat, playerSize: number, containerWidth: number, containerHeight: number) => {
+const getPlayerPosition = (player: ScoredGamePlayer, playerSize: number, containerWidth: number, containerHeight: number) => {
   const halfSize = playerSize / 2;
   const maxWidth = containerWidth - halfSize;
   const maxHeight = containerHeight - halfSize;
@@ -65,13 +65,13 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
     };
   }, []);
 
-  const findPlayerName = (player: ScoredGamePlayerWithThreat) => {
-    if (player.guest_name !== null) {
-      return player.guest_name;
-    } else if (player.id in players) {
+  const findPlayerName = (player: ScoredGamePlayer) => {
+    if (!player.isGuest && player.id in players) {
       return players[player.id].name;
+    } else {
+      return player.name;
     }
-    return "[Player]"
+    // return "[Player]"
   };
 
   // Define enhanced pitch styles with better contrast and differentiation

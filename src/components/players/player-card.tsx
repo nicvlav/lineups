@@ -7,7 +7,7 @@ import { Position } from "@/types/positions";
 import { ZoneScores } from "@/types/positions";
 import { getArchetypeById } from "@/types/archetypes";
 import { getTopArchetypes } from "@/lib/positions/calculator";
-import ModernPlayerStatsModal from "@/components/players/modern-player-stats-modal";
+import PlayerStatsModal from "@/components/players/player-stats-modal";
 import { getCardUnderlineColor, getStatBarColor } from "@/lib/color-system";
 import type { CardViewMode } from "./player-cards";
 
@@ -140,7 +140,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             </div>
 
             {/* Modern Player Stats Modal */}
-            <ModernPlayerStatsModal
+            <PlayerStatsModal
                 player={player}
                 isOpen={open}
                 onClose={() => setOpen(false)}
