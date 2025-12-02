@@ -99,7 +99,7 @@ const OverviewTabComponent: React.FC<OverviewTabComponentProps> = ({
       {!player.isGuest && (
         <div>
           <p className="text-sm text-muted-foreground mb-4">
-            Alternative positions this player could fill:
+            Alternative strong positions for this player:
           </p>
           {getAlternativePositions().map(([position, score]) => (
             <div key={position} className="bg-card border rounded-lg p-4">
