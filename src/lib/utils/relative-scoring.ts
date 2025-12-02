@@ -59,11 +59,11 @@ export function calculateRelativeScore(currentScore: number, bestScore: number):
 
   if (currentScore > 85) return percentage * 100;
 
-  if (currentScore > 75) return Math.pow(percentage, 1.25) * 100;
+  if (currentScore > 70) return Math.pow(percentage, 1.25) * 100;
 
-  if (currentScore > 60) return Math.pow(percentage, 1.5) * 100;
+  if (currentScore > 60) return Math.pow(percentage, 1.5) * 95;
 
-  return Math.pow(percentage, 3) * 90;
+  return Math.pow(percentage, 2) * 90;
 }
 
 /**
