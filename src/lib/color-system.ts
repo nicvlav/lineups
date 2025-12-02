@@ -1,28 +1,28 @@
 /**
- * Unified Color System - COOL SPECTRUM (Green→Blue)
+ * Unified Color System - FOREST GREEN anchor
  *
  * Provides consistent color theming across all player visualizations:
  * - Card underlines
  * - Archetype bars
  * - Admin stats
  *
- * TIGHT COOL RANGE: Compressed green→blue journey, staying in cool zone
- * - Elite (90+): Classic lime-green (128° - pitch player blend, chroma 0.18)
- * - Excellent (80-89): Cyan-green (175° - bridge color, chroma 0.16)
- * - Great (70-79): Muted blue (220° - closer to blue than purple, chroma 0.13)
- * - Good (60-69): Muted blue-purple (255° - blue-leaning, chroma 0.10)
- * - Solid (<60): Muted indigo-purple (270° - heavily subdued, chroma 0.08)
+ * FOREST GREEN to purply-blue with reduced muting throughout
+ * - Elite (90+): Forest green (145° - pitch background inspired, chroma 0.16)
+ * - Excellent (80-89): Cyan-green (180° - bridge, chroma 0.15)
+ * - Great (70-79): Sky blue (220° - chroma 0.14)
+ * - Good (60-69): Blue-purple (250° - chroma 0.13)
+ * - Solid (<60): Purply-blue (270° - chroma 0.12, reduced muting)
  *
  * Color philosophy:
- * - 142° TIGHT rotation (lime→cyan→blue→indigo) - all cool tones
- * - Elite matches pitch player icon green (lime-400) for cohesion
- * - Reduced chroma on Elite (0.18 vs 0.20) - less electric, more natural
- * - Stays closer to blue (220-270°) rather than wild purples/magentas
- * - Aggressive progressive muting: 0.18 → 0.16 → 0.13 → 0.10 → 0.08
- * - Lower tiers recede dramatically via LOW chroma + darker lightness
- * - Top is vibrant but natural, bottom whispers (indigo fades)
- * - Clean, professional, modern - avoids "too futuristic" or neon feel
- * - Dark mode: Top brightens slightly, bottom darkens into near-invisibility
+ * - 125° rotation (forest green→cyan→blue→purple) - all cool tones
+ * - Elite matches pitch background green aesthetic (145° vs pitch ~130°)
+ * - True forest green at top (not lime, not cyan-green)
+ * - REDUCED muting: chroma only drops 0.16 → 0.12 (gentle 25% decline)
+ * - More vibrant lower tiers - all colors stay visible and energetic
+ * - Gentler lightness progression: 0.72 → 0.64
+ * - Bottom tier (purply-blue at 270°) is same hue but WAY less muted
+ * - Clean, professional, balanced - no tier fades into invisibility
+ * - Dark mode: Brightens all tiers, maintains energy throughout
  */
 
 // ============ Color Tiers ============

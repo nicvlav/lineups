@@ -48,20 +48,19 @@
   --pitch-green-bright: oklch(0.80 0.19 130);   /* From #89db46 */
   --pitch-green-deep: oklch(0.48 0.12 128);     /* From #4d7a27 */
 
-  /* Quality tiers - TIGHT GREEN→BLUE-PURPLE RANGE */
-  /* Compressed spectrum staying in cool zone (green→blue) */
-  /* Lower tiers heavily muted, leaning blue-purple rather than warm */
-  /* Classic lime green (pitch player) → tight journey → blue-indigo (cool/muted) */
-  --quality-elite: oklch(0.80 0.18 128);        /* Classic lime-green (pitch player blend) */
-  --quality-elite-soft: oklch(0.80 0.18 128 / 0.3);
-  --quality-excellent: oklch(0.74 0.16 175);    /* Cyan-green (bridge) */
-  --quality-excellent-soft: oklch(0.74 0.16 175 / 0.3);
-  --quality-great: oklch(0.68 0.13 220);        /* Muted blue (tighter to blue zone) */
-  --quality-great-soft: oklch(0.68 0.13 220 / 0.3);
-  --quality-good: oklch(0.64 0.10 255);         /* Muted blue-purple (closer to blue) */
-  --quality-good-soft: oklch(0.64 0.10 255 / 0.3);
-  --quality-solid: oklch(0.60 0.08 270);        /* Muted indigo-purple (heavily subdued) */
-  --quality-solid-soft: oklch(0.60 0.08 270 / 0.3);
+  /* Quality tiers - FOREST GREEN anchor with reduced muting */
+  /* Elite starts at forest green (pitch background), ends at less-muted purply-blue */
+  /* Compressed spectrum with more vibrant lower tiers */
+  --quality-elite: oklch(0.72 0.16 145);        /* Forest green (pitch-like anchor) */
+  --quality-elite-soft: oklch(0.72 0.16 145 / 0.3);
+  --quality-excellent: oklch(0.70 0.15 180);    /* Cyan-green (bridge) */
+  --quality-excellent-soft: oklch(0.70 0.15 180 / 0.3);
+  --quality-great: oklch(0.68 0.14 220);        /* Sky blue */
+  --quality-great-soft: oklch(0.68 0.14 220 / 0.3);
+  --quality-good: oklch(0.66 0.13 250);         /* Blue-purple (less muted) */
+  --quality-good-soft: oklch(0.66 0.13 250 / 0.3);
+  --quality-solid: oklch(0.64 0.12 270);        /* Purply-blue (reduced muting) */
+  --quality-solid-soft: oklch(0.64 0.12 270 / 0.3);
 }
 
 .dark {
@@ -98,17 +97,17 @@
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
 
-  /* Dark mode - top pops, bottom recedes into darkness */
-  --quality-elite: oklch(0.82 0.19 128);        /* Brighter classic lime (POPS!) */
-  --quality-elite-soft: oklch(0.82 0.19 128 / 0.3);
-  --quality-excellent: oklch(0.76 0.17 175);    /* Bright cyan-green */
-  --quality-excellent-soft: oklch(0.76 0.17 175 / 0.3);
-  --quality-great: oklch(0.70 0.14 220);        /* Muted blue (recedes) */
-  --quality-great-soft: oklch(0.70 0.14 220 / 0.3);
-  --quality-good: oklch(0.64 0.11 255);         /* Darker blue-purple (recedes more) */
-  --quality-good-soft: oklch(0.64 0.11 255 / 0.3);
-  --quality-solid: oklch(0.58 0.09 270);        /* Darkest indigo (almost fades away) */
-  --quality-solid-soft: oklch(0.58 0.09 270 / 0.3);
+  /* Dark mode - brighter throughout, less muting */
+  --quality-elite: oklch(0.74 0.18 145);        /* Brighter forest green */
+  --quality-elite-soft: oklch(0.74 0.18 145 / 0.3);
+  --quality-excellent: oklch(0.72 0.17 180);    /* Bright cyan-green */
+  --quality-excellent-soft: oklch(0.72 0.17 180 / 0.3);
+  --quality-great: oklch(0.70 0.16 220);        /* Bright sky blue */
+  --quality-great-soft: oklch(0.70 0.16 220 / 0.3);
+  --quality-good: oklch(0.68 0.15 250);         /* Blue-purple (more vibrant) */
+  --quality-good-soft: oklch(0.68 0.15 250 / 0.3);
+  --quality-solid: oklch(0.66 0.14 270);        /* Purply-blue (more visible) */
+  --quality-solid-soft: oklch(0.66 0.14 270 / 0.3);
 } 
 
 @theme inline { 
