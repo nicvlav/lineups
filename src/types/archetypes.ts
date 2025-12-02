@@ -119,14 +119,14 @@ export const ARCHETYPES: Archetype[] = [
       // Inverted specialization: shooting and playmaking
       longShots: 800,
       finishing: 850,
-      vision: 700,
+      vision: 1200,
       crossing: 600,
 
       // Supporting stats
-      technique: 750,
+      technique: 400,
       composure: 700,
       offTheBall: 600,
-      agility: 500,
+      agility: 200,
       attWorkrate: 700,
       decisions: 500,
       concentration: 300,
@@ -141,26 +141,26 @@ export const ARCHETYPES: Archetype[] = [
     strengthLabels: ['Crossing ability', 'Provides width', 'Delivery quality', 'Stretches play'],
     weights: {
       // Core winger stats (shared with inverted)
-      dribbling: 900,
+      dribbling: 1200,
       speed: 850,
       firstTouch: 800,
-      flair: 700,
-      passing: 500,
-      teamwork: 500,
+      flair: 400,
+      passing: 100,
+      teamwork: 300,
 
       // Traditional specialization: crossing and width
       crossing: 1500,
-      vision: 200,
+      vision: 100,
 
       // Supporting stats
       technique: 700,
       stamina: 650,
       attWorkrate: 800,
-      decisions: 450,
+      decisions: 150,
       composure: 400,
       concentration: 300,
       determination: 300,
-      agility: 400,
+      agility: 250,
     }
   },
 
