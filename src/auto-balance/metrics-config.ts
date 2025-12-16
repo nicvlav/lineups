@@ -202,7 +202,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
             starDistribution: 0.1,
 
             // #2 Priority: Each zone (DEF/MID/ATT) competitive
-            peakPotential: 0.25,
+            peakPotential: 0.3,
         },
         secondary: {
             // Peak potential matters less than actual scores
@@ -212,9 +212,9 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
             allStatBalance: 0.05,
 
             // Fine-tuning metrics
-            energy: 0.17,
-            creativity: 0.16,
-            striker: 0.15,
+            energy: 0.16,
+            creativity: 0.15,
+            striker: 0.12,
         }
     },
 
@@ -282,10 +282,10 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
         // Scale candidate pool with team size (20 players = top 4 candidates)
         topNScaling: false,
-        baseTopN: 8,
+        baseTopN: 5,
 
         // Weighted probability for selecting from top N
-        selectionWeights: [0.45, 0.3, 0.1, 0.05, 0.025, 0.025, 0.025, 0.025],
+        selectionWeights: [0.50, 0.25, 0.15, 0.05, 0.05]//, 0.05, 0.025, 0.025, 0.025, 0.025],
     },
 
     monteCarlo: {
