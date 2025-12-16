@@ -647,92 +647,65 @@ function calculateCreativityBalance(teamA: FastTeam, teamB: FastTeam, debug: boo
  */
 function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
     const ST_INDEX = POSITION_INDICES.ST;
-    const EPSILON = 0.00001; // Score must be within 3 points of best score to count as viable striker
-    const VIABLE_DIFFERENCE = 3.0;
+    const EPSILON = 0.00001;
+
+    // Score must be within 3 points of best score to count as viable striker
+    const VIABLE_DIFFERENCE = 5.0;
     const HIGH_SCORE_THRESHOLD = 90;
-    const MEDIUM_SCORE_THRESHOLD = 80;
+    const MEDIUM_SCORE_THRESHOLD = 75;
     const MIN_THRESHOLD = 65;
-    // Weighted striker scoring system:
-    // +3 points: ST is their BEST position (specialist striker)
-    // +2 points: ST is really high >= 90
-    // +1 point:  ST is viable (within EPSILON of best score) but not their best
-    let teamAStrikerPoints = 0;
-    let teamBStrikerPoints = 0;
 
-    // Track counts for debug output
-    let teamASpecialists = 0;
-    let teamAViable = 0;
-    let teamBSpecialists = 0;
-    let teamBViable = 0;
+    const calculateTeamStrikerMetrics = (team: FastTeam) => {
+        let points = 0;
+        let specialists = 0;
+        let viable = 0;
 
-    for (const positionPlayers of teamA.positions) {
-        for (const player of positionPlayers) {
-            const stScore = player.scores[ST_INDEX];
-            const bestScore = player.bestScore;
+        for (const positionPlayers of team.positions) {
+            for (const player of positionPlayers) {
+                const stScore = player.scores[ST_INDEX];
+                const bestScore = player.bestScore;
 
-            if (stScore < MIN_THRESHOLD || Math.abs(stScore - bestScore) > VIABLE_DIFFERENCE) continue;
+                if (stScore < MIN_THRESHOLD || Math.abs(stScore - bestScore) > VIABLE_DIFFERENCE) continue;
 
-            if (player.isSpecialist && Math.abs(stScore - bestScore) < EPSILON) {
-                // ST is their best position (specialist)
-                teamAStrikerPoints += 6;
-                teamASpecialists++;
-            } else if (stScore >= HIGH_SCORE_THRESHOLD) {
-                // ST is viable but not their best
-                teamAStrikerPoints += 4;
-                teamAViable++;
-            } else if (stScore >= MEDIUM_SCORE_THRESHOLD) {
-                // ST is viable but not their best
-                teamAStrikerPoints += 2;
-                teamAViable++;
-            } else {
-                // ST is viable but not their best
-                teamAStrikerPoints += 1;
-                teamAViable++;
+                if (player.isSpecialist && Math.abs(stScore - bestScore) < EPSILON) {
+                    specialists++;
+                    // points += 3;
+                }
+
+                if (stScore >= HIGH_SCORE_THRESHOLD) {
+                    points += 20;
+                    viable++;
+                } else if (stScore >= MEDIUM_SCORE_THRESHOLD) {
+                    points += 12;
+                    viable++;
+                } else {
+                    points += 3;
+                    viable++;
+                }
             }
         }
-    }
 
-    for (const positionPlayers of teamB.positions) {
-        for (const player of positionPlayers) {
-            const stScore = player.scores[ST_INDEX];
-            const bestScore = player.bestScore;
+        return { points, specialists, viable };
+    };
 
-            if (stScore < MIN_THRESHOLD || Math.abs(stScore - bestScore) > VIABLE_DIFFERENCE) continue;
+    const teamAMetrics = calculateTeamStrikerMetrics(teamA);
+    const teamBMetrics = calculateTeamStrikerMetrics(teamB);
 
-            if (player.isSpecialist && Math.abs(stScore - bestScore) < EPSILON) {
-                // ST is their best position (specialist)
-                teamBStrikerPoints += 6;
-                teamBSpecialists++;
-            } else if (stScore >= HIGH_SCORE_THRESHOLD) {
-                // ST is viable but not their best
-                teamBStrikerPoints += 4;
-                teamBViable++;
-            } else if (stScore >= MEDIUM_SCORE_THRESHOLD) {
-                // ST is viable but not their best
-                teamBStrikerPoints += 2;
-                teamBViable++;
-            } else {
-                // ST is viable but not their best
-                teamBStrikerPoints += 1;
-                teamBViable++;
-            }
-        }
-    }
     // 1. Specialist striker balance (most important - need true strikers!)
     let specialistBalance = 0;
 
-    const totalSpecialists = teamASpecialists + teamBSpecialists;
+    const totalSpecialists = teamAMetrics.specialists + teamBMetrics.specialists;
 
     if (totalSpecialists == 0) {
         specialistBalance = 1.0;
     } else if (totalSpecialists % 2 === 1) {
-        specialistBalance = (teamASpecialists > teamBSpecialists) == (teamAStrikerPoints > teamBStrikerPoints) ? 0.0 : 1.0;
+        specialistBalance = ((teamAMetrics.specialists - teamBMetrics.specialists) * (teamAMetrics.viable - teamBMetrics.viable)) <= 0 ? 1.0 : 0.75 * calculateBasicDifferenceRatio(teamAMetrics.points, teamBMetrics.points);
     } else {
-        specialistBalance = calculateBasicDifferenceRatio(teamASpecialists, teamBSpecialists);
+        specialistBalance = calculateBasicDifferenceRatio(teamAMetrics.specialists, teamBMetrics.specialists);
     }
 
     // 2. Viable striker balance (secondary - can fill in at striker)
-    const viableBalance = calculateBasicDifferenceRatio(teamAStrikerPoints, teamBStrikerPoints);
+    const viableBalance = calculateBasicDifferenceRatio(teamAMetrics.points, teamBMetrics.points);
 
     // 3. Overall striker quality balance (legacy metric)
     const qualityRatio = calculateBasicDifferenceRatio(teamA.strikerScore, teamB.strikerScore);
@@ -743,7 +716,7 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
     );
 
     // Combine: specialist count matters most (50%), viable count secondary (30%), quality tertiary (20%)
-    const strikerBalanceRatio = specialistBalance * 0.4 + viableBalance * 0.5 + qualityScore * 0.1;
+    const strikerBalanceRatio = specialistBalance * 0.3 + viableBalance * 0.4 + qualityScore * 0.3;
 
     // if one team has more specialists than the other
     // we want the team with less specialists
@@ -755,12 +728,12 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.striker;
         console.log('Striker Balance (3-Factor System):');
-        console.log(`  Team A: ${teamAStrikerPoints} points (${teamASpecialists} specialists, ${teamAViable} viable)`);
-        console.log(`  Team B: ${teamBStrikerPoints} points (${teamBSpecialists} specialists, ${teamBViable} viable)`);
+        console.log(`  Team A: ${teamAMetrics.points} points (${teamAMetrics.specialists} specialists, ${teamAMetrics.viable} viable)`);
+        console.log(`  Team B: ${teamBMetrics.points} points (${teamBMetrics.specialists} specialists, ${teamBMetrics.viable} viable)`);
         console.log('');
-        console.log(formatComparison('  Specialist Strikers', teamASpecialists, teamBSpecialists, specialistBalance));
+        console.log(formatComparison('  Specialist Strikers', teamAMetrics.specialists, teamBMetrics.specialists, specialistBalance));
         console.log(`    Specialist Balance: ${specialistBalance.toFixed(3)} (weight: 50%)`);
-        console.log(formatComparison('  Viable Strikers', teamAStrikerPoints, teamBStrikerPoints, viableBalance));
+        console.log(formatComparison('  Viable Strikers', teamAMetrics.points, teamBMetrics.points, viableBalance));
         console.log(`    Viable Balance: ${viableBalance.toFixed(3)} (weight: 30%)`);
         console.log(formatComparison('  Striker Quality', teamA.strikerScore, teamB.strikerScore, qualityRatio));
         console.log(`    Quality Balance: ${qualityScore.toFixed(3)} (weight: 20%)`);
