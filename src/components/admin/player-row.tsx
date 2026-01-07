@@ -135,7 +135,7 @@ export function PlayerRow({ player }: PlayerRowProps) {
         <TableRow className="group">
             <TableCell>
                 {isEditing ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-60">
                         <Input
                             ref={inputRef}
                             value={editedName}
