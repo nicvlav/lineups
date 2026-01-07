@@ -1,5 +1,13 @@
-import { useState, useMemo } from "react";
-import { usePlayers } from "@/hooks/use-players";
+import { useState, useMemo, useEffect } from "react";
+import { useAuth } from "@/context/auth-context";
+import { usePlayers as usePlayersQuery } from "@/hooks/use-players";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Vote, ArrowUpDown, Plus, } from "lucide-react";
+import { ActionBarSingle } from "@/components/ui/action-bar";
+import { cn } from "@/lib/utils";
+
 import { PlayerRow } from "./player-row";
 import { AddPlayerDialog } from "./add-player-dialog";
 import {
@@ -9,17 +17,29 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, ArrowUpDown } from "lucide-react";
 
 type SortField = "name" | "votes" | "created";
 type SortDirection = "asc" | "desc";
 
 export default function PlayerManager() {
-    const { data: playersRecord = {}, isLoading } = usePlayers();
+    const { user, canVote, isVerified } = useAuth();
+
+    // Use direct query hook with background refresh for voting page
+    const { data: playersRecord = {}, isLoading } = usePlayersQuery({
+        refetchInterval: 30000, // 30s background refresh while on voting page
+        refetchIntervalInBackground: false, // Stop when tab inactive
+    });
+
     const players = Object.values(playersRecord);
+
+    // Log background refresh activity
+    useEffect(() => {
+        console.log("🗳️ VOTING PAGE: Background refresh enabled (30s interval)");
+        return () => {
+            console.log("🗳️ VOTING PAGE: Background refresh disabled (left page)");
+        };
+    }, []);
+
 
     const [searchQuery, setSearchQuery] = useState("");
     const [showAddDialog, setShowAddDialog] = useState(false);
@@ -82,6 +102,27 @@ export default function PlayerManager() {
         </TableHead>
     );
 
+    if (!user) {
+        return (
+            <div className="flex justify-center items-center h-full">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center">
+                        <Vote className="h-12 w-12 mx-auto text-muted-foreground" />
+                        <CardTitle>Sign In Required</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                        <p className="text-muted-foreground mb-4">
+                            You need to be signed in to participate in player voting.
+                        </p>
+                        <Button onClick={() => window.location.href = '/'}>
+                            Go to Sign In
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-full">
@@ -93,70 +134,96 @@ export default function PlayerManager() {
         );
     }
 
-    return (
-        <div className="container mx-auto p-6 max-w-6xl">
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="text-2xl">Manage Players</CardTitle>
-                            <CardDescription>
-                                Add, edit, and manage player names
-                            </CardDescription>
+    if (!canVote || !isVerified) {
+        return (
+            <div className="flex justify-center items-center h-full">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center">
+                        <Vote className="h-12 w-12 mx-auto text-muted-foreground" />
+                        <CardTitle>Squad Verification Required</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                        <p className="text-muted-foreground mb-4">
+                            You need to complete squad verification and player association to access voting features.
+                        </p>
+                        <div className="space-y-2 text-sm text-muted-foreground">
+                            <p>• Join an authorized squad</p>
+                            <p>• Associate with a player profile</p>
+                            <p>• Complete verification process</p>
                         </div>
-                        <Button onClick={() => setShowAddDialog(true)} size="sm">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Player
+                        <Button className="mt-4" onClick={() => window.location.href = '/'}>
+                            Complete Verification
                         </Button>
-                    </div>
-                </CardHeader>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
-                <CardContent>
-                    {/* Search */}
-                    <div className="mb-4">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search players..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                    </div>
+    return (
+        <div className={cn("flex flex-col h-full w-full p-4 space-y-4")}>
+            {/* Header Section */}
+            <div className="space-y-2">
+                <h1 className="text-2xl font-bold tracking-tight">Manage Players</h1>
+                <p className="text-muted-foreground">
+                    Add, edit, and manage player names
+                </p>
+            </div>
 
-                    {/* Table */}
-                    <div className="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <SortableHeader field="name">Name</SortableHeader>
-                                    <SortableHeader field="votes">Votes</SortableHeader>
-                                    <SortableHeader field="created">Created</SortableHeader>
-                                    <TableHead>Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredAndSortedPlayers.length === 0 ? (
+            {/* Stats Bar */}
+            <ActionBarSingle className='h-15'>
+                <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-3">
+                        <Input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search players..."
+                            className="w-full"
+                        />
+                    </div>
+                    <Button onClick={() => setShowAddDialog(true)} size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Player
+                    </Button>
+
+                </div>
+            </ActionBarSingle>
+
+            {/* Tabbed Panel */}
+            <Card className="flex-1 flex flex-col min-h-0 bg-linear-to-r from-card to-muted/20 overflow-hidden">
+                <CardContent className="flex-1 h-full p-0">
+                    <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
+
+                        {/* Player List */}
+                        <div className="space-y-2">
+                            <Table>
+                                <TableHeader>
                                     <TableRow>
-                                        <td colSpan={4} className="text-center py-8 text-muted-foreground">
-                                            {searchQuery
-                                                ? `No players found matching "${searchQuery}"`
-                                                : "No players yet. Add one to get started!"}
-                                        </td>
+                                        <SortableHeader field="name">Name</SortableHeader>
+                                        <SortableHeader field="votes">Votes</SortableHeader>
+                                        <SortableHeader field="created">Created</SortableHeader>
+                                        <TableHead>Actions</TableHead>
                                     </TableRow>
-                                ) : (
-                                    filteredAndSortedPlayers.map((player) => (
-                                        <PlayerRow key={player.id} player={player} />
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredAndSortedPlayers.length === 0 ? (
+                                        <TableRow>
+                                            <td colSpan={4} className="text-center py-8 text-muted-foreground">
+                                                {searchQuery
+                                                    ? `No players found matching "${searchQuery}"`
+                                                    : "No players yet. Add one to get started!"}
+                                            </td>
+                                        </TableRow>
+                                    ) : (
+                                        filteredAndSortedPlayers.map((player) => (
+                                            <PlayerRow key={player.id} player={player} />
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
 
-                    {/* Footer stats */}
-                    <div className="mt-4 text-sm text-muted-foreground">
-                        Showing {filteredAndSortedPlayers.length} of {players.length} players
+                        </div>
                     </div>
                 </CardContent>
             </Card>

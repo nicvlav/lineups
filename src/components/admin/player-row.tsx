@@ -184,7 +184,7 @@ export function PlayerRow({ player }: PlayerRowProps) {
             </TableCell>
 
             <TableCell className="w-24">
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-2">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
