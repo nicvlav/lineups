@@ -110,7 +110,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
             <div className="space-y-2">
                 <h1 className="text-2xl font-bold tracking-tight">Team Generator</h1>
                 <p className="text-muted-foreground">
-                    Select players and and generate perfectly balanced teams
+                    Select players and and auto generate balanced teams
                 </p>
             </div>
 

@@ -141,7 +141,7 @@ export default function VotingPage() {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Player Evaluation</h1>
         <p className="text-muted-foreground">
-          Vote for any player, any time. Your votes help build fair teams.
+          Vote for the ratings of any player (final ratings are aggregated)
         </p>
       </div>
 

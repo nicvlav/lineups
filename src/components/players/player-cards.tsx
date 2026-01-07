@@ -46,9 +46,9 @@ const PlayerCards = () => {
         <div className={cn("flex flex-col h-full w-full p-4 space-y-4")}>
             {/* Section Header */}
             <div className="space-y-2">
-                <h1 className="text-2xl font-bold tracking-tight">Player Database</h1>
+                <h1 className="text-2xl font-bold tracking-tight">Player Cards</h1>
                 <p className="text-muted-foreground">
-                    Browse and analyze player statistics, ratings, and positional fits
+                    View player strengths and profiles based on voted ratings
                 </p>
             </div>
 

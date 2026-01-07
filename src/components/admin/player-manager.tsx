@@ -166,7 +166,7 @@ export default function PlayerManager() {
             <div className="space-y-2">
                 <h1 className="text-2xl font-bold tracking-tight">Manage Players</h1>
                 <p className="text-muted-foreground">
-                    Add, edit, and manage player names
+                    Add, edit, and manage players
                 </p>
             </div>
 
