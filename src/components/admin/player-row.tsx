@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useUpdatePlayer, useDeletePlayer } from "@/hooks/use-players";
+import { useVoting } from "@/context/voting-provider";
+import { useAuth } from "@/context/auth-context";
 import { Player } from "@/types/players";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -12,9 +13,10 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Eye, Trash2, Check, X } from "lucide-react";
+import { Vote, Trash2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { PlayerVoting } from "@/components/voting/player-voting-dialog";
 
 interface PlayerRowProps {
     player: Player;
@@ -23,13 +25,19 @@ interface PlayerRowProps {
 export function PlayerRow({ player }: PlayerRowProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState(player.name);
+    const [isVoting, setIsVoting] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
-    const navigate = useNavigate();
 
     const updatePlayerMutation = useUpdatePlayer();
     const deletePlayerMutation = useDeletePlayer();
+    const { submitVote, userVotes } = useVoting();
+    const { user } = useAuth();
 
     const canDelete = player.vote_count === 0;
+    const hasVoted = userVotes.has(player.id);
+    const userVote = userVotes.get(player.id);
+    const isAssociatedPlayer = user?.profile?.associated_player_id === player.id;
+    const canVote = !isAssociatedPlayer;
 
     // Focus input when entering edit mode
     useEffect(() => {
@@ -91,8 +99,17 @@ export function PlayerRow({ player }: PlayerRowProps) {
         }
     };
 
-    const handleViewVote = () => {
-        navigate(`/vote?player=${player.id}`);
+    const handleOpenVoting = () => {
+        setIsVoting(true);
+    };
+
+    const handleCloseVoting = () => {
+        setIsVoting(false);
+    };
+
+    const handleVoteSubmit = async (voteData: { playerId: string; votes: Record<string, number> }) => {
+        await submitVote(voteData);
+        handleCloseVoting();
     };
 
     const handleDelete = () => {
@@ -114,6 +131,7 @@ export function PlayerRow({ player }: PlayerRowProps) {
     };
 
     return (
+        <>
         <TableRow className="group">
             <TableCell>
                 {isEditing ? (
@@ -165,7 +183,7 @@ export function PlayerRow({ player }: PlayerRowProps) {
                 {player.created_at ? format(new Date(player.created_at), "MMM d, yyyy") : "—"}
             </TableCell>
 
-            <TableCell>
+            <TableCell className="w-24">
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <TooltipProvider>
                         <Tooltip>
@@ -173,14 +191,21 @@ export function PlayerRow({ player }: PlayerRowProps) {
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={handleViewVote}
-                                    className="h-8 w-8 p-0"
+                                    onClick={handleOpenVoting}
+                                    disabled={!canVote}
+                                    className="h-8 w-8 p-0 disabled:opacity-50"
                                 >
-                                    <Eye className="h-4 w-4" />
+                                    <Vote className={`h-4 w-4 ${hasVoted ? 'text-green-600' : ''}`} />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>View in voting page</p>
+                                <p>
+                                    {!canVote
+                                        ? "Cannot vote for yourself"
+                                        : hasVoted
+                                        ? "Edit vote"
+                                        : "Vote for player"}
+                                </p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -208,5 +233,17 @@ export function PlayerRow({ player }: PlayerRowProps) {
                 </div>
             </TableCell>
         </TableRow>
+
+        {/* Vote Dialog */}
+        {isVoting && (
+            <PlayerVoting
+                player={player}
+                onVoteComplete={handleVoteSubmit}
+                onClose={handleCloseVoting}
+                isEditing={hasVoted}
+                existingVotes={userVote}
+            />
+        )}
+    </>
     );
 }
