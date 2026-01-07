@@ -1,12 +1,12 @@
 import { ModeToggle } from "@/components/layout/mode-toggle"
-import { Home, ListChecks , SquareUser, Vote, LogIn, LogOut, User, Settings, type LucideIcon } from "lucide-react";
+import { Home, ListChecks , SquareUser, Vote, LogIn, LogOut, TableProperties , type LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LAYOUT, GAP, ANIMATIONS } from "@/lib/design-tokens";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
-import { PlayerAssociation } from "@/components/auth/dialogs/player-association";
-import { useState } from "react";
+// import { PlayerAssociation } from "@/components/auth/dialogs/player-association";
+// import { useState } from "react";
 
 interface HeaderBarProps {
     compact: boolean;
@@ -20,7 +20,7 @@ interface TabIconProps {
 
 const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
     const { user, signOut } = useAuth();
-    const [showPlayerAssociation, setShowPlayerAssociation] = useState(false);
+    // const [showPlayerAssociation, setShowPlayerAssociation] = useState(false);
     const iconSize = compact ? 16 : 20;
 
     // Detect staging environment
@@ -89,7 +89,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
 
     return (
         <>
-            <header className="w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b-2 border-border">
+            <header className="w-full bg-background/95 border-b-2 border-border">
                 <div className={cn(
                     "grid grid-cols-3 items-center w-full",
                     "sm:grid-cols-3 grid-cols-[auto_1fr_auto]", // On mobile: auto-sized sides, flexible center
@@ -101,8 +101,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                         <h1 className={cn(
                             "font-bold text-foreground select-none tracking-tight rounded-xl",
                             isStaging
-                                ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30"
-                                : "bg-gradient-to-r from-muted/40 to-muted/20",
+                                ? "bg-linear-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30"
+                                : "bg-linear-to-r from-muted/40 to-muted/20",
                             compact ? "text-lg px-3 py-1.5" : "text-xl px-4 py-2"
                         )}>
                             {isStaging ? "LM 🚧" : "LM"}
@@ -115,7 +115,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                             className={cn(
                                 "flex items-center justify-center",
                                 "bg-muted/10 rounded-2xl p-1",
-                                "backdrop-blur-sm",
                                 GAP.xs
                             )} // gap-1
                             role="navigation"
@@ -130,7 +129,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                                 <TabIcon icon={Vote} to="/vote" label="Vote" />
                             )}
                             {canVote && (
-                                <TabIcon icon={Settings} to="/admin/players" label="Manage Players" />
+                                <TabIcon icon={TableProperties} to="/manage" label="Manage Players" />
                             )}
 
                         </nav>
@@ -145,7 +144,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                         )}>
                             {user ? (
                                 <>
-                                    <Button
+                                    {/* <Button
                                         variant="ghost"
                                         size={compact ? "sm" : "default"}
                                         onClick={() => setShowPlayerAssociation(true)}
@@ -154,7 +153,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                                     >
                                         <User className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
                                         {!compact && "Profile"}
-                                    </Button>
+                                    </Button> */}
                                     <Button
                                         variant="ghost"
                                         size={compact ? "sm" : "default"}
@@ -184,12 +183,12 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                 </div>
             </header>
 
-            {showPlayerAssociation && (
+            {/* {showPlayerAssociation && (
                 <PlayerAssociation
                     open={showPlayerAssociation}
                     onClose={() => setShowPlayerAssociation(false)}
                 />
-            )}
+            )} */}
         </>
     );
 };

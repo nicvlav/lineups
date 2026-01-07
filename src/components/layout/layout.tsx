@@ -104,8 +104,8 @@ const LayoutContent = () => {
                             {!canVote && <Route path="vote" element={<Navigate to="/" />} />}
 
                             {/* Admin routes - only for verified users */}
-                            {canVote && <Route path="admin/players" element={<PlayerManager />} />}
-                            {!canVote && <Route path="admin/players" element={<Navigate to="/" />} />}
+                            {canVote && <Route path="manage" element={<PlayerManager />} />}
+                            {!canVote && <Route path="manage" element={<Navigate to="/" />} />}
 
                             {/* Catch all - redirect to home */}
                             <Route path="*" element={<Navigate to="/" replace />} />
