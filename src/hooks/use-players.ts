@@ -11,7 +11,6 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { handleDatabaseError } from "@/lib/session-manager";
@@ -238,15 +237,23 @@ async function fetchPlayers(): Promise<Record<string, Player>> {
 /**
  * Hook to fetch all players
  *
+ * @param options - Optional TanStack Query options (e.g., refetchInterval for background refresh)
  * @returns Query result with players data, loading, and error states
  *
  * @example
+ * // Basic usage:
  * const { data: players, isLoading, error } = usePlayers();
- * if (isLoading) return <Loading />;
- * if (error) return <Error />;
- * return <PlayerList players={players} />;
+ *
+ * // With background refresh (voting page):
+ * const { data: players } = usePlayers({
+ *   refetchInterval: 30000, // 30s background refresh
+ *   refetchIntervalInBackground: false
+ * });
  */
-export function usePlayers() {
+export function usePlayers(options?: {
+    refetchInterval?: number | false;
+    refetchIntervalInBackground?: boolean;
+}) {
     return useQuery({
         queryKey: playersKeys.all,
         queryFn: fetchPlayers,
@@ -254,94 +261,8 @@ export function usePlayers() {
         gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
         refetchOnWindowFocus: true, // Refetch when user returns to tab
         refetchOnReconnect: true, // Refetch when internet reconnects
+        ...options, // Allow override with custom options
     });
-}
-
-// =====================================================
-// REAL-TIME SUBSCRIPTIONS
-// =====================================================
-
-/**
- * Hook to enable real-time updates for players
- *
- * Subscribes to Supabase real-time changes and invalidates queries
- * when players are inserted, updated, or deleted
- *
- * @example
- * function PlayersPage() {
- *   const { data: players } = usePlayers();
- *   usePlayersRealtime(); // Enable real-time updates
- *   return <PlayerList players={players} />;
- * }
- */
-export function usePlayersRealtime() {
-    const queryClient = useQueryClient();
-
-    useEffect(() => {
-        if (!supabase) {
-            console.log("PLAYERS: No Supabase client available for real-time");
-            return;
-        }
-
-        console.log("PLAYERS: Setting up real-time subscription...");
-
-        const channel = supabase
-            .channel("players_realtime")
-            .on(
-                "postgres_changes",
-                {
-                    event: "INSERT",
-                    schema: "public",
-                    table: "players",
-                },
-                (payload) => {
-                    console.log("PLAYERS: Real-time INSERT received:", payload.new);
-                    // Invalidate queries to trigger refetch
-                    queryClient.invalidateQueries({ queryKey: playersKeys.all });
-                }
-            )
-            .on(
-                "postgres_changes",
-                {
-                    event: "UPDATE",
-                    schema: "public",
-                    table: "players",
-                },
-                (payload) => {
-                    const updatedPlayer = payload.new as any;
-                    console.log(
-                        `PLAYERS: Real-time UPDATE received for player ${updatedPlayer.name} (vote_count: ${updatedPlayer.vote_count})`
-                    );
-                    // Invalidate queries to trigger refetch
-                    queryClient.invalidateQueries({ queryKey: playersKeys.all });
-                }
-            )
-            .on(
-                "postgres_changes",
-                {
-                    event: "DELETE",
-                    schema: "public",
-                    table: "players",
-                },
-                (payload) => {
-                    console.log("PLAYERS: Real-time DELETE received:", payload.old);
-                    // Invalidate queries to trigger refetch
-                    queryClient.invalidateQueries({ queryKey: playersKeys.all });
-                }
-            )
-            .subscribe((status) => {
-                if (status === "SUBSCRIBED") {
-                    console.log("✅ PLAYERS: Real-time subscription active");
-                } else if (status === "CHANNEL_ERROR") {
-                    console.error("❌ PLAYERS: Real-time subscription error");
-                }
-            });
-
-        return () => {
-            console.log("PLAYERS: Cleaning up real-time subscription");
-            supabase.removeChannel(channel);
-        };
-    }, [queryClient]);
 }
 
 // =====================================================

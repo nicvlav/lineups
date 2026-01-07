@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
-import { usePlayers } from "@/context/players-provider";
+import { usePlayers as usePlayersQuery } from "@/hooks/use-players";
 import { useVoting } from "@/context/voting-provider";
 import { PlayerVoteCard } from "@/components/voting/player-vote-card";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,24 @@ type SortType = 'name' | 'votes';
 
 export default function VotingPage() {
   const { user, canVote, isVerified } = useAuth();
-  const { players: playersRecord } = usePlayers();
+
+  // Use direct query hook with background refresh for voting page
+  const { data: playersRecord = {} } = usePlayersQuery({
+    refetchInterval: 30000, // 30s background refresh while on voting page
+    refetchIntervalInBackground: false, // Stop when tab inactive
+  });
+
   const { userVotes } = useVoting();
 
   const players = Object.values(playersRecord);
+
+  // Log background refresh activity
+  useEffect(() => {
+    console.log("🗳️ VOTING PAGE: Background refresh enabled (30s interval)");
+    return () => {
+      console.log("🗳️ VOTING PAGE: Background refresh disabled (left page)");
+    };
+  }, []);
 
   const [activeTab, setActiveTab] = useState<TabType>('not-voted');
   const [searchQuery, setSearchQuery] = useState('');

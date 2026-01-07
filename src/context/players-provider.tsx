@@ -13,7 +13,7 @@
  */
 
 import React, { ReactNode, createContext, useContext } from "react";
-import { usePlayers as usePlayersQuery, usePlayersRealtime, useAddPlayer as useAddPlayerMutation, useDeletePlayer as useDeletePlayerMutation } from "@/hooks/use-players";
+import { usePlayers as usePlayersQuery, useAddPlayer as useAddPlayerMutation, useDeletePlayer as useDeletePlayerMutation } from "@/hooks/use-players";
 import { Player } from "@/types/players";
 
 interface PlayersContextType {
@@ -32,12 +32,11 @@ interface PlayersProviderProps {
 
 export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) => {
     // Use TanStack Query hooks
+    // Real-time subscriptions removed - Using REST-only approach for better stability
+    // Background refresh handles updates on voting page (30s interval)
     const { data: players = {}, isLoading, error } = usePlayersQuery();
     const addPlayerMutation = useAddPlayerMutation();
     const deletePlayerMutation = useDeletePlayerMutation();
-
-    // Enable real-time subscriptions
-    usePlayersRealtime();
 
     // Wrapper for addPlayer to match old API
     const addPlayer = (player: Partial<Player>, onSuccess?: (player: Player) => void) => {
