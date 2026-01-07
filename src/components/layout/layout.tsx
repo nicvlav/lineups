@@ -68,72 +68,73 @@ const LayoutContent = () => {
             <PlayersProvider>
                 <GameProvider>
                     <VotingProvider>
-                    {/* Staging environment banner */}
-                    {isStaging && (
-                        <div className="bg-linear-to-r from-orange-500 to-red-500 text-white text-center py-1 px-4 text-sm font-medium z-50 relative">
-                            🚧 STAGING ENVIRONMENT - For Testing Only 🚧
-                        </div>
-                    )}
+                        {/* Staging environment banner */}
+                        {isStaging && (
+                            <div className="bg-linear-to-r from-orange-500 to-red-500 text-white text-center py-1 px-4 text-sm font-medium z-50 relative">
+                                🚧 STAGING ENVIRONMENT - For Testing Only 🚧
+                            </div>
+                        )}
 
-                    {/* Conditionally show header - not on auth routes */}
-                    {!isAuthRoute && (
-                        <div className="sticky top-0 z-50">
-                            <HeaderBar compact={isCompact} />
-                        </div>
-                    )}
+                        {/* Conditionally show header - not on auth routes */}
+                        {!isAuthRoute && (
+                            <div className="sticky top-0 z-50">
+                                <HeaderBar compact={isCompact} />
+                            </div>
+                        )}
 
-                    {/* Main content area */}
-                    <main className="flex-1 overflow-auto">
-                        <Routes>
-                            {/* Auth routes - accessible to all */}
-                            <Route path="auth/sign-in" element={<SignInPage />} />
-                            <Route path="auth/sign-up" element={<SignUpPage />} />
-                            <Route path="auth/reset-password" element={<ResetPasswordPage />} />
-                            <Route path="auth/update-password" element={<UpdatePasswordPage />} />
-                            <Route path="auth/callback" element={<AuthCallbackPage />} />
-                            <Route path="auth/debug" element={<AuthDebugPage />} />
-                            <Route path="data-deletion" element={<DataDeletionPage />} />
+                        {/* Main content area */}
+                        <main className="flex-1 overflow-auto">
+                            <Routes>
+                                {/* Auth routes - accessible to all */}
+                                <Route path="auth/sign-in" element={<SignInPage />} />
+                                <Route path="auth/sign-up" element={<SignUpPage />} />
+                                <Route path="auth/reset-password" element={<ResetPasswordPage />} />
+                                <Route path="auth/update-password" element={<UpdatePasswordPage />} />
+                                <Route path="auth/callback" element={<AuthCallbackPage />} />
+                                <Route path="auth/debug" element={<AuthDebugPage />} />
+                                <Route path="data-deletion" element={<DataDeletionPage />} />
 
-                            {/* App routes */}
-                            <Route index element={<Game isCompact={isCompact} playerSize={(() => {
-                                return isCompact ? (width < 400 ? 40 : 60) : 70;
-                            })()} />} />
-                            <Route path="cards" element={<PlayerCards />} />
-                            <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
-                            {canVote && <Route path="vote" element={<VotingPage />} />}
-                            {!canVote && <Route path="vote" element={<Navigate to="/" />} />}
+                                {/* App routes */}
+                                <Route index element={<Game isCompact={isCompact} playerSize={(() => {
+                                    return isCompact ? (width < 400 ? 40 : 60) : 70;
+                                })()} />} />
+                                <Route path="cards" element={<PlayerCards />} />
+                                <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
 
-                            {/* Admin routes - only for verified users */}
-                            {canVote && <Route path="manage" element={<PlayerManager />} />}
-                            {!canVote && <Route path="manage" element={<Navigate to="/" />} />}
+                                {/* Admin routes - only for verified users */}
+                                {canVote && <Route path="manage" element={<PlayerManager />} />}
+                                {!canVote && <Route path="manage" element={<Navigate to="/" />} />}
 
-                            {/* Catch all - redirect to home */}
-                            <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
-                    </main>
+                                {canVote && <Route path="vote" element={<VotingPage />} />}
+                                {!canVote && <Route path="vote" element={<Navigate to="/" />} />}
 
-                    {/* Verification dialogs for users who need them */}
-                    {user && needsVerification && !isAuthRoute && (
-                        <>
-                            {/* Step 1: Squad ID verification (if no squad_id) */}
-                            {!user.profile?.squad_id && (
-                                <SquadIdVerification
-                                    open={true}
-                                    onClose={() => { }}
-                                    mandatory={true}
-                                />
-                            )}
+                                {/* Catch all - redirect to home */}
+                                <Route path="*" element={<Navigate to="/" replace />} />
+                            </Routes>
+                        </main>
 
-                            {/* Step 2: Player assignment (if has squad_id but not fully verified) */}
-                            {user.profile?.squad_id && !user.profile?.is_verified && (
-                                <PlayerAssignment
-                                    open={true}
-                                    onClose={() => { }}
-                                    mandatory={true}
-                                />
-                            )}
-                        </>
-                    )}
+                        {/* Verification dialogs for users who need them */}
+                        {user && needsVerification && !isAuthRoute && (
+                            <>
+                                {/* Step 1: Squad ID verification (if no squad_id) */}
+                                {!user.profile?.squad_id && (
+                                    <SquadIdVerification
+                                        open={true}
+                                        onClose={() => { }}
+                                        mandatory={true}
+                                    />
+                                )}
+
+                                {/* Step 2: Player assignment (if has squad_id but not fully verified) */}
+                                {user.profile?.squad_id && !user.profile?.is_verified && (
+                                    <PlayerAssignment
+                                        open={true}
+                                        onClose={() => { }}
+                                        mandatory={true}
+                                    />
+                                )}
+                            </>
+                        )}
                     </VotingProvider>
                 </GameProvider>
             </PlayersProvider>

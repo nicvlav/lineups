@@ -1,5 +1,5 @@
 import { ModeToggle } from "@/components/layout/mode-toggle"
-import { Home, ListChecks , SquareUser, Vote, LogIn, LogOut, TableProperties , type LucideIcon } from "lucide-react";
+import { Home, ListChecks, SquareUser, Vote, LogIn, LogOut, TableProperties, type LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LAYOUT, GAP, ANIMATIONS } from "@/lib/design-tokens";
@@ -27,7 +27,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
     const isStaging = window.location.hostname.includes('staging');
 
     const canVote = user !== null;
-    
+
     const handleSignOut = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -121,16 +121,19 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                             aria-label="Main navigation"
                         >
                             <TabIcon icon={Home} to="/" label="Home" />
-            
+
                             <TabIcon icon={SquareUser} to="/cards" label="Cards" />
-                           
-                            <TabIcon icon={ListChecks } to="/generate" label="Generate Teams" />
-                            {canVote && (
-                                <TabIcon icon={Vote} to="/vote" label="Vote" />
-                            )}
+
+                            <TabIcon icon={ListChecks} to="/generate" label="Generate Teams" />
+
                             {canVote && (
                                 <TabIcon icon={TableProperties} to="/manage" label="Manage Players" />
                             )}
+
+                            {canVote && (
+                                <TabIcon icon={Vote} to="/vote" label="Vote" />
+                            )}
+
 
                         </nav>
                     </div>
