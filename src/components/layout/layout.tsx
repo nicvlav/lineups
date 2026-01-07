@@ -14,6 +14,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PlayerCards from "@/components/players/player-cards";
 import TeamGenerator from "@/components/game/team-generator";
 import VotingPage from "@/components/voting/voting-page";
+import PlayerManager from "@/components/admin/player-manager";
 import SignInPage from "@/components/auth/pages/sign-in";
 import SignUpPage from "@/components/auth/pages/sign-up";
 import ResetPasswordPage from "@/components/auth/pages/reset-password";
@@ -101,6 +102,10 @@ const LayoutContent = () => {
                             <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
                             {canVote && <Route path="vote" element={<VotingPage />} />}
                             {!canVote && <Route path="vote" element={<Navigate to="/" />} />}
+
+                            {/* Admin routes - only for verified users */}
+                            {canVote && <Route path="admin/players" element={<PlayerManager />} />}
+                            {!canVote && <Route path="admin/players" element={<Navigate to="/" />} />}
 
                             {/* Catch all - redirect to home */}
                             <Route path="*" element={<Navigate to="/" replace />} />

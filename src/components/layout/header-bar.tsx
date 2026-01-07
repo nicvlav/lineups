@@ -1,5 +1,5 @@
 import { ModeToggle } from "@/components/layout/mode-toggle"
-import { Home, ListChecks , SquareUser, Vote, LogIn, LogOut, User, type LucideIcon } from "lucide-react";
+import { Home, ListChecks , SquareUser, Vote, LogIn, LogOut, User, Settings, type LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LAYOUT, GAP, ANIMATIONS } from "@/lib/design-tokens";
@@ -128,6 +128,9 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                             <TabIcon icon={ListChecks } to="/generate" label="Generate Teams" />
                             {canVote && (
                                 <TabIcon icon={Vote} to="/vote" label="Vote" />
+                            )}
+                            {canVote && (
+                                <TabIcon icon={Settings} to="/admin/players" label="Manage Players" />
                             )}
 
                         </nav>

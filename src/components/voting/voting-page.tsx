@@ -10,12 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Vote, CheckCircle, ArrowUpDown } from "lucide-react";
 import { ActionBarSingle } from "@/components/ui/action-bar";
 import { cn } from "@/lib/utils";
+import { useSearchParams } from "react-router-dom";
 
 type TabType = 'not-voted' | 'voted';
 type SortType = 'name' | 'votes';
 
 export default function VotingPage() {
   const { user, canVote, isVerified } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Use direct query hook with background refresh for voting page
   const { data: playersRecord = {} } = usePlayersQuery({
@@ -38,6 +40,17 @@ export default function VotingPage() {
   const [activeTab, setActiveTab] = useState<TabType>('not-voted');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortType>('name');
+
+  // Pre-populate search from query params (e.g., from admin page link)
+  useEffect(() => {
+    const playerId = searchParams.get('player');
+    if (playerId && playersRecord[playerId]) {
+      const player = playersRecord[playerId];
+      setSearchQuery(player.name);
+      // Clear the query param after using it
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, playersRecord, setSearchParams]);
 
   // Filter out user's associated player
   const eligiblePlayers = useMemo(() => {

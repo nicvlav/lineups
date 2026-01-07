@@ -41,6 +41,11 @@ interface DeletePlayerParams {
     id: string;
 }
 
+interface UpdatePlayerParams {
+    id: string;
+    name: string;
+}
+
 // =====================================================
 // UTILITY FUNCTIONS
 // =====================================================
@@ -297,6 +302,7 @@ export function useAddPlayer() {
                 throw new Error("Supabase client not available");
             }
 
+            const startTime = performance.now();
             const playerStats = player.stats ? player.stats : defaultStatScores;
             const newPlayer: Player = {
                 id: player.id ? player.id : uuidv4(),
@@ -311,26 +317,66 @@ export function useAddPlayer() {
 
             console.log("PLAYERS: Adding new player:", newPlayer.name);
 
-            const { error } = await supabase
-                .from("players")
-                .insert([
-                    {
-                        id: newPlayer.id,
-                        name: newPlayer.name,
-                        vote_count: 0,
-                        ...individualColumns,
-                    },
-                ])
-                .select()
-                .single();
+            // Create AbortController for timeout handling (same pattern as voting)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                const elapsed = performance.now() - startTime;
+                console.error("❌ PLAYERS: Insert timed out after 30 seconds");
+                console.error("⏱️ PLAYERS: Elapsed time:", elapsed.toFixed(2), "ms");
+                controller.abort();
+            }, 30000);
 
-            if (error) {
-                console.error("PLAYERS: Error adding player:", error);
-                throw error;
+            try {
+                const requestStart = performance.now();
+                console.log("📡 PLAYERS: Sending INSERT request to Supabase...");
+
+                const { error } = await supabase
+                    .from("players")
+                    .insert([
+                        {
+                            id: newPlayer.id,
+                            name: newPlayer.name,
+                            vote_count: 0,
+                            ...individualColumns,
+                        },
+                    ])
+                    .abortSignal(controller.signal);
+
+                const requestEnd = performance.now();
+                const requestTime = requestEnd - requestStart;
+                console.log("📡 PLAYERS: Supabase request completed in", requestTime.toFixed(2), "ms");
+
+                clearTimeout(timeoutId);
+
+                if (error) {
+                    console.error("❌ PLAYERS: Error adding player:", error);
+                    console.error("❌ PLAYERS: Error code:", error.code);
+                    console.error("❌ PLAYERS: Error message:", error.message);
+                    throw error;
+                }
+
+                const totalTime = performance.now() - startTime;
+                console.log("✅ PLAYERS: Player added successfully");
+                console.log("⏱️ PLAYERS: Total operation time:", totalTime.toFixed(2), "ms");
+
+                if (totalTime > 5000) {
+                    console.warn("⚠️ PLAYERS: Slow insert detected (>5s) - check database performance");
+                }
+
+                return newPlayer;
+            } catch (err: any) {
+                clearTimeout(timeoutId);
+                const totalTime = performance.now() - startTime;
+                console.error("❌ PLAYERS: Insert failed after", totalTime.toFixed(2), "ms");
+                console.error("❌ PLAYERS: Error name:", err?.name);
+                console.error("❌ PLAYERS: Error message:", err?.message);
+
+                if (err.name === "AbortError" || err?.message?.includes("aborted")) {
+                    throw new Error("Request timed out - please try again");
+                }
+
+                throw err;
             }
-
-            console.log("✅ PLAYERS: Player added successfully");
-            return newPlayer;
         },
         onSuccess: () => {
             console.log("PLAYERS: Invalidating queries after add");
@@ -339,6 +385,101 @@ export function useAddPlayer() {
         },
         onError: (error) => {
             console.error("PLAYERS: Add player mutation failed:", error);
+        },
+    });
+}
+
+/**
+ * Hook to update a player's name
+ *
+ * @returns Mutation object with mutate function and state
+ *
+ * @example
+ * const updatePlayerMutation = useUpdatePlayer();
+ *
+ * function handleUpdatePlayer(playerId: string, newName: string) {
+ *   updatePlayerMutation.mutate(
+ *     { id: playerId, name: newName },
+ *     {
+ *       onSuccess: () => {
+ *         console.log("Player name updated");
+ *       }
+ *     }
+ *   );
+ * }
+ */
+export function useUpdatePlayer() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ id, name }: UpdatePlayerParams): Promise<void> => {
+            if (!supabase) {
+                throw new Error("Supabase client not available");
+            }
+
+            // Validate name
+            const trimmedName = name.trim();
+            if (trimmedName.length < 2) {
+                throw new Error("Player name must be at least 2 characters");
+            }
+            if (trimmedName.length > 50) {
+                throw new Error("Player name must be less than 50 characters");
+            }
+
+            console.log("PLAYERS: Updating player:", id, "to", trimmedName);
+
+            const { error } = await supabase
+                .from("players")
+                .update({
+                    name: trimmedName,
+                    updated_at: new Date().toISOString()
+                })
+                .eq("id", id);
+
+            if (error) {
+                console.error("PLAYERS: Error updating player:", error);
+                throw error;
+            }
+
+            console.log("✅ PLAYERS: Player updated successfully");
+        },
+        onMutate: async ({ id, name }) => {
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({ queryKey: playersKeys.all });
+
+            // Snapshot previous value
+            const previousPlayers = queryClient.getQueryData<Record<string, Player>>(
+                playersKeys.all
+            );
+
+            // Optimistically update player name
+            if (previousPlayers && previousPlayers[id]) {
+                const updated = {
+                    ...previousPlayers,
+                    [id]: {
+                        ...previousPlayers[id],
+                        name: name.trim(),
+                    },
+                };
+                queryClient.setQueryData(playersKeys.all, updated);
+                console.log("PLAYERS: Optimistic update applied for", id);
+            }
+
+            // Return context with previous value
+            return { previousPlayers };
+        },
+        onError: (error, _variables, context) => {
+            // Rollback on error
+            if (context?.previousPlayers) {
+                queryClient.setQueryData(playersKeys.all, context.previousPlayers);
+                console.log("PLAYERS: Rollback optimistic update");
+            }
+            console.error("PLAYERS: Update player mutation failed:", error);
+        },
+        onSuccess: () => {
+            console.log("PLAYERS: Invalidating queries after update");
+            // Invalidate queries to trigger refetch
+            queryClient.invalidateQueries({ queryKey: playersKeys.all });
         },
     });
 }
@@ -371,19 +512,70 @@ export function useDeletePlayer() {
                 throw new Error("Supabase client not available");
             }
 
+            const startTime = performance.now();
             console.log("PLAYERS: Deleting player:", id);
 
-            const { error } = await supabase
-                .from("players")
-                .delete()
-                .match({ id });
+            // Create AbortController for timeout handling
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                const elapsed = performance.now() - startTime;
+                console.error("❌ PLAYERS: Delete timed out after 30 seconds");
+                console.error("⏱️ PLAYERS: Elapsed time:", elapsed.toFixed(2), "ms");
+                controller.abort();
+            }, 30000);
 
-            if (error) {
-                console.error("PLAYERS: Error deleting player:", error);
-                throw error;
+            try {
+                const requestStart = performance.now();
+                console.log("📡 PLAYERS: Sending DELETE request to Supabase...");
+
+                const { error, status, statusText, count } = await supabase
+                    .from("players")
+                    .delete({ count: 'exact' })
+                    .eq("id", id)
+                    .abortSignal(controller.signal);
+
+                const requestEnd = performance.now();
+                const requestTime = requestEnd - requestStart;
+                console.log("📡 PLAYERS: Supabase request completed in", requestTime.toFixed(2), "ms");
+                console.log("📡 PLAYERS: HTTP Status:", status, statusText);
+                console.log("📡 PLAYERS: Rows affected:", count);
+
+                clearTimeout(timeoutId);
+
+                if (error) {
+                    console.error("❌ PLAYERS: Error deleting player:", error);
+                    console.error("❌ PLAYERS: Error code:", error.code);
+                    console.error("❌ PLAYERS: Error message:", error.message);
+                    console.error("❌ PLAYERS: Error details:", error.details);
+                    console.error("❌ PLAYERS: Error hint:", error.hint);
+                    throw error;
+                }
+
+                if (count === 0) {
+                    console.warn("⚠️ PLAYERS: Delete succeeded but no rows affected - check RLS policies");
+                    throw new Error("Player could not be deleted - check permissions or if player has votes");
+                }
+
+                const totalTime = performance.now() - startTime;
+                console.log("✅ PLAYERS: Player deleted successfully");
+                console.log("⏱️ PLAYERS: Total operation time:", totalTime.toFixed(2), "ms");
+
+                if (totalTime > 5000) {
+                    console.warn("⚠️ PLAYERS: Slow delete detected (>5s) - check database performance");
+                }
+            } catch (err: any) {
+                clearTimeout(timeoutId);
+                const totalTime = performance.now() - startTime;
+                console.error("❌ PLAYERS: Delete failed after", totalTime.toFixed(2), "ms");
+                console.error("❌ PLAYERS: Error name:", err?.name);
+                console.error("❌ PLAYERS: Error message:", err?.message);
+
+                if (err.name === "AbortError" || err?.message?.includes("aborted")) {
+                    throw new Error("Request timed out - please try again");
+                }
+
+                throw err;
             }
-
-            console.log("✅ PLAYERS: Player deleted successfully");
         },
         onMutate: async ({ id }) => {
             // Cancel outgoing refetches

@@ -55,6 +55,7 @@ export interface Player {
   stats: PlayerStats;
   avatar_url?: string;
   vote_count: number;
+  created_at?: string;
 }
 
 /**
