@@ -4,6 +4,8 @@ import { usePlayers } from "@/context/players-provider";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { playersKeys } from "@/hooks/use-players";
+import { ensureValidSession, categorizeError } from "@/lib/session-manager";
+
 interface VoteData {
     playerId: string;
     votes: Record<string, number>;
@@ -142,10 +144,6 @@ async function fetchUserVotes(userId: string | undefined): Promise<Map<string, a
 
 // Submit vote to database
 async function submitVoteToDatabase(voteData: VoteData, userProfileId: string) {
-    const startTime = performance.now();
-    console.log("🗳️ VOTING: Starting vote submission for player:", voteData.playerId);
-    console.log("📊 VOTING: User profile ID:", userProfileId);
-
     const dbVoteData: any = {
         voter_user_profile_id: userProfileId,
         player_id: voteData.playerId,
@@ -160,62 +158,29 @@ async function submitVoteToDatabase(voteData: VoteData, userProfileId: string) {
         }
     }
 
-    console.log("📊 VOTING: Vote data size:", JSON.stringify(dbVoteData).length, "bytes");
-
-    // Create a fresh AbortController for each attempt (important for retries)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-        const elapsed = performance.now() - startTime;
-        console.error("❌ VOTING: Request timed out after 30 seconds");
-        console.error("⏱️ VOTING: Elapsed time:", elapsed.toFixed(2), "ms");
-        console.error("⚠️ VOTING: Timeout increased to 30s to allow for RLS policy checks + database triggers");
-        controller.abort();
-    }, 30000); // Increased from 15s to 30s for better stability with RLS + triggers
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
-        const requestStart = performance.now();
-        console.log("📡 VOTING: Sending UPSERT request to Supabase...");
-
-        const { error, status, statusText } = await supabase
+        const { error } = await supabase
             .from("player_votes")
             .upsert(dbVoteData, {
                 onConflict: "player_id,voter_user_profile_id",
             })
             .abortSignal(controller.signal);
 
-        const requestEnd = performance.now();
-        const requestTime = requestEnd - requestStart;
-        console.log("📡 VOTING: Supabase request completed in", requestTime.toFixed(2), "ms");
-        console.log("📡 VOTING: HTTP Status:", status, statusText);
-
         clearTimeout(timeoutId);
 
         if (error) {
-            console.error("❌ VOTING: Supabase error:", error);
-            console.error("❌ VOTING: Error code:", error.code);
-            console.error("❌ VOTING: Error message:", error.message);
-            console.error("❌ VOTING: Error details:", error.details);
-            console.error("❌ VOTING: Error hint:", error.hint);
+            const categorized = categorizeError(error);
+            if (categorized.isAuthError) {
+                throw new Error("Session expired - please sign in again");
+            }
             throw error;
-        }
-
-        const totalTime = performance.now() - startTime;
-        console.log("✅ VOTING: Vote successfully submitted");
-        console.log("⏱️ VOTING: Total operation time:", totalTime.toFixed(2), "ms");
-
-        if (totalTime > 5000) {
-            console.warn("⚠️ VOTING: Slow vote submission detected (>5s) - check database performance");
         }
     } catch (err: any) {
         clearTimeout(timeoutId);
 
-        const totalTime = performance.now() - startTime;
-        console.error("❌ VOTING: Submission failed after", totalTime.toFixed(2), "ms");
-        console.error("❌ VOTING: Error name:", err?.name);
-        console.error("❌ VOTING: Error message:", err?.message);
-        console.error("❌ VOTING: Full error:", err);
-
-        // Convert abort errors to more descriptive errors
         if (err.name === "AbortError" || err?.message?.includes("aborted")) {
             throw new Error("Request timed out - please try again");
         }
@@ -229,7 +194,8 @@ export function useVotingStats() {
     return useQuery({
         queryKey: votingKeys.stats(),
         queryFn: fetchVotingStats,
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 2 * 60 * 1000,          // 2 min - more dynamic
+        refetchOnWindowFocus: true,        // Check when user returns
     });
 }
 
@@ -238,7 +204,7 @@ export function usePlayersWithVotes() {
     return useQuery({
         queryKey: votingKeys.playersWithVotes(),
         queryFn: fetchPlayersWithVotes,
-        staleTime: 1000 * 30, // 30 seconds (more dynamic than other vote data)
+        staleTime: 1000 * 30,
     });
 }
 
@@ -250,7 +216,8 @@ export function useUserVotes() {
         queryKey: votingKeys.userVotes(user?.id),
         queryFn: () => fetchUserVotes(user?.id),
         enabled: !!user,
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 30 * 1000,              // 30 sec - very fresh (user's own data)
+        refetchOnWindowFocus: true,        // Always fresh when they return
     });
 }
 
@@ -262,42 +229,34 @@ export function useSubmitVote() {
 
     return useMutation({
         mutationFn: async (voteData: VoteData) => {
-            console.log("🗳️ VOTING: Mutation started for player:", voteData.playerId);
+            const sessionValid = await ensureValidSession();
+            if (!sessionValid) {
+                throw new Error("Session expired - please sign in again");
+            }
 
             if (!user?.profile?.id) {
-                console.error("❌ VOTING: User not authenticated");
                 throw new Error("User not authenticated");
             }
 
-            // Request deduplication - prevent double-submit
+            // Request deduplication
             const dedupeKey = `${voteData.playerId}_${user.profile.id}`;
             if (inFlightVotes.has(dedupeKey)) {
-                console.warn("⚠️ VOTING: Duplicate submission blocked for player:", voteData.playerId);
                 throw new Error("Vote submission already in progress for this player");
             }
 
-            // Mark as in-flight
             inFlightVotes.add(dedupeKey);
-            console.log("🔒 VOTING: Vote marked as in-flight:", dedupeKey);
 
             try {
                 return await submitVoteToDatabase(voteData, user.profile.id);
             } finally {
-                // Always remove from in-flight, even on error
                 inFlightVotes.delete(dedupeKey);
-                console.log("🔓 VOTING: Vote removed from in-flight:", dedupeKey);
             }
         },
         onMutate: async (voteData) => {
-            console.log("🗳️ VOTING: onMutate - Optimistic update for player:", voteData.playerId);
-
-            // Cancel outgoing refetches to prevent race conditions
             await queryClient.cancelQueries({ queryKey: votingKeys.userVotes(user?.id) });
 
-            // Snapshot previous value for rollback
             const previousVotes = queryClient.getQueryData<Map<string, any>>(votingKeys.userVotes(user?.id));
 
-            // Optimistically update with timestamp to prevent stale data override
             const optimisticTimestamp = Date.now();
             queryClient.setQueryData<Map<string, any>>(votingKeys.userVotes(user?.id), (old) => {
                 const updated = new Map(old || new Map());
@@ -306,83 +265,55 @@ export function useSubmitVote() {
                     votes: voteData.votes,
                     created_at: new Date().toISOString(),
                     isPending: true,
-                    optimisticTimestamp, // Track when optimistic update was applied
+                    optimisticTimestamp,
                 });
                 return updated;
             });
 
-            // Show loading toast
             const player = players[voteData.playerId];
             const toastId = toast.loading(`Submitting vote for ${player?.name || "player"}...`, {
-                icon: "⏳",
-                duration: Infinity, // Prevent auto-dismiss
+                duration: Infinity,
             });
 
             return {
                 previousVotes,
                 toastId,
                 playerName: player?.name || "player",
-                optimisticTimestamp // Pass timestamp to onSuccess for comparison
+                optimisticTimestamp
             };
         },
-        onError: (err, voteData, context) => {
-            console.error("❌ VOTING: onError triggered for player:", voteData.playerId, err);
-
-            // Rollback optimistic update
+        onError: (err, _voteData, context) => {
             if (context?.previousVotes) {
                 queryClient.setQueryData(votingKeys.userVotes(user?.id), context.previousVotes);
             }
 
-            // Show error toast (onSettled will dismiss loading toast)
             const errorMessage = err instanceof Error ? err.message : String(err);
             toast.error(`Failed to submit vote for ${context?.playerName || "player"}`, {
                 description: errorMessage,
                 duration: 4000,
-                icon: "❌",
             });
         },
-        onSuccess: (_, voteData, context) => {
-            console.log("✅ VOTING: onSuccess - Vote submitted successfully for player:", voteData.playerId);
-
-            // Show success toast (onSettled will dismiss loading toast)
+        onSuccess: (_, _voteData, context) => {
             toast.success(`Vote submitted for ${context?.playerName || "player"}`, {
                 duration: 2000,
-                icon: "✅",
             });
 
-            // Invalidate and refetch - including players cache for updated aggregates
             queryClient.invalidateQueries({ queryKey: votingKeys.userVotes(user?.id) });
             queryClient.invalidateQueries({ queryKey: votingKeys.playersWithVotes() });
             queryClient.invalidateQueries({ queryKey: votingKeys.stats() });
-            queryClient.invalidateQueries({ queryKey: playersKeys.all }); // ← Refetch players to get updated aggregates from DB trigger
+            queryClient.invalidateQueries({ queryKey: playersKeys.all });
         },
-        onSettled: (_data, error, voteData, context) => {
-            console.log("🏁 VOTING: onSettled - Mutation completed for player:", voteData.playerId, {
-                success: !error,
-                error: error?.message,
-            });
-
-            // CRITICAL: Always dismiss toast when mutation completes (success or failure)
+        onSettled: (_data, _error, _voteData, context) => {
             if (context?.toastId) {
                 toast.dismiss(context.toastId);
             }
         },
         retry: (failureCount, error: any) => {
-            console.log(`🔄 VOTING: Retry check - attempt ${failureCount}/3`, error?.message);
-
-            // Don't retry auth errors
-            if (error?.message?.includes("not authenticated")) {
-                console.log("⏭️ VOTING: Skipping retry for auth error");
+            if (error?.message?.includes("Session expired") || error?.message?.includes("not authenticated")) {
                 return false;
             }
-
-            // Retry up to 3 times for other errors
             return failureCount < 3;
         },
-        retryDelay: (attemptIndex) => {
-            const delay = Math.min(1000 * 2 ** attemptIndex, 30000);
-            console.log(`⏱️ VOTING: Retry delay: ${delay}ms for attempt ${attemptIndex + 1}`);
-            return delay;
-        },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     });
 }

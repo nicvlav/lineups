@@ -16,6 +16,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { ensureValidSession, categorizeError } from "@/lib/session-manager";
 
 // =====================================================
 // QUERY KEYS
@@ -201,11 +202,10 @@ export function useUpdateProfile() {
             userId,
             updates,
         }: UpdateProfileParams): Promise<UserProfile> => {
-            if (!supabase) {
-                throw new Error("Supabase client not available");
+            const sessionValid = await ensureValidSession();
+            if (!sessionValid) {
+                throw new Error("Session expired - please sign in again");
             }
-
-            console.log("USER_PROFILE: Updating profile for user:", userId);
 
             const { data, error } = await supabase
                 .from("user_profiles")
@@ -223,11 +223,13 @@ export function useUpdateProfile() {
                 .single();
 
             if (error) {
-                console.error("USER_PROFILE: Error updating profile:", error);
+                const categorized = categorizeError(error);
+                if (categorized.isAuthError) {
+                    throw new Error("Session expired - please sign in again");
+                }
                 throw error;
             }
 
-            console.log("✅ USER_PROFILE: Profile updated successfully");
             return data;
         },
         onSuccess: (data) => {
@@ -267,11 +269,10 @@ export function useVerifySquad() {
             userId,
             squadId,
         }: VerifySquadParams): Promise<UserProfile> => {
-            if (!supabase) {
-                throw new Error("Supabase client not available");
+            const sessionValid = await ensureValidSession();
+            if (!sessionValid) {
+                throw new Error("Session expired - please sign in again");
             }
-
-            console.log("USER_PROFILE: Verifying squad:", squadId);
 
             // First validate the squad exists
             const { error: squadError } = await supabase
@@ -305,23 +306,17 @@ export function useVerifySquad() {
                 .single();
 
             if (error) {
-                console.error("USER_PROFILE: Error verifying squad:", error);
+                const categorized = categorizeError(error);
+                if (categorized.isAuthError) {
+                    throw new Error("Session expired - please sign in again");
+                }
                 throw error;
             }
 
-            console.log("✅ USER_PROFILE: Squad verified successfully");
             return data;
         },
         onSuccess: (data) => {
-            // Update cache
-            queryClient.setQueryData(
-                userProfileKeys.detail(data.user_id),
-                data
-            );
-            console.log("USER_PROFILE: Cache updated after squad verification");
-        },
-        onError: (error) => {
-            console.error("USER_PROFILE: Squad verification failed:", error);
+            queryClient.setQueryData(userProfileKeys.detail(data.user_id), data);
         },
     });
 }
@@ -351,11 +346,10 @@ export function useAssignPlayer() {
             playerId,
             squadId,
         }: AssignPlayerParams): Promise<UserProfile> => {
-            if (!supabase) {
-                throw new Error("Supabase client not available");
+            const sessionValid = await ensureValidSession();
+            if (!sessionValid) {
+                throw new Error("Session expired - please sign in again");
             }
-
-            console.log("USER_PROFILE: Assigning player:", playerId);
 
             const { data, error } = await supabase
                 .from("user_profiles")
@@ -375,23 +369,17 @@ export function useAssignPlayer() {
                 .single();
 
             if (error) {
-                console.error("USER_PROFILE: Error assigning player:", error);
+                const categorized = categorizeError(error);
+                if (categorized.isAuthError) {
+                    throw new Error("Session expired - please sign in again");
+                }
                 throw error;
             }
 
-            console.log("✅ USER_PROFILE: Player assigned successfully");
             return data;
         },
         onSuccess: (data) => {
-            // Update cache
-            queryClient.setQueryData(
-                userProfileKeys.detail(data.user_id),
-                data
-            );
-            console.log("USER_PROFILE: Cache updated after player assignment");
-        },
-        onError: (error) => {
-            console.error("USER_PROFILE: Player assignment failed:", error);
+            queryClient.setQueryData(userProfileKeys.detail(data.user_id), data);
         },
     });
 }

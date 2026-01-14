@@ -1,448 +1,137 @@
 /**
- * Modern Session Management Utility
- * 
- * Provides intelligent session handling, token refresh, and targeted cache clearing
- * while preserving authentication state during routine operations.
+ * Session Management Utility
+ *
+ * Per Supabase docs:
+ * - Use getUser() for authentication validation (makes network request)
+ * - Don't frequently call getSession() - there's a background process for refresh
+ * - Let Supabase's autoRefreshToken handle token management
+ *
+ * See: https://supabase.com/docs/guides/auth/sessions
  */
 
 import { supabase } from './supabase';
 
-// Auth-related storage keys that should be preserved during cache clearing
-const AUTH_STORAGE_KEYS = [
-  'supabase.auth.token',
-  'sb-auth-token',
-  'sb-refresh-token', 
-  'sb-provider-token',
-  'mobile_session_recovery',
-  'fb_auth_debug'
-] as const;
+// =====================================================
+// PRE-MUTATION VALIDATION
+// =====================================================
 
-// Game data keys that should ALWAYS be preserved (work without auth)
-const GAME_DATA_KEYS = [
-  'GameDB', // IndexedDB database name
-  'gameState', // Game state storage
-  'tabKey', // Tab-specific game sessions (sessionStorage)
-  'tabRegistry', // Registry of active tabs for cleanup
-] as const;
+/**
+ * Ensures user is authenticated before a mutation.
+ * Uses getUser() which makes a network request to verify the session.
+ *
+ * @returns true if user is authenticated and mutation can proceed
+ */
+export async function ensureValidSession(): Promise<boolean> {
+    try {
+        // getUser() makes a network request to verify the session is valid
+        // This is the recommended approach per Supabase docs
+        const { data: { user }, error } = await supabase.auth.getUser();
 
-// User-specific keys that should be preserved (will be filtered by user ID)
-const USER_STORAGE_PATTERNS = [
-  /^voting_session_/,
-  /^user_profile_/,
-  /^auth_state_/,
-  /^tab-/, // Tab keys for game sessions
-] as const;
+        if (error) {
+            console.warn('Session validation failed:', error.message);
+            return false;
+        }
 
-// Vote-related keys that should be cleared on sign out
+        return !!user;
+    } catch (err) {
+        console.error('Session validation exception:', err);
+        return false;
+    }
+}
+
+// =====================================================
+// ERROR HANDLING
+// =====================================================
+
+export interface DatabaseError {
+    isAuthError: boolean;
+    isNetworkError: boolean;
+    isRetryable: boolean;
+    message: string;
+}
+
+/**
+ * Categorize a database error for appropriate handling
+ */
+export function categorizeError(error: unknown): DatabaseError {
+    const errorObj = error as { code?: string; message?: string } | null;
+    const code = errorObj?.code || '';
+    const message = errorObj?.message || '';
+
+    // JWT/Token errors
+    if (code === 'PGRST301' || message.includes('JWT') || message.includes('expired') || message.includes('invalid_token')) {
+        return {
+            isAuthError: true,
+            isNetworkError: false,
+            isRetryable: true,
+            message,
+        };
+    }
+
+    // Network errors
+    if (message.includes('network') || message.includes('fetch') || message.includes('NetworkError') || message.includes('timeout')) {
+        return {
+            isAuthError: false,
+            isNetworkError: true,
+            isRetryable: true,
+            message,
+        };
+    }
+
+    // Other Postgres errors (permission, constraint, etc.)
+    if (code.startsWith('PGRST') || code.startsWith('23')) {
+        return {
+            isAuthError: false,
+            isNetworkError: false,
+            isRetryable: false,
+            message,
+        };
+    }
+
+    // Unknown - assume not retryable
+    return {
+        isAuthError: false,
+        isNetworkError: false,
+        isRetryable: false,
+        message,
+    };
+}
+
+// =====================================================
+// STORAGE CLEANUP (for sign out)
+// =====================================================
+
 const VOTE_STORAGE_PATTERNS = [
-  /^voting_session_/,
-  /^user_votes_/,
-  /^vote_cache_/,
-] as const;
-
-export interface SessionError {
-  code: string;
-  message: string;
-  isAuthRelated: boolean;
-  isNetworkRelated: boolean;
-  isTemporary: boolean;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-}
-
-export interface SessionRefreshResult {
-  success: boolean;
-  error?: string;
-  shouldSignOut?: boolean;
-  retryAfter?: number;
-}
+    /^voting_session_/,
+    /^user_votes_/,
+    /^vote_cache_/,
+];
 
 /**
- * Categorizes errors to determine appropriate response
+ * Clear vote-related data from storage (called on sign out)
  */
-export function categorizeError(error: any): SessionError {
-  const code = error?.code || '';
-  const message = error?.message || '';
-  
-  // JWT/Token related errors
-  if (code === 'PGRST301' || message.includes('JWT') || message.includes('expired') || message.includes('invalid_token')) {
-    return {
-      code,
-      message,
-      isAuthRelated: true,
-      isNetworkRelated: false,
-      isTemporary: true,
-      severity: 'medium'
-    };
-  }
-  
-  // Network/connectivity errors
-  if (message.includes('network') || message.includes('fetch') || message.includes('timeout') || code === 'NETWORK_ERROR') {
-    return {
-      code,
-      message,
-      isAuthRelated: false,
-      isNetworkRelated: true,
-      isTemporary: true,
-      severity: 'low'
-    };
-  }
-  
-  // Permission/authorization errors (non-token related)
-  if (code.includes('PGRST') && code !== 'PGRST301') {
-    return {
-      code,
-      message,
-      isAuthRelated: true,
-      isNetworkRelated: false,
-      isTemporary: false,
-      severity: 'high'
-    };
-  }
-  
-  // Unknown errors - treat conservatively
-  return {
-    code,
-    message,
-    isAuthRelated: false,
-    isNetworkRelated: false,
-    isTemporary: false,
-    severity: 'medium'
-  };
-}
+export function clearVoteData(userId?: string): void {
+    try {
+        const keysToRemove: string[] = [];
 
-/**
- * Attempts to refresh the current session intelligently
- */
-export async function refreshSession(): Promise<SessionRefreshResult> {
-  try {
-    console.log('🔄 SESSION: Attempting token refresh...');
-    
-    // Get current session first
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('SESSION: Error getting current session:', sessionError);
-      return { 
-        success: false, 
-        error: sessionError.message,
-        shouldSignOut: sessionError.message.includes('invalid') || sessionError.message.includes('expired')
-      };
-    }
-    
-    if (!session) {
-      console.log('SESSION: No active session found');
-      return { success: false, error: 'No active session', shouldSignOut: true };
-    }
-    
-    // Check if token is close to expiry (refresh if less than 5 minutes remaining)
-    const now = Math.floor(Date.now() / 1000);
-    const expiresAt = session.expires_at || 0;
-    const timeUntilExpiry = expiresAt - now;
-    
-    if (timeUntilExpiry > 300) { // More than 5 minutes left
-      console.log(`SESSION: Token still valid for ${Math.floor(timeUntilExpiry / 60)} minutes`);
-      return { success: true };
-    }
-    
-    console.log('SESSION: Token needs refresh...');
-    
-    // Attempt refresh
-    const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
-    
-    if (refreshError) {
-      console.error('SESSION: Refresh failed:', refreshError);
-      
-      // Determine if we should sign out based on error type
-      const shouldSignOut = refreshError.message.includes('refresh_token') || 
-                           refreshError.message.includes('invalid') ||
-                           refreshError.message.includes('expired');
-                           
-      return { 
-        success: false, 
-        error: refreshError.message,
-        shouldSignOut,
-        retryAfter: shouldSignOut ? undefined : 30 // Retry in 30 seconds if not signing out
-      };
-    }
-    
-    if (newSession) {
-      console.log('✅ SESSION: Token refreshed successfully');
-      return { success: true };
-    }
-    
-    return { success: false, error: 'No session returned from refresh' };
-    
-  } catch (error) {
-    console.error('SESSION: Unexpected error during refresh:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      retryAfter: 60 // Retry in 1 minute for unexpected errors
-    };
-  }
-}
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key) continue;
 
-/**
- * Clears corrupted application data while preserving authentication state
- */
-export async function clearCorruptedAppData(options: {
-  preserveAuth?: boolean;
-  preserveUserData?: boolean;
-  preserveGameData?: boolean;
-  userId?: string;
-} = {}): Promise<void> {
-  const { preserveAuth = true, preserveUserData = true, preserveGameData = true, userId } = options;
-  
-  console.log('🧹 SESSION: Clearing corrupted app data...', { preserveAuth, preserveUserData, preserveGameData, userId });
-  
-  try {
-    // Step 1: Collect keys to preserve
-    const keysToPreserve = new Set<string>();
-    
-    if (preserveAuth) {
-      // Add auth-related keys
-      AUTH_STORAGE_KEYS.forEach(key => keysToPreserve.add(key));
-      
-      // Add any Supabase auth keys (they might have different names)
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
-          keysToPreserve.add(key);
+            const isVoteRelated = VOTE_STORAGE_PATTERNS.some(pattern => pattern.test(key));
+            const isUserSpecific = userId && key.includes(userId) && (
+                key.includes('voting_') ||
+                key.includes('vote_') ||
+                key.includes('player_votes')
+            );
+
+            if (isVoteRelated || isUserSpecific) {
+                keysToRemove.push(key);
+            }
         }
-      }
-    }
 
-    if (preserveGameData) {
-      // Add game data keys - these work without authentication
-      GAME_DATA_KEYS.forEach(key => keysToPreserve.add(key));
-      
-      // Add any tab-specific game data
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('tab-')) {
-          keysToPreserve.add(key);
-        }
-      }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+    } catch {
+        // Storage access may fail in some contexts
     }
-    
-    if (preserveUserData && userId) {
-      // Add user-specific keys
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key) {
-          // Check if key matches user-specific patterns
-          const isUserSpecific = USER_STORAGE_PATTERNS.some(pattern => pattern.test(key));
-          if (isUserSpecific && key.includes(userId)) {
-            keysToPreserve.add(key);
-          }
-        }
-      }
-    }
-    
-    // Step 2: Clear localStorage selectively
-    const localStorageKeys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) localStorageKeys.push(key);
-    }
-    
-    let clearedCount = 0;
-    localStorageKeys.forEach(key => {
-      if (!keysToPreserve.has(key)) {
-        localStorage.removeItem(key);
-        clearedCount++;
-      }
-    });
-    
-    // Step 3: Clear sessionStorage (less critical for auth)
-    const sessionStorageKeys: string[] = [];
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (key) sessionStorageKeys.push(key);
-    }
-    
-    // Only preserve tab-related keys in sessionStorage
-    sessionStorageKeys.forEach(key => {
-      if (!key.includes('tab') && !keysToPreserve.has(key)) {
-        sessionStorage.removeItem(key);
-      }
-    });
-    
-    console.log(`✅ SESSION: Cleared ${clearedCount} localStorage keys, preserved ${keysToPreserve.size} important keys`);
-    
-    // Important: We intentionally DO NOT clear IndexedDB here
-    // Game data in IndexedDB should persist even during auth issues
-    // since it contains publicly visible player lineups that work without auth
-    
-  } catch (error) {
-    console.error('SESSION: Error during selective cache clear:', error);
-    // If selective clearing fails, don't fall back to nuclear clear
-    throw error;
-  }
-}
-
-/**
- * Clears all vote-related data on sign out
- */
-export async function clearVoteData(userId?: string): Promise<void> {
-  console.log('🗳️ SESSION: Clearing vote data for user:', userId);
-  
-  try {
-    // Clear localStorage vote data
-    const localStorageKeys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) localStorageKeys.push(key);
-    }
-    
-    let clearedCount = 0;
-    localStorageKeys.forEach(key => {
-      // Clear vote-related patterns
-      const isVoteRelated = VOTE_STORAGE_PATTERNS.some(pattern => pattern.test(key));
-      
-      // Clear user-specific vote data if userId provided
-      const isUserSpecificVote = userId && key.includes(userId) && (
-        key.includes('voting_') || 
-        key.includes('vote_') ||
-        key.includes('player_votes')
-      );
-      
-      if (isVoteRelated || isUserSpecificVote) {
-        localStorage.removeItem(key);
-        clearedCount++;
-      }
-    });
-    
-    // Clear sessionStorage vote data
-    const sessionStorageKeys: string[] = [];
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (key) sessionStorageKeys.push(key);
-    }
-    
-    sessionStorageKeys.forEach(key => {
-      const isVoteRelated = VOTE_STORAGE_PATTERNS.some(pattern => pattern.test(key));
-      if (isVoteRelated) {
-        sessionStorage.removeItem(key);
-      }
-    });
-    
-    console.log(`✅ SESSION: Cleared ${clearedCount} vote-related keys`);
-    
-  } catch (error) {
-    console.error('SESSION: Error clearing vote data:', error);
-  }
-}
-
-/**
- * Handles database errors with intelligent retry and recovery
- */
-export async function handleDatabaseError(error: any, context: string, userId?: string): Promise<{
-  shouldRetry: boolean;
-  shouldSignOut: boolean;
-  retryAfter?: number;
-}> {
-  const categorized = categorizeError(error);
-  
-  console.log(`🚨 SESSION: Database error in ${context}:`, {
-    code: categorized.code,
-    message: categorized.message,
-    severity: categorized.severity,
-    isAuthRelated: categorized.isAuthRelated,
-    isTemporary: categorized.isTemporary
-  });
-  
-  // Handle based on error category
-  switch (categorized.severity) {
-    case 'low':
-      // Network issues - just retry
-      return { shouldRetry: true, shouldSignOut: false, retryAfter: 5 };
-      
-    case 'medium':
-      if (categorized.isAuthRelated && categorized.isTemporary) {
-        // Try to refresh session first
-        const refreshResult = await refreshSession();
-        
-        if (refreshResult.success) {
-          return { shouldRetry: true, shouldSignOut: false, retryAfter: 1 };
-        }
-        
-        if (refreshResult.shouldSignOut) {
-          return { shouldRetry: false, shouldSignOut: true };
-        }
-        
-        // Refresh failed but might recover - clear app data and retry
-        await clearCorruptedAppData({ 
-          preserveAuth: true,
-          preserveGameData: true, // Always preserve game data
-          userId 
-        });
-        return { shouldRetry: true, shouldSignOut: false, retryAfter: refreshResult.retryAfter || 30 };
-      }
-      
-      // Non-auth medium errors - clear app data and retry
-      await clearCorruptedAppData({ 
-        preserveGameData: true, // Always preserve game data
-        userId 
-      });
-      return { shouldRetry: true, shouldSignOut: false, retryAfter: 10 };
-      
-    case 'high':
-      // Permission issues - clear app data but don't sign out
-      await clearCorruptedAppData({ 
-        preserveGameData: true, // Always preserve game data
-        userId 
-      });
-      return { shouldRetry: false, shouldSignOut: false };
-      
-    case 'critical':
-      // Critical errors - sign out
-      return { shouldRetry: false, shouldSignOut: true };
-      
-    default:
-      return { shouldRetry: false, shouldSignOut: false };
-  }
-}
-
-/**
- * Modern session health check with automatic recovery
- */
-export async function checkSessionHealth(): Promise<{
-  isHealthy: boolean;
-  needsRefresh: boolean;
-  error?: string;
-}> {
-  try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      return { isHealthy: false, needsRefresh: false, error: error.message };
-    }
-    
-    if (!session) {
-      return { isHealthy: false, needsRefresh: false, error: 'No active session' };
-    }
-    
-    // Check token expiry
-    const now = Math.floor(Date.now() / 1000);
-    const expiresAt = session.expires_at || 0;
-    const timeUntilExpiry = expiresAt - now;
-    
-    if (timeUntilExpiry <= 0) {
-      return { isHealthy: false, needsRefresh: true, error: 'Token expired' };
-    }
-    
-    if (timeUntilExpiry < 300) { // Less than 5 minutes
-      return { isHealthy: true, needsRefresh: true };
-    }
-    
-    return { isHealthy: true, needsRefresh: false };
-    
-  } catch (error) {
-    return { 
-      isHealthy: false, 
-      needsRefresh: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    };
-  }
 }
