@@ -1,15 +1,21 @@
-import React, { ReactNode, createContext, useContext, useState, useEffect, useRef } from "react";
-import { useAuth } from "@/context/auth-context";
-import { usePlayers } from "@/context/players-provider";
-import { usePitchAnimation } from "@/context/pitch-animation-context";
-import { useLocation } from "react-router-dom";
-import { v4 as uuidv4 } from 'uuid';
 import { openDB } from "idb";
-
-import { Formation, Point, Position, getPointForPosition, normalizedDefaultWeights, emptyZoneScores } from "@/types/positions";
-import { Player, ScoredGamePlayer, calculateScoresForStats, GamePlayer } from "@/types/players";
-import { decodeStateFromURL } from "@/lib/utils/url-state";
+import React, { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
 import { autoBalance } from "@/auto-balance";
+import { useAuth } from "@/context/auth-context";
+import { usePitchAnimation } from "@/context/pitch-animation-context";
+import { usePlayers } from "@/context/players-provider";
+import { decodeStateFromURL } from "@/lib/utils/url-state";
+import { calculateScoresForStats, GamePlayer, Player, ScoredGamePlayer } from "@/types/players";
+import {
+    emptyZoneScores,
+    Formation,
+    getPointForPosition,
+    normalizedDefaultWeights,
+    Point,
+    Position,
+} from "@/types/positions";
 
 const DB_NAME = "GameDB";
 const STORE_NAME = "gameState";
@@ -21,7 +27,7 @@ const initDB = async () => {
             if (!db.objectStoreNames.contains(STORE_NAME)) {
                 db.createObjectStore(STORE_NAME);
             }
-        }
+        },
     });
 };
 
@@ -30,9 +36,9 @@ const getFromDB = async (key: string) => {
         const db = await initDB();
         return db.get(STORE_NAME, key);
     } catch (error) {
-        console.error('💥 GAME: IndexedDB read error:', error);
-        if (error instanceof Error && (error.name === 'InvalidStateError' || error.name === 'VersionError')) {
-            console.warn('GAME: IndexedDB corruption detected, clearing...');
+        console.error("💥 GAME: IndexedDB read error:", error);
+        if (error instanceof Error && (error.name === "InvalidStateError" || error.name === "VersionError")) {
+            console.warn("GAME: IndexedDB corruption detected, clearing...");
             await clearCorruptedDB();
         }
         return null;
@@ -44,9 +50,9 @@ const saveToDB = async (key: string, value: string) => {
         const db = await initDB();
         await db.put(STORE_NAME, value, key);
     } catch (error) {
-        console.error('💥 GAME: IndexedDB write error:', error);
-        if (error instanceof Error && (error.name === 'InvalidStateError' || error.name === 'VersionError')) {
-            console.warn('GAME: IndexedDB corruption detected, clearing...');
+        console.error("💥 GAME: IndexedDB write error:", error);
+        if (error instanceof Error && (error.name === "InvalidStateError" || error.name === "VersionError")) {
+            console.warn("GAME: IndexedDB corruption detected, clearing...");
             await clearCorruptedDB();
         }
     }
@@ -54,19 +60,19 @@ const saveToDB = async (key: string, value: string) => {
 
 const clearCorruptedDB = async () => {
     try {
-        console.log('🧹 GAME: Clearing corrupted IndexedDB...');
+        console.log("🧹 GAME: Clearing corrupted IndexedDB...");
         const db = await initDB();
-        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const tx = db.transaction(STORE_NAME, "readwrite");
         await tx.objectStore(STORE_NAME).clear();
         await tx.done;
-        console.log('✅ GAME: IndexedDB cleared successfully');
+        console.log("✅ GAME: IndexedDB cleared successfully");
     } catch (error) {
-        console.error('❌ GAME: Failed to clear IndexedDB:', error);
+        console.error("❌ GAME: Failed to clear IndexedDB:", error);
         try {
             await indexedDB.deleteDatabase(DB_NAME);
-            console.log('🗑️ GAME: IndexedDB database deleted');
+            console.log("🗑️ GAME: IndexedDB database deleted");
         } catch (deleteError) {
-            console.error('💥 GAME: Failed to delete IndexedDB:', deleteError);
+            console.error("💥 GAME: Failed to delete IndexedDB:", deleteError);
         }
     }
 };
@@ -96,8 +102,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const location = useLocation();
 
     // Routes that should NOT have game state management
-    const isStaticRoute = location.pathname.startsWith('/auth') ||
-        location.pathname === '/data-deletion';
+    const isStaticRoute = location.pathname.startsWith("/auth") || location.pathname === "/data-deletion";
 
     const [gamePlayers, setGamePlayers] = useState<Record<string, ScoredGamePlayer>>({});
     const [currentFormation, setCurrentFormation] = useState<Formation | null>(null);
@@ -115,9 +120,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             tabRegistry[tabKey] = Date.now();
             localStorage.setItem("tabRegistry", JSON.stringify(tabRegistry));
 
-            console.log('🆕 GAME: Created new tab key:', tabKey);
+            console.log("🆕 GAME: Created new tab key:", tabKey);
         } else {
-            console.log('🔄 GAME: Using existing tab key:', tabKey);
+            console.log("🔄 GAME: Using existing tab key:", tabKey);
         }
 
         return tabKey;
@@ -131,16 +136,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             try {
                 const tabRegistry = JSON.parse(localStorage.getItem("tabRegistry") || "{}");
                 const now = Date.now();
-                const oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000);
+                const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
 
                 const activeTabKeys = Object.keys(tabRegistry);
-                const oldTabKeys = activeTabKeys.filter(key => tabRegistry[key] < oneWeekAgo);
+                const oldTabKeys = activeTabKeys.filter((key) => tabRegistry[key] < oneWeekAgo);
 
                 if (oldTabKeys.length > 0) {
                     console.log(`🧹 GAME: Cleaning up ${oldTabKeys.length} old tab keys from IndexedDB`);
 
                     const db = await initDB();
-                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    const tx = db.transaction(STORE_NAME, "readwrite");
                     const store = tx.objectStore(STORE_NAME);
 
                     for (const oldKey of oldTabKeys) {
@@ -152,7 +157,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                     localStorage.setItem("tabRegistry", JSON.stringify(tabRegistry));
                 }
             } catch (error) {
-                console.error('GAME: Error during tab cleanup:', error);
+                console.error("GAME: Error during tab cleanup:", error);
             }
         };
 
@@ -208,21 +213,25 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             }
 
             // Fall back to IndexedDB state
-            console.log('GAME: Loading game state with tab key:', tabKeyRef.current);
+            console.log("GAME: Loading game state with tab key:", tabKeyRef.current);
             const savedState = await getFromDB(tabKeyRef.current);
             if (savedState) {
                 try {
                     const parsedData = JSON.parse(savedState);
-                    console.log('GAME: Loaded game state from IndexedDB:', parsedData.gamePlayers ? Object.keys(parsedData.gamePlayers).length : 0, 'players');
+                    console.log(
+                        "GAME: Loaded game state from IndexedDB:",
+                        parsedData.gamePlayers ? Object.keys(parsedData.gamePlayers).length : 0,
+                        "players"
+                    );
                     await loadJSONGamePlayers(parsedData.gamePlayers, parsedData.currentFormation);
                 } catch (error) {
-                    console.error('GAME: Error loading from IndexedDB:', error);
+                    console.error("GAME: Error loading from IndexedDB:", error);
                 }
             } else {
-                console.log('GAME: No saved game state found in IndexedDB');
+                console.log("GAME: No saved game state found in IndexedDB");
             }
         } catch (error) {
-            console.error('GAME: Error during game state initialization:', error);
+            console.error("GAME: Error during game state initialization:", error);
         } finally {
             loadingState.current = false;
         }
@@ -232,8 +241,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     useEffect(() => {
         if (isStaticRoute) return;
 
-        initializeGameState().catch(error => {
-            console.error('GAME: Game state initialization failed:', error);
+        initializeGameState().catch((error) => {
+            console.error("GAME: Game state initialization failed:", error);
         });
     }, [urlState, isStaticRoute]);
 
@@ -246,12 +255,22 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         }
     }, [gamePlayers, currentFormation, isStaticRoute]);
 
-    const saveState = async (gamePlayersToSave: Record<string, ScoredGamePlayer>, formation: Formation | null = null) => {
+    const saveState = async (
+        gamePlayersToSave: Record<string, ScoredGamePlayer>,
+        formation: Formation | null = null
+    ) => {
         const stateObject = {
             gamePlayers: gamePlayersToSave,
-            currentFormation: formation
+            currentFormation: formation,
         };
-        console.log('GAME: Saving game state with tab key:', tabKeyRef.current, 'players:', Object.keys(gamePlayersToSave).length, 'formation:', formation?.name || 'none');
+        console.log(
+            "GAME: Saving game state with tab key:",
+            tabKeyRef.current,
+            "players:",
+            Object.keys(gamePlayersToSave).length,
+            "formation:",
+            formation?.name || "none"
+        );
         await saveToDB(tabKeyRef.current, JSON.stringify(stateObject));
     };
 
@@ -263,13 +282,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
     // switch a player to a dummy player
     const removeFromGame = async (playerToRemove: ScoredGamePlayer) => {
-        setGamePlayers(prevGamePlayers => {
+        setGamePlayers((prevGamePlayers) => {
             const newGamePlayers = { ...prevGamePlayers };
             delete newGamePlayers[playerToRemove.id];
             return newGamePlayers;
         });
 
-        setGamePlayers(prevGamePlayers => {
+        setGamePlayers((prevGamePlayers) => {
             const newGamePlayers = { ...prevGamePlayers };
             const newID = uuidv4();
             newGamePlayers[newID] = {
@@ -292,7 +311,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         if (newID in gamePlayers) {
             const newPlayer = gamePlayers[newID];
 
-            setGamePlayers(prevGamePlayers => {
+            setGamePlayers((prevGamePlayers) => {
                 const newGamePlayers = { ...prevGamePlayers };
                 newGamePlayers[oldPlayer.id] = {
                     ...oldPlayer,
@@ -310,7 +329,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             });
         } else {
             const newPlayer = players[newID];
-            setGamePlayers(prevGamePlayers => {
+            setGamePlayers((prevGamePlayers) => {
                 const newGamePlayers = { ...prevGamePlayers };
                 const zoneFit = calculateScoresForStats(newPlayer.stats, normalizedDefaultWeights);
 
@@ -344,8 +363,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                         ...player,
                         team,
                         position,
-                        exactPosition
-                    }
+                        exactPosition,
+                    };
                 } else {
                     const newID = uuidv4();
                     const zoneFit = structuredClone(emptyZoneScores);
@@ -357,8 +376,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                         team,
                         position,
                         zoneFit,
-                        exactPosition
-                    }
+                        exactPosition,
+                    };
                 }
             }
         }
@@ -370,7 +389,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         const teamA = applyFormationToTeam("A", formation);
         const teamB = applyFormationToTeam("B", formation);
 
-        triggerAnimation('formation');
+        triggerAnimation("formation");
 
         setGamePlayers({ ...teamA, ...teamB });
         setCurrentFormation(formation);
@@ -393,14 +412,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         }
 
         const playerRecord: Record<string, ScoredGamePlayer> = {};
-        teamA.forEach(player => {
+        teamA.forEach((player) => {
             playerRecord[player.id] = { ...player };
         });
-        teamB.forEach(player => {
+        teamB.forEach((player) => {
             playerRecord[player.id] = { ...player };
         });
 
-        triggerAnimation('generation');
+        triggerAnimation("generation");
 
         setGamePlayers(playerRecord);
         setCurrentFormation(formation || null);
@@ -408,26 +427,29 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
     const generateTeams = async (filteredPlayers: Player[]) => {
         const normalizedWeights = normalizedDefaultWeights;
-        handleGenerateTeams(filteredPlayers.map(player => {
-            const position = { x: 0.5, y: 0.5 } as Point;
-            const zoneFit = calculateScoresForStats(player.stats, normalizedWeights);
+        handleGenerateTeams(
+            filteredPlayers.map((player) => {
+                const position = { x: 0.5, y: 0.5 } as Point;
+                const zoneFit = calculateScoresForStats(player.stats, normalizedWeights);
 
-            // Determine best position based on zone scores (will be replaced by auto-balance)
-            const bestPosition = (Object.entries(zoneFit) as [Position, number][])
-                .reduce((best, [pos, score]) => score > best.score ? { position: pos, score } : best,
-                    { position: 'CM' as Position, score: 0 }).position;
+                // Determine best position based on zone scores (will be replaced by auto-balance)
+                const bestPosition = (Object.entries(zoneFit) as [Position, number][]).reduce(
+                    (best, [pos, score]) => (score > best.score ? { position: pos, score } : best),
+                    { position: "CM" as Position, score: 0 }
+                ).position;
 
-            return {
-                id: player.id,
-                name: player.name,
-                isGuest: false,
-                team: "A",
-                position: position,
-                exactPosition: bestPosition,
-                zoneFit: zoneFit,
-                stats: player.stats
-            } as ScoredGamePlayer;
-        }));
+                return {
+                    id: player.id,
+                    name: player.name,
+                    isGuest: false,
+                    team: "A",
+                    position: position,
+                    exactPosition: bestPosition,
+                    zoneFit: zoneFit,
+                    stats: player.stats,
+                } as ScoredGamePlayer;
+            })
+        );
     };
 
     const rebalanceCurrentGame = async () => {
@@ -438,7 +460,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
             const playerWithStats = {
                 ...player,
-                stats: players[id].stats
+                stats: players[id].stats,
             };
             filteredPlayers.push(playerWithStats);
         });
@@ -447,17 +469,19 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     };
 
     return (
-        <GameContext.Provider value={{
-            gamePlayers,
-            currentFormation,
+        <GameContext.Provider
+            value={{
+                gamePlayers,
+                currentFormation,
 
-            clearGame,
-            removeFromGame,
-            switchToRealPlayer,
-            applyFormation,
-            generateTeams,
-            rebalanceCurrentGame,
-        }}>
+                clearGame,
+                removeFromGame,
+                switchToRealPlayer,
+                applyFormation,
+                generateTeams,
+                rebalanceCurrentGame,
+            }}
+        >
             {children}
         </GameContext.Provider>
     );
@@ -466,7 +490,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 export const useGame = () => {
     const context = useContext(GameContext);
     if (!context) {
-        throw new Error('useGame must be used within a GameProvider');
+        throw new Error("useGame must be used within a GameProvider");
     }
     return context;
 };

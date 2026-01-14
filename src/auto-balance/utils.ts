@@ -1,15 +1,15 @@
 /**
  * Auto-Balance Utility Functions
- * 
+ *
  * Helper functions for player conversion and team management.
- * 
+ *
  * @module auto-balance/utils
  */
 
-import type { ScoredGamePlayer} from "@/types/players";
-import type { FastPlayer, FastTeam } from "./types";
+import type { ScoredGamePlayer } from "@/types/players";
 import { isPositionSpecialist } from "@/types/players";
 import { INDEX_TO_POSITION, POSITION_COUNT } from "./constants";
+import type { FastPlayer, FastTeam } from "./types";
 
 /**
  * Converts a scored player to optimized format
@@ -56,7 +56,7 @@ export function toFastPlayer(player: ScoredGamePlayer): FastPlayer {
         isStarPlayer: false,
         starTier: 0,
         isSpecialist: isPositionSpecialist(bestScore, secondBestScore),
-        starClassification: null
+        starClassification: null,
     };
 }
 
@@ -91,9 +91,7 @@ export function createFastTeam(): FastTeam {
  * Creates an optimized comparator for position-based sorting
  * MASSIVELY prefers specialists over versatile players
  */
-export function createPositionComparator(
-    positionIdx: number
-): (a: FastPlayer, b: FastPlayer) => number {
+export function createPositionComparator(positionIdx: number): (a: FastPlayer, b: FastPlayer) => number {
     return (a: FastPlayer, b: FastPlayer): number => {
         const aScore = a.scores[positionIdx];
         const bScore = b.scores[positionIdx];
@@ -112,7 +110,7 @@ export function createPositionComparator(
         // Priority 2: If both are specialists for this position, prefer stronger specialization
         if (aIsPositionSpecialist && bIsPositionSpecialist) {
             // Higher specialization ratio = more specialized
-            const ratioDiff = (b.bestScore - b.secondBestScore) - (a.bestScore - a.secondBestScore);
+            const ratioDiff = b.bestScore - b.secondBestScore - (a.bestScore - a.secondBestScore);
             // Even tiny differences matter for specialists
             if (Math.abs(ratioDiff) > 0.01) {
                 return ratioDiff > 0 ? 100 : -100;
@@ -125,7 +123,8 @@ export function createPositionComparator(
 
         // Strong penalty for players who would be "wasted" at this position
         const efficiencyDiff = bEfficiency - aEfficiency;
-        if (Math.abs(efficiencyDiff) > 0.02) { // Even 2% efficiency difference matters
+        if (Math.abs(efficiencyDiff) > 0.02) {
+            // Even 2% efficiency difference matters
             return efficiencyDiff > 0 ? 50 : -50;
         }
 
@@ -185,7 +184,7 @@ export function removePlayerFast(array: FastPlayer[], player: FastPlayer): boole
  */
 export function cryptoRandom(): number {
     // Use crypto API if available (browser and modern Node.js)
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) {
         const array = new Uint32Array(1);
         crypto.getRandomValues(array);
         // Convert to 0-1 range (divide by max uint32 value)
@@ -251,7 +250,7 @@ export function weightedRandomSelect<T>(items: T[], weights: number[]): T {
 
     // Normalize weights to sum to 1.0
     const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-    const normalizedWeights = weights.map(w => w / totalWeight);
+    const normalizedWeights = weights.map((w) => w / totalWeight);
 
     // Create cumulative distribution
     const cumulativeWeights: number[] = [];
@@ -294,7 +293,7 @@ export function selectPlayerWithProximity(
     comparator: (a: FastPlayer, b: FastPlayer) => number,
     proximityThreshold: number = 5,
     topN: number = 4,
-    selectionWeights: number[] = [0.50, 0.30, 0.15, 0.05]
+    selectionWeights: number[] = [0.5, 0.3, 0.15, 0.05]
 ): FastPlayer {
     if (available.length === 0) {
         throw new Error("Cannot select from empty array");
@@ -347,15 +346,15 @@ export function selectPlayerWithProximity(
 export function getAvailableZones(formation: Int8Array): number[] {
     const zones: number[] = [];
     const ZONE_POSITIONS = [
-        [0],           // Goalkeeper
-        [1, 2],        // Defense
-        [3, 4, 5, 6],  // Midfield
-        [7, 8],        // Attack
+        [0], // Goalkeeper
+        [1, 2], // Defense
+        [3, 4, 5, 6], // Midfield
+        [7, 8], // Attack
     ];
 
     for (let zoneIdx = 0; zoneIdx < ZONE_POSITIONS.length; zoneIdx++) {
         const positions = ZONE_POSITIONS[zoneIdx];
-        const hasOpenings = positions.some(posIdx => formation[posIdx] > 0);
+        const hasOpenings = positions.some((posIdx) => formation[posIdx] > 0);
 
         if (hasOpenings) {
             zones.push(zoneIdx);

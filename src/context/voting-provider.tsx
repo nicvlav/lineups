@@ -1,5 +1,5 @@
-import React, { ReactNode, createContext, useContext } from "react";
-import { useVotingStats, usePlayersWithVotes, useUserVotes, useSubmitVote } from "@/hooks/use-voting";
+import React, { createContext, ReactNode, useContext } from "react";
+import { usePlayersWithVotes, useSubmitVote, useUserVotes, useVotingStats } from "@/hooks/use-voting";
 
 interface VoteData {
     playerId: string;

@@ -5,83 +5,72 @@
  * This allows gradual migration from old paths to new paths.
  */
 
-// Stats
-export type {
-  StatsKey,
-  PlayerStats,
-  StatCategory
-} from './stats';
-
-export {
-  statKeys,
-  statLabelMap,
-  statShortLabelMap,
-  statColorsMap,
-  defaultStatScores,
-  StatCategoryKeys,
-  StatCategoryNameMap,
-  CategorizedStats
-} from './stats';
-
-// Positions
-export type {
-  Position,
-  PositionDefinition,
-  Zone
-} from './positions';
-
-export {
-  POSITIONS,
-  ZONE_POSITIONS,
-  ZONE_LABELS,
-  positionKeys,
-  getPosition,
-  getPositionsInZone,
-  getPositionsSortedByPriority
-} from './positions';
-
 // Archetypes
-export type { Archetype } from './archetypes';
-
+export type { Archetype } from "./archetypes";
 export {
-  ARCHETYPES,
-  getArchetypesForPosition,
-  getArchetypeById,
-  getArchetypeCountByPosition
-} from './archetypes';
-
+    ARCHETYPES,
+    getArchetypeById,
+    getArchetypeCountByPosition,
+    getArchetypesForPosition,
+} from "./archetypes";
 // Formations
-export type { Formation } from './formations';
-
-export {
-  formationTemplates,
-  getFormation,
-  getFormationsForCount
-} from './formations';
-
 // Re-export Formation from positions for backward compatibility
-export type { Formation as FormationCompat } from './formations';
-
+export type { Formation, Formation as FormationCompat } from "./formations";
+export {
+    formationTemplates,
+    getFormation,
+    getFormationsForCount,
+} from "./formations";
 // Players
 export type {
-  Point,
-  ZoneScores,
-  PlayerArchetypeScores,
-  Player,
-  PlayerWithArchetypes,
-  GamePlayer,
-  FilledGamePlayer,
-  ScoredGamePlayer,
-  PositionedGamePlayer,
-  PositionedFilledGamePlayer,
-  PositionedScoredGamePlayer,
-  PositionAndScore,
-  ZoneAverages
-} from './players';
-
+    FilledGamePlayer,
+    GamePlayer,
+    Player,
+    PlayerArchetypeScores,
+    PlayerWithArchetypes,
+    Point,
+    PositionAndScore,
+    PositionedFilledGamePlayer,
+    PositionedGamePlayer,
+    PositionedScoredGamePlayer,
+    ScoredGamePlayer,
+    ZoneAverages,
+    ZoneScores,
+} from "./players";
 export {
-  emptyZoneScores,
-  getTopPositions,
-  getBestArchetypeForPosition,
-  isPositionSpecialist
-} from './players';
+    emptyZoneScores,
+    getBestArchetypeForPosition,
+    getTopPositions,
+    isPositionSpecialist,
+} from "./players";
+// Positions
+export type {
+    Position,
+    PositionDefinition,
+    Zone,
+} from "./positions";
+export {
+    getPosition,
+    getPositionsInZone,
+    getPositionsSortedByPriority,
+    POSITIONS,
+    positionKeys,
+    ZONE_LABELS,
+    ZONE_POSITIONS,
+} from "./positions";
+// Stats
+export type {
+    PlayerStats,
+    StatCategory,
+    StatsKey,
+} from "./stats";
+export {
+    CategorizedStats,
+    defaultStatScores,
+    StatCategoryKeys,
+    StatCategoryNameMap,
+    statColorsMap,
+    statKeys,
+    statLabelMap,
+    statShortLabelMap,
+} from "./stats";

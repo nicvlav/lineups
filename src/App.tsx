@@ -1,12 +1,12 @@
-import { SupabaseProvider } from "@/context/supabase-provider";
-import { AuthProvider } from "@/context/auth-context";
-import { ThemeProvider } from "@/context/theme-provider";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { queryClient } from "@/lib/query-client";
 import { useEffect } from "react";
-import Layout from "@/components/layout/layout";
 import { Toaster } from "sonner";
+import Layout from "@/components/layout/layout";
+import { AuthProvider } from "@/context/auth-context";
+import { SupabaseProvider } from "@/context/supabase-provider";
+import { ThemeProvider } from "@/context/theme-provider";
+import { queryClient } from "@/lib/query-client";
 
 const App = () => {
     const currentUrl = new URL(window.location.href);

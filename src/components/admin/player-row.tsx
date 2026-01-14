@@ -1,22 +1,17 @@
-import { useState, useRef, useEffect } from "react";
-import { useUpdatePlayer, useDeletePlayer } from "@/hooks/use-players";
-import { useVoting } from "@/context/voting-provider";
-import { useAuth } from "@/context/auth-context";
-import { Player } from "@/types/players";
-import { TableCell, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
+import { Check, Trash2, Vote, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Vote, Trash2, Check, X } from "lucide-react";
-import { toast } from "sonner";
-import { format } from "date-fns";
+import { TableCell, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PlayerVoting } from "@/components/voting/player-voting-dialog";
+import { useAuth } from "@/context/auth-context";
+import { useVoting } from "@/context/voting-provider";
+import { useDeletePlayer, useUpdatePlayer } from "@/hooks/use-players";
+import { Player } from "@/types/players";
 
 interface PlayerRowProps {
     player: Player;
@@ -132,118 +127,116 @@ export function PlayerRow({ player }: PlayerRowProps) {
 
     return (
         <>
-        <TableRow className="group">
-            <TableCell>
-                {isEditing ? (
-                    <div className="flex items-center gap-2 min-w-60">
-                        <Input
-                            ref={inputRef}
-                            value={editedName}
-                            onChange={(e) => setEditedName(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            className="h-8"
-                            disabled={updatePlayerMutation.isPending}
-                        />
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={handleSave}
-                            disabled={updatePlayerMutation.isPending}
-                            className="h-8 w-8 p-0"
+            <TableRow className="group">
+                <TableCell>
+                    {isEditing ? (
+                        <div className="flex items-center gap-2 min-w-60">
+                            <Input
+                                ref={inputRef}
+                                value={editedName}
+                                onChange={(e) => setEditedName(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                className="h-8"
+                                disabled={updatePlayerMutation.isPending}
+                            />
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleSave}
+                                disabled={updatePlayerMutation.isPending}
+                                className="h-8 w-8 p-0"
+                            >
+                                <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleCancel}
+                                disabled={updatePlayerMutation.isPending}
+                                className="h-8 w-8 p-0"
+                            >
+                                <X className="h-4 w-4 text-red-600" />
+                            </Button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleStartEdit}
+                            className="text-left hover:text-primary transition-colors font-medium"
                         >
-                            <Check className="h-4 w-4 text-green-600" />
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={handleCancel}
-                            disabled={updatePlayerMutation.isPending}
-                            className="h-8 w-8 p-0"
-                        >
-                            <X className="h-4 w-4 text-red-600" />
-                        </Button>
+                            {player.name}
+                        </button>
+                    )}
+                </TableCell>
+
+                <TableCell>
+                    <Badge variant={player.vote_count > 0 ? "default" : "secondary"}>{player.vote_count}</Badge>
+                </TableCell>
+
+                <TableCell className="text-muted-foreground text-sm">
+                    {player.created_at ? format(new Date(player.created_at), "MMM d, yyyy") : "—"}
+                </TableCell>
+
+                <TableCell className="w-24">
+                    <div className="flex items-center gap-2">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={handleOpenVoting}
+                                        disabled={!canVote}
+                                        className="h-8 w-8 p-0 disabled:opacity-50"
+                                    >
+                                        <Vote className={`h-4 w-4 ${hasVoted ? "text-green-600" : ""}`} />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>
+                                        {!canVote
+                                            ? "Cannot vote for yourself"
+                                            : hasVoted
+                                              ? "Edit vote"
+                                              : "Vote for player"}
+                                    </p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={handleDelete}
+                                        disabled={!canDelete || deletePlayerMutation.isPending}
+                                        className="h-8 w-8 p-0 hover:text-destructive disabled:opacity-50"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    {canDelete
+                                        ? "Delete player"
+                                        : `Cannot delete - player has ${player.vote_count} vote${player.vote_count !== 1 ? "s" : ""}`}
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     </div>
-                ) : (
-                    <button
-                        onClick={handleStartEdit}
-                        className="text-left hover:text-primary transition-colors font-medium"
-                    >
-                        {player.name}
-                    </button>
-                )}
-            </TableCell>
+                </TableCell>
+            </TableRow>
 
-            <TableCell>
-                <Badge variant={player.vote_count > 0 ? "default" : "secondary"}>
-                    {player.vote_count}
-                </Badge>
-            </TableCell>
-
-            <TableCell className="text-muted-foreground text-sm">
-                {player.created_at ? format(new Date(player.created_at), "MMM d, yyyy") : "—"}
-            </TableCell>
-
-            <TableCell className="w-24">
-                <div className="flex items-center gap-2">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={handleOpenVoting}
-                                    disabled={!canVote}
-                                    className="h-8 w-8 p-0 disabled:opacity-50"
-                                >
-                                    <Vote className={`h-4 w-4 ${hasVoted ? 'text-green-600' : ''}`} />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>
-                                    {!canVote
-                                        ? "Cannot vote for yourself"
-                                        : hasVoted
-                                        ? "Edit vote"
-                                        : "Vote for player"}
-                                </p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={handleDelete}
-                                    disabled={!canDelete || deletePlayerMutation.isPending}
-                                    className="h-8 w-8 p-0 hover:text-destructive disabled:opacity-50"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                {canDelete
-                                    ? "Delete player"
-                                    : `Cannot delete - player has ${player.vote_count} vote${player.vote_count !== 1 ? "s" : ""}`}
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </div>
-            </TableCell>
-        </TableRow>
-
-        {/* Vote Dialog */}
-        {isVoting && (
-            <PlayerVoting
-                player={player}
-                onVoteComplete={handleVoteSubmit}
-                onClose={handleCloseVoting}
-                isEditing={hasVoted}
-                existingVotes={userVote}
-            />
-        )}
-    </>
+            {/* Vote Dialog */}
+            {isVoting && (
+                <PlayerVoting
+                    player={player}
+                    onVoteComplete={handleVoteSubmit}
+                    onClose={handleCloseVoting}
+                    isEditing={hasVoted}
+                    existingVotes={userVote}
+                />
+            )}
+        </>
     );
 }

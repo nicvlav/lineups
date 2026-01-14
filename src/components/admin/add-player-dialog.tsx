@@ -1,5 +1,7 @@
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useAddPlayer } from "@/hooks/use-players";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
@@ -8,11 +10,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { useAddPlayer } from "@/hooks/use-players";
 
 interface AddPlayerDialogProps {
     open: boolean;
@@ -64,9 +64,7 @@ export function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogProps) {
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>Add New Player</DialogTitle>
-                        <DialogDescription>
-                            Enter the player's name to add them to the squad.
-                        </DialogDescription>
+                        <DialogDescription>Enter the player's name to add them to the squad.</DialogDescription>
                     </DialogHeader>
 
                     <div className="grid gap-4 py-4">
@@ -93,9 +91,7 @@ export function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogProps) {
                             Cancel
                         </Button>
                         <Button type="submit" disabled={addPlayerMutation.isPending}>
-                            {addPlayerMutation.isPending && (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
+                            {addPlayerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Add Player
                         </Button>
                     </DialogFooter>

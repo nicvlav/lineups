@@ -6,8 +6,8 @@
  * @module auto-balance/types
  */
 
-import type { Formation, StarZoneClassification } from "@/types/positions";
 import type { ScoredGamePlayer } from "@/types/players";
+import type { Formation, StarZoneClassification } from "@/types/positions";
 import type { BalanceConfiguration } from "./metrics-config";
 
 /**
@@ -65,7 +65,7 @@ export interface FastPlayer {
     assignedPosition: number;
 
     /** Assigned team */
-    team: 'A' | 'B' | null;
+    team: "A" | "B" | null;
 
     // ===== PRE-CALCULATED ANALYTICS (calculated once before Monte Carlo) =====
 
@@ -161,7 +161,6 @@ export interface Teams {
     teamB: FastTeam;
 }
 
-
 /**
  * Result of a simulation run
  */
@@ -225,4 +224,3 @@ export interface AssignmentContext {
     selectionWeights: number[];
     topN: number;
 }
-

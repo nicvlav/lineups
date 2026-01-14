@@ -1,12 +1,10 @@
-import { ModeToggle } from "@/components/layout/mode-toggle"
-import { Home, ListChecks, SquareUser, Vote, LogIn, LogOut, TableProperties, type LucideIcon } from "lucide-react";
+import { Home, ListChecks, LogIn, LogOut, type LucideIcon, SquareUser, TableProperties, Vote } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { LAYOUT, GAP, ANIMATIONS } from "@/lib/design-tokens";
-import { useAuth } from "@/context/auth-context";
+import { ModeToggle } from "@/components/layout/mode-toggle";
 import { Button } from "@/components/ui/button";
-// import { PlayerAssociation } from "@/components/auth/dialogs/player-association";
-// import { useState } from "react";
+import { useAuth } from "@/context/auth-context";
+import { ANIMATIONS, GAP, LAYOUT } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils";
 
 interface HeaderBarProps {
     compact: boolean;
@@ -20,11 +18,10 @@ interface TabIconProps {
 
 const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
     const { user, signOut } = useAuth();
-    // const [showPlayerAssociation, setShowPlayerAssociation] = useState(false);
     const iconSize = compact ? 16 : 20;
 
     // Detect staging environment
-    const isStaging = window.location.hostname.includes('staging');
+    const isStaging = window.location.hostname.includes("staging");
 
     const canVote = user !== null;
 
@@ -33,17 +30,17 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
         e.stopPropagation();
 
         try {
-            console.log('🚪 HEADER: Initiating sign out...');
+            console.log("🚪 HEADER: Initiating sign out...");
             const result = await signOut();
 
             if (result.error) {
-                console.error('HEADER: Sign out failed:', result.error);
+                console.error("HEADER: Sign out failed:", result.error);
                 // Still continue - auth context should have cleared local state
             } else {
-                console.log('✅ HEADER: Sign out successful');
+                console.log("✅ HEADER: Sign out successful");
             }
         } catch (error) {
-            console.error('HEADER: Unexpected sign out error:', error);
+            console.error("HEADER: Unexpected sign out error:", error);
             // Even if error, auth context should have cleared state
         }
     };
@@ -51,13 +48,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
     const TabIcon = ({ icon: Icon, to, label }: TabIconProps) => (
         <NavLink
             to={to}
-            onClick={() => {
-                console.log(`HeaderBar: Navigation clicked - ${label} to ${to}`);
-                // Use unique timer names with timestamp to avoid conflicts
-                const timerId = `HeaderBar: Navigate to ${to} - ${Date.now()}`;
-                console.time(timerId);
-                setTimeout(() => console.timeEnd(timerId), 100);
-            }}
             className={({ isActive }) =>
                 cn(
                     "relative group inline-flex items-center justify-center",
@@ -90,21 +80,25 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
     return (
         <>
             <header className="w-full bg-background/95 border-b-2 border-border">
-                <div className={cn(
-                    "grid grid-cols-3 items-center w-full",
-                    "sm:grid-cols-3 grid-cols-[auto_1fr_auto]", // On mobile: auto-sized sides, flexible center
-                    LAYOUT.header.height, // h-16
-                    compact ? "px-4" : "px-4"
-                )}>
+                <div
+                    className={cn(
+                        "grid grid-cols-3 items-center w-full",
+                        "sm:grid-cols-3 grid-cols-[auto_1fr_auto]", // On mobile: auto-sized sides, flexible center
+                        LAYOUT.header.height, // h-16
+                        compact ? "px-4" : "px-4"
+                    )}
+                >
                     {/* Brand/Logo - Left column */}
                     <div className="flex justify-start">
-                        <h1 className={cn(
-                            "font-bold text-foreground select-none tracking-tight rounded-xl",
-                            isStaging
-                                ? "bg-linear-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30"
-                                : "bg-linear-to-r from-muted/40 to-muted/20",
-                            compact ? "text-lg px-3 py-1.5" : "text-xl px-4 py-2"
-                        )}>
+                        <h1
+                            className={cn(
+                                "font-bold text-foreground select-none tracking-tight rounded-xl",
+                                isStaging
+                                    ? "bg-linear-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30"
+                                    : "bg-linear-to-r from-muted/40 to-muted/20",
+                                compact ? "text-lg px-3 py-1.5" : "text-xl px-4 py-2"
+                            )}
+                        >
                             {isStaging ? "LM 🚧" : "LM"}
                         </h1>
                     </div>
@@ -112,11 +106,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                     {/* Navigation - Center column (always centered) */}
                     <div className="flex justify-center">
                         <nav
-                            className={cn(
-                                "flex items-center justify-center",
-                                "bg-muted/10 rounded-2xl p-1",
-                                GAP.xs
-                            )} // gap-1
+                            className={cn("flex items-center justify-center", "bg-muted/10 rounded-2xl p-1", GAP.xs)} // gap-1
                             role="navigation"
                             aria-label="Main navigation"
                         >
@@ -126,37 +116,23 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
 
                             <TabIcon icon={ListChecks} to="/generate" label="Generate Teams" />
 
-                            {canVote && (
-                                <TabIcon icon={TableProperties} to="/manage" label="Manage Players" />
-                            )}
+                            {canVote && <TabIcon icon={TableProperties} to="/manage" label="Manage Players" />}
 
-                            {canVote && (
-                                <TabIcon icon={Vote} to="/vote" label="Vote" />
-                            )}
-
-
+                            {canVote && <TabIcon icon={Vote} to="/vote" label="Vote" />}
                         </nav>
                     </div>
 
                     {/* Actions - Right column */}
                     <div className="flex justify-end">
-                        <div className={cn(
-                            "flex items-center gap-2",
-                            "bg-gradient-to-l from-muted/40 to-muted/20 rounded-xl",
-                            compact ? "p-1.5" : "p-2"
-                        )}>
+                        <div
+                            className={cn(
+                                "flex items-center gap-2",
+                                "bg-gradient-to-l from-muted/40 to-muted/20 rounded-xl",
+                                compact ? "p-1.5" : "p-2"
+                            )}
+                        >
                             {user ? (
                                 <>
-                                    {/* <Button
-                                        variant="ghost"
-                                        size={compact ? "sm" : "default"}
-                                        onClick={() => setShowPlayerAssociation(true)}
-                                        className="text-muted-foreground hover:text-foreground"
-                                        title="Associate with player profile"
-                                    >
-                                        <User className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
-                                        {!compact && "Profile"}
-                                    </Button> */}
                                     <Button
                                         variant="ghost"
                                         size={compact ? "sm" : "default"}
@@ -185,13 +161,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                     </div>
                 </div>
             </header>
-
-            {/* {showPlayerAssociation && (
-                <PlayerAssociation
-                    open={showPlayerAssociation}
-                    onClose={() => setShowPlayerAssociation(false)}
-                />
-            )} */}
         </>
     );
 };

@@ -26,13 +26,13 @@
  * applyVisualScaling(100) // Returns 100 (best always shows full)
  */
 export function applyVisualScaling(relativePercent: number, exponent: number = 2.5): number {
-  if (relativePercent <= 0) return 0;
-  if (relativePercent >= 100) return 100;
+    if (relativePercent <= 0) return 0;
+    if (relativePercent >= 100) return 100;
 
-  const x = relativePercent / 100; // Normalize to 0-1
-  const scaled = Math.pow(x, exponent); // Exponential transform
+    const x = relativePercent / 100; // Normalize to 0-1
+    const scaled = x ** exponent; // Exponential transform
 
-  return scaled * 100;
+    return scaled * 100;
 }
 
 /**
@@ -52,18 +52,18 @@ export function applyVisualScaling(relativePercent: number, exponent: number = 2
  * calculateRelativeScore(70, 80) // Returns 90
  */
 export function calculateRelativeScore(currentScore: number, bestScore: number): number {
-  if (bestScore === 0) return 0;
-  if (currentScore >= bestScore) return 100;
+    if (bestScore === 0) return 0;
+    if (currentScore >= bestScore) return 100;
 
-  const percentage = (100 - (bestScore - currentScore)) / 100;
+    const percentage = (100 - (bestScore - currentScore)) / 100;
 
-  if (currentScore > 85) return percentage * 100;
+    if (currentScore > 85) return percentage * 100;
 
-  if (currentScore > 70) return Math.pow(percentage, 1.25) * 100;
+    if (currentScore > 70) return percentage ** 1.25 * 100;
 
-  if (currentScore > 60) return Math.pow(percentage, 1.5) * 95;
+    if (currentScore > 60) return percentage ** 1.5 * 95;
 
-  return Math.pow(percentage, 2) * 90;
+    return percentage ** 2 * 90;
 }
 
 /**
@@ -77,25 +77,18 @@ export function calculateRelativeScore(currentScore: number, bestScore: number):
  * calculateAllRelativeScores(positions);
  * // Returns: { ST: 100, AM: 95, CM: 90 }
  */
-export function calculateAllRelativeScores<T extends Record<string, number>>(
-  scores: T
-): Record<keyof T, number> {
-  const values = Object.values(scores) as number[];
-  const bestScore = Math.max(...values);
+export function calculateAllRelativeScores<T extends Record<string, number>>(scores: T): Record<keyof T, number> {
+    const values = Object.values(scores) as number[];
+    const bestScore = Math.max(...values);
 
-  if (bestScore === 0) {
-    // No data - return zeros
+    if (bestScore === 0) {
+        // No data - return zeros
+        return Object.fromEntries(Object.keys(scores).map((key) => [key, 0])) as Record<keyof T, number>;
+    }
+
     return Object.fromEntries(
-      Object.keys(scores).map(key => [key, 0])
+        Object.entries(scores).map(([key, score]) => [key, calculateRelativeScore(score as number, bestScore)])
     ) as Record<keyof T, number>;
-  }
-
-  return Object.fromEntries(
-    Object.entries(scores).map(([key, score]) => [
-      key,
-      calculateRelativeScore(score as number, bestScore)
-    ])
-  ) as Record<keyof T, number>;
 }
 
 /**
@@ -107,12 +100,12 @@ export function calculateAllRelativeScores<T extends Record<string, number>>(
  * @returns Array of [key, score] tuples, sorted by score descending
  */
 export function getTopRelativeScores<T extends Record<string, number>>(
-  scores: T,
-  n: number,
-  excludeKeys: (keyof T)[] = []
+    scores: T,
+    n: number,
+    excludeKeys: (keyof T)[] = []
 ): Array<[keyof T, number]> {
-  return Object.entries(scores)
-    .filter(([key]) => !excludeKeys.includes(key as keyof T))
-    .sort(([, a], [, b]) => (b as number) - (a as number))
-    .slice(0, n) as Array<[keyof T, number]>;
+    return Object.entries(scores)
+        .filter(([key]) => !excludeKeys.includes(key as keyof T))
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, n) as Array<[keyof T, number]>;
 }

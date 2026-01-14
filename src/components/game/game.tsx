@@ -1,16 +1,14 @@
-import TeamArea from "@/components/game/pitch/team-area"; // Render directly
-import Panel from "@/components/shared/panel"
-import { Button } from "@/components/ui/button"
 import { Share, Trash2 } from "lucide-react";
-import { useGame } from "@/context/game-provider"
-import { encodeStateToURL } from "@/lib/utils/url-state";
-import FormationSelector from "@/components/game/formation-selector"
-import { cn } from "@/lib/utils";
-import { ANIMATIONS } from "@/lib/design-tokens";
-import { ActionBarTwoColumn } from "@/components/ui/action-bar";
 import { toast } from "sonner";
-
-// import { Separator } from "@/components/ui/separator"
+import FormationSelector from "@/components/game/formation-selector";
+import TeamArea from "@/components/game/pitch/team-area"; // Render directly
+import Panel from "@/components/shared/panel";
+import { ActionBarTwoColumn } from "@/components/ui/action-bar";
+import { Button } from "@/components/ui/button";
+import { useGame } from "@/context/game-provider";
+import { ANIMATIONS } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils";
+import { encodeStateToURL } from "@/lib/utils/url-state";
 
 interface GameProps {
     isCompact: boolean;
@@ -27,12 +25,12 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
             toast.success("Link copied to clipboard!", {
                 description: "Share this link to let others see your lineup",
                 duration: 3000,
-                icon: '🔗'
+                icon: "🔗",
             });
         } catch (error) {
             toast.error("Failed to copy link", {
                 description: "Please try again",
-                duration: 3000
+                duration: 3000,
             });
         }
     };
@@ -40,14 +38,13 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
     return (
         <div className="w-full h-full p-4">
             {/* Layout for small screens (stacked and tall) */}
-            <div className='flex flex-col h-full w-full max-w-full'>
-
+            <div className="flex flex-col h-full w-full max-w-full">
                 {/* Action Bar - Professional alignment using unified component */}
                 <ActionBarTwoColumn
                     left={<FormationSelector />}
                     right={
                         <div className="flex gap-2">
-                            <Button 
+                            <Button
                                 variant="ghost"
                                 size="sm"
                                 className={cn(
@@ -61,7 +58,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                                 <span className="hidden sm:inline ml-2">Clear</span>
                             </Button>
 
-                            <Button 
+                            <Button
                                 variant="ghost"
                                 size="sm"
                                 className={cn(
@@ -78,16 +75,14 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                 />
 
                 {isCompact && (
-                  <div className="flex-1 flex flex-col w-full gap-2">
-                        <Panel>
+                    <div className="flex-1 flex flex-col w-full gap-2">
+                        <Panel variant="game">
                             {/* First Div */}
                             <TeamArea team="A" playerSize={playerSize} />
 
                             {/* Second Div */}
                             <TeamArea team="B" playerSize={playerSize} />
                         </Panel>
-
-
                     </div>
                 )}
 
@@ -103,6 +98,6 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                 )}
             </div>
         </div>
-    )
-}
+    );
+};
 export default Game;

@@ -7,9 +7,9 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { playersKeys } from "./use-players";
 import { votingKeys } from "./use-voting";
-import { supabase } from "@/lib/supabase";
 
 /**
  * Prefetch players data in the background
@@ -23,10 +23,7 @@ export function usePrefetchPlayers() {
         queryClient.prefetchQuery({
             queryKey: playersKeys.all,
             queryFn: async () => {
-                const { data } = await supabase
-                    .from("players")
-                    .select("*")
-                    .order("name", { ascending: false });
+                const { data } = await supabase.from("players").select("*").order("name", { ascending: false });
                 return data || [];
             },
             staleTime: 10 * 60 * 1000, // Match main query
@@ -47,7 +44,10 @@ export function usePrefetchVotingStats() {
                 const [playersCount, playersWithVotes, totalVoters] = await Promise.all([
                     supabase.from("players").select("id", { count: "exact", head: true }),
                     supabase.from("players").select("id", { count: "exact", head: true }).gt("vote_count", 0),
-                    supabase.from("user_profiles").select("user_id", { count: "exact", head: true }).eq("is_verified", true),
+                    supabase
+                        .from("user_profiles")
+                        .select("user_id", { count: "exact", head: true })
+                        .eq("is_verified", true),
                 ]);
                 return {
                     totalPlayers: playersCount.count || 0,

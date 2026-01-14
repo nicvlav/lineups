@@ -5,10 +5,10 @@
  * This provides consistent player ratings across the entire application.
  */
 
-import type { Position, StarZoneClassification } from '@/types/positions';
-import type { ZoneScores, PlayerArchetypeScores } from "@/types/players";
-import { getArchetypeById } from '@/types/archetypes';
-import { positionsSet } from '@/types/positions';
+import { getArchetypeById } from "@/types/archetypes";
+import type { PlayerArchetypeScores, ZoneScores } from "@/types/players";
+import type { Position, StarZoneClassification } from "@/types/positions";
+import { positionsSet } from "@/types/positions";
 
 // ============ Specialist Determination ============
 /**
@@ -20,29 +20,29 @@ export const SPECIALIST_THRESHOLD = 3;
  * Determine if player is a specialist and get their primary role
  */
 export function getPrimaryArchetypeId(archetypeScores: PlayerArchetypeScores): string | null {
-  // Get all position scores (excluding GK for now)
-  const positions = Object.entries(archetypeScores)
-    .filter(([pos]) => pos !== 'GK')
-    .map(([_, data]) => ({
-      score: data.bestScore,
-      archetypeId: data.bestArchetypeId
-    }))
-    .sort((a, b) => b.score - a.score);
+    // Get all position scores (excluding GK for now)
+    const positions = Object.entries(archetypeScores)
+        .filter(([pos]) => pos !== "GK")
+        .map(([_, data]) => ({
+            score: data.bestScore,
+            archetypeId: data.bestArchetypeId,
+        }))
+        .sort((a, b) => b.score - a.score);
 
-  return positions.length ? positions[0].archetypeId : null;
+    return positions.length ? positions[0].archetypeId : null;
 }
 
 /**
  * Generate play style buzzwords based on archetype strengths
  */
 export function getPlayStyleBuzzwords(archetypeId: string | null): string[] {
-  if (!archetypeId) return [];
+    if (!archetypeId) return [];
 
-  const archetype = getArchetypeById(archetypeId);
-  if (!archetype) return [];
+    const archetype = getArchetypeById(archetypeId);
+    if (!archetype) return [];
 
-  // Return up to 3 strength labels as buzzwords
-  return archetype.strengthLabels.slice(0, 3);
+    // Return up to 3 strength labels as buzzwords
+    return archetype.strengthLabels.slice(0, 3);
 }
 
 // ============ Zone Classification (Generic) ============
@@ -66,118 +66,120 @@ export function getPlayStyleBuzzwords(archetypeId: string | null): string[] {
  * Each position's weights sum to 1.0
  */
 const POSITION_ZONE_WEIGHTS: Record<Position, { def: number; mid: number; att: number }> = {
-  // Pure Defensive
-  CB: { def: 1.0, mid: 0.0, att: 0.0 },
-  FB: { def: 0.7, mid: 0.3, att: 0.0 }, // FB overlaps into midfield
+    // Pure Defensive
+    CB: { def: 1.0, mid: 0.0, att: 0.0 },
+    FB: { def: 0.7, mid: 0.3, att: 0.0 }, // FB overlaps into midfield
 
-  // Defensive Midfield
-  DM: { def: 0.6, mid: 0.4, att: 0.0 }, // DM is hybrid def/mid
+    // Defensive Midfield
+    DM: { def: 0.6, mid: 0.4, att: 0.0 }, // DM is hybrid def/mid
 
-  // Pure Midfield
-  CM: { def: 0.0, mid: 1.0, att: 0.0 },
-  WM: { def: 0.0, mid: 0.7, att: 0.3 }, // WM can push forward
+    // Pure Midfield
+    CM: { def: 0.0, mid: 1.0, att: 0.0 },
+    WM: { def: 0.0, mid: 0.7, att: 0.3 }, // WM can push forward
 
-  // Attacking Midfield
-  AM: { def: 0.0, mid: 0.7, att: 0.3 }, // AM is hybrid mid/att
+    // Attacking Midfield
+    AM: { def: 0.0, mid: 0.7, att: 0.3 }, // AM is hybrid mid/att
 
-  // Pure Attack
-  ST: { def: 0.0, mid: 0.0, att: 1.0 },
-  WR: { def: 0.0, mid: 0.0, att: 1.0 },
+    // Pure Attack
+    ST: { def: 0.0, mid: 0.0, att: 1.0 },
+    WR: { def: 0.0, mid: 0.0, att: 1.0 },
 
-  // Goalkeeper (not used in classification)
-  GK: { def: 0.0, mid: 0.0, att: 0.0 }
+    // Goalkeeper (not used in classification)
+    GK: { def: 0.0, mid: 0.0, att: 0.0 },
 };
 
-export function classifyPlayerByZone(zoneFit: ZoneScores, availablePositions: Set<Position> = positionsSet): StarZoneClassification {
-  // Now recalculate best scores ONLY for positions that exist in the formation
-  const defensivePositions: Position[] = ['CB', 'FB'];
-  const midfieldPositions: Position[] = ['DM', 'CM', 'WM'];
-  const attackingPositions: Position[] = ['ST', 'WR', 'AM'];
+export function classifyPlayerByZone(
+    zoneFit: ZoneScores,
+    availablePositions: Set<Position> = positionsSet
+): StarZoneClassification {
+    // Now recalculate best scores ONLY for positions that exist in the formation
+    const defensivePositions: Position[] = ["CB", "FB"];
+    const midfieldPositions: Position[] = ["DM", "CM", "WM"];
+    const attackingPositions: Position[] = ["ST", "WR", "AM"];
 
-  // Filter to only available positions and get max scores
-  const bestDefensiveScore = defensivePositions
-    .filter(pos => availablePositions.has(pos))
-    .reduce((prev, curr) => {
-      return Math.max(prev, zoneFit[curr]);
-    }, 0)
+    // Filter to only available positions and get max scores
+    const bestDefensiveScore = defensivePositions
+        .filter((pos) => availablePositions.has(pos))
+        .reduce((prev, curr) => {
+            return Math.max(prev, zoneFit[curr]);
+        }, 0);
 
-  const bestMidfieldScore = midfieldPositions
-    .filter(pos => availablePositions.has(pos))
-    .reduce((prev, curr) => {
-      return Math.max(prev, zoneFit[curr]);
-    }, 0)
+    const bestMidfieldScore = midfieldPositions
+        .filter((pos) => availablePositions.has(pos))
+        .reduce((prev, curr) => {
+            return Math.max(prev, zoneFit[curr]);
+        }, 0);
 
-  const bestAttackingScore = attackingPositions
-    .filter(pos => availablePositions.has(pos))
-    .reduce((prev, curr) => {
-      return Math.max(prev, zoneFit[curr]);
-    }, 0)
+    const bestAttackingScore = attackingPositions
+        .filter((pos) => availablePositions.has(pos))
+        .reduce((prev, curr) => {
+            return Math.max(prev, zoneFit[curr]);
+        }, 0);
 
-  const bestScore = Math.max(bestDefensiveScore, bestMidfieldScore, bestAttackingScore);
-  let sum = 0;
-  let count = 0;
+    const bestScore = Math.max(bestDefensiveScore, bestMidfieldScore, bestAttackingScore);
+    let sum = 0;
+    let count = 0;
 
-  const qualifyingPositions: Position[] = [];
+    const qualifyingPositions: Position[] = [];
 
-  Object.keys(zoneFit).forEach(key => {
-    const pos = key as Position;
-    const score = zoneFit[pos];
-    sum += score;
-    count++;
-    if ((score >= 90) || (score >= (bestScore - 3))) {
-      qualifyingPositions.push(pos);
+    Object.keys(zoneFit).forEach((key) => {
+        const pos = key as Position;
+        const score = zoneFit[pos];
+        sum += score;
+        count++;
+        if (score >= 90 || score >= bestScore - 3) {
+            qualifyingPositions.push(pos);
+        }
+    });
+
+    // Calculate weighted zone scores
+    let defScore = 0;
+    let midScore = 0;
+    let attScore = 0;
+
+    for (const pos of qualifyingPositions) {
+        const weights = POSITION_ZONE_WEIGHTS[pos];
+        defScore += weights.def;
+        midScore += weights.mid;
+        attScore += weights.att;
     }
-  });
 
-  // Calculate weighted zone scores
-  let defScore = 0;
-  let midScore = 0;
-  let attScore = 0;
+    let specialistType: "Defender" | "Attacker" | "Midfielder" | "All-rounder";
 
-  for (const pos of qualifyingPositions) {
-    const weights = POSITION_ZONE_WEIGHTS[pos];
-    defScore += weights.def;
-    midScore += weights.mid;
-    attScore += weights.att;
-  }
+    const totalWeightedScore = (defScore + midScore + attScore) * bestScore;
 
-  let specialistType: 'Defender' | 'Attacker' | 'Midfielder' | 'All-rounder';
-
-  const totalWeightedScore = (defScore + midScore + attScore) * bestScore;
-
-  if (totalWeightedScore === 0) {
-    specialistType = 'All-rounder';
-  } else {
-    // Calculate weighted proportions
-    const defProp = defScore * bestDefensiveScore / totalWeightedScore;
-    const midProp = midScore * bestMidfieldScore / totalWeightedScore;
-    const attProp = attScore * bestAttackingScore / totalWeightedScore;
-
-    const maxProp = Math.max(defProp, midProp, attProp);
-    const SPECIALIST_THRESHOLD = 0.5; // Need 50%+ in one zone to be specialist
-
-    // Classify based on weighted proportions
-    if (maxProp >= SPECIALIST_THRESHOLD) {
-      // Clear specialist - one zone has majority
-      if (maxProp === defProp) {
-        specialistType = 'Defender';
-      } else if (maxProp === midProp) {
-        specialistType = 'Midfielder';
-      } else {
-        specialistType = 'Attacker';
-      }
+    if (totalWeightedScore === 0) {
+        specialistType = "All-rounder";
     } else {
-      // No clear dominance - all-rounder
-      specialistType = 'All-rounder';
+        // Calculate weighted proportions
+        const defProp = (defScore * bestDefensiveScore) / totalWeightedScore;
+        const midProp = (midScore * bestMidfieldScore) / totalWeightedScore;
+        const attProp = (attScore * bestAttackingScore) / totalWeightedScore;
+
+        const maxProp = Math.max(defProp, midProp, attProp);
+        const SPECIALIST_THRESHOLD = 0.5; // Need 50%+ in one zone to be specialist
+
+        // Classify based on weighted proportions
+        if (maxProp >= SPECIALIST_THRESHOLD) {
+            // Clear specialist - one zone has majority
+            if (maxProp === defProp) {
+                specialistType = "Defender";
+            } else if (maxProp === midProp) {
+                specialistType = "Midfielder";
+            } else {
+                specialistType = "Attacker";
+            }
+        } else {
+            // No clear dominance - all-rounder
+            specialistType = "All-rounder";
+        }
     }
-  }
 
-  return {
-    specialistType,
-    bestDefensiveScore,
-    bestMidfieldScore,
-    bestAttackingScore,
-    bestScore
-  };
+    return {
+        specialistType,
+        bestDefensiveScore,
+        bestMidfieldScore,
+        bestAttackingScore,
+        bestScore,
+    };
 }
-

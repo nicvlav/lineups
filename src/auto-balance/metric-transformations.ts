@@ -88,7 +88,7 @@ export function calibratedScore(
 
         // Smooth curve from 0.8 to 1.0
         // Using inverse steepness for gentler curve (rewarding good performance)
-        return 0.8 + (0.2 * Math.pow(position, 1 / steepness));
+        return 0.8 + 0.2 * position ** (1 / steepness);
     }
 
     // Between poor and acceptable - steeper penalty
@@ -97,7 +97,7 @@ export function calibratedScore(
 
     // Steeper curve from 0.2 to 0.8
     // Using steepness directly (penalizing mediocre performance)
-    return 0.2 + (0.6 * Math.pow(position, steepness));
+    return 0.2 + 0.6 * position ** steepness;
 }
 
 /**
@@ -131,7 +131,7 @@ export function linearScore(ratio: number): number {
  */
 export function exponentialPenalty(ratio: number, power: number): number {
     const clampedRatio = Math.max(0, Math.min(1, ratio));
-    return Math.pow(clampedRatio, power);
+    return clampedRatio ** power;
 }
 
 /**
@@ -159,11 +159,7 @@ export function stepFunction(ratio: number, threshold: number): number {
  * @param steepness How quickly the curve transitions (higher = steeper)
  * @returns Score (0-1)
  */
-export function sigmoidScore(
-    ratio: number,
-    midpoint: number = 0.9,
-    steepness: number = 10
-): number {
+export function sigmoidScore(ratio: number, midpoint: number = 0.9, steepness: number = 10): number {
     // Sigmoid function: 1 / (1 + e^(-k*(x-x0)))
     return 1 / (1 + Math.exp(-steepness * (ratio - midpoint)));
 }
@@ -188,7 +184,7 @@ export function calculateBasicDifferenceRatio(a: number, b: number): number {
 
     // Handle zero case - if both are zero, they're balanced
     if (minValue === 0) {
-        return (a === 0 && b === 0) ? 1.0 : 0.0;
+        return a === 0 && b === 0 ? 1.0 : 0.0;
     }
 
     const differenceRatio = Math.abs(a - b) / minValue;
@@ -254,7 +250,7 @@ export function geometricMean(values: number[]): number {
     if (values.length === 0) return 0;
 
     const product = values.reduce((prod, val) => prod * val, 1.0);
-    return Math.pow(product, 1 / values.length);
+    return product ** (1 / values.length);
 }
 
 /**
@@ -269,7 +265,7 @@ export function geometricMean(values: number[]): number {
 export function harmonicMean(values: number[]): number {
     if (values.length === 0) return 0;
 
-    const sumOfReciprocals = values.reduce((sum, val) => sum + (1 / Math.max(val, 0.001)), 0);
+    const sumOfReciprocals = values.reduce((sum, val) => sum + 1 / Math.max(val, 0.001), 0);
     return values.length / sumOfReciprocals;
 }
 
@@ -283,10 +279,7 @@ export function harmonicMean(values: number[]): number {
  * @param points Number of sample points (default: 20)
  * @returns String representation of the curve
  */
-export function visualizeTransformation(
-    transformFn: (ratio: number) => number,
-    points: number = 20
-): string {
+export function visualizeTransformation(transformFn: (ratio: number) => number, points: number = 20): string {
     const lines: string[] = [];
     lines.push("Ratio → Score");
     lines.push("═".repeat(40));
@@ -296,9 +289,7 @@ export function visualizeTransformation(
         const score = transformFn(ratio);
         const bar = "█".repeat(Math.round(score * 30));
 
-        lines.push(
-            `${ratio.toFixed(2)} → ${score.toFixed(3)} ${bar}`
-        );
+        lines.push(`${ratio.toFixed(2)} → ${score.toFixed(3)} ${bar}`);
     }
 
     return lines.join("\n");
@@ -314,18 +305,18 @@ export function visualizeTransformation(
  */
 export function compareTransformations(
     transforms: Record<string, (ratio: number) => number>,
-    testRatios: number[] = [0.99, 0.97, 0.95, 0.90, 0.85, 0.80]
+    testRatios: number[] = [0.99, 0.97, 0.95, 0.9, 0.85, 0.8]
 ): string {
     const lines: string[] = [];
     const names = Object.keys(transforms);
 
     // Header
-    lines.push("Ratio   | " + names.map(n => n.padEnd(10)).join(" | "));
+    lines.push("Ratio   | " + names.map((n) => n.padEnd(10)).join(" | "));
     lines.push("─".repeat(10 + names.length * 13));
 
     // Data rows
     for (const ratio of testRatios) {
-        const scores = names.map(name => transforms[name](ratio).toFixed(3));
+        const scores = names.map((name) => transforms[name](ratio).toFixed(3));
         lines.push(`${ratio.toFixed(2)}    | ` + scores.join(" | "));
     }
 

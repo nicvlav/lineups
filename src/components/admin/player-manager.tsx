@@ -1,22 +1,15 @@
-import { useState, useMemo, useEffect } from "react";
-import { useAuth } from "@/context/auth-context";
-import { usePlayers as usePlayersQuery } from "@/hooks/use-players";
+import { ArrowUpDown, Plus, Vote } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ActionBarSingle } from "@/components/ui/action-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Vote, ArrowUpDown, Plus, } from "lucide-react";
-import { ActionBarSingle } from "@/components/ui/action-bar";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/context/auth-context";
+import { usePlayers as usePlayersQuery } from "@/hooks/use-players";
 import { cn } from "@/lib/utils";
-
-import { PlayerRow } from "./player-row";
 import { AddPlayerDialog } from "./add-player-dialog";
-import {
-    Table,
-    TableBody,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+import { PlayerRow } from "./player-row";
 
 type SortField = "name" | "votes" | "created";
 type SortDirection = "asc" | "desc";
@@ -40,7 +33,6 @@ export default function PlayerManager() {
         };
     }, []);
 
-
     const [searchQuery, setSearchQuery] = useState("");
     const [showAddDialog, setShowAddDialog] = useState(false);
     const [sortField, setSortField] = useState<SortField>("name");
@@ -53,9 +45,7 @@ export default function PlayerManager() {
         // Apply search filter
         if (searchQuery.trim()) {
             const lowerSearch = searchQuery.toLowerCase();
-            filtered = players.filter((p) =>
-                p.name.toLowerCase().includes(lowerSearch)
-            );
+            filtered = players.filter((p) => p.name.toLowerCase().includes(lowerSearch));
         }
 
         // Apply sorting
@@ -69,12 +59,13 @@ export default function PlayerManager() {
                 case "votes":
                     comparison = (a.vote_count || 0) - (b.vote_count || 0);
                     break;
-                case "created":
+                case "created": {
                     // Parse dates and compare timestamps (newest first when desc)
                     const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
                     const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
                     comparison = dateA - dateB;
                     break;
+                }
             }
 
             return sortDirection === "asc" ? comparison : -comparison;
@@ -114,9 +105,7 @@ export default function PlayerManager() {
                         <p className="text-muted-foreground mb-4">
                             You need to be signed in to participate in player voting.
                         </p>
-                        <Button onClick={() => window.location.href = '/'}>
-                            Go to Sign In
-                        </Button>
+                        <Button onClick={() => (window.location.href = "/")}>Go to Sign In</Button>
                     </CardContent>
                 </Card>
             </div>
@@ -151,7 +140,7 @@ export default function PlayerManager() {
                             <p>• Associate with a player profile</p>
                             <p>• Complete verification process</p>
                         </div>
-                        <Button className="mt-4" onClick={() => window.location.href = '/'}>
+                        <Button className="mt-4" onClick={() => (window.location.href = "/")}>
                             Complete Verification
                         </Button>
                     </CardContent>
@@ -165,13 +154,11 @@ export default function PlayerManager() {
             {/* Header Section */}
             <div className="space-y-2">
                 <h1 className="text-2xl font-bold tracking-tight">Manage Players</h1>
-                <p className="text-muted-foreground">
-                    Add, edit, and manage players
-                </p>
+                <p className="text-muted-foreground">Add, edit, and manage players</p>
             </div>
 
             {/* Stats Bar */}
-            <ActionBarSingle className='h-15'>
+            <ActionBarSingle className="h-15">
                 <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
                         <Input
@@ -186,7 +173,6 @@ export default function PlayerManager() {
                         <Plus className="h-4 w-4 mr-2" />
                         Add Player
                     </Button>
-
                 </div>
             </ActionBarSingle>
 
@@ -194,7 +180,6 @@ export default function PlayerManager() {
             <Card className="flex-1 flex flex-col min-h-0 bg-linear-to-r from-card to-muted/20 overflow-hidden">
                 <CardContent className="flex-1 h-full p-0">
                     <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
-
                         {/* Player List */}
                         <div className="space-y-2">
                             <Table>
@@ -222,7 +207,6 @@ export default function PlayerManager() {
                                     )}
                                 </TableBody>
                             </Table>
-
                         </div>
                     </div>
                 </CardContent>

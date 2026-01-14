@@ -63,7 +63,7 @@ export const statKeys: StatsKey[] = [
     "teamwork",
     "determination",
     "leadership",
-    "concentration"
+    "concentration",
 ] as const;
 
 export const statLabelMap: Record<StatsKey, string> = {
@@ -167,21 +167,14 @@ export type PlayerStats = Record<StatsKey, number>;
 /**
  * Default stat scores (all zeros)
  */
-export const defaultStatScores: PlayerStats = Object.fromEntries(
-    statKeys.map((key) => [key, 0])
-) as PlayerStats;
+export const defaultStatScores: PlayerStats = Object.fromEntries(statKeys.map((key) => [key, 0])) as PlayerStats;
 
 /**
  * Stat categories for grouping and display
  */
-export type StatCategory = 'technical' | 'tactical' | 'physical' | "mental";
+export type StatCategory = "technical" | "tactical" | "physical" | "mental";
 
-export const StatCategoryKeys: StatCategory[] = [
-    "technical",
-    "tactical",
-    "physical",
-    "mental"
-] as const;
+export const StatCategoryKeys: StatCategory[] = ["technical", "tactical", "physical", "mental"] as const;
 
 export const StatCategoryNameMap: Record<StatCategory, string> = {
     technical: "Technical",
@@ -194,15 +187,7 @@ export const StatCategoryNameMap: Record<StatCategory, string> = {
  * Stats grouped by category
  */
 export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
-    technical: [
-        "passing",
-        "firstTouch",
-        "crossing",
-        "dribbling",
-        "technique",
-        "finishing",
-        "longShots",
-    ],
+    technical: ["passing", "firstTouch", "crossing", "dribbling", "technique", "finishing", "longShots"],
     tactical: [
         "anticipation",
         "vision",
@@ -214,20 +199,6 @@ export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
         "attWorkrate",
         "defWorkrate",
     ],
-    mental: [
-        "composure",
-        "concentration",
-        "determination",
-        "leadership",
-        "teamwork",
-        "aggression",
-        "flair",
-    ],
-    physical: [
-        "speed",
-        "strength",
-        "agility",
-        "stamina",
-        "heading"
-    ],
+    mental: ["composure", "concentration", "determination", "leadership", "teamwork", "aggression", "flair"],
+    physical: ["speed", "strength", "agility", "stamina", "heading"],
 } as const;

@@ -46,46 +46,34 @@
  * @module auto-balance
  */
 
-import type {
-    ScoredGamePlayer
-} from "@/types/players";
+import type { ScoredGamePlayer } from "@/types/players";
 import type { Formation } from "@/types/positions";
-
+import { convertToGamePlayers, runOptimizedMonteCarlo } from "./algorithm";
+import { diagnosticReport } from "./debug-tools";
+import { calculateMetrics } from "./metrics";
+import { type BalanceConfiguration, DEFAULT_BALANCE_CONFIG } from "./metrics-config";
 // Import internal modules
 import type { BalanceMetrics } from "./types";
-import { DEFAULT_BALANCE_CONFIG, type BalanceConfiguration } from "./metrics-config";
 import { toFastPlayer } from "./utils";
-import {
-    runOptimizedMonteCarlo,
-    convertToGamePlayers
-} from "./algorithm";
-import { calculateMetrics } from "./metrics";
-import { diagnosticReport } from "./debug-tools";
-
-// Re-export types for external use
-export type { BalanceConfiguration } from "./metrics-config";
-
-// Re-export modern metrics API
-export { calculateMetrics } from "./metrics";
-
-// Re-export new configuration system
-export { DEFAULT_BALANCE_CONFIG } from "./metrics-config";
-
-// Re-export utilities
-export { canAutoBalance, getAvailableFormations } from "./formation";
 
 // Re-export debug tools for advanced users
-export { diagnosticReport, explainScore, compareResults } from "./debug-tools";
-
+export { compareResults, diagnosticReport, explainScore } from "./debug-tools";
+// Re-export utilities
+export { canAutoBalance, getAvailableFormations } from "./formation";
 // Re-export transformations for custom metrics
 export { calibratedScore, Steepness, visualizeTransformation } from "./metric-transformations";
+// Re-export modern metrics API
+export { calculateMetrics } from "./metrics";
+// Re-export types for external use
+export type { BalanceConfiguration } from "./metrics-config";
+// Re-export new configuration system
+export { DEFAULT_BALANCE_CONFIG } from "./metrics-config";
 
 // Backward compatibility exports (these were in auto-balance-types.tsx)
 // These are deprecated but kept for compatibility
 export const toArrayScoredGamePlayers = (players: ScoredGamePlayer[]) => players;
 export const assignPositions = (players: ScoredGamePlayer[]) => players;
 export const calculateScores = (players: ScoredGamePlayer[]) => players;
-
 
 /**
  * @param players - Array of scored players to balance
@@ -179,11 +167,15 @@ export function autoBalance(
         console.log(`   Players: ${players.length}`);
         console.log(`   Max Iterations: ${config.monteCarlo.maxIterations}`);
         console.log(`   Proximity Threshold: ${config.algorithm.proximityThreshold}`);
-        console.log('');
-        console.log('Metric Weights:');
-        console.log(`   PRIMARY: Star=${config.weights.primary.starDistribution}, Score=${config.weights.primary.scoreBalance}, Zone=${config.weights.primary.peakPotential}`);
-        console.log(`   SECONDARY: Peak=${config.weights.secondary.zoneBalance}, AllStat=${config.weights.secondary.allStatBalance}, Energy=${config.weights.secondary.energy}`);
-        console.log('');
+        console.log("");
+        console.log("Metric Weights:");
+        console.log(
+            `   PRIMARY: Star=${config.weights.primary.starDistribution}, Score=${config.weights.primary.scoreBalance}, Zone=${config.weights.primary.peakPotential}`
+        );
+        console.log(
+            `   SECONDARY: Peak=${config.weights.secondary.zoneBalance}, AllStat=${config.weights.secondary.allStatBalance}, Energy=${config.weights.secondary.energy}`
+        );
+        console.log("");
     }
 
     // Convert to optimized format
@@ -197,12 +189,7 @@ export function autoBalance(
     }
 
     // Calculate metrics
-    const metricsResult = calculateMetrics(
-        result.teams.teamA,
-        result.teams.teamB,
-        config,
-        true
-    );
+    const metricsResult = calculateMetrics(result.teams.teamA, result.teams.teamB, config, true);
 
     // Generate enhanced diagnostic report
     const diagnostic = diagnosticReport(
@@ -212,9 +199,9 @@ export function autoBalance(
         metricsResult.score,
         config
     );
-  
+
     // if (debugMode) {
-        console.log(diagnostic);
+    console.log(diagnostic);
     // }
 
     const convertedTeams = convertToGamePlayers(result);
@@ -302,7 +289,9 @@ export function autoBalanceWithConfig(
 
     if (verbose) {
         console.log("\n🎨 Custom Configuration:");
-        console.log(`   Primary weights: Score=${config.weights.primary.scoreBalance}, Star=${config.weights.primary.starDistribution}, Zone=${config.weights.primary.peakPotential}`);
+        console.log(
+            `   Primary weights: Score=${config.weights.primary.scoreBalance}, Star=${config.weights.primary.starDistribution}, Zone=${config.weights.primary.peakPotential}`
+        );
         console.log(`   Proximity threshold: ${config.algorithm.proximityThreshold}`);
         console.log(`   Max iterations: ${config.monteCarlo.maxIterations}`);
     }
@@ -319,13 +308,7 @@ export function autoBalanceWithConfig(
 
     // Generate diagnostic report
     const diagnostic = verbose
-        ? diagnosticReport(
-            result.teams.teamA,
-            result.teams.teamB,
-            result.metrics,
-            result.score,
-            config
-        )
+        ? diagnosticReport(result.teams.teamA, result.teams.teamB, result.metrics, result.score, config)
         : undefined;
 
     if (diagnostic && verbose) {

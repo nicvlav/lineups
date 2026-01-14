@@ -1,43 +1,49 @@
 import { useState } from "react";
-import { usePlayers } from "@/context/players-provider";
-import { getZoneAverages, getTopPositions } from "@/types/players";
-import { calculateArchetypeScores } from "@/lib/positions/calculator";
 import PlayerCard from "@/components/players/player-card";
-import { Select, SelectTrigger, SelectItem, SelectContent, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { ActionBarSingle } from "@/components/ui/action-bar";
-import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePlayers } from "@/context/players-provider";
+import { calculateArchetypeScores } from "@/lib/positions/calculator";
+import { cn } from "@/lib/utils";
+import { getTopPositions, getZoneAverages } from "@/types/players";
 
 export type CardViewMode = "minimal" | "archetypes" | "face-stats";
 
 const PlayerCards = () => {
-    const { players, } = usePlayers();
+    const { players } = usePlayers();
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [cardViewMode, setCardViewMode] = useState<CardViewMode>("archetypes");
 
-    const filteredPlayers = Object.values(players).filter((p) =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ).map((player) => {
-        const archetypeScores = calculateArchetypeScores(player.stats);
-        const topScores = getTopPositions(archetypeScores, 3);
+    const filteredPlayers = Object.values(players)
+        .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        .map((player) => {
+            const archetypeScores = calculateArchetypeScores(player.stats);
+            const topScores = getTopPositions(archetypeScores, 3);
 
-        // Convert to ZoneScores for backward compatibility
-        const zoneFit = Object.entries(archetypeScores).reduce((acc, [pos, data]) => {
-            acc[pos as keyof typeof acc] = data.bestScore;
-            return acc;
-        }, { GK: 0, CB: 0, FB: 0, DM: 0, CM: 0, WM: 0, AM: 0, ST: 0, WR: 0 });
+            // Convert to ZoneScores for backward compatibility
+            const zoneFit = Object.entries(archetypeScores).reduce(
+                (acc, [pos, data]) => {
+                    acc[pos as keyof typeof acc] = data.bestScore;
+                    return acc;
+                },
+                { GK: 0, CB: 0, FB: 0, DM: 0, CM: 0, WM: 0, AM: 0, ST: 0, WR: 0 }
+            );
 
-        return {
-            player,
-            overall: Math.max(...topScores.map((t) => t.score)),
-            zoneFit,
-            topPositions: topScores.slice(0, 3).map((t) => t.position).join(", "),
-            topScoresWithArchetypes: topScores, // Pass full archetype data
-            archetypeScores, // Pass full archetype breakdown
-            averages: getZoneAverages(player)
-        }
-    });
+            return {
+                player,
+                overall: Math.max(...topScores.map((t) => t.score)),
+                zoneFit,
+                topPositions: topScores
+                    .slice(0, 3)
+                    .map((t) => t.position)
+                    .join(", "),
+                topScoresWithArchetypes: topScores, // Pass full archetype data
+                archetypeScores, // Pass full archetype breakdown
+                averages: getZoneAverages(player),
+            };
+        });
 
     // Sort by overall descending (no sorting controls)
     const sortedPlayers = [...filteredPlayers].sort((a, b) => b.overall - a.overall);
@@ -47,13 +53,11 @@ const PlayerCards = () => {
             {/* Section Header */}
             <div className="space-y-2">
                 <h1 className="text-2xl font-bold tracking-tight">Player Cards</h1>
-                <p className="text-muted-foreground">
-                    View player strengths and profiles based on voted ratings
-                </p>
+                <p className="text-muted-foreground">View player strengths and profiles based on voted ratings</p>
             </div>
 
             {/* Search + Card View Selector */}
-            <ActionBarSingle className='h-15'>
+            <ActionBarSingle className="h-15">
                 <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
                         <Input
@@ -104,7 +108,5 @@ const PlayerCards = () => {
             </Card>
         </div>
     );
-
-
-}
+};
 export default PlayerCards;

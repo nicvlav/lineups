@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { } from "@/types/stats";
-import { } from "@/types/players";
-import { normalizedDefaultWeights, ZoneScores, Position } from "@/types/positions";
+import {} from "@/types/players";
+import { normalizedDefaultWeights, Position, ZoneScores } from "@/types/positions";
+import {} from "@/types/stats";
 
 type PositionScoreListProps = {
     zoneFit: ZoneScores;
@@ -33,14 +33,11 @@ export const PositionScoreList: React.FC<PositionScoreListProps> = ({ zoneFit })
                         key={pos}
                         className="flex flex-col items-center justify-center rounded-lg p-3 border border-accent/30 bg-accent/10 hover:bg-accent/20 transition shadow-sm"
                     >
-                        <span className={`text-lg font-bold ${getStatColor(score)}`}>
-                            {score.toFixed(1)}
-                        </span>
+                        <span className={`text-lg font-bold ${getStatColor(score)}`}>{score.toFixed(1)}</span>
                         <span className="text-sm font-medium">{shortName}</span>
                     </div>
                 ))}
             </div>
         </div>
-
     );
 };

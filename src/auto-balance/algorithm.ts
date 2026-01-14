@@ -1,26 +1,34 @@
 /**
  * Auto-Balance Core Algorithm
- * 
+ *
  * Core team assignment and optimization logic.
- * 
+ *
  * @module auto-balance/algorithm
  */
 
-import type { FastPlayer, FastTeam, Teams, SimulationResult, AssignmentContext } from "./types";
 import type { ScoredGamePlayer } from "@/types/players";
 import type { Formation } from "@/types/positions";
-import {
-    INDEX_TO_POSITION,
-    POSITION_COUNT,
-    ZONE_POSITIONS,
-} from "./constants";
-import { defaultZoneWeights, getPointForPosition, formationTemplates } from "@/types/positions";
-import { getFastFormation } from "./formation";
-import { createFastTeam, createPositionComparator, cryptoRandomInt, selectPlayerWithProximity, getAvailablePositions, removePlayerFast } from "./utils";
-import type { BalanceConfiguration } from "./metrics-config";
-import { calculateMetrics, calculateOptimalStarDistribution, calculateStarDistributionBreakdown, calculateShapedPenaltyScore } from "./metrics";
-import { getStarCount } from "./debug-tools";
+import { defaultZoneWeights, formationTemplates, getPointForPosition } from "@/types/positions";
 import { preCalculatePlayerAnalytics } from "./adapters";
+import { INDEX_TO_POSITION, POSITION_COUNT, ZONE_POSITIONS } from "./constants";
+import { getStarCount } from "./debug-tools";
+import { getFastFormation } from "./formation";
+import {
+    calculateMetrics,
+    calculateOptimalStarDistribution,
+    calculateShapedPenaltyScore,
+    calculateStarDistributionBreakdown,
+} from "./metrics";
+import type { BalanceConfiguration } from "./metrics-config";
+import type { AssignmentContext, FastPlayer, FastTeam, SimulationResult, Teams } from "./types";
+import {
+    createFastTeam,
+    createPositionComparator,
+    cryptoRandomInt,
+    getAvailablePositions,
+    removePlayerFast,
+    selectPlayerWithProximity,
+} from "./utils";
 
 /**
  * Initialize the assignment context with all necessary state
@@ -43,9 +51,7 @@ function initializeAssignmentContext(
 
     // Use cached formations if provided, otherwise look them up
     const formationDataA = cachedFormationA || getFastFormation(teamASize);
-    const formationDataB = cachedFormationB || (teamASize === teamBSize
-        ? formationDataA
-        : getFastFormation(teamBSize));
+    const formationDataB = cachedFormationB || (teamASize === teamBSize ? formationDataA : getFastFormation(teamBSize));
 
     if (!formationDataA || !formationDataB) {
         return null;
@@ -97,9 +103,7 @@ function initializeAssignmentContext(
 
     // Calculate dynamic topN based on team size if scaling enabled
     const baseTopN = algConfig.baseTopN;
-    const topN = algConfig.topNScaling
-        ? Math.min(baseTopN, Math.floor(totalPlayers / 5))
-        : baseTopN;
+    const topN = algConfig.topNScaling ? Math.min(baseTopN, Math.floor(totalPlayers / 5)) : baseTopN;
 
     return {
         config,
@@ -113,7 +117,7 @@ function initializeAssignmentContext(
         comparators,
         proximityThreshold,
         selectionWeights,
-        topN
+        topN,
     };
 }
 
@@ -140,7 +144,8 @@ function assignGoalkeepers(context: AssignmentContext): void {
         const player = sortedByWorst[i];
 
         // Decide which team gets this GK (balance total score)
-        const assignToA = context.formationA[GK_INDEX] > 0 &&
+        const assignToA =
+            context.formationA[GK_INDEX] > 0 &&
             (context.formationB[GK_INDEX] === 0 || context.teamA.totalScore <= context.teamB.totalScore);
 
         const targetTeam = assignToA ? context.teamA : context.teamB;
@@ -151,7 +156,7 @@ function assignGoalkeepers(context: AssignmentContext): void {
 
             // Assign player to GK
             player.assignedPosition = GK_INDEX;
-            player.team = assignToA ? 'A' : 'B';
+            player.team = assignToA ? "A" : "B";
             targetTeam.positions[GK_INDEX].push(player);
             targetTeam.totalScore += score;
             targetTeam.peakPotential += player.bestScore;
@@ -182,8 +187,8 @@ function assignOutfieldPlayers(context: AssignmentContext): void {
         if (aPositions.length === 0 && bPositions.length === 0) break;
 
         // Choose team based on current balance
-        const assignToA = aPositions.length > 0 &&
-            (bPositions.length === 0 || context.teamA.totalScore <= context.teamB.totalScore);
+        const assignToA =
+            aPositions.length > 0 && (bPositions.length === 0 || context.teamA.totalScore <= context.teamB.totalScore);
 
         const targetTeam = assignToA ? context.teamA : context.teamB;
         const targetFormation = assignToA ? context.formationA : context.formationB;
@@ -227,7 +232,7 @@ function assignOutfieldPlayers(context: AssignmentContext): void {
 
         // Assign player to position
         player.assignedPosition = posIdx;
-        player.team = assignToA ? 'A' : 'B';
+        player.team = assignToA ? "A" : "B";
         targetTeam.positions[posIdx].push(player);
         targetTeam.totalScore += score;
         targetTeam.peakPotential += player.bestScore;
@@ -253,7 +258,7 @@ function aggregateTeamStats(teamA: FastTeam, teamB: FastTeam): void {
         for (const posIdx of ZONE_POSITIONS[zoneIdx]) {
             // Team A
             for (const player of teamA.positions[posIdx]) {
-                teamA.zoneScores[zoneIdx] += (zoneIdx === 0 ? player.bestScore : player.scores[posIdx]);
+                teamA.zoneScores[zoneIdx] += zoneIdx === 0 ? player.bestScore : player.scores[posIdx];
                 teamA.zonePeakScores[zoneIdx] += player.bestScore;
 
                 // Accumulate pre-calculated scores (much faster than recalculating!)
@@ -268,7 +273,7 @@ function aggregateTeamStats(teamA: FastTeam, teamB: FastTeam): void {
 
             // Team B
             for (const player of teamB.positions[posIdx]) {
-                teamB.zoneScores[zoneIdx] += (zoneIdx === 0 ? player.bestScore : player.scores[posIdx]);
+                teamB.zoneScores[zoneIdx] += zoneIdx === 0 ? player.bestScore : player.scores[posIdx];
                 teamB.zonePeakScores[zoneIdx] += player.bestScore;
 
                 // Accumulate pre-calculated scores (much faster than recalculating!)
@@ -323,7 +328,7 @@ export function assignPlayersToTeams(
 
     return {
         teamA: context.teamA,
-        teamB: context.teamB
+        teamB: context.teamB,
     };
 }
 
@@ -344,7 +349,7 @@ function normalizePlayerAssignments(teams: Teams): void {
     for (let posIdx = 0; posIdx < teams.teamA.positions.length; posIdx++) {
         for (const player of teams.teamA.positions[posIdx]) {
             player.assignedPosition = posIdx;
-            player.team = 'A';
+            player.team = "A";
         }
     }
 
@@ -352,7 +357,7 @@ function normalizePlayerAssignments(teams: Teams): void {
     for (let posIdx = 0; posIdx < teams.teamB.positions.length; posIdx++) {
         for (const player of teams.teamB.positions[posIdx]) {
             player.assignedPosition = posIdx;
-            player.team = 'B';
+            player.team = "B";
         }
     }
 }
@@ -395,7 +400,7 @@ export function runOptimizedMonteCarlo(
     const availableFormationsB = formationTemplates[teamBSize] || [];
 
     if (availableFormationsA.length === 0 || availableFormationsB.length === 0) {
-        console.error('No formation available for team sizes:', teamASize, teamBSize);
+        console.error("No formation available for team sizes:", teamASize, teamBSize);
         return null;
     }
 
@@ -409,24 +414,27 @@ export function runOptimizedMonteCarlo(
         return { array: arr, formation };
     });
 
-    const cachedFormationsB = teamASize === teamBSize
-        ? cachedFormationsA
-        : availableFormationsB.map((formation: Formation) => {
-            const arr = new Int8Array(POSITION_COUNT);
-            for (let i = 0; i < POSITION_COUNT; i++) {
-                const position = INDEX_TO_POSITION[i];
-                arr[i] = formation.positions[position] || 0;
-            }
-            return { array: arr, formation };
-        });
+    const cachedFormationsB =
+        teamASize === teamBSize
+            ? cachedFormationsA
+            : availableFormationsB.map((formation: Formation) => {
+                  const arr = new Int8Array(POSITION_COUNT);
+                  for (let i = 0; i < POSITION_COUNT; i++) {
+                      const position = INDEX_TO_POSITION[i];
+                      arr[i] = formation.positions[position] || 0;
+                  }
+                  return { array: arr, formation };
+              });
 
     // Calculate optimal star distribution statistics BEFORE Monte Carlo loop
     const optimalStats = calculateOptimalStarDistribution(players, config);
 
     if (verbose) {
-        console.log('🎲 Starting optimized Monte Carlo simulation...');
+        console.log("🎲 Starting optimized Monte Carlo simulation...");
         console.log(`   Max iterations: ${maxIterations}`);
-        console.log(`   Team sizes: ${teamASize} (${cachedFormationsA.length} formations) vs ${teamBSize} (${cachedFormationsB.length} formations)`);
+        console.log(
+            `   Team sizes: ${teamASize} (${cachedFormationsA.length} formations) vs ${teamBSize} (${cachedFormationsB.length} formations)`
+        );
         console.log(`   Optimal star distribution stats:`);
         console.log(`     Best:  ${optimalStats.best.toFixed(4)}`);
         console.log(`     Mean:  ${optimalStats.mean.toFixed(4)}`);
@@ -438,9 +446,10 @@ export function runOptimizedMonteCarlo(
         // Pick random formations from cached arrays (very fast!)
         const formationA = cachedFormationsA[Math.floor(Math.random() * cachedFormationsA.length)];
         // CONSISTENCY: If both teams have same size, use the same formation for fairness
-        const formationB = teamASize === teamBSize
-            ? formationA
-            : cachedFormationsB[Math.floor(Math.random() * cachedFormationsB.length)];
+        const formationB =
+            teamASize === teamBSize
+                ? formationA
+                : cachedFormationsB[Math.floor(Math.random() * cachedFormationsB.length)];
 
         const result = assignPlayersToTeams(players, config, formationA, formationB);
         if (!result) continue;
@@ -474,7 +483,7 @@ export function runOptimizedMonteCarlo(
         const simResult: SimulationResult = {
             teams: result,
             score: finalScore,
-            metrics: metrics.details
+            metrics: metrics.details,
         };
 
         if (finalScore > bestScore) {
@@ -505,9 +514,12 @@ export function runOptimizedMonteCarlo(
 /**
  * Converts optimized result back to original format
  */
-export function convertToGamePlayers(
-    result: SimulationResult
-): { a: ScoredGamePlayer[]; b: ScoredGamePlayer[]; formationA: Formation | undefined; formationB: Formation | undefined } {
+export function convertToGamePlayers(result: SimulationResult): {
+    a: ScoredGamePlayer[];
+    b: ScoredGamePlayer[];
+    formationA: Formation | undefined;
+    formationB: Formation | undefined;
+} {
     const teamA: ScoredGamePlayer[] = [];
     const teamB: ScoredGamePlayer[] = [];
 
@@ -530,7 +542,7 @@ export function convertToGamePlayers(
                 ...player.original,
                 position: point,
                 exactPosition: position,
-                team: 'A',
+                team: "A",
             });
         });
 
@@ -548,7 +560,7 @@ export function convertToGamePlayers(
                 ...player.original,
                 position: point,
                 exactPosition: position,
-                team: 'B',
+                team: "B",
             });
         });
     }
@@ -557,6 +569,6 @@ export function convertToGamePlayers(
         a: teamA,
         b: teamB,
         formationA: result.teams.teamA.formation || undefined,
-        formationB: result.teams.teamB.formation || undefined
+        formationB: result.teams.teamB.formation || undefined,
     };
 }

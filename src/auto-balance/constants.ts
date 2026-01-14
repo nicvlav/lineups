@@ -9,7 +9,7 @@
 import type { Position } from "@/types/positions";
 
 // Re-export new configuration system
-export { DEFAULT_BALANCE_CONFIG, type BalanceConfiguration } from "./metrics-config";
+export { type BalanceConfiguration, DEFAULT_BALANCE_CONFIG } from "./metrics-config";
 
 /**
  * 🔍 GLOBAL DEBUG SWITCH
@@ -18,32 +18,40 @@ export { DEFAULT_BALANCE_CONFIG, type BalanceConfiguration } from "./metrics-con
  * This overrides any other debug settings in the code
  * ═══════════════════════════════════════════════════════════════════════════
  */
-export const ENABLE_DEBUG = true;  // ← CHANGE THIS TO false TO DISABLE DEBUG
+export const ENABLE_DEBUG = true; // ← CHANGE THIS TO false TO DISABLE DEBUG
 
 /** Position indices for array-based operations */
 export const POSITION_INDICES = {
-    GK: 0, CB: 1, FB: 2, DM: 3, CM: 4, WM: 5, AM: 6, ST: 7, WR: 8
+    GK: 0,
+    CB: 1,
+    FB: 2,
+    DM: 3,
+    CM: 4,
+    WM: 5,
+    AM: 6,
+    ST: 7,
+    WR: 8,
 } as const;
 
 /** Reverse mapping from index to position */
-export const INDEX_TO_POSITION: readonly Position[] = ['GK', 'CB', 'FB', 'DM', 'CM', 'WM', 'AM', 'ST', 'WR'];
+export const INDEX_TO_POSITION: readonly Position[] = ["GK", "CB", "FB", "DM", "CM", "WM", "AM", "ST", "WR"];
 
 /** Total number of positions */
 export const POSITION_COUNT = 9;
 
 /** Zone groupings for metric calculation */
 export const ZONE_POSITIONS = [
-    [0],           // Goalkeeper
-    [1, 2],        // Defense
-    [3, 4, 5, 6],  // Midfield
-    [7, 8],        // Attack
+    [0], // Goalkeeper
+    [1, 2], // Defense
+    [3, 4, 5, 6], // Midfield
+    [7, 8], // Attack
 ] as const;
 
 /** Position categorization for attack/defense balance */
 export const POSITION_CATEGORIES = {
     defensive: [0, 1, 2, 3] as readonly number[], // GK, CB, FB, DM - defensive minded
-    neutral: [4, 5] as readonly number[],         // CM, WM - balanced midfield
-    attacking: [6, 7, 8] as readonly number[],    // AM, ST, WR - attack minded
+    neutral: [4, 5] as readonly number[], // CM, WM - balanced midfield
+    attacking: [6, 7, 8] as readonly number[], // AM, ST, WR - attack minded
 } as const;
 
 /**
@@ -67,8 +75,8 @@ export function getStdDevThreshold(numPlayers: number): number {
     // Anchor points for interpolation - easily adjustable
     const MIN_PLAYERS = 16;
     const MAX_PLAYERS = 22;
-    const LENIENT_THRESHOLD = 0.2;  // For small teams (18 players)
-    const STRICT_THRESHOLD = 0.1;   // For large teams (22+ players)
+    const LENIENT_THRESHOLD = 0.2; // For small teams (18 players)
+    const STRICT_THRESHOLD = 0.1; // For large teams (22+ players)
 
     // Clamp to range
     if (numPlayers <= MIN_PLAYERS) return LENIENT_THRESHOLD;
@@ -76,7 +84,7 @@ export function getStdDevThreshold(numPlayers: number): number {
 
     // Linear interpolation between anchor points
     const ratio = (numPlayers - MIN_PLAYERS) / (MAX_PLAYERS - MIN_PLAYERS);
-    return LENIENT_THRESHOLD - (ratio * (LENIENT_THRESHOLD - STRICT_THRESHOLD));
+    return LENIENT_THRESHOLD - ratio * (LENIENT_THRESHOLD - STRICT_THRESHOLD);
 }
 
 /**
@@ -112,7 +120,7 @@ export function getScaledPower(
 
     // Linear interpolation between anchor points
     const ratio = (numPlayers - minPlayers) / (maxPlayers - minPlayers);
-    return gentlePower + (ratio * (harshPower - gentlePower));
+    return gentlePower + ratio * (harshPower - gentlePower);
 }
 
 /**

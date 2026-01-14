@@ -37,8 +37,6 @@ export interface MetricWeights {
 
         /** Peak potential balance */
         peakPotential: number;
-
-
     };
 
     /** Secondary metrics - fine-tuning adjustments */
@@ -215,15 +213,15 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
             energy: 0.16,
             creativity: 0.15,
             striker: 0.12,
-        }
+        },
     },
 
     thresholds: {
         // Score balance: Within 1% = perfect, within 3% = acceptable, >10% = poor
         scoreBalance: {
-            perfect: 0.95,      // <1% difference (e.g., 400 vs 404 out of 800 total)
-            acceptable: 0.85,   // <3% difference (e.g., 400 vs 412)
-            poor: 0.70,         // >10% difference (e.g., 400 vs 440)
+            perfect: 0.95, // <1% difference (e.g., 400 vs 404 out of 800 total)
+            acceptable: 0.85, // <3% difference (e.g., 400 vs 412)
+            poor: 0.7, // >10% difference (e.g., 400 vs 440)
         },
 
         // Star distribution: Perfect = equal split, acceptable = ±1 player, poor = ±3 players
@@ -235,23 +233,23 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
         // Peak potential: Theoretical max strength
         peakPotential: {
-            perfect: 0.99995,      // <2% difference in potential
-            acceptable: 0.999,   // <5% difference
-            poor: 0.95,         // >15% difference
+            perfect: 0.99995, // <2% difference in potential
+            acceptable: 0.999, // <5% difference
+            poor: 0.95, // >15% difference
         },
 
         // Zone balance: Each zone competitive between teams
         zoneBalance: {
-            perfect: 0.97,      // All zones within 5% of each other
-            acceptable: 0.93,   // Most zones balanced, one slightly off
-            poor: 0.80,         // Multiple zones significantly imbalanced
+            perfect: 0.97, // All zones within 5% of each other
+            acceptable: 0.93, // Most zones balanced, one slightly off
+            poor: 0.8, // Multiple zones significantly imbalanced
         },
 
         // Peak potential: Theoretical max strength
         allStatBalance: {
             perfect: 0.99,
             acceptable: 0.94,
-            poor: 0.90,
+            poor: 0.9,
         },
 
         // Energy: Stamina + work rate
@@ -265,14 +263,14 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         creativity: {
             perfect: 0.99,
             acceptable: 0.975,
-            poor: 0.90,
+            poor: 0.9,
         },
 
         // Energy: Stamina + work rate
         striker: {
             perfect: 0.99,
             acceptable: 0.94,
-            poor: 0.90,
+            poor: 0.9,
         },
     },
 
@@ -285,7 +283,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         baseTopN: 5,
 
         // Weighted probability for selecting from top N
-        selectionWeights: [0.50, 0.25, 0.15, 0.05, 0.05]//, 0.05, 0.025, 0.025, 0.025, 0.025],
+        selectionWeights: [0.5, 0.25, 0.15, 0.05, 0.05], //, 0.05, 0.025, 0.025, 0.025, 0.025],
     },
 
     monteCarlo: {
@@ -318,9 +316,9 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
 
         starDistribution: {
             // Superstar distribution matters most
-            superstars: 0.60,
-            stars: 0.30,
-            solid: 0.10,
+            superstars: 0.6,
+            stars: 0.3,
+            solid: 0.1,
         },
 
         zoneDirectionality: {
@@ -328,10 +326,10 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
             neutralEpsilon: 0.995,
 
             // 90% penalty if one team wins all 3 zones (DEF/MID/ATT)
-            dominationPenalty: 0.10,
+            dominationPenalty: 0.1,
 
             // 60% penalty if one team wins 2 zones decisively
-            twoZonePenalty: 0.40,
+            twoZonePenalty: 0.4,
         },
 
         midfieldPreference: {
@@ -373,11 +371,7 @@ export function validateWeights(weights: MetricWeights): boolean {
 /**
  * Get human-readable explanation of a threshold
  */
-export function explainThreshold(
-    metricName: string,
-    thresholds: MetricThresholds,
-    totalScore: number = 100
-): string {
+export function explainThreshold(metricName: string, thresholds: MetricThresholds, totalScore: number = 100): string {
     const perfectDiff = totalScore * (1 - thresholds.perfect);
     const acceptableDiff = totalScore * (1 - thresholds.acceptable);
     const poorDiff = totalScore * (1 - thresholds.poor);

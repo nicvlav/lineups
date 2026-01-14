@@ -14,9 +14,9 @@
  * supabase.auth.onAuthStateChange() - this is ONLY for data fetching.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { categorizeError, ensureValidSession } from "@/lib/session-manager";
 import { supabase } from "@/lib/supabase";
-import { ensureValidSession, categorizeError } from "@/lib/session-manager";
 
 // =====================================================
 // QUERY KEYS
@@ -86,11 +86,7 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
 
     console.log("USER_PROFILE: Fetching profile for user:", userId);
 
-    const { data, error } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("user_id", userId)
-        .single();
+    const { data, error } = await supabase.from("user_profiles").select("*").eq("user_id", userId).single();
 
     if (error) {
         // Profile doesn't exist yet (PGRST116 = not found)
@@ -117,10 +113,7 @@ async function fetchSquads(): Promise<Squad[]> {
 
     console.log("SQUADS: Fetching available squads...");
 
-    const { data, error } = await supabase
-        .from("squads")
-        .select("*")
-        .order("name");
+    const { data, error } = await supabase.from("squads").select("*").order("name");
 
     if (error) {
         console.error("SQUADS: Error fetching squads:", error);
@@ -198,10 +191,7 @@ export function useUpdateProfile() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({
-            userId,
-            updates,
-        }: UpdateProfileParams): Promise<UserProfile> => {
+        mutationFn: async ({ userId, updates }: UpdateProfileParams): Promise<UserProfile> => {
             const sessionValid = await ensureValidSession();
             if (!sessionValid) {
                 throw new Error("Session expired - please sign in again");
@@ -234,10 +224,7 @@ export function useUpdateProfile() {
         },
         onSuccess: (data) => {
             // Update cache with new profile data
-            queryClient.setQueryData(
-                userProfileKeys.detail(data.user_id),
-                data
-            );
+            queryClient.setQueryData(userProfileKeys.detail(data.user_id), data);
             console.log("USER_PROFILE: Cache updated with new profile");
         },
         onError: (error) => {
@@ -265,21 +252,14 @@ export function useVerifySquad() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({
-            userId,
-            squadId,
-        }: VerifySquadParams): Promise<UserProfile> => {
+        mutationFn: async ({ userId, squadId }: VerifySquadParams): Promise<UserProfile> => {
             const sessionValid = await ensureValidSession();
             if (!sessionValid) {
                 throw new Error("Session expired - please sign in again");
             }
 
             // First validate the squad exists
-            const { error: squadError } = await supabase
-                .from("squads")
-                .select("id")
-                .eq("id", squadId)
-                .single();
+            const { error: squadError } = await supabase.from("squads").select("id").eq("id", squadId).single();
 
             if (squadError) {
                 if (squadError.code === "PGRST116") {
@@ -341,11 +321,7 @@ export function useAssignPlayer() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({
-            userId,
-            playerId,
-            squadId,
-        }: AssignPlayerParams): Promise<UserProfile> => {
+        mutationFn: async ({ userId, playerId, squadId }: AssignPlayerParams): Promise<UserProfile> => {
             const sessionValid = await ensureValidSession();
             if (!sessionValid) {
                 throw new Error("Session expired - please sign in again");

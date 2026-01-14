@@ -4,41 +4,38 @@
  * Central export point for all position and archetype functionality.
  */
 
-// Core types
-export type { Position, PositionDefinition, Zone } from '@/types/positions';
-export type { Archetype } from '@/types/archetypes';
-export type { PlayerArchetypeScores, PlayerWithArchetypes } from '@/types/players';
-
-// Position definitions and utilities
-export {
-  POSITIONS,
-  ZONE_POSITIONS,
-  ZONE_LABELS,
-  positionKeys,
-  getPosition,
-  getPositionsInZone,
-  getPositionsSortedByPriority
-} from '@/types/positions';
-
+export type { Archetype } from "@/types/archetypes";
 // Archetype definitions and utilities
 export {
-  ARCHETYPES,
-  getArchetypesForPosition,
-  getArchetypeById,
-  getArchetypeCountByPosition
-} from '@/types/archetypes';
-
+    ARCHETYPES,
+    getArchetypeById,
+    getArchetypeCountByPosition,
+    getArchetypesForPosition,
+} from "@/types/archetypes";
+export type { PlayerArchetypeScores, PlayerWithArchetypes } from "@/types/players";
 // Player utilities
 export {
-  getTopPositions,
-  getBestArchetypeForPosition,
-  isPositionSpecialist
-} from '@/types/players';
+    getBestArchetypeForPosition,
+    getTopPositions,
+    isPositionSpecialist,
+} from "@/types/players";
+// Core types
+export type { Position, PositionDefinition, Zone } from "@/types/positions";
+// Position definitions and utilities
+export {
+    getPosition,
+    getPositionsInZone,
+    getPositionsSortedByPriority,
+    POSITIONS,
+    positionKeys,
+    ZONE_LABELS,
+    ZONE_POSITIONS,
+} from "@/types/positions";
 
 // Calculation utilities
 export {
-  calculateArchetypeScores,
-  getPositionScores,
-  calculateZoneScores,
-  normalizeWeights
-} from './calculator';
+    calculateArchetypeScores,
+    calculateZoneScores,
+    getPositionScores,
+    normalizeWeights,
+} from "./calculator";

@@ -1,16 +1,13 @@
-"use client";
-
 import React, { useState } from "react";
-import { StatsKey } from "@/types/stats";
-import { ZoneAverages, Player, PlayerArchetypeScores } from "@/types/players";
-import { Position } from "@/types/positions";
-import { ZoneScores } from "@/types/positions";
-import { getArchetypeById } from "@/types/archetypes";
-import { getTopArchetypes } from "@/lib/positions/calculator";
 import PlayerStatsModal from "@/components/players/player-stats-modal";
-import { getCardUnderlineColor, getStatBarColor } from "@/lib/color-system";
-import type { CardViewMode } from "./player-cards";
 import { useTapHandler } from "@/hooks/use-tap-handler";
+import { getCardUnderlineColor, getStatBarColor } from "@/lib/color-system";
+import { getTopArchetypes } from "@/lib/positions/calculator";
+import { getArchetypeById } from "@/types/archetypes";
+import { Player, PlayerArchetypeScores, ZoneAverages } from "@/types/players";
+import { Position, ZoneScores } from "@/types/positions";
+import { StatsKey } from "@/types/stats";
+import type { CardViewMode } from "./player-cards";
 
 interface PlayerCardProps {
     player: Player;
@@ -66,7 +63,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                             alt={playerName}
                             className="w-8 h-8 object-cover rounded-full"
                             onError={(e) => {
-                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.style.display = "none";
                             }}
                         />
                     )}
@@ -90,9 +87,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
                             if (!archetypeData) {
                                 // Empty slot for consistent height
-                                return (
-                                    <div key={`empty-${index}`} className="h-4" />
-                                );
+                                return <div key={`empty-${index}`} className="h-4" />;
                             }
 
                             const archetype = getArchetypeById(archetypeData.archetypeId);
@@ -103,7 +98,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                                     key={`${archetypeData.position}-${archetypeData.archetypeId}`}
                                     className="flex items-center gap-2 text-xs"
                                 >
-                                    <span className="font-semibold text-primary w-6 shrink-0">{archetypeData.position}</span>
+                                    <span className="font-semibold text-primary w-6 shrink-0">
+                                        {archetypeData.position}
+                                    </span>
                                     <span className="h-px flex-1 bg-border/40" />
                                     <span className="text-muted-foreground truncate">{archetype.name}</span>
                                 </div>

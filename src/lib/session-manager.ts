@@ -9,7 +9,7 @@
  * See: https://supabase.com/docs/guides/auth/sessions
  */
 
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 // =====================================================
 // PRE-MUTATION VALIDATION
@@ -25,16 +25,19 @@ export async function ensureValidSession(): Promise<boolean> {
     try {
         // getUser() makes a network request to verify the session is valid
         // This is the recommended approach per Supabase docs
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const {
+            data: { user },
+            error,
+        } = await supabase.auth.getUser();
 
         if (error) {
-            console.warn('Session validation failed:', error.message);
+            console.warn("Session validation failed:", error.message);
             return false;
         }
 
         return !!user;
     } catch (err) {
-        console.error('Session validation exception:', err);
+        console.error("Session validation exception:", err);
         return false;
     }
 }
@@ -55,11 +58,16 @@ export interface DatabaseError {
  */
 export function categorizeError(error: unknown): DatabaseError {
     const errorObj = error as { code?: string; message?: string } | null;
-    const code = errorObj?.code || '';
-    const message = errorObj?.message || '';
+    const code = errorObj?.code || "";
+    const message = errorObj?.message || "";
 
     // JWT/Token errors
-    if (code === 'PGRST301' || message.includes('JWT') || message.includes('expired') || message.includes('invalid_token')) {
+    if (
+        code === "PGRST301" ||
+        message.includes("JWT") ||
+        message.includes("expired") ||
+        message.includes("invalid_token")
+    ) {
         return {
             isAuthError: true,
             isNetworkError: false,
@@ -69,7 +77,12 @@ export function categorizeError(error: unknown): DatabaseError {
     }
 
     // Network errors
-    if (message.includes('network') || message.includes('fetch') || message.includes('NetworkError') || message.includes('timeout')) {
+    if (
+        message.includes("network") ||
+        message.includes("fetch") ||
+        message.includes("NetworkError") ||
+        message.includes("timeout")
+    ) {
         return {
             isAuthError: false,
             isNetworkError: true,
@@ -79,7 +92,7 @@ export function categorizeError(error: unknown): DatabaseError {
     }
 
     // Other Postgres errors (permission, constraint, etc.)
-    if (code.startsWith('PGRST') || code.startsWith('23')) {
+    if (code.startsWith("PGRST") || code.startsWith("23")) {
         return {
             isAuthError: false,
             isNetworkError: false,
@@ -101,11 +114,7 @@ export function categorizeError(error: unknown): DatabaseError {
 // STORAGE CLEANUP (for sign out)
 // =====================================================
 
-const VOTE_STORAGE_PATTERNS = [
-    /^voting_session_/,
-    /^user_votes_/,
-    /^vote_cache_/,
-];
+const VOTE_STORAGE_PATTERNS = [/^voting_session_/, /^user_votes_/, /^vote_cache_/];
 
 /**
  * Clear vote-related data from storage (called on sign out)
@@ -118,19 +127,18 @@ export function clearVoteData(userId?: string): void {
             const key = localStorage.key(i);
             if (!key) continue;
 
-            const isVoteRelated = VOTE_STORAGE_PATTERNS.some(pattern => pattern.test(key));
-            const isUserSpecific = userId && key.includes(userId) && (
-                key.includes('voting_') ||
-                key.includes('vote_') ||
-                key.includes('player_votes')
-            );
+            const isVoteRelated = VOTE_STORAGE_PATTERNS.some((pattern) => pattern.test(key));
+            const isUserSpecific =
+                userId &&
+                key.includes(userId) &&
+                (key.includes("voting_") || key.includes("vote_") || key.includes("player_votes"));
 
             if (isVoteRelated || isUserSpecific) {
                 keysToRemove.push(key);
             }
         }
 
-        keysToRemove.forEach(key => localStorage.removeItem(key));
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
     } catch {
         // Storage access may fail in some contexts
     }

@@ -1,6 +1,14 @@
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { useGame } from "@/context/game-provider";
 import { formationTemplates } from "@/types/positions";
-import { Select, SelectTrigger, SelectGroup, SelectItem, SelectLabel, SelectContent, SelectValue } from "@/components/ui/select";
 
 const FormationSelector = () => {
     const { applyFormation, currentFormation } = useGame();
@@ -9,20 +17,17 @@ const FormationSelector = () => {
         if (!value) return;
 
         const allFormations = Object.values(formationTemplates).flat();
-        const selected = allFormations.find(f => f.name === value);
+        const selected = allFormations.find((f) => f.name === value);
 
         if (!selected) return;
         applyFormation(selected);
-
     };
 
     return (
         <Select onValueChange={handleChange} value={currentFormation?.name || undefined}>
             {/* Trigger button for the select */}
             <SelectTrigger className="w-full">
-                <SelectValue placeholder="Set Formation">
-                    {currentFormation?.name || "Set Formation"}
-                </SelectValue>
+                <SelectValue placeholder="Set Formation">{currentFormation?.name || "Set Formation"}</SelectValue>
             </SelectTrigger>
 
             {/* Dropdown content with dynamically grouped formations */}

@@ -1,16 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
-import { usePlayers } from "@/context/players-provider";
-import { useGame } from "@/context/game-provider";
-import { Users, Wand2, CheckCircle2 } from "lucide-react";
-import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { ANIMATIONS, GAP } from "@/lib/design-tokens";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { CheckCircle2, Users, Wand2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ActionBarSingle } from "@/components/ui/action-bar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useGame } from "@/context/game-provider";
+import { usePlayers } from "@/context/players-provider";
+import { ANIMATIONS, GAP } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils";
 
 interface TeamGeneratorProps {
     isCompact: boolean;
@@ -23,10 +23,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
     const navigate = useNavigate();
 
     const playersArr = Object.values(players);
-    const sortedPlayers = useMemo(() =>
-        [...playersArr].sort((a, b) => a.name.localeCompare(b.name)),
-        [playersArr]
-    );
+    const sortedPlayers = useMemo(() => [...playersArr].sort((a, b) => a.name.localeCompare(b.name)), [playersArr]);
 
     // Initialize selected players from game
     useEffect(() => {
@@ -34,14 +31,12 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
     }, [players, gamePlayers]);
 
     // Responsive columns
-    const [windowWidth, setWindowWidth] = useState(() =>
-        typeof window !== 'undefined' ? window.innerWidth : 1024
-    );
+    const [windowWidth, setWindowWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1024));
 
     useEffect(() => {
         const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
     }, []);
 
     // Column distribution for responsive layout
@@ -65,39 +60,31 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
         if (selectedPlayers.length < 10) {
             toast.error("Need at least 10 players", {
                 description: "Select more players to generate teams",
-                duration: 3000
+                duration: 3000,
             });
             return;
         }
 
-        const selectedPlayerObjects = playersArr.filter(
-            player => selectedPlayers.includes(player.id)
-        );
+        const selectedPlayerObjects = playersArr.filter((player) => selectedPlayers.includes(player.id));
 
         generateTeams(selectedPlayerObjects);
 
         toast.success("Teams generated!", {
             description: `Created balanced teams with ${selectedPlayers.length} players`,
             duration: 2000,
-            icon: '⚽'
+            icon: "⚽",
         });
 
         navigate("/");
     };
 
     const toggleAll = () => {
-        setSelectedPlayers(
-            selectedPlayers.length === playersArr.length
-                ? []
-                : playersArr.map(p => p.id)
-        );
+        setSelectedPlayers(selectedPlayers.length === playersArr.length ? [] : playersArr.map((p) => p.id));
     };
 
     const togglePlayer = (playerId: string) => {
-        setSelectedPlayers(prev =>
-            prev.includes(playerId)
-                ? prev.filter(id => id !== playerId)
-                : [...prev, playerId]
+        setSelectedPlayers((prev) =>
+            prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]
         );
     };
 
@@ -109,38 +96,26 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
             {/* Modern Header */}
             <div className="space-y-2">
                 <h1 className="text-2xl font-bold tracking-tight">Team Generator</h1>
-                <p className="text-muted-foreground">
-                    Select players and and auto generate balanced teams
-                </p>
+                <p className="text-muted-foreground">Select players and and auto generate balanced teams</p>
             </div>
 
             {/* Status Bar with Modern Design */}
-            <ActionBarSingle className='h-15'>
+            <ActionBarSingle className="h-15">
                 <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
-                        <Badge
-                            variant={canGenerate ? "default" : "secondary"}
-                            className="gap-1.5"
-                        >
+                        <Badge variant={canGenerate ? "default" : "secondary"} className="gap-1.5">
                             <Users className="" />
                             {selectedPlayers.length}/{playersArr.length} selected
                         </Badge>
 
-                        {!canGenerate && (
-                            <span className="text-xs text-muted-foreground">
-                                Need 10-24 players
-                            </span>
-                        )}
+                        {!canGenerate && <span className="text-xs text-muted-foreground">Need 10-24 players</span>}
                     </div>
 
                     <Button
                         variant={allSelected ? "destructive" : "outline"}
                         size="sm"
                         onClick={toggleAll}
-                        className={cn(
-                            "h-7 text-xs",
-                            ANIMATIONS.transition.normal
-                        )}
+                        className={cn("h-7 text-xs", ANIMATIONS.transition.normal)}
                     >
                         {allSelected ? (
                             <>Clear All</>
@@ -159,14 +134,19 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                 <CardContent className="flex-1 h-full p-0">
                     <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
                         {columns.length > 0 ? (
-                            <div className={cn(
-                                "grid gap-4",
-                                columns.length === 1 ? "grid-cols-1" :
-                                    columns.length === 2 ? "grid-cols-2" : "grid-cols-3"
-                            )}>
+                            <div
+                                className={cn(
+                                    "grid gap-4",
+                                    columns.length === 1
+                                        ? "grid-cols-1"
+                                        : columns.length === 2
+                                          ? "grid-cols-2"
+                                          : "grid-cols-3"
+                                )}
+                            >
                                 {columns.map((columnPlayers, columnIndex) => (
                                     <div key={columnIndex} className={cn("space-y-2", GAP.xs)}>
-                                        {columnPlayers.map(player => (
+                                        {columnPlayers.map((player) => (
                                             <div
                                                 key={player.id}
                                                 onClick={() => togglePlayer(player.id)}
@@ -186,10 +166,12 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                                     onClick={(e) => e.stopPropagation()}
                                                     className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                                 />
-                                                <span className={cn(
-                                                    "flex-1 text-sm font-medium",
-                                                    selectedPlayers.includes(player.id) && "text-primary"
-                                                )}>
+                                                <span
+                                                    className={cn(
+                                                        "flex-1 text-sm font-medium",
+                                                        selectedPlayers.includes(player.id) && "text-primary"
+                                                    )}
+                                                >
                                                     {player.name}
                                                 </span>
                                                 {selectedPlayers.includes(player.id) && (
@@ -227,10 +209,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                         : "opacity-50"
                 )}
             >
-                <Wand2 className={cn(
-                    "mr-2 h-5 w-5",
-                    canGenerate && "animate-pulse"
-                )} />
+                <Wand2 className={cn("mr-2 h-5 w-5", canGenerate && "animate-pulse")} />
                 Generate Balanced Teams
             </Button>
         </div>

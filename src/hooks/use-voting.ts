@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useAuth } from "@/context/auth-context";
 import { usePlayers } from "@/context/players-provider";
-import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
 import { playersKeys } from "@/hooks/use-players";
-import { ensureValidSession, categorizeError } from "@/lib/session-manager";
+import { categorizeError, ensureValidSession } from "@/lib/session-manager";
+import { supabase } from "@/lib/supabase";
 
 interface VoteData {
     playerId: string;
@@ -84,11 +84,7 @@ async function fetchPlayersWithVotes(): Promise<Set<string>> {
 async function fetchUserVotes(userId: string | undefined): Promise<Map<string, any>> {
     if (!userId) return new Map();
 
-    const { data: userProfile } = await supabase
-        .from("user_profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
+    const { data: userProfile } = await supabase.from("user_profiles").select("id").eq("user_id", userId).single();
 
     if (!userProfile) return new Map();
 
@@ -194,8 +190,8 @@ export function useVotingStats() {
     return useQuery({
         queryKey: votingKeys.stats(),
         queryFn: fetchVotingStats,
-        staleTime: 2 * 60 * 1000,          // 2 min - more dynamic
-        refetchOnWindowFocus: true,        // Check when user returns
+        staleTime: 2 * 60 * 1000, // 2 min - more dynamic
+        refetchOnWindowFocus: true, // Check when user returns
     });
 }
 
@@ -216,8 +212,8 @@ export function useUserVotes() {
         queryKey: votingKeys.userVotes(user?.id),
         queryFn: () => fetchUserVotes(user?.id),
         enabled: !!user,
-        staleTime: 30 * 1000,              // 30 sec - very fresh (user's own data)
-        refetchOnWindowFocus: true,        // Always fresh when they return
+        staleTime: 30 * 1000, // 30 sec - very fresh (user's own data)
+        refetchOnWindowFocus: true, // Always fresh when they return
     });
 }
 
@@ -279,7 +275,7 @@ export function useSubmitVote() {
                 previousVotes,
                 toastId,
                 playerName: player?.name || "player",
-                optimisticTimestamp
+                optimisticTimestamp,
             };
         },
         onError: (err, _voteData, context) => {

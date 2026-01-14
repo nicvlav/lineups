@@ -7,9 +7,9 @@
  * @module auto-balance/debug-tools
  */
 
-import type { FastTeam, BalanceMetrics} from "./types";
 import type { BalanceConfiguration, MetricWeights } from "./metrics-config";
 import { getTotalWeight } from "./metrics-config";
+import type { BalanceMetrics, FastTeam } from "./types";
 
 /**
  * Metric contribution breakdown
@@ -45,10 +45,7 @@ export interface ScoreExplanation {
  * @param config Balance configuration with weights
  * @returns Detailed explanation
  */
-export function explainScore(
-    metrics: BalanceMetrics,
-    config: BalanceConfiguration
-): ScoreExplanation {
+export function explainScore(metrics: BalanceMetrics, config: BalanceConfiguration): ScoreExplanation {
     const contributions: MetricContribution[] = [];
 
     // Primary metrics
@@ -154,8 +151,8 @@ export function formatScoreExplanation(explanation: ScoreExplanation): string {
     for (const contrib of explanation.topContributors) {
         lines.push(
             `  ${contrib.metricName.padEnd(20)} ` +
-            `${contrib.rawValue.toFixed(3)} × ${contrib.weight.toFixed(2)} = ` +
-            `${contrib.contribution.toFixed(3)} (${contrib.percentage.toFixed(1)}%)`
+                `${contrib.rawValue.toFixed(3)} × ${contrib.weight.toFixed(2)} = ` +
+                `${contrib.contribution.toFixed(3)} (${contrib.percentage.toFixed(1)}%)`
         );
     }
 
@@ -165,8 +162,8 @@ export function formatScoreExplanation(explanation: ScoreExplanation): string {
     for (const contrib of explanation.weakestMetrics) {
         lines.push(
             `  ${contrib.metricName.padEnd(20)} ` +
-            `${contrib.rawValue.toFixed(3)} × ${contrib.weight.toFixed(2)} = ` +
-            `${contrib.contribution.toFixed(3)} (${contrib.percentage.toFixed(1)}%)`
+                `${contrib.rawValue.toFixed(3)} × ${contrib.weight.toFixed(2)} = ` +
+                `${contrib.contribution.toFixed(3)} (${contrib.percentage.toFixed(1)}%)`
         );
     }
 
@@ -175,9 +172,7 @@ export function formatScoreExplanation(explanation: ScoreExplanation): string {
     lines.push("───────────────────────────────────────────────────────────");
     for (const contrib of explanation.contributions) {
         const bar = "█".repeat(Math.round(contrib.rawValue * 20));
-        lines.push(
-            `  ${contrib.metricName.padEnd(20)} ${contrib.rawValue.toFixed(3)} ${bar}`
-        );
+        lines.push(`  ${contrib.metricName.padEnd(20)} ${contrib.rawValue.toFixed(3)} ${bar}`);
     }
 
     lines.push("═══════════════════════════════════════════════════════════");
@@ -256,10 +251,30 @@ export function formatComparison(comparison: TeamComparison): string {
     lines.push("──────────────────────────────────────────────────────────");
 
     const metrics = [
-        ["Score Balance", "scoreBalance", comparison.result1.metrics.positionalScoreBalance, comparison.result2.metrics.positionalScoreBalance],
-        ["Star Distribution", "starDistribution", comparison.result1.metrics.talentDistributionBalance, comparison.result2.metrics.talentDistributionBalance],
-        ["Zone Balance", "zoneBalance", comparison.result1.metrics.zonalDistributionBalance, comparison.result2.metrics.zonalDistributionBalance],
-        ["Peak Potential", "peakPotential", comparison.result1.metrics.overallStrengthBalance, comparison.result2.metrics.overallStrengthBalance],
+        [
+            "Score Balance",
+            "scoreBalance",
+            comparison.result1.metrics.positionalScoreBalance,
+            comparison.result2.metrics.positionalScoreBalance,
+        ],
+        [
+            "Star Distribution",
+            "starDistribution",
+            comparison.result1.metrics.talentDistributionBalance,
+            comparison.result2.metrics.talentDistributionBalance,
+        ],
+        [
+            "Zone Balance",
+            "zoneBalance",
+            comparison.result1.metrics.zonalDistributionBalance,
+            comparison.result2.metrics.zonalDistributionBalance,
+        ],
+        [
+            "Peak Potential",
+            "peakPotential",
+            comparison.result1.metrics.overallStrengthBalance,
+            comparison.result2.metrics.overallStrengthBalance,
+        ],
     ];
 
     for (const [name, key, val1, val2] of metrics) {
@@ -285,7 +300,7 @@ export function analyzeWeightSensitivity(
     metrics: BalanceMetrics,
     weights: MetricWeights,
     metricToVary: keyof MetricWeights["primary"] | keyof MetricWeights["secondary"],
-    variations: number[] = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30]
+    variations: number[] = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
 ): Record<number, number> {
     const results: Record<number, number> = {};
 
@@ -436,8 +451,6 @@ export function diagnosticReport(
     lines.push("╚═══════════════════════════════════════════════════════════╝");
     lines.push("");
 
-
-
     // Team summaries
     const summaryA = summarizeTeam(teamA, config.starPlayers.absoluteMinimum);
     const summaryB = summarizeTeam(teamB, config.starPlayers.absoluteMinimum);
@@ -448,7 +461,6 @@ export function diagnosticReport(
     lines.push("");
     lines.push(formatTeamSummary(summaryB, "B"));
     lines.push("");
-
 
     // Score explanation
     const explanation = explainScore(metrics, config);

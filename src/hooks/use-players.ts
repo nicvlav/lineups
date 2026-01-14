@@ -8,12 +8,12 @@
  * - Loading and error states
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { v4 as uuidv4 } from "uuid";
-import { ensureValidSession, categorizeError } from "@/lib/session-manager";
-import { defaultStatScores, PlayerStats } from "@/types/stats";
+import { categorizeError, ensureValidSession } from "@/lib/session-manager";
+import { supabase } from "@/lib/supabase";
 import { Player } from "@/types/players";
+import { defaultStatScores, PlayerStats } from "@/types/stats";
 
 // =====================================================
 // QUERY KEYS
@@ -108,10 +108,7 @@ function convertColumnsToPlayerStats(player: Record<string, unknown>): PlayerSta
 // =====================================================
 
 async function fetchPlayers(): Promise<Record<string, Player>> {
-    const { data, error } = await supabase
-        .from("players")
-        .select("*")
-        .order("name", { ascending: false });
+    const { data, error } = await supabase.from("players").select("*").order("name", { ascending: false });
 
     if (error) {
         const categorized = categorizeError(error);
@@ -143,16 +140,13 @@ async function fetchPlayers(): Promise<Record<string, Player>> {
 // QUERIES
 // =====================================================
 
-export function usePlayers(options?: {
-    refetchInterval?: number | false;
-    refetchIntervalInBackground?: boolean;
-}) {
+export function usePlayers(options?: { refetchInterval?: number | false; refetchIntervalInBackground?: boolean }) {
     return useQuery({
         queryKey: playersKeys.all,
         queryFn: fetchPlayers,
-        staleTime: 10 * 60 * 1000,        // 10 min - players change rarely
-        gcTime: 30 * 60 * 1000,            // 30 min - keep in cache longer
-        refetchOnWindowFocus: 'always',    // Always check when returning
+        staleTime: 10 * 60 * 1000, // 10 min - players change rarely
+        gcTime: 30 * 60 * 1000, // 30 min - keep in cache longer
+        refetchOnWindowFocus: "always", // Always check when returning
         refetchOnReconnect: true,
         retry: (failureCount, error) => {
             if (error instanceof Error && error.message === "Session expired") {
@@ -186,14 +180,14 @@ export function useAddPlayer() {
                 stats: playerStats,
             };
 
-            const { error } = await supabase
-                .from("players")
-                .insert([{
+            const { error } = await supabase.from("players").insert([
+                {
                     id: newPlayer.id,
                     name: newPlayer.name,
                     vote_count: 0,
                     ...convertPlayerStatsToColumns(playerStats),
-                }]);
+                },
+            ]);
 
             if (error) {
                 const categorized = categorizeError(error);
@@ -229,10 +223,7 @@ export function useUpdatePlayer() {
                 throw new Error("Player name must be less than 50 characters");
             }
 
-            const { error } = await supabase
-                .from("players")
-                .update({ name: trimmedName })
-                .eq("id", id);
+            const { error } = await supabase.from("players").update({ name: trimmedName }).eq("id", id);
 
             if (error) {
                 const categorized = categorizeError(error);
@@ -277,10 +268,7 @@ export function useDeletePlayer() {
                 throw new Error("Session expired - please sign in again");
             }
 
-            const { error, count } = await supabase
-                .from("players")
-                .delete({ count: 'exact' })
-                .eq("id", id);
+            const { error, count } = await supabase.from("players").delete({ count: "exact" }).eq("id", id);
 
             if (error) {
                 const categorized = categorizeError(error);

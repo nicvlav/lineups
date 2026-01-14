@@ -8,12 +8,12 @@
  * See: https://github.com/supabase/gotrue-js/issues/762
  */
 
-import { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from "react";
-import { supabase } from "@/lib/supabase";
-import { User, Session, AuthError } from "@supabase/supabase-js";
-import { clearVoteData } from "@/lib/session-manager";
+import { AuthError, Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
-import { userProfileKeys, squadKeys } from "@/hooks/use-user-profile";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { squadKeys, userProfileKeys } from "@/hooks/use-user-profile";
+import { clearVoteData } from "@/lib/session-manager";
+import { supabase } from "@/lib/supabase";
 
 // =====================================================
 // TYPES
@@ -64,7 +64,12 @@ interface AuthContextProps {
     validateSquad: (squadId: string) => Promise<{ valid: boolean; error?: string }>;
     verifySquad: (squadId: string) => Promise<{ error: AuthError | null }>;
     assignPlayer: (playerId: string | null) => Promise<{ error: AuthError | null }>;
-    verifySquadAndPlayer: (squadId: string, playerId: string | null, createNew?: boolean, newPlayerName?: string) => Promise<{ error: AuthError | null }>;
+    verifySquadAndPlayer: (
+        squadId: string,
+        playerId: string | null,
+        createNew?: boolean,
+        newPlayerName?: string
+    ) => Promise<{ error: AuthError | null }>;
     getAvailableSquads: () => Promise<Squad[]>;
 }
 
@@ -91,7 +96,9 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
     // Ref to track current user for callbacks (prevents stale closure)
     const userRef = useRef<AuthUser | null>(null);
-    useEffect(() => { userRef.current = user; }, [user]);
+    useEffect(() => {
+        userRef.current = user;
+    }, [user]);
 
     // =====================================================
     // PROFILE LOADING (called OUTSIDE of onAuthStateChange)
@@ -100,21 +107,21 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
     const loadUserProfile = useCallback(async (supabaseUser: User): Promise<void> => {
         try {
             const { data: profile, error } = await supabase
-                .from('user_profiles')
-                .select('*')
-                .eq('user_id', supabaseUser.id)
+                .from("user_profiles")
+                .select("*")
+                .eq("user_id", supabaseUser.id)
                 .single();
 
             // Profile doesn't exist - create it
-            if (error?.code === 'PGRST116') {
+            if (error?.code === "PGRST116") {
                 const { data: newProfile, error: createError } = await supabase
-                    .from('user_profiles')
+                    .from("user_profiles")
                     .insert({ user_id: supabaseUser.id, is_verified: false })
                     .select()
                     .single();
 
-                if (createError && createError.code !== '23505') {
-                    console.error('Failed to create user profile:', createError);
+                if (createError && createError.code !== "23505") {
+                    console.error("Failed to create user profile:", createError);
                 }
 
                 setUser({
@@ -128,7 +135,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             }
 
             if (error) {
-                console.error('Error loading profile:', error);
+                console.error("Error loading profile:", error);
             }
 
             setUser({
@@ -139,7 +146,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                 profile: profile || undefined,
             });
         } catch (error) {
-            console.error('Error loading user profile:', error);
+            console.error("Error loading user profile:", error);
             // Set user without profile on error
             setUser({
                 id: supabaseUser.id,
@@ -160,21 +167,26 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         const initialize = async () => {
             try {
                 // Use getUser() for initial load - makes network request to verify session
-                const { data: { user: supabaseUser }, error } = await supabase.auth.getUser();
+                const {
+                    data: { user: supabaseUser },
+                    error,
+                } = await supabase.auth.getUser();
 
                 if (error) {
                     // Not authenticated or session invalid - this is fine
-                    if (error.message !== 'Auth session missing!') {
-                        console.error('Error getting user:', error);
+                    if (error.message !== "Auth session missing!") {
+                        console.error("Error getting user:", error);
                     }
                 } else if (supabaseUser && mounted) {
                     // Get session for storage (non-blocking)
-                    const { data: { session } } = await supabase.auth.getSession();
+                    const {
+                        data: { session },
+                    } = await supabase.auth.getSession();
                     setSession(session);
                     await loadUserProfile(supabaseUser);
                 }
             } catch (error) {
-                console.error('Failed to initialize auth:', error);
+                console.error("Failed to initialize auth:", error);
             } finally {
                 if (mounted) {
                     setLoading(false);
@@ -187,30 +199,30 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         // Listen for auth state changes
         // CRITICAL: Do NOT call any Supabase methods inside this callback!
         // This causes deadlocks. Instead, defer work using setTimeout.
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (event, newSession) => {
-                if (!mounted) return;
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((event, newSession) => {
+            if (!mounted) return;
 
-                // Update session state immediately (no Supabase calls)
-                setSession(newSession);
+            // Update session state immediately (no Supabase calls)
+            setSession(newSession);
 
-                if (newSession?.user) {
-                    // DEFER profile loading outside the callback to prevent deadlock
-                    setTimeout(() => {
-                        if (mounted) {
-                            loadUserProfile(newSession.user);
-                        }
-                    }, 0);
-                } else {
-                    setUser(null);
-                    if (event === 'SIGNED_OUT') {
-                        setCanVote(false);
-                        setIsVerified(false);
-                        setNeedsVerification(false);
+            if (newSession?.user) {
+                // DEFER profile loading outside the callback to prevent deadlock
+                setTimeout(() => {
+                    if (mounted) {
+                        loadUserProfile(newSession.user);
                     }
+                }, 0);
+            } else {
+                setUser(null);
+                if (event === "SIGNED_OUT") {
+                    setCanVote(false);
+                    setIsVerified(false);
+                    setNeedsVerification(false);
                 }
             }
-        );
+        });
 
         return () => {
             mounted = false;
@@ -247,7 +259,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
     useEffect(() => {
         const timeout = setTimeout(() => {
             if (loading) {
-                console.warn('Auth initialization timeout');
+                console.warn("Auth initialization timeout");
                 setLoading(false);
             }
         }, 10000);
@@ -264,7 +276,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             const { error } = await supabase.auth.signUp({
                 email,
                 password,
-                options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
+                options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
             });
             return { error };
         } catch (error) {
@@ -284,11 +296,11 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
     const signInWithFacebook = async () => {
         try {
             const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'facebook',
+                provider: "facebook",
                 options: {
-                    scopes: 'email',
-                    redirectTo: `${window.location.origin}/auth/callback`
-                }
+                    scopes: "email",
+                    redirectTo: `${window.location.origin}/auth/callback`,
+                },
             });
             return { error };
         } catch (error) {
@@ -299,7 +311,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
     const resetPassword = async (email: string) => {
         try {
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/auth/reset-password`
+                redirectTo: `${window.location.origin}/auth/reset-password`,
             });
             return { error };
         } catch (error) {
@@ -358,24 +370,33 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
     const updateAssociatedPlayer = async (playerId: string | null) => {
         if (!user) {
-            return { error: { message: 'User not authenticated' } as AuthError };
+            return { error: { message: "User not authenticated" } as AuthError };
         }
 
         try {
-            const { error } = await supabase
-                .from('user_profiles')
-                .upsert({
+            const { error } = await supabase.from("user_profiles").upsert(
+                {
                     user_id: user.id,
                     associated_player_id: playerId,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: "user_id" }
+            );
 
             if (error) throw error;
 
-            setUser(prev => prev ? {
-                ...prev,
-                profile: { ...prev.profile!, associated_player_id: playerId, updated_at: new Date().toISOString() }
-            } : null);
+            setUser((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          profile: {
+                              ...prev.profile!,
+                              associated_player_id: playerId,
+                              updated_at: new Date().toISOString(),
+                          },
+                      }
+                    : null
+            );
 
             queryClient.invalidateQueries({ queryKey: userProfileKeys.detail(user.id) });
             return { error: null };
@@ -389,10 +410,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             const cached = queryClient.getQueryData<Squad[]>(squadKeys.list());
             if (cached) return cached;
 
-            const { data, error } = await supabase
-                .from('squads')
-                .select('*')
-                .order('name');
+            const { data, error } = await supabase.from("squads").select("*").order("name");
 
             if (error) throw error;
 
@@ -405,49 +423,55 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
     const validateSquad = async (squadId: string): Promise<{ valid: boolean; error?: string }> => {
         try {
-            const { error } = await supabase
-                .from('squads')
-                .select('id')
-                .eq('id', squadId)
-                .single();
+            const { error } = await supabase.from("squads").select("id").eq("id", squadId).single();
 
-            if (error?.code === 'PGRST116') {
-                return { valid: false, error: 'Squad not found' };
+            if (error?.code === "PGRST116") {
+                return { valid: false, error: "Squad not found" };
             }
             if (error) throw error;
 
             return { valid: true };
         } catch {
-            return { valid: false, error: 'Failed to validate squad' };
+            return { valid: false, error: "Failed to validate squad" };
         }
     };
 
     const verifySquad = async (squadId: string) => {
         if (!user) {
-            return { error: { message: 'User not authenticated' } as AuthError };
+            return { error: { message: "User not authenticated" } as AuthError };
         }
 
         try {
             const validation = await validateSquad(squadId);
             if (!validation.valid) {
-                return { error: { message: validation.error || 'Invalid squad' } as AuthError };
+                return { error: { message: validation.error || "Invalid squad" } as AuthError };
             }
 
-            const { error } = await supabase
-                .from('user_profiles')
-                .upsert({
+            const { error } = await supabase.from("user_profiles").upsert(
+                {
                     user_id: user.id,
                     squad_id: squadId,
                     is_verified: false,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: "user_id" }
+            );
 
             if (error) throw error;
 
-            setUser(prev => prev ? {
-                ...prev,
-                profile: { ...prev.profile!, squad_id: squadId, is_verified: false, updated_at: new Date().toISOString() }
-            } : null);
+            setUser((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          profile: {
+                              ...prev.profile!,
+                              squad_id: squadId,
+                              is_verified: false,
+                              updated_at: new Date().toISOString(),
+                          },
+                      }
+                    : null
+            );
 
             queryClient.invalidateQueries({ queryKey: userProfileKeys.detail(user.id) });
             return { error: null };
@@ -458,35 +482,40 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
     const assignPlayer = async (playerId: string | null) => {
         if (!user) {
-            return { error: { message: 'User not authenticated' } as AuthError };
+            return { error: { message: "User not authenticated" } as AuthError };
         }
 
         if (!user.profile?.squad_id) {
-            return { error: { message: 'Squad verification required first' } as AuthError };
+            return { error: { message: "Squad verification required first" } as AuthError };
         }
 
         try {
-            const { error } = await supabase
-                .from('user_profiles')
-                .upsert({
+            const { error } = await supabase.from("user_profiles").upsert(
+                {
                     user_id: user.id,
                     squad_id: user.profile.squad_id,
                     associated_player_id: playerId,
                     is_verified: true,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: "user_id" }
+            );
 
             if (error) throw error;
 
-            setUser(prev => prev ? {
-                ...prev,
-                profile: {
-                    ...prev.profile!,
-                    associated_player_id: playerId,
-                    is_verified: true,
-                    updated_at: new Date().toISOString()
-                }
-            } : null);
+            setUser((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          profile: {
+                              ...prev.profile!,
+                              associated_player_id: playerId,
+                              is_verified: true,
+                              updated_at: new Date().toISOString(),
+                          },
+                      }
+                    : null
+            );
 
             queryClient.invalidateQueries({ queryKey: userProfileKeys.detail(user.id) });
             return { error: null };
@@ -502,7 +531,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         newPlayerName?: string
     ) => {
         if (!user) {
-            return { error: { message: 'User not authenticated' } as AuthError };
+            return { error: { message: "User not authenticated" } as AuthError };
         }
 
         try {
@@ -510,7 +539,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
             if (createNew && newPlayerName) {
                 const { data: newPlayer, error: playerError } = await supabase
-                    .from('players')
+                    .from("players")
                     .insert({ name: newPlayerName.trim(), vote_count: 0 })
                     .select()
                     .single();
@@ -520,31 +549,36 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             }
 
             if (!finalPlayerId) {
-                return { error: { message: 'Player ID is required' } as AuthError };
+                return { error: { message: "Player ID is required" } as AuthError };
             }
 
-            const { error } = await supabase
-                .from('user_profiles')
-                .upsert({
+            const { error } = await supabase.from("user_profiles").upsert(
+                {
                     user_id: user.id,
                     squad_id: squadId,
                     associated_player_id: finalPlayerId,
                     is_verified: true,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: "user_id" }
+            );
 
             if (error) throw error;
 
-            setUser(prev => prev ? {
-                ...prev,
-                profile: {
-                    ...prev.profile!,
-                    squad_id: squadId,
-                    associated_player_id: finalPlayerId,
-                    is_verified: true,
-                    updated_at: new Date().toISOString()
-                }
-            } : null);
+            setUser((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          profile: {
+                              ...prev.profile!,
+                              squad_id: squadId,
+                              associated_player_id: finalPlayerId,
+                              is_verified: true,
+                              updated_at: new Date().toISOString(),
+                          },
+                      }
+                    : null
+            );
 
             queryClient.invalidateQueries({ queryKey: userProfileKeys.detail(user.id) });
             return { error: null };
@@ -569,29 +603,31 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
     }
 
     return (
-        <AuthContext.Provider value={{
-            user,
-            session,
-            urlState,
-            canVote,
-            isVerified,
-            needsVerification,
-            loading,
-            signUpWithEmail,
-            signInWithEmail,
-            signInWithFacebook,
-            resetPassword,
-            updatePassword,
-            signOut,
-            forceSignOut,
-            clearUrlState,
-            updateAssociatedPlayer,
-            validateSquad,
-            verifySquad,
-            assignPlayer,
-            verifySquadAndPlayer,
-            getAvailableSquads
-        }}>
+        <AuthContext.Provider
+            value={{
+                user,
+                session,
+                urlState,
+                canVote,
+                isVerified,
+                needsVerification,
+                loading,
+                signUpWithEmail,
+                signInWithEmail,
+                signInWithFacebook,
+                resetPassword,
+                updatePassword,
+                signOut,
+                forceSignOut,
+                clearUrlState,
+                updateAssociatedPlayer,
+                validateSquad,
+                verifySquad,
+                assignPlayer,
+                verifySquadAndPlayer,
+                getAvailableSquads,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );

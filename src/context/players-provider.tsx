@@ -12,8 +12,12 @@
  * - Optimistic updates
  */
 
-import React, { ReactNode, createContext, useContext } from "react";
-import { usePlayers as usePlayersQuery, useAddPlayer as useAddPlayerMutation, useDeletePlayer as useDeletePlayerMutation } from "@/hooks/use-players";
+import React, { createContext, ReactNode, useContext } from "react";
+import {
+    useAddPlayer as useAddPlayerMutation,
+    useDeletePlayer as useDeletePlayerMutation,
+    usePlayers as usePlayersQuery,
+} from "@/hooks/use-players";
 import { Player } from "@/types/players";
 
 interface PlayersContextType {
