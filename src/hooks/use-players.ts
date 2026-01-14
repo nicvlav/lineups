@@ -155,11 +155,18 @@ export function usePlayers(options?: {
         refetchOnWindowFocus: 'always',    // Always check when returning
         refetchOnReconnect: true,
         retry: (failureCount, error) => {
+            // Don't retry auth errors
             if (error instanceof Error && error.message === "Session expired") {
                 return false;
             }
+            // Don't retry CORS errors (browser wake-up issues)
+            const categorized = categorizeError(error);
+            if (categorized.isNetworkError) {
+                return failureCount < 1; // Only retry once for network errors
+            }
             return failureCount < 3;
         },
+        retryDelay: 1000, // 1 second delay between retries
         ...options,
     });
 }
