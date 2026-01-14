@@ -7,6 +7,7 @@
  * @module auto-balance/metrics
  */
 
+import { logger } from "@/lib/logger";
 import { classifyPlayerByZone } from "@/lib/player-quality";
 import { getFormationsForCount } from "@/types/formations";
 import type { Formation, Position, StarZoneClassification } from "@/types/positions";
@@ -256,21 +257,21 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.energy;
-        console.log("Energy Balance:");
-        console.log(formatComparison("Stamina", teamA.staminaScore, teamB.staminaScore, staminaRatio));
-        console.log(formatComparison("Att Workrate", aAttWR, bAttWR, calculateBasicDifferenceRatio(aAttWR, bAttWR)));
-        console.log(formatComparison("Def Workrate", aDefWR, bDefWR, calculateBasicDifferenceRatio(aDefWR, bDefWR)));
-        console.log(formatComparison("Total Workrate", aTotalWR, bTotalWR, totalWRRatio));
-        console.log(
+        logger.debug("Energy Balance:");
+        logger.debug(formatComparison("Stamina", teamA.staminaScore, teamB.staminaScore, staminaRatio));
+        logger.debug(formatComparison("Att Workrate", aAttWR, bAttWR, calculateBasicDifferenceRatio(aAttWR, bAttWR)));
+        logger.debug(formatComparison("Def Workrate", aDefWR, bDefWR, calculateBasicDifferenceRatio(aDefWR, bDefWR)));
+        logger.debug(formatComparison("Total Workrate", aTotalWR, bTotalWR, totalWRRatio));
+        logger.debug(
             `  Cancellation Factor: ${cancellationFactor.toFixed(3)} (att: ${aAttAdvantage.toFixed(1)}, def: ${aDefAdvantage.toFixed(1)})`
         );
-        console.log(`  Raw Quality (no cancel): ${rawQuality.toFixed(3)}`);
-        console.log(`  Cancellation-Adjusted: ${cancellationAdjusted.toFixed(3)}`);
-        console.log(`  Blend Weight: ${blendWeight.toFixed(3)} (higher = more cancellation influence)`);
-        console.log(`  Final Workrate Ratio: ${workrateRatio.toFixed(3)}`);
-        console.log(`  Raw Combined: ${rawCombined.toFixed(3)}`);
-        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
-        console.log(`  Calibrated Score: ${energyBalanceRatio.toFixed(3)}`);
+        logger.debug(`  Raw Quality (no cancel): ${rawQuality.toFixed(3)}`);
+        logger.debug(`  Cancellation-Adjusted: ${cancellationAdjusted.toFixed(3)}`);
+        logger.debug(`  Blend Weight: ${blendWeight.toFixed(3)} (higher = more cancellation influence)`);
+        logger.debug(`  Final Workrate Ratio: ${workrateRatio.toFixed(3)}`);
+        logger.debug(`  Raw Combined: ${rawCombined.toFixed(3)}`);
+        logger.debug(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        logger.debug(`  Calibrated Score: ${energyBalanceRatio.toFixed(3)}`);
     }
 
     return energyBalanceRatio;
@@ -298,10 +299,10 @@ function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.peakPotential;
-        console.log("Overall Strength Balance (Peak Potential):");
-        console.log(formatComparison("Peak", teamA.peakPotential, teamB.peakPotential, rawRatio));
-        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
-        console.log(`  Calibrated Score: ${strengthBalanceRatio.toFixed(3)}`);
+        logger.debug("Overall Strength Balance (Peak Potential):");
+        logger.debug(formatComparison("Peak", teamA.peakPotential, teamB.peakPotential, rawRatio));
+        logger.debug(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        logger.debug(`  Calibrated Score: ${strengthBalanceRatio.toFixed(3)}`);
     }
 
     return strengthBalanceRatio;
@@ -445,15 +446,15 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.scoreBalance;
-        console.log("Positional Score Balance:");
-        console.log(
+        logger.debug("Positional Score Balance:");
+        logger.debug(
             formatComparison("A     | Peak vs Placed | ", teamAStats.peakTotal, teamAStats.placedTotal, aRatio)
         );
-        console.log(
+        logger.debug(
             formatComparison("B     | Peak vs Placed | ", teamBStats.peakTotal, teamBStats.placedTotal, bRatio)
         );
-        console.log(formatComparison("Diff  | Peak vs Placed | ", aRatio, bRatio, diff));
-        console.log(
+        logger.debug(formatComparison("Diff  | Peak vs Placed | ", aRatio, bRatio, diff));
+        logger.debug(
             formatComparison(
                 "Total | Peak vs Placed | ",
                 teamAStats.placedTotal + teamBStats.placedTotal,
@@ -461,32 +462,32 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
                 efficiency
             )
         );
-        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
-        console.log(`  Efficiency Score: ${efficiencyScore.toFixed(3)}`);
-        console.log(`  Gap Statistics:`);
-        console.log(
+        logger.debug(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        logger.debug(`  Efficiency Score: ${efficiencyScore.toFixed(3)}`);
+        logger.debug(`  Gap Statistics:`);
+        logger.debug(
             `    Team A: mean=${teamAStats.meanGap.toFixed(2)}, stdDev=${teamAStats.stdDev.toFixed(2)}, worst=${teamAStats.worstPlayerName} (${teamAStats.worstGap.toFixed(1)})`
         );
-        console.log(
+        logger.debug(
             `    Team B: mean=${teamBStats.meanGap.toFixed(2)}, stdDev=${teamBStats.stdDev.toFixed(2)}, worst=${teamBStats.worstPlayerName} (${teamBStats.worstGap.toFixed(1)})`
         );
-        console.log(
+        logger.debug(
             `    Combined: mean=${combinedMean.toFixed(2)}, stdDev=${combinedStdDev.toFixed(2)}, worst=${worstOverallGap.toFixed(1)}`
         );
-        console.log(`  Component Scores:`);
-        console.log(
+        logger.debug(`  Component Scores:`);
+        logger.debug(
             `    Variance Score: ${varianceScore.toFixed(3)} (stdDev=${combinedStdDev.toFixed(2)}, penalty=${variancePenalty.toFixed(3)})`
         );
-        console.log(
+        logger.debug(
             `    Weighted Gap Score: ${weightedGapScore.toFixed(3)} (avgWeighted=${avgWeightedGap.toFixed(2)}, penalty=${weightedGapPenalty.toFixed(3)})`
         );
-        console.log(
+        logger.debug(
             `    Mean Gap Score: ${meanGapScore.toFixed(3)} (mean=${combinedMean.toFixed(2)}, penalty=${meanGapPenalty.toFixed(3)}) [not used]`
         );
-        console.log(
+        logger.debug(
             `    Worst Gap Score: ${worstGapScore.toFixed(3)} (worst=${worstOverallGap.toFixed(1)}, penalty=${worstGapPenalty.toFixed(3)})`
         );
-        console.log(
+        logger.debug(
             `  Final: ${efficiencyScore.toFixed(3)}×0.35 + ${varianceScore.toFixed(3)}×0.30 + ${weightedGapScore.toFixed(3)}×0.20 + ${worstGapScore.toFixed(3)}×0.15 = ${finalScore.toFixed(3)}`
         );
     }
@@ -575,22 +576,22 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.zoneBalance;
-        console.log("Zonal Distribution Balance:");
-        console.log(formatZoneScores(teamA, teamB));
-        console.log(formatZonePeakScores(teamA, teamB));
-        console.log(formatZoneAverageRatings(teamA, teamB));
-        console.log("  Per-Zone Raw Ratios (DEF, MID, ATT): " + rawZoneRatios.map((r) => r.toFixed(3)).join(", "));
-        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
-        console.log(`  Zone Winners: ${directionality.winners.join(", ")}`);
-        console.log(
+        logger.debug("Zonal Distribution Balance:");
+        logger.debug(formatZoneScores(teamA, teamB));
+        logger.debug(formatZonePeakScores(teamA, teamB));
+        logger.debug(formatZoneAverageRatings(teamA, teamB));
+        logger.debug("  Per-Zone Raw Ratios (DEF, MID, ATT): " + rawZoneRatios.map((r) => r.toFixed(3)).join(", "));
+        logger.debug(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        logger.debug(`  Zone Winners: ${directionality.winners.join(", ")}`);
+        logger.debug(
             `  Directional Split: A=${directionality.teamAWins}, B=${directionality.teamBWins}, Neutral=${directionality.neutrals}`
         );
-        console.log(`  Zone Directional Penalty: ${directionality.penalty.toFixed(3)}`);
-        console.log(`  Team A Internal Balance: ${teamAZonalBalance.toFixed(3)}`);
-        console.log(`  Team B Internal Balance: ${teamBZonalBalance.toFixed(3)}`);
-        console.log(`  internalSkillRatio: ${internalSkillRatio.toFixed(3)}`);
-        console.log(`  totalImbalance: ${totalImbalance.toFixed(3)}`);
-        console.log(`  Final Zonal Balance: ${zonalBalanceRatio.toFixed(3)}`);
+        logger.debug(`  Zone Directional Penalty: ${directionality.penalty.toFixed(3)}`);
+        logger.debug(`  Team A Internal Balance: ${teamAZonalBalance.toFixed(3)}`);
+        logger.debug(`  Team B Internal Balance: ${teamBZonalBalance.toFixed(3)}`);
+        logger.debug(`  internalSkillRatio: ${internalSkillRatio.toFixed(3)}`);
+        logger.debug(`  totalImbalance: ${totalImbalance.toFixed(3)}`);
+        logger.debug(`  Final Zonal Balance: ${zonalBalanceRatio.toFixed(3)}`);
     }
 
     return zonalBalanceRatio;
@@ -626,10 +627,10 @@ function calculateAllStatBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.allStatBalance;
-        console.log("All-Stat Balance (Sum of Every Player Stat):");
-        console.log(formatComparison("Total All Stats", teamATotal, teamBTotal, rawRatio));
-        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
-        console.log(`  Calibrated Score: ${allStatBalanceRatio.toFixed(3)}`);
+        logger.debug("All-Stat Balance (Sum of Every Player Stat):");
+        logger.debug(formatComparison("Total All Stats", teamATotal, teamBTotal, rawRatio));
+        logger.debug(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        logger.debug(`  Calibrated Score: ${allStatBalanceRatio.toFixed(3)}`);
     }
 
     return allStatBalanceRatio;
@@ -659,10 +660,10 @@ function calculateCreativityBalance(teamA: FastTeam, teamB: FastTeam, debug: boo
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.creativity;
-        console.log("Creativity Balance:");
-        console.log(formatComparison("Creativity", teamA.creativityScore, teamB.creativityScore, rawRatio));
-        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
-        console.log(`  Calibrated Score: ${creativityBalanceRatio.toFixed(3)}`);
+        logger.debug("Creativity Balance:");
+        logger.debug(formatComparison("Creativity", teamA.creativityScore, teamB.creativityScore, rawRatio));
+        logger.debug(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        logger.debug(`  Calibrated Score: ${creativityBalanceRatio.toFixed(3)}`);
     }
 
     return creativityBalanceRatio;
@@ -762,15 +763,15 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.striker;
-        console.log("Striker Balance (3-Factor System):");
-        console.log(
+        logger.debug("Striker Balance (3-Factor System):");
+        logger.debug(
             `  Team A: ${teamAMetrics.points} points (${teamAMetrics.specialists} specialists, ${teamAMetrics.viable} viable)`
         );
-        console.log(
+        logger.debug(
             `  Team B: ${teamBMetrics.points} points (${teamBMetrics.specialists} specialists, ${teamBMetrics.viable} viable)`
         );
-        console.log("");
-        console.log(
+        logger.debug("");
+        logger.debug(
             formatComparison(
                 "  Specialist Strikers",
                 teamAMetrics.specialists,
@@ -778,14 +779,14 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
                 specialistBalance
             )
         );
-        console.log(`    Specialist Balance: ${specialistBalance.toFixed(3)} (weight: 50%)`);
-        console.log(formatComparison("  Viable Strikers", teamAMetrics.points, teamBMetrics.points, viableBalance));
-        console.log(`    Viable Balance: ${viableBalance.toFixed(3)} (weight: 30%)`);
-        console.log(formatComparison("  Striker Quality", teamA.strikerScore, teamB.strikerScore, qualityRatio));
-        console.log(`    Quality Balance: ${qualityScore.toFixed(3)} (weight: 20%)`);
-        console.log("");
-        console.log(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
-        console.log(`  Final Striker Balance: ${strikerBalanceRatio.toFixed(3)}`);
+        logger.debug(`    Specialist Balance: ${specialistBalance.toFixed(3)} (weight: 50%)`);
+        logger.debug(formatComparison("  Viable Strikers", teamAMetrics.points, teamBMetrics.points, viableBalance));
+        logger.debug(`    Viable Balance: ${viableBalance.toFixed(3)} (weight: 30%)`);
+        logger.debug(formatComparison("  Striker Quality", teamA.strikerScore, teamB.strikerScore, qualityRatio));
+        logger.debug(`    Quality Balance: ${qualityScore.toFixed(3)} (weight: 20%)`);
+        logger.debug("");
+        logger.debug(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
+        logger.debug(`  Final Striker Balance: ${strikerBalanceRatio.toFixed(3)}`);
     }
 
     return strikerBalanceRatio;
@@ -959,20 +960,20 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
     // const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.25 + Math.pow(internalSkillRatio, skillZonePower) * 0.75) * combinedMidfieldPenalty;
 
     if (debug) {
-        console.log("Talent Distribution Balance (Player Score Std Dev):");
-        console.log("  Average Player Ratings Per Zone:");
-        console.log("         GK      DEF     MID     ATT");
-        console.log(
+        logger.debug("Talent Distribution Balance (Player Score Std Dev):");
+        logger.debug("  Average Player Ratings Per Zone:");
+        logger.debug("         GK      DEF     MID     ATT");
+        logger.debug(
             `  A:  ${Array.from(teamAZoneAverages)
                 .map((s) => s.toFixed(1).padStart(6))
                 .join(" ")}`
         );
-        console.log(
+        logger.debug(
             `  B:  ${Array.from(teamBZoneAverages)
                 .map((s) => s.toFixed(1).padStart(6))
                 .join(" ")}`
         );
-        console.log("");
+        logger.debug("");
 
         // Midfield preference penalty debug output
         const teamAMaxNonGK = Math.max(teamAZoneAverages[1], teamAZoneAverages[2], teamAZoneAverages[3]);
@@ -981,35 +982,35 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
         const teamBMidGap = teamBMaxNonGK - teamBZoneAverages[2];
         const penaltyPower = getMidfieldPenaltyPower(numPlayers);
 
-        console.log(
+        logger.debug(
             `  Midfield Preference Penalty (strength: ${midfieldPenaltyStrength.toFixed(2)}, power: ${penaltyPower.toFixed(1)}, players: ${numPlayers}):`
         );
-        console.log(
+        logger.debug(
             `    Team A: MID=${teamAZoneAverages[2].toFixed(1)}, Max=${teamAMaxNonGK.toFixed(1)}, Gap=${teamAMidGap.toFixed(1)}, Penalty=${teamAMidfieldPenalty.toFixed(3)} ${teamAMidfieldPenalty === 1.0 ? "(MID is strongest!)" : "(MID not strongest)"}`
         );
-        console.log(
+        logger.debug(
             `    Team B: MID=${teamBZoneAverages[2].toFixed(1)}, Max=${teamBMaxNonGK.toFixed(1)}, Gap=${teamBMidGap.toFixed(1)}, Penalty=${teamBMidfieldPenalty.toFixed(3)} ${teamBMidfieldPenalty === 1.0 ? "(MID is strongest!)" : "(MID not strongest)"}`
         );
-        console.log(`    Combined Midfield Penalty: ${combinedMidfieldPenalty.toFixed(3)}`);
-        console.log("");
+        logger.debug(`    Combined Midfield Penalty: ${combinedMidfieldPenalty.toFixed(3)}`);
+        logger.debug("");
 
-        console.log(`  Zone Average Internal Balance (Deviation across zones):`);
-        console.log(
+        logger.debug(`  Zone Average Internal Balance (Deviation across zones):`);
+        logger.debug(
             `    Team A Zone Avg Balance: ${teamAZonalBalance.toFixed(3)} ${teamAZonalBalance > teamBZonalBalance ? "(more balanced zones)" : "(less balanced zones)"}`
         );
-        console.log(
+        logger.debug(
             `    Team B Zone Avg Balance: ${teamBZonalBalance.toFixed(3)} ${teamBZonalBalance > teamAZonalBalance ? "(more balanced zones)" : "(less balanced zones)"}`
         );
-        console.log(
+        logger.debug(
             `    Internal Variance Ratio: ${internalSkillRatio.toFixed(3)} (power: ${skillZonePower.toFixed(1)})`
         );
-        console.log(`    Scaled Internal Variance: ${(internalSkillRatio ** skillZonePower).toFixed(3)}`);
-        console.log("");
-        console.log(formatComparison("Std Dev", teamAStdDev, teamBStdDev, rawRatio));
-        console.log(`  Team A: ${teamAStdDev > teamBStdDev ? "More spiky" : "More flat"} talent distribution`);
-        console.log(`  Team B: ${teamBStdDev > teamAStdDev ? "More spiky" : "More flat"} talent distribution`);
-        console.log(`  midDiffRatio (^3): ${midDiffRatio.toFixed(3)}`);
-        console.log(`  Scaled (^3): ${midRatio.toFixed(3)}`);
+        logger.debug(`    Scaled Internal Variance: ${(internalSkillRatio ** skillZonePower).toFixed(3)}`);
+        logger.debug("");
+        logger.debug(formatComparison("Std Dev", teamAStdDev, teamBStdDev, rawRatio));
+        logger.debug(`  Team A: ${teamAStdDev > teamBStdDev ? "More spiky" : "More flat"} talent distribution`);
+        logger.debug(`  Team B: ${teamBStdDev > teamAStdDev ? "More spiky" : "More flat"} talent distribution`);
+        logger.debug(`  midDiffRatio (^3): ${midDiffRatio.toFixed(3)}`);
+        logger.debug(`  Scaled (^3): ${midRatio.toFixed(3)}`);
     }
 
     return midRatio;
@@ -1663,7 +1664,7 @@ export function calculateOptimalStarDistribution(
         const result = calculateStarDistributionPenalty(teamAClassifications, teamBClassifications);
 
         if (result.penalty > 0.3) {
-            console.log("==============Start Optimal Run==================", result.penalty);
+            logger.debug("==============Start Optimal Run==================", result.penalty);
             let aAttSum = 0;
             let aMidSum = 0;
             let aDefSum = 0;
@@ -1675,7 +1676,7 @@ export function calculateOptimalStarDistribution(
             let bBestScore = 0;
 
             teamAIndices.forEach((i) => {
-                console.log(`A => type: ${classifications[i].specialistType} | best: ${classifications[i].bestScore}`);
+                logger.debug(`A => type: ${classifications[i].specialistType} | best: ${classifications[i].bestScore}`);
 
                 aAttSum += classifications[i].bestAttackingScore;
                 aMidSum += classifications[i].bestMidfieldScore;
@@ -1684,7 +1685,7 @@ export function calculateOptimalStarDistribution(
             });
 
             teamBIndices.forEach((i) => {
-                console.log(`B => type: ${classifications[i].specialistType} | best: ${classifications[i].bestScore}`);
+                logger.debug(`B => type: ${classifications[i].specialistType} | best: ${classifications[i].bestScore}`);
 
                 bAttSum += classifications[i].bestAttackingScore;
                 bMidSum += classifications[i].bestMidfieldScore;
@@ -1692,20 +1693,20 @@ export function calculateOptimalStarDistribution(
                 bBestScore += classifications[i].bestScore;
             });
 
-            console.log(
+            logger.debug(
                 `def  => A: ${aDefSum.toFixed(1)} | B: ${bDefSum.toFixed(1)} | Ratio: ${calculateBasicDifferenceRatio(aDefSum, bDefSum).toFixed(4)}`
             );
-            console.log(
+            logger.debug(
                 `mid  => A: ${aMidSum.toFixed(1)} | B: ${bMidSum.toFixed(1)} | Ratio: ${calculateBasicDifferenceRatio(aMidSum, bMidSum).toFixed(4)}`
             );
-            console.log(
+            logger.debug(
                 `att  => A: ${aAttSum.toFixed(1)} | B: ${bAttSum.toFixed(1)} | Ratio: ${calculateBasicDifferenceRatio(aAttSum, bAttSum).toFixed(4)}`
             );
-            console.log(
+            logger.debug(
                 `best => A: ${aBestScore.toFixed(1)} | B: ${bBestScore.toFixed(1)} | Ratio: ${calculateBasicDifferenceRatio(aBestScore, bBestScore).toFixed(4)}`
             );
 
-            console.log("==============End Optimal Run==================", result.penalty);
+            logger.debug("==============End Optimal Run==================", result.penalty);
         }
         if (result.penalty > bestPenalty) {
             bestPenalty = result.penalty;
@@ -1730,19 +1731,19 @@ export function calculateOptimalStarDistribution(
         }
 
         indices.forEach((i) => {
-            console.log("A: ", classifications[i]);
+            logger.debug("A: ", classifications[i]);
         });
 
         bIndices.forEach((i) => {
-            console.log("B: ", classifications[i]);
+            logger.debug("B: ", classifications[i]);
         });
     }
 
     const avgPenalty = totalPenalties / combinations.length;
 
-    console.log(`[calculateOptimalStarDistribution] ${numStars} stars, ${combinations.length} combinations`);
-    console.log(`  Best: ${bestPenalty.toFixed(4)}, Worst: ${worstPenalty.toFixed(4)}, Avg: ${avgPenalty.toFixed(4)}`);
-    console.log(
+    logger.debug(`[calculateOptimalStarDistribution] ${numStars} stars, ${combinations.length} combinations`);
+    logger.debug(`  Best: ${bestPenalty.toFixed(4)}, Worst: ${worstPenalty.toFixed(4)}, Avg: ${avgPenalty.toFixed(4)}`);
+    logger.debug(
         `  Zero penalties: ${zeroCount}/${combinations.length} (${((100 * zeroCount) / combinations.length).toFixed(1)}%)`
     );
 
@@ -1793,48 +1794,48 @@ export function calculateStarZonePenalty(
     const result = calculateStarDistributionPenalty(distA.classifications, distB.classifications);
 
     if (debug) {
-        console.log("Star Zone Specialization Analysis (NEW 4-Category Position-Based System):");
-        console.log("");
-        console.log(`  Team A Stars: ${distA.totalStars} total`);
-        console.log(`    Defensive specialists: ${result.teamADefSpecialists}`);
-        console.log(`    Attacking specialists: ${result.teamAAttSpecialists}`);
-        console.log(`    Midfielders: ${result.teamAMidfielders}`);
-        console.log(`    All-rounders: ${result.teamAAllRounders}`);
-        console.log("");
+        logger.debug("Star Zone Specialization Analysis (NEW 4-Category Position-Based System):");
+        logger.debug("");
+        logger.debug(`  Team A Stars: ${distA.totalStars} total`);
+        logger.debug(`    Defensive specialists: ${result.teamADefSpecialists}`);
+        logger.debug(`    Attacking specialists: ${result.teamAAttSpecialists}`);
+        logger.debug(`    Midfielders: ${result.teamAMidfielders}`);
+        logger.debug(`    All-rounders: ${result.teamAAllRounders}`);
+        logger.debug("");
 
-        console.log(`  Team B Stars: ${distB.totalStars} total`);
-        console.log(`    Defensive specialists: ${result.teamBDefSpecialists}`);
-        console.log(`    Attacking specialists: ${result.teamBAttSpecialists}`);
-        console.log(`    Midfielders: ${result.teamBMidfielders}`);
-        console.log(`    All-rounders: ${result.teamBAllRounders}`);
-        console.log("");
+        logger.debug(`  Team B Stars: ${distB.totalStars} total`);
+        logger.debug(`    Defensive specialists: ${result.teamBDefSpecialists}`);
+        logger.debug(`    Attacking specialists: ${result.teamBAttSpecialists}`);
+        logger.debug(`    Midfielders: ${result.teamBMidfielders}`);
+        logger.debug(`    All-rounders: ${result.teamBAllRounders}`);
+        logger.debug("");
 
-        console.log(`  SPECIALIST COUNT IMBALANCES:`);
-        console.log(
+        logger.debug(`  SPECIALIST COUNT IMBALANCES:`);
+        logger.debug(
             `    Def specialist count diff: ${Math.abs(result.teamADefSpecialists - result.teamBDefSpecialists)}`
         );
-        console.log(
+        logger.debug(
             `    Att specialist count diff: ${Math.abs(result.teamAAttSpecialists - result.teamBAttSpecialists)}`
         );
-        console.log(`    Midfielder count diff: ${Math.abs(result.teamAMidfielders - result.teamBMidfielders)}`);
-        console.log("");
+        logger.debug(`    Midfielder count diff: ${Math.abs(result.teamAMidfielders - result.teamBMidfielders)}`);
+        logger.debug("");
 
-        console.log(`  FINAL PENALTY: ${result.penalty.toFixed(3)}`);
-        console.log("");
+        logger.debug(`  FINAL PENALTY: ${result.penalty.toFixed(3)}`);
+        logger.debug("");
 
         if (distA.classifications.length > 0) {
-            console.log("  Team A Star Classifications:");
+            logger.debug("  Team A Star Classifications:");
             for (const c of distA.classifications) {
-                console.log(
+                logger.debug(
                     `    STAR: ${c.specialistType} (DEF:${c.bestDefensiveScore.toFixed(1)}, MID:${c.bestMidfieldScore.toFixed(1)}, ATT:${c.bestAttackingScore.toFixed(1)})`
                 );
             }
         }
 
         if (distB.classifications.length > 0) {
-            console.log("  Team B Star Classifications:");
+            logger.debug("  Team B Star Classifications:");
             for (const c of distB.classifications) {
-                console.log(
+                logger.debug(
                     `    STAR: ${c.specialistType} (DEF:${c.bestDefensiveScore.toFixed(1)}, MID:${c.bestMidfieldScore.toFixed(1)}, ATT:${c.bestAttackingScore.toFixed(1)})`
                 );
             }
@@ -1924,43 +1925,43 @@ export function calculateMetrics(
     const finalScore = weightedScore;
 
     if (debug) {
-        console.log("");
-        console.log("╔═══════════════════════════════════════════════════════════════════╗");
-        console.log("║         PROFESSIONAL BALANCE METRICS (Calibrated System)         ║");
-        console.log("╚═══════════════════════════════════════════════════════════════════╝");
-        console.log("");
-        console.log("PRIMARY METRICS (What users care about most):");
-        console.log(
+        logger.debug("");
+        logger.debug("╔═══════════════════════════════════════════════════════════════════╗");
+        logger.debug("║         PROFESSIONAL BALANCE METRICS (Calibrated System)         ║");
+        logger.debug("╚═══════════════════════════════════════════════════════════════════╝");
+        logger.debug("");
+        logger.debug("PRIMARY METRICS (What users care about most):");
+        logger.debug(
             `  Star Distribution:     ${metrics.talentDistributionBalance.toFixed(3)} × ${config.weights.primary.starDistribution.toFixed(2)} = ${(config.weights.primary.starDistribution * metrics.talentDistributionBalance).toFixed(3)}`
         );
-        console.log(
+        logger.debug(
             `  Score Balance:         ${metrics.positionalScoreBalance.toFixed(3)} × ${config.weights.primary.scoreBalance.toFixed(2)} = ${(config.weights.primary.scoreBalance * metrics.positionalScoreBalance).toFixed(3)}`
         );
-        console.log(
+        logger.debug(
             `  Peak Potential:          ${metrics.overallStrengthBalance.toFixed(3)} × ${config.weights.primary.peakPotential.toFixed(2)} = ${(config.weights.primary.peakPotential * metrics.overallStrengthBalance).toFixed(3)}`
         );
-        console.log("");
-        console.log("SECONDARY METRICS (Fine-tuning):");
-        console.log(
+        logger.debug("");
+        logger.debug("SECONDARY METRICS (Fine-tuning):");
+        logger.debug(
             `  Zone Balance:        ${metrics.zonalDistributionBalance.toFixed(3)} × ${config.weights.secondary.zoneBalance.toFixed(2)} = ${(config.weights.secondary.zoneBalance * metrics.zonalDistributionBalance).toFixed(3)}`
         );
-        console.log(
+        logger.debug(
             `  All-Stat Balance:      ${metrics.allStatBalance.toFixed(3)} × ${config.weights.secondary.allStatBalance.toFixed(2)} = ${(config.weights.secondary.allStatBalance * metrics.allStatBalance).toFixed(3)}`
         );
-        console.log(
+        logger.debug(
             `  Energy:                ${metrics.energyBalance.toFixed(3)} × ${config.weights.secondary.energy.toFixed(2)} = ${(config.weights.secondary.energy * metrics.energyBalance).toFixed(3)}`
         );
-        console.log(
+        logger.debug(
             `  Creativity:            ${metrics.creativityBalance.toFixed(3)} × ${config.weights.secondary.creativity.toFixed(2)} = ${(config.weights.secondary.creativity * metrics.creativityBalance).toFixed(3)}`
         );
-        console.log(
+        logger.debug(
             `  Striker Quality:       ${metrics.strikerBalance.toFixed(3)} × ${config.weights.secondary.striker.toFixed(2)} = ${(config.weights.secondary.striker * metrics.strikerBalance).toFixed(3)}`
         );
-        console.log("");
-        console.log("─────────────────────────────────────────────────────────────────────");
-        console.log(`  FINAL WEIGHTED SCORE:  ${finalScore.toFixed(3)}`);
-        console.log("╚═══════════════════════════════════════════════════════════════════╝");
-        console.log("");
+        logger.debug("");
+        logger.debug("─────────────────────────────────────────────────────────────────────");
+        logger.debug(`  FINAL WEIGHTED SCORE:  ${finalScore.toFixed(3)}`);
+        logger.debug("╚═══════════════════════════════════════════════════════════════════╝");
+        logger.debug("");
     }
 
     return { score: finalScore, details: metrics };

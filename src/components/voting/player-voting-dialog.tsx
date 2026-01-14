@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/context/auth-context";
+import { logger } from "@/lib/logger";
 import { Player } from "@/types/players";
 import { CategorizedStats, StatCategory, StatCategoryNameMap, StatsKey, statLabelMap } from "@/types/stats";
 
@@ -33,7 +34,7 @@ export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = fals
     useEffect(() => {
         if (isEditing && existingVotes?.votes) {
             try {
-                console.log("Existing votes data:", existingVotes.votes);
+                logger.debug("Existing votes data:", existingVotes.votes);
                 // Check if it's already an object or needs parsing
                 let existingVoteData;
                 if (typeof existingVotes.votes === "string") {
@@ -43,7 +44,7 @@ export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = fals
                 }
                 setVotes(existingVoteData);
             } catch (error) {
-                console.error("Error parsing existing votes:", error, "Raw data:", existingVotes.votes);
+                logger.error("Error parsing existing votes:", error, "Raw data:", existingVotes.votes);
                 // Fall back to defaults if parsing fails
                 const initialVotes = {} as Record<StatsKey, number>;
                 Object.keys(statLabelMap).forEach((key) => {
@@ -112,7 +113,7 @@ export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = fals
             // Always close after submission - parent will handle next player
             onClose();
         } catch (error) {
-            console.error("Error submitting votes:", error);
+            logger.error("Error submitting votes:", error);
         } finally {
             setIsSubmitting(false);
         }

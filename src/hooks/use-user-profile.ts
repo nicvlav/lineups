@@ -15,6 +15,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { logger } from "@/lib/logger";
 import { categorizeError, ensureValidSession } from "@/lib/session-manager";
 import { supabase } from "@/lib/supabase";
 
@@ -80,25 +81,25 @@ interface AssignPlayerParams {
  */
 async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
     if (!supabase) {
-        console.log("USER_PROFILE: No Supabase client available");
+        logger.debug("USER_PROFILE: No Supabase client available");
         return null;
     }
 
-    console.log("USER_PROFILE: Fetching profile for user:", userId);
+    logger.debug("USER_PROFILE: Fetching profile for user:", userId);
 
     const { data, error } = await supabase.from("user_profiles").select("*").eq("user_id", userId).single();
 
     if (error) {
         // Profile doesn't exist yet (PGRST116 = not found)
         if (error.code === "PGRST116") {
-            console.log("USER_PROFILE: Profile not found, will create on mutation");
+            logger.debug("USER_PROFILE: Profile not found, will create on mutation");
             return null;
         }
-        console.error("USER_PROFILE: Error fetching profile:", error);
+        logger.error("USER_PROFILE: Error fetching profile:", error);
         throw error;
     }
 
-    console.log("USER_PROFILE: Profile fetched successfully");
+    logger.debug("USER_PROFILE: Profile fetched successfully");
     return data;
 }
 
@@ -107,20 +108,20 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
  */
 async function fetchSquads(): Promise<Squad[]> {
     if (!supabase) {
-        console.log("SQUADS: No Supabase client available");
+        logger.debug("SQUADS: No Supabase client available");
         return [];
     }
 
-    console.log("SQUADS: Fetching available squads...");
+    logger.debug("SQUADS: Fetching available squads...");
 
     const { data, error } = await supabase.from("squads").select("*").order("name");
 
     if (error) {
-        console.error("SQUADS: Error fetching squads:", error);
+        logger.error("SQUADS: Error fetching squads:", error);
         throw error;
     }
 
-    console.log(`SQUADS: Fetched ${data?.length || 0} squads successfully`);
+    logger.debug(`SQUADS: Fetched ${data?.length || 0} squads successfully`);
     return data || [];
 }
 
@@ -225,10 +226,10 @@ export function useUpdateProfile() {
         onSuccess: (data) => {
             // Update cache with new profile data
             queryClient.setQueryData(userProfileKeys.detail(data.user_id), data);
-            console.log("USER_PROFILE: Cache updated with new profile");
+            logger.debug("USER_PROFILE: Cache updated with new profile");
         },
         onError: (error) => {
-            console.error("USER_PROFILE: Update mutation failed:", error);
+            logger.error("USER_PROFILE: Update mutation failed:", error);
         },
     });
 }

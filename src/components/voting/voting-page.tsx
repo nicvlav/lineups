@@ -9,6 +9,7 @@ import { PlayerVoteCard } from "@/components/voting/player-vote-card";
 import { useAuth } from "@/context/auth-context";
 import { useVoting } from "@/context/voting-provider";
 import { usePlayers as usePlayersQuery } from "@/hooks/use-players";
+import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 
 type TabType = "not-voted" | "voted";
@@ -29,9 +30,9 @@ export default function VotingPage() {
 
     // Log background refresh activity
     useEffect(() => {
-        console.log("🗳️ VOTING PAGE: Background refresh enabled (30s interval)");
+        logger.debug("VOTING PAGE: Background refresh enabled (30s interval)");
         return () => {
-            console.log("🗳️ VOTING PAGE: Background refresh disabled (left page)");
+            logger.debug("VOTING PAGE: Background refresh disabled (left page)");
         };
     }, []);
 

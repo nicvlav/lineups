@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 
 export default function AuthCallbackPage() {
@@ -62,7 +63,7 @@ export default function AuthCallbackPage() {
                 const errorDescription = urlParams.get("error_description") || hashParams.get("error_description");
 
                 if (authError) {
-                    console.error("❌ Auth error from URL:", { authError, errorCode, errorDescription });
+                    logger.error("Auth error from URL:", { authError, errorCode, errorDescription });
 
                     if (errorCode === "otp_expired") {
                         setError("Email verification link has expired. Please sign up again to get a new link.");
@@ -78,7 +79,7 @@ export default function AuthCallbackPage() {
                 const refreshToken = hashParams.get("refresh_token");
 
                 if (accessToken) {
-                    console.log("✅ Found access token in URL, setting session...");
+                    logger.info("Found access token in URL, setting session...");
 
                     // Set the session using the tokens from the URL
                     const { data, error } = await supabase.auth.setSession({
@@ -87,10 +88,10 @@ export default function AuthCallbackPage() {
                     });
 
                     if (error) {
-                        console.error("❌ Error setting session:", error);
+                        logger.error("Error setting session:", error);
                         setError(error.message);
                     } else if (data.session) {
-                        console.log("✅ Session set successfully:", data.session.user.email);
+                        logger.info("Session set successfully:", data.session.user.email);
                         navigate("/", { replace: true });
                     } else {
                         setError("Failed to create session from tokens");
@@ -100,7 +101,7 @@ export default function AuthCallbackPage() {
                 }
 
                 // Fallback: Handle the OAuth callback with URL parameters or existing session
-                console.log("🔄 CALLBACK: About to call getSession in callback...");
+                logger.debug("CALLBACK: About to call getSession in callback...");
 
                 // Add timeout to getSession in callback too (mobile issue)
                 const callbackSessionPromise = supabase.auth.getSession();
@@ -112,33 +113,33 @@ export default function AuthCallbackPage() {
                 try {
                     sessionResult = await Promise.race([callbackSessionPromise, callbackTimeoutPromise]);
                 } catch (timeoutError) {
-                    console.warn("⏰ CALLBACK: getSession timed out, assuming auth is already handled...");
+                    logger.warn("CALLBACK: getSession timed out, assuming auth is already handled...");
                     // If getSession times out in callback, just redirect - auth context has already handled it
-                    console.log("🏠 CALLBACK: Redirecting to home due to timeout...");
+                    logger.debug("CALLBACK: Redirecting to home due to timeout...");
                     navigate("/", { replace: true });
                     return;
                 }
 
                 const { data, error } = sessionResult as any;
-                console.log("📡 CALLBACK: getSession result:", { hasSession: !!data.session, error: error?.message });
+                logger.debug("CALLBACK: getSession result:", { hasSession: !!data.session, error: error?.message });
 
                 if (error) {
-                    console.error("Auth callback error:", error);
+                    logger.error("Auth callback error:", error);
                     setError(error.message);
                 } else if (data.session) {
-                    console.log("Session found:", data.session.user.email);
-                    console.log("🏠 CALLBACK: Redirecting to home from session found...");
+                    logger.info("Session found:", data.session.user.email);
+                    logger.debug("CALLBACK: Redirecting to home from session found...");
                     // Successfully authenticated, redirect to home
                     navigate("/", { replace: true });
                 } else {
-                    console.log("No session in callback, but user might already be signed in. Redirecting to home...");
-                    console.log("🏠 CALLBACK: Redirecting to home from no session...");
+                    logger.debug("No session in callback, but user might already be signed in. Redirecting to home...");
+                    logger.debug("CALLBACK: Redirecting to home from no session...");
                     // If we're here, the auth listener has likely already handled the session
                     // Just redirect to home and let the main app handle the auth state
                     navigate("/", { replace: true });
                 }
             } catch (err) {
-                console.error("Unexpected error:", err);
+                logger.error("Unexpected error:", err);
                 setError("An unexpected error occurred during authentication");
                 setLoading(false);
             }

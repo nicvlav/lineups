@@ -9,6 +9,7 @@
  * See: https://supabase.com/docs/guides/auth/sessions
  */
 
+import { logger } from "@/lib/logger";
 import { supabase } from "./supabase";
 
 // =====================================================
@@ -31,13 +32,13 @@ export async function ensureValidSession(): Promise<boolean> {
         } = await supabase.auth.getUser();
 
         if (error) {
-            console.warn("Session validation failed:", error.message);
+            logger.warn("Session validation failed:", error.message);
             return false;
         }
 
         return !!user;
     } catch (err) {
-        console.error("Session validation exception:", err);
+        logger.error("Session validation exception:", err);
         return false;
     }
 }

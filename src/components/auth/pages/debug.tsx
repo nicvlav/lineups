@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 
 export default function AuthDebugPage() {
@@ -51,18 +52,18 @@ export default function AuthDebugPage() {
                     },
                 };
 
-                console.log("🔍 Debug Info:", info);
+                logger.debug("Debug Info:", info);
                 setDebugInfo(info);
 
                 // If we have a successful session, redirect after showing debug
                 if (sessionData.session) {
-                    console.log("✅ Session found! Redirecting in 3 seconds...");
+                    logger.info("Session found! Redirecting in 3 seconds...");
                     setTimeout(() => {
                         navigate("/", { replace: true });
                     }, 3000);
                 }
             } catch (error) {
-                console.error("Debug error:", error);
+                logger.error("Debug error:", error);
                 setDebugInfo({ error: error instanceof Error ? error.message : String(error) });
             } finally {
                 setLoading(false);

@@ -1,5 +1,6 @@
 import React, { createContext, ReactNode, useContext } from "react";
 import { usePlayersWithVotes, useSubmitVote, useUserVotes, useVotingStats } from "@/hooks/use-voting";
+import { logger } from "@/lib/logger";
 
 interface VoteData {
     playerId: string;
@@ -58,7 +59,7 @@ export const VotingProvider: React.FC<VotingProviderProps> = ({ children }) => {
     // Recovery is handled automatically by React Query's retry logic
     const recoverFailedVotes = () => {
         // No-op: React Query handles retries automatically
-        console.log("🔄 VOTING: Recovery handled automatically by React Query");
+        logger.info("VOTING: Recovery handled automatically by React Query");
     };
 
     return (

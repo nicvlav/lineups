@@ -6,6 +6,7 @@
  * @module auto-balance/algorithm
  */
 
+import { logger } from "@/lib/logger";
 import type { ScoredGamePlayer } from "@/types/players";
 import type { Formation } from "@/types/positions";
 import { defaultZoneWeights, formationTemplates, getPointForPosition } from "@/types/positions";
@@ -400,7 +401,7 @@ export function runOptimizedMonteCarlo(
     const availableFormationsB = formationTemplates[teamBSize] || [];
 
     if (availableFormationsA.length === 0 || availableFormationsB.length === 0) {
-        console.error("No formation available for team sizes:", teamASize, teamBSize);
+        logger.error("No formation available for team sizes:", teamASize, teamBSize);
         return null;
     }
 
@@ -430,16 +431,16 @@ export function runOptimizedMonteCarlo(
     const optimalStats = calculateOptimalStarDistribution(players, config);
 
     if (verbose) {
-        console.log("🎲 Starting optimized Monte Carlo simulation...");
-        console.log(`   Max iterations: ${maxIterations}`);
-        console.log(
+        logger.debug("🎲 Starting optimized Monte Carlo simulation...");
+        logger.debug(`   Max iterations: ${maxIterations}`);
+        logger.debug(
             `   Team sizes: ${teamASize} (${cachedFormationsA.length} formations) vs ${teamBSize} (${cachedFormationsB.length} formations)`
         );
-        console.log(`   Optimal star distribution stats:`);
-        console.log(`     Best:  ${optimalStats.best.toFixed(4)}`);
-        console.log(`     Mean:  ${optimalStats.mean.toFixed(4)}`);
-        console.log(`     Worst: ${optimalStats.worst.toFixed(4)}`);
-        console.log(`     Stars: ${optimalStats.numStars} (${optimalStats.combinations} combinations tested)`);
+        logger.debug(`   Optimal star distribution stats:`);
+        logger.debug(`     Best:  ${optimalStats.best.toFixed(4)}`);
+        logger.debug(`     Mean:  ${optimalStats.mean.toFixed(4)}`);
+        logger.debug(`     Worst: ${optimalStats.worst.toFixed(4)}`);
+        logger.debug(`     Stars: ${optimalStats.numStars} (${optimalStats.combinations} combinations tested)`);
     }
 
     for (let i = 0; i < maxIterations; i++) {
@@ -491,16 +492,16 @@ export function runOptimizedMonteCarlo(
             bestResult = simResult;
 
             if (verbose && i % 20 === 0) {
-                console.log(`   Iteration ${i}: Best score = ${bestScore.toFixed(3)}`);
+                logger.debug(`   Iteration ${i}: Best score = ${bestScore.toFixed(3)}`);
             }
         }
     }
 
     if (verbose && bestResult) {
-        console.log(`✓ Completed ${maxIterations} iterations`);
-        console.log(`   Best score: ${bestScore.toFixed(3)}`);
-        console.log(`   Score balance: ${bestResult.metrics.positionalScoreBalance.toFixed(3)}`);
-        console.log(`   Star distribution: ${bestResult.metrics.talentDistributionBalance.toFixed(3)}`);
+        logger.debug(`✓ Completed ${maxIterations} iterations`);
+        logger.debug(`   Best score: ${bestScore.toFixed(3)}`);
+        logger.debug(`   Score balance: ${bestResult.metrics.positionalScoreBalance.toFixed(3)}`);
+        logger.debug(`   Star distribution: ${bestResult.metrics.talentDistributionBalance.toFixed(3)}`);
     }
 
     // Normalize player assignments to match team structure before returning

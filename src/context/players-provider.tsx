@@ -18,6 +18,7 @@ import {
     useDeletePlayer as useDeletePlayerMutation,
     usePlayers as usePlayersQuery,
 } from "@/hooks/use-players";
+import { logger } from "@/lib/logger";
 import { Player } from "@/types/players";
 
 interface PlayersContextType {
@@ -48,11 +49,11 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             { player },
             {
                 onSuccess: (newPlayer) => {
-                    console.log("PlayersProvider: Player added successfully");
+                    logger.info("PlayersProvider: Player added successfully");
                     onSuccess?.(newPlayer);
                 },
                 onError: (error) => {
-                    console.error("PlayersProvider: Error adding player:", error);
+                    logger.error("PlayersProvider: Error adding player:", error);
                 },
             }
         );
@@ -64,10 +65,10 @@ export const PlayersProvider: React.FC<PlayersProviderProps> = ({ children }) =>
             { id },
             {
                 onSuccess: () => {
-                    console.log("PlayersProvider: Player deleted successfully");
+                    logger.info("PlayersProvider: Player deleted successfully");
                 },
                 onError: (error) => {
-                    console.error("PlayersProvider: Error deleting player:", error);
+                    logger.error("PlayersProvider: Error deleting player:", error);
                 },
             }
         );

@@ -4,6 +4,7 @@ import { ModeToggle } from "@/components/layout/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { ANIMATIONS, GAP, LAYOUT } from "@/lib/design-tokens";
+import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 
 interface HeaderBarProps {
@@ -30,17 +31,17 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
         e.stopPropagation();
 
         try {
-            console.log("🚪 HEADER: Initiating sign out...");
+            logger.debug("HEADER: Initiating sign out");
             const result = await signOut();
 
             if (result.error) {
-                console.error("HEADER: Sign out failed:", result.error);
+                logger.error("HEADER: Sign out failed", result.error);
                 // Still continue - auth context should have cleared local state
             } else {
-                console.log("✅ HEADER: Sign out successful");
+                logger.info("HEADER: Sign out successful");
             }
         } catch (error) {
-            console.error("HEADER: Unexpected sign out error:", error);
+            logger.error("HEADER: Unexpected sign out error", error);
             // Even if error, auth context should have cleared state
         }
     };

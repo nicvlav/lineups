@@ -46,6 +46,7 @@
  * @module auto-balance
  */
 
+import { logger } from "@/lib/logger";
 import type { ScoredGamePlayer } from "@/types/players";
 import type { Formation } from "@/types/positions";
 import { convertToGamePlayers, runOptimizedMonteCarlo } from "./algorithm";
@@ -160,22 +161,22 @@ export function autoBalance(
     };
 
     if (debugMode) {
-        console.log("\n╔══════════════════════════════════════════════════════════════════════╗");
-        console.log("║       AUTO-BALANCE - PROFESSIONAL CALIBRATED SYSTEM 🚀           ║");
-        console.log("╚══════════════════════════════════════════════════════════════════════╝");
-        console.log(`\nConfiguration:`);
-        console.log(`   Players: ${players.length}`);
-        console.log(`   Max Iterations: ${config.monteCarlo.maxIterations}`);
-        console.log(`   Proximity Threshold: ${config.algorithm.proximityThreshold}`);
-        console.log("");
-        console.log("Metric Weights:");
-        console.log(
+        logger.debug("\n╔══════════════════════════════════════════════════════════════════════╗");
+        logger.debug("║       AUTO-BALANCE - PROFESSIONAL CALIBRATED SYSTEM 🚀           ║");
+        logger.debug("╚══════════════════════════════════════════════════════════════════════╝");
+        logger.debug(`\nConfiguration:`);
+        logger.debug(`   Players: ${players.length}`);
+        logger.debug(`   Max Iterations: ${config.monteCarlo.maxIterations}`);
+        logger.debug(`   Proximity Threshold: ${config.algorithm.proximityThreshold}`);
+        logger.debug("");
+        logger.debug("Metric Weights:");
+        logger.debug(
             `   PRIMARY: Star=${config.weights.primary.starDistribution}, Score=${config.weights.primary.scoreBalance}, Zone=${config.weights.primary.peakPotential}`
         );
-        console.log(
+        logger.debug(
             `   SECONDARY: Peak=${config.weights.secondary.zoneBalance}, AllStat=${config.weights.secondary.allStatBalance}, Energy=${config.weights.secondary.energy}`
         );
-        console.log("");
+        logger.debug("");
     }
 
     // Convert to optimized format
@@ -201,7 +202,7 @@ export function autoBalance(
     );
 
     // if (debugMode) {
-    console.log(diagnostic);
+    logger.debug(diagnostic);
     // }
 
     const convertedTeams = convertToGamePlayers(result);
@@ -288,12 +289,12 @@ export function autoBalanceWithConfig(
     };
 
     if (verbose) {
-        console.log("\n🎨 Custom Configuration:");
-        console.log(
+        logger.debug("\n🎨 Custom Configuration:");
+        logger.debug(
             `   Primary weights: Score=${config.weights.primary.scoreBalance}, Star=${config.weights.primary.starDistribution}, Zone=${config.weights.primary.peakPotential}`
         );
-        console.log(`   Proximity threshold: ${config.algorithm.proximityThreshold}`);
-        console.log(`   Max iterations: ${config.monteCarlo.maxIterations}`);
+        logger.debug(`   Proximity threshold: ${config.algorithm.proximityThreshold}`);
+        logger.debug(`   Max iterations: ${config.monteCarlo.maxIterations}`);
     }
 
     // Convert to optimized format
@@ -312,7 +313,7 @@ export function autoBalanceWithConfig(
         : undefined;
 
     if (diagnostic && verbose) {
-        console.log(diagnostic);
+        logger.debug(diagnostic);
     }
 
     const convertedTeams = convertToGamePlayers(result);

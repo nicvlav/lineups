@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/context/auth-context";
 import { usePlayers as usePlayersQuery } from "@/hooks/use-players";
+import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import { AddPlayerDialog } from "./add-player-dialog";
 import { PlayerRow } from "./player-row";
@@ -27,9 +28,9 @@ export default function PlayerManager() {
 
     // Log background refresh activity
     useEffect(() => {
-        console.log("🗳️ VOTING PAGE: Background refresh enabled (30s interval)");
+        logger.debug("VOTING PAGE: Background refresh enabled (30s interval)");
         return () => {
-            console.log("🗳️ VOTING PAGE: Background refresh disabled (left page)");
+            logger.debug("VOTING PAGE: Background refresh disabled (left page)");
         };
     }, []);
 

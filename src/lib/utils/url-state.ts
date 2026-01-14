@@ -6,6 +6,7 @@
  */
 
 import LZString from "lz-string";
+import { logger } from "@/lib/logger";
 import type { GamePlayer } from "@/types/players";
 import type { Formation } from "@/types/positions";
 
@@ -20,7 +21,7 @@ export const decodeStateFromURL = (search: string) => {
         try {
             return JSON.parse(LZString.decompressFromEncodedURIComponent(encodedState));
         } catch (e) {
-            console.error("Invalid URL state", e);
+            logger.error("Invalid URL state", e);
         }
     }
     return null;

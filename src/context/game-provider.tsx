@@ -6,6 +6,7 @@ import { autoBalance } from "@/auto-balance";
 import { useAuth } from "@/context/auth-context";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
 import { usePlayers } from "@/context/players-provider";
+import { logger } from "@/lib/logger";
 import { decodeStateFromURL } from "@/lib/utils/url-state";
 import { calculateScoresForStats, GamePlayer, Player, ScoredGamePlayer } from "@/types/players";
 import {
@@ -36,9 +37,9 @@ const getFromDB = async (key: string) => {
         const db = await initDB();
         return db.get(STORE_NAME, key);
     } catch (error) {
-        console.error("💥 GAME: IndexedDB read error:", error);
+        logger.error("GAME: IndexedDB read error:", error);
         if (error instanceof Error && (error.name === "InvalidStateError" || error.name === "VersionError")) {
-            console.warn("GAME: IndexedDB corruption detected, clearing...");
+            logger.warn("GAME: IndexedDB corruption detected, clearing...");
             await clearCorruptedDB();
         }
         return null;
@@ -50,9 +51,9 @@ const saveToDB = async (key: string, value: string) => {
         const db = await initDB();
         await db.put(STORE_NAME, value, key);
     } catch (error) {
-        console.error("💥 GAME: IndexedDB write error:", error);
+        logger.error("GAME: IndexedDB write error:", error);
         if (error instanceof Error && (error.name === "InvalidStateError" || error.name === "VersionError")) {
-            console.warn("GAME: IndexedDB corruption detected, clearing...");
+            logger.warn("GAME: IndexedDB corruption detected, clearing...");
             await clearCorruptedDB();
         }
     }
@@ -60,19 +61,19 @@ const saveToDB = async (key: string, value: string) => {
 
 const clearCorruptedDB = async () => {
     try {
-        console.log("🧹 GAME: Clearing corrupted IndexedDB...");
+        logger.info("GAME: Clearing corrupted IndexedDB...");
         const db = await initDB();
         const tx = db.transaction(STORE_NAME, "readwrite");
         await tx.objectStore(STORE_NAME).clear();
         await tx.done;
-        console.log("✅ GAME: IndexedDB cleared successfully");
+        logger.info("GAME: IndexedDB cleared successfully");
     } catch (error) {
-        console.error("❌ GAME: Failed to clear IndexedDB:", error);
+        logger.error("GAME: Failed to clear IndexedDB:", error);
         try {
             await indexedDB.deleteDatabase(DB_NAME);
-            console.log("🗑️ GAME: IndexedDB database deleted");
+            logger.info("GAME: IndexedDB database deleted");
         } catch (deleteError) {
-            console.error("💥 GAME: Failed to delete IndexedDB:", deleteError);
+            logger.error("GAME: Failed to delete IndexedDB:", deleteError);
         }
     }
 };
@@ -120,9 +121,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             tabRegistry[tabKey] = Date.now();
             localStorage.setItem("tabRegistry", JSON.stringify(tabRegistry));
 
-            console.log("🆕 GAME: Created new tab key:", tabKey);
+            logger.debug("GAME: Created new tab key:", tabKey);
         } else {
-            console.log("🔄 GAME: Using existing tab key:", tabKey);
+            logger.debug("GAME: Using existing tab key:", tabKey);
         }
 
         return tabKey;
@@ -142,7 +143,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 const oldTabKeys = activeTabKeys.filter((key) => tabRegistry[key] < oneWeekAgo);
 
                 if (oldTabKeys.length > 0) {
-                    console.log(`🧹 GAME: Cleaning up ${oldTabKeys.length} old tab keys from IndexedDB`);
+                    logger.debug(`GAME: Cleaning up ${oldTabKeys.length} old tab keys from IndexedDB`);
 
                     const db = await initDB();
                     const tx = db.transaction(STORE_NAME, "readwrite");
@@ -157,7 +158,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                     localStorage.setItem("tabRegistry", JSON.stringify(tabRegistry));
                 }
             } catch (error) {
-                console.error("GAME: Error during tab cleanup:", error);
+                logger.error("GAME: Error during tab cleanup:", error);
             }
         };
 
@@ -213,25 +214,25 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             }
 
             // Fall back to IndexedDB state
-            console.log("GAME: Loading game state with tab key:", tabKeyRef.current);
+            logger.debug("GAME: Loading game state with tab key:", tabKeyRef.current);
             const savedState = await getFromDB(tabKeyRef.current);
             if (savedState) {
                 try {
                     const parsedData = JSON.parse(savedState);
-                    console.log(
+                    logger.debug(
                         "GAME: Loaded game state from IndexedDB:",
                         parsedData.gamePlayers ? Object.keys(parsedData.gamePlayers).length : 0,
                         "players"
                     );
                     await loadJSONGamePlayers(parsedData.gamePlayers, parsedData.currentFormation);
                 } catch (error) {
-                    console.error("GAME: Error loading from IndexedDB:", error);
+                    logger.error("GAME: Error loading from IndexedDB:", error);
                 }
             } else {
-                console.log("GAME: No saved game state found in IndexedDB");
+                logger.debug("GAME: No saved game state found in IndexedDB");
             }
         } catch (error) {
-            console.error("GAME: Error during game state initialization:", error);
+            logger.error("GAME: Error during game state initialization:", error);
         } finally {
             loadingState.current = false;
         }
@@ -242,7 +243,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         if (isStaticRoute) return;
 
         initializeGameState().catch((error) => {
-            console.error("GAME: Game state initialization failed:", error);
+            logger.error("GAME: Game state initialization failed:", error);
         });
     }, [urlState, isStaticRoute]);
 
@@ -263,7 +264,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             gamePlayers: gamePlayersToSave,
             currentFormation: formation,
         };
-        console.log(
+        logger.debug(
             "GAME: Saving game state with tab key:",
             tabKeyRef.current,
             "players:",
@@ -407,7 +408,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             // Both teams should use the same formation (they're the same size after balancing)
             formation = balanced.formationA || balanced.formationB;
         } catch (error) {
-            console.error(error);
+            logger.error("Team generation error", error);
             return;
         }
 

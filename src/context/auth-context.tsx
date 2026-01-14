@@ -12,6 +12,7 @@ import { AuthError, Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { squadKeys, userProfileKeys } from "@/hooks/use-user-profile";
+import { logger } from "@/lib/logger";
 import { clearVoteData } from "@/lib/session-manager";
 import { supabase } from "@/lib/supabase";
 
@@ -121,7 +122,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                     .single();
 
                 if (createError && createError.code !== "23505") {
-                    console.error("Failed to create user profile:", createError);
+                    logger.error("Failed to create user profile:", createError);
                 }
 
                 setUser({
@@ -135,7 +136,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             }
 
             if (error) {
-                console.error("Error loading profile:", error);
+                logger.error("Error loading profile:", error);
             }
 
             setUser({
@@ -146,7 +147,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                 profile: profile || undefined,
             });
         } catch (error) {
-            console.error("Error loading user profile:", error);
+            logger.error("Error loading user profile:", error);
             // Set user without profile on error
             setUser({
                 id: supabaseUser.id,
@@ -175,7 +176,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                 if (error) {
                     // Not authenticated or session invalid - this is fine
                     if (error.message !== "Auth session missing!") {
-                        console.error("Error getting user:", error);
+                        logger.error("Error getting user:", error);
                     }
                 } else if (supabaseUser && mounted) {
                     // Get session for storage (non-blocking)
@@ -186,7 +187,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
                     await loadUserProfile(supabaseUser);
                 }
             } catch (error) {
-                console.error("Failed to initialize auth:", error);
+                logger.error("Failed to initialize auth:", error);
             } finally {
                 if (mounted) {
                     setLoading(false);
@@ -259,7 +260,7 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
     useEffect(() => {
         const timeout = setTimeout(() => {
             if (loading) {
-                console.warn("Auth initialization timeout");
+                logger.warn("Auth initialization timeout");
                 setLoading(false);
             }
         }, 10000);
