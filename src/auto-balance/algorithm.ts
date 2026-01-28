@@ -457,7 +457,7 @@ export function runGuidedMonteCarlo(
     const starPlayers = players.filter((p) => p.bestScore >= starThreshold);
 
     if (verbose) {
-        logger.debug("🎯 Starting GUIDED Monte Carlo simulation...");
+        logger.debug("Starting GUIDED Monte Carlo simulation...");
         logger.debug(`   Max iterations: ${maxIterations}`);
         logger.debug(
             `   Team sizes: ${teamASize} (${cachedFormationsA.length} formations) vs ${teamBSize} (${cachedFormationsB.length} formations)`

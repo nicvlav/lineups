@@ -1366,6 +1366,17 @@ export function calculatePeakTalentBalance(
 ): number {
     if (teamAProfiles.length === 0 || teamBProfiles.length === 0) return 1.0;
 
+    // ODD SPLITS: Peak talent comparison less meaningful (quality already handles this)
+    // Return high baseline to neutralize this metric, fading with team size
+    const smallerCount = Math.min(teamAProfiles.length, teamBProfiles.length);
+    const isOdd = (teamAProfiles.length + teamBProfiles.length) % 2 === 1;
+
+    if (isOdd) {
+        // 1v2: 0.85, 2v3: 0.75, 3v4: 0.70, 4v5: 0.65, etc.
+        const baselineScore = Math.max(0.60, 0.95 - smallerCount * 0.10);
+        return baselineScore;
+    }
+
     // Find peak affinity in each zone for each team
     const teamAPeaks = {
         def: Math.max(...teamAProfiles.map((p) => p.affinity.def)),
@@ -1442,6 +1453,18 @@ export function calculateAffinityBalanceScore(
     if (teamAProfiles.length === 0 && teamBProfiles.length === 0) return 1.0;
     if (teamAProfiles.length === 0 || teamBProfiles.length === 0) return 0.5;
 
+    // ODD SPLITS: Affinity comparison less meaningful when team sizes differ
+    // The number disadvantage is the primary issue, quality must compensate
+    const smallerCount = Math.min(teamAProfiles.length, teamBProfiles.length);
+    const isOdd = (teamAProfiles.length + teamBProfiles.length) % 2 === 1;
+
+    if (isOdd) {
+        // Return near-neutral baseline that fades as teams get larger
+        // 1v2: 0.85, 2v3: 0.75, 3v4: 0.70, 4v5: 0.65, etc.
+        const baselineScore = Math.max(0.60, 0.95 - smallerCount * 0.10);
+        return baselineScore;
+    }
+
     // Sum affinities per zone for each team
     const teamASums = { def: 0, mid: 0, att: 0 };
     const teamBSums = { def: 0, mid: 0, att: 0 };
@@ -1483,10 +1506,32 @@ export function calculateFlexibilityBalance(
 ): number {
     if (teamAProfiles.length === 0 || teamBProfiles.length === 0) return 1.0;
 
-    const avgFlexA = teamAProfiles.reduce((sum, p) => sum + p.flexibility, 0) / teamAProfiles.length;
-    const avgFlexB = teamBProfiles.reduce((sum, p) => sum + p.flexibility, 0) / teamBProfiles.length;
+    const countA = teamAProfiles.length;
+    const countB = teamBProfiles.length;
+    const isOdd = (countA + countB) % 2 === 1;
 
-    return calculateBasicDifferenceRatio(avgFlexA, avgFlexB);
+    if (isOdd) {
+        const smallerCount = Math.min(countA, countB);
+
+        // ALL ODD SPLITS: Flexibility less important than quality
+        // Use fading neutralization: 1v2: 0.85, 2v3: 0.75, 3v4: 0.70, etc.
+        const avgFlexA = teamAProfiles.reduce((sum, p) => sum + p.flexibility, 0) / countA;
+        const avgFlexB = teamBProfiles.reduce((sum, p) => sum + p.flexibility, 0) / countB;
+        const smallerIsA = countA < countB;
+        const smallerFlex = smallerIsA ? avgFlexA : avgFlexB;
+
+        // Calculate baseline that fades with team size
+        const baseline = Math.max(0.60, 0.95 - smallerCount * 0.10);
+
+        // Add small bonus/penalty based on actual flexibility (max ±0.10)
+        const flexScore = baseline + (smallerFlex - 0.5) * 0.20;
+        return Math.max(0.50, Math.min(1.0, flexScore));
+    } else {
+        // EVEN SPLIT: Standard flexibility balance
+        const avgFlexA = teamAProfiles.reduce((sum, p) => sum + p.flexibility, 0) / countA;
+        const avgFlexB = teamBProfiles.reduce((sum, p) => sum + p.flexibility, 0) / countB;
+        return calculateBasicDifferenceRatio(avgFlexA, avgFlexB);
+    }
 }
 
 /**
@@ -1646,11 +1691,42 @@ export function scoreStarSplit(
     const shapingExponent = finiteOr(strictness.shapingExponent, 1.0);
     const adjustedQualityWeight = finiteOr(strictness.qualityPenaltyWeight, 0);
 
-    // weights (updated to include peak talent)
-    const affinityWeight = 0.30;
-    const flexibilityWeight = 0.10;
-    const countWeight = 0.15;
-    const peakWeight = 0.15;
+    // Detect odd split early to adjust weights
+    const countA = teamAQualities.length;
+    const countB = teamBQualities.length;
+    const isOdd = (countA + countB) % 2 === 1;
+
+    // weights (adjusted for odd splits to emphasize quality over affinity)
+    let affinityWeight = 0.30;
+    let flexibilityWeight = 0.10;
+    let countWeight = 0.15;
+    let peakWeight = 0.15;
+
+    if (isOdd) {
+        // ODD SPLIT: Emphasize quality dramatically, especially for small splits
+        const smallerTeamSize = Math.min(countA, countB);
+
+        if (smallerTeamSize === 1) {
+            // SINGLE STAR: Quality is 70% of the decision - the best star MUST be alone
+            affinityWeight = 0.05;      // Minimal
+            flexibilityWeight = 0.10;   // Some importance
+            countWeight = 0.05;         // Minimal
+            peakWeight = 0.10;          // Minimal (quality already covers this)
+            // adjustedQualityWeight will be ~0.70 from dynamic strictness
+        } else if (smallerTeamSize === 2) {
+            // 2v3 SPLIT: Quality is 50% of decision
+            affinityWeight = 0.10;
+            flexibilityWeight = 0.15;
+            countWeight = 0.05;
+            peakWeight = 0.20;
+        } else {
+            // Larger odd splits: More balanced weights
+            affinityWeight = 0.20;
+            flexibilityWeight = 0.15;
+            countWeight = 0.10;
+            peakWeight = 0.20;
+        }
+    }
 
     const totalWeight = affinityWeight + adjustedQualityWeight + flexibilityWeight + countWeight + peakWeight;
     if (!(totalWeight > 0)) {
@@ -1670,42 +1746,131 @@ export function scoreStarSplit(
     // 1) affinity balance
     const affinityBalance = clamp01Safe(calculateAffinityBalanceScore(teamAProfiles, teamBProfiles), EPS);
 
-    // 2) quality balance
-    const qualityA = teamAQualities.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
-    const qualityB = teamBQualities.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+    // 2) quality balance (uses countA, countB, isOdd from above)
+    let qualityBalance: number;
 
-    // IMPORTANT: qualityRatio must be in [0,1] where 1 is best
-    const qualityRatioRaw = calculateBasicDifferenceRatio(qualityA, qualityB);
-    const qualityRatio = clamp(finiteOr(qualityRatioRaw, 0), 0, 1);
-    const qualityBalance = clamp01Safe(Math.pow(qualityRatio, shapingExponent), EPS);
+    if (isOdd) {
+        // ODD SPLIT: CRITICAL - Smaller team MUST have higher or equal average quality
+        // Identify which team is smaller
+        const smallerIsA = countA < countB;
+        const smallerCount = Math.min(countA, countB);
+
+        const avgA = countA > 0 ? teamAQualities.reduce((a, b) => a + b, 0) / countA : 0;
+        const avgB = countB > 0 ? teamBQualities.reduce((a, b) => a + b, 0) / countB : 0;
+        const smallerAvg = smallerIsA ? avgA : avgB;
+        const largerAvg = smallerIsA ? avgB : avgA;
+
+        // REQUIREMENT 1: Smaller team MUST have higher average (not just close)
+        // If smaller team has lower avg, heavily penalize
+        let avgScore: number;
+        if (smallerAvg < largerAvg) {
+            // CATASTROPHIC: Smaller team has worse average quality
+            // This means worst stars are alone - unacceptable
+            const deficit = (largerAvg - smallerAvg) / largerAvg;
+            avgScore = Math.max(0, 1.0 - deficit * 3.0); // 3x multiplier for harshness
+        } else {
+            // GOOD: Smaller team has equal or higher average
+            const advantage = (smallerAvg - largerAvg) / (smallerAvg + EPS);
+            avgScore = Math.min(1.0, 1.0 + advantage * 0.5); // Bonus for having better avg
+        }
+
+        // REQUIREMENT 2: Check if smaller team has worst star in the pool
+        const allQualities = [...teamAQualities, ...teamBQualities].sort((a, b) => b - a);
+
+        const smallerTeamQualities = smallerIsA ? teamAQualities : teamBQualities;
+        const smallerTeamBest = Math.max(...smallerTeamQualities);
+
+        // REQUIREMENT 3: For single star, check rank position (not just worst)
+        const bestStar = allQualities[0];
+        const worstStar = allQualities[allQualities.length - 1];
+        const smallerHasWorst = smallerTeamQualities.includes(worstStar);
+        const smallerHasBest = smallerTeamQualities.includes(bestStar);
+
+        let rankPenalty = 1.0;
+        if (smallerCount === 1) {
+            // Single star case: Must be THE BEST star, or very close
+            if (smallerHasWorst) {
+                // CATASTROPHIC: Worst star alone
+                rankPenalty = 0.05;
+            } else if (smallerHasBest) {
+                // PERFECT: Best star alone
+                rankPenalty = 1.0;
+            } else {
+                // Middle star alone - penalize based on how far from best
+                // At elite levels, even 1 point difference is huge
+                const gapFromBest = bestStar - smallerTeamBest;
+                const totalRange = bestStar - worstStar;
+
+                if (totalRange > 0) {
+                    // Exponential penalty: 1 point gap = ~0.7, 2 points = ~0.5, 3+ = ~0.3
+                    const normalizedGap = gapFromBest / totalRange;
+                    rankPenalty = Math.pow(1.0 - normalizedGap, 3.0); // Cubic for harshness
+                } else {
+                    rankPenalty = 1.0; // All stars same quality
+                }
+            }
+        } else {
+            // Multi-star smaller team - less strict
+            if (smallerHasWorst) {
+                rankPenalty = 0.3;
+            }
+        }
+
+        // Combine: Average requirement (50%) + rank position (50%)
+        // For single star, rank is critical; for multi-star, average matters more
+        const avgWeight = smallerCount === 1 ? 0.3 : 0.7;
+        const rankWeight = smallerCount === 1 ? 0.7 : 0.3;
+        const combinedRatio = avgWeight * avgScore + rankWeight * rankPenalty;
+        qualityBalance = clamp01Safe(Math.pow(combinedRatio, shapingExponent * 1.5), EPS);
+    } else {
+        // EVEN SPLIT: Use sum of qualities (original logic)
+        const qualityA = teamAQualities.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+        const qualityB = teamBQualities.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+        const qualityRatioRaw = calculateBasicDifferenceRatio(qualityA, qualityB);
+        const qualityRatio = clamp(finiteOr(qualityRatioRaw, 0), 0, 1);
+        qualityBalance = clamp01Safe(Math.pow(qualityRatio, shapingExponent), EPS);
+    }
 
     // 3) flexibility balance
     const flexibilityBalance = clamp01Safe(calculateFlexibilityBalance(teamAProfiles, teamBProfiles), EPS);
 
     // 4) count balance
-    const countByZone = (profiles: ZoneAffinityProfile[], zone: "def" | "mid" | "att") =>
-        profiles.filter((p) => p.dominantZone === zone).length;
+    let specialistCountBalance: number;
 
-    const defScore = clamp01Safe(
-        calculateCountSplitPenalty(countByZone(teamAProfiles, "def"), countByZone(teamBProfiles, "def"), shapingExponent),
-        EPS
-    );
+    if (isOdd) {
+        // ODD SPLITS: Specialist count balance is less meaningful when team sizes differ
+        // Quality already ensures better stars go to smaller team - zone diversity is secondary
+        const smallerCount = Math.min(countA, countB);
 
-    const attScore = clamp01Safe(
-        calculateCountSplitPenalty(countByZone(teamAProfiles, "att"), countByZone(teamBProfiles, "att"), shapingExponent),
-        EPS
-    );
+        // Fading baseline: 1v2: 0.85, 2v3: 0.75, 3v4: 0.70, 4v5: 0.65, etc.
+        const baselineScore = Math.max(0.60, 0.95 - smallerCount * 0.10);
+        specialistCountBalance = baselineScore;
+    } else {
+        // EVEN SPLITS: Calculate actual specialist count balance
+        const countByZone = (profiles: ZoneAffinityProfile[], zone: "def" | "mid" | "att") =>
+            profiles.filter((p) => p.dominantZone === zone).length;
 
-    const midScore = clamp01Safe(
-        calculateCountSplitPenalty(
-            countByZone(teamAProfiles, "mid"),
-            countByZone(teamBProfiles, "mid"),
-            shapingExponent * 0.8
-        ),
-        EPS
-    );
+        const defScore = clamp01Safe(
+            calculateCountSplitPenalty(countByZone(teamAProfiles, "def"), countByZone(teamBProfiles, "def"), shapingExponent),
+            EPS
+        );
 
-    const specialistCountBalance = clamp01Safe(Math.pow(defScore * attScore * midScore, 1 / 3), EPS);
+        const attScore = clamp01Safe(
+            calculateCountSplitPenalty(countByZone(teamAProfiles, "att"), countByZone(teamBProfiles, "att"), shapingExponent),
+            EPS
+        );
+
+        const midScore = clamp01Safe(
+            calculateCountSplitPenalty(
+                countByZone(teamAProfiles, "mid"),
+                countByZone(teamBProfiles, "mid"),
+                shapingExponent * 0.8
+            ),
+            EPS
+        );
+
+        specialistCountBalance = clamp01Safe(Math.pow(defScore * attScore * midScore, 1 / 3), EPS);
+    }
 
     // 5) peak talent balance
     const peakTalentBalance = clamp01Safe(calculatePeakTalentBalance(teamAProfiles, teamBProfiles), EPS);
