@@ -1757,6 +1757,75 @@ export function scoreStarSplit(
     }
 }
 
+/**
+ * Evaluate star distribution using gradient-based scoring for actual assigned teams
+ *
+ * This function extracts star players from assigned teams and scores their distribution
+ * using the same gradient affinity metrics used during pre-ranking.
+ *
+ * @param teamA First team
+ * @param teamB Second team
+ * @param config Balance configuration with star threshold
+ * @param strictness Dynamic strictness parameters
+ * @returns Gradient-based score (0-1, higher is better) and breakdown
+ */
+export function evaluateAssignedStarDistribution(
+    teamA: FastTeam,
+    teamB: FastTeam,
+    config: BalanceConfiguration,
+    strictness: DynamicStrictness
+): { score: number; breakdown: RankedStarSplit["breakdown"] } {
+    const starThreshold = config.starPlayers.absoluteMinimum;
+
+    // Extract star players from each team
+    const teamAStars: FastPlayer[] = [];
+    const teamBStars: FastPlayer[] = [];
+
+    teamA.positions.forEach(positionPlayers => {
+        positionPlayers.forEach(player => {
+            if (player.bestScore >= starThreshold) {
+                teamAStars.push(player);
+            }
+        });
+    });
+
+    teamB.positions.forEach(positionPlayers => {
+        positionPlayers.forEach(player => {
+            if (player.bestScore >= starThreshold) {
+                teamBStars.push(player);
+            }
+        });
+    });
+
+    // If no stars, return perfect score
+    if (teamAStars.length === 0 && teamBStars.length === 0) {
+        return {
+            score: 1.0,
+            breakdown: {
+                affinityBalance: 1.0,
+                qualityBalance: 1.0,
+                flexibilityBalance: 1.0,
+                specialistCountBalance: 1.0,
+                peakTalentBalance: 1.0,
+            },
+        };
+    }
+
+    // Calculate zone affinity profiles for each star
+    const teamAProfiles = teamAStars.map(p =>
+        calculateZoneAffinity(p.zoneScores[1], p.zoneScores[2], p.zoneScores[3])
+    );
+    const teamBProfiles = teamBStars.map(p =>
+        calculateZoneAffinity(p.zoneScores[1], p.zoneScores[2], p.zoneScores[3])
+    );
+
+    // Get star qualities (best scores)
+    const teamAQualities = teamAStars.map(p => p.bestScore);
+    const teamBQualities = teamBStars.map(p => p.bestScore);
+
+    // Use the same scoring function as pre-ranking
+    return scoreStarSplit(teamAProfiles, teamBProfiles, teamAQualities, teamBQualities, strictness);
+}
 
 /**
  * Generate and rank all possible star splits
@@ -2639,7 +2708,8 @@ export function calculateExtendedOptimalStarDistribution(
     // Log star profiles for debugging
     logger.debug(`  Star profiles:`);
     starProfiles.forEach((profile, i) => {
-        logger.debug(`    [${i}] ${starQualities[i].toFixed(0)} | dom=${profile.dominantZone.padEnd(8)} | aff: D=${profile.affinity.def.toFixed(2)} M=${profile.affinity.mid.toFixed(2)} A=${profile.affinity.att.toFixed(2)} | str=${profile.specialistStrength.toFixed(2)} flex=${profile.flexibility.toFixed(2)}`);
+        const playerName = starPlayers[i]?.original?.name || 'Unknown';
+        logger.debug(`    [${i}] ${playerName.padEnd(15)} | ${starQualities[i].toFixed(0)} | dom=${profile.dominantZone.padEnd(8)} | aff: D=${profile.affinity.def.toFixed(2)} M=${profile.affinity.mid.toFixed(2)} A=${profile.affinity.att.toFixed(2)} | str=${profile.specialistStrength.toFixed(2)} flex=${profile.flexibility.toFixed(2)}`);
     });
 
     // Log top 5 and bottom 3 splits for comparison

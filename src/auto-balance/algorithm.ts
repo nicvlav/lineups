@@ -21,6 +21,7 @@ import {
     calculateOptimalStarDistribution,
     calculateShapedPenaltyScore,
     calculateStarDistributionBreakdown,
+    evaluateAssignedStarDistribution,
     selectGuidedStarSplit,
 } from "./metrics";
 import type { ExtendedOptimalStats, RankedStarSplit } from "./types";
@@ -658,18 +659,24 @@ export function runGuidedMonteCarlo(
         // Star count penalty
         const starCountPenalty = starCountDiff > 1 ? 0 : 1;
 
-        // Get star distribution breakdown
-        const starBreakdown = calculateStarDistributionBreakdown(result.teamA, result.teamB, config);
+        // NEW: Use gradient-based star distribution evaluation (same scoring as pre-ranking)
+        const gradientEval = evaluateAssignedStarDistribution(
+            result.teamA,
+            result.teamB,
+            config,
+            extendedStats.strictness
+        );
 
-        // NEW: Use DYNAMIC shaping exponent from pool characteristics
-        const shapedPenaltyScore = calculateShapedPenaltyScore(
-            starBreakdown.penalty,
+        // Compare gradient score to pre-computed statistics
+        // extendedStats.best/mean/worst are gradient scores from ranked splits
+        const shapedStarScore = calculateShapedPenaltyScore(
+            gradientEval.score,
             extendedStats,
-            extendedStats.strictness.shapingExponent // Dynamic instead of fixed 6.0
+            extendedStats.strictness.shapingExponent
         );
 
         // Combined multiplier
-        const starMultiplier = starCountPenalty * shapedPenaltyScore;
+        const starMultiplier = starCountPenalty * shapedStarScore;
         const finalScore = metrics.score * starMultiplier;
 
         const simResult: SimulationResult = {
@@ -700,16 +707,41 @@ export function runGuidedMonteCarlo(
         const finalTeamAStars: number[] = [];
         const finalTeamBStars: number[] = [];
 
-        starPlayers.forEach((starPlayer, idx) => {
-            if (starPlayer.team === "A") {
-                finalTeamAStars.push(idx);
-            } else if (starPlayer.team === "B") {
-                finalTeamBStars.push(idx);
-            }
+        // Extract stars from the BEST RESULT teams, not the mutated starPlayers array
+        const allPlayersInTeams: FastPlayer[] = [];
+
+        // Collect all players from team A
+        bestResult.teams.teamA.positions.forEach(positionPlayers => {
+            positionPlayers.forEach(player => {
+                if (player.isStarPlayer) {
+                    const starIdx = starPlayers.findIndex(sp => sp.original.id === player.original.id);
+                    if (starIdx !== -1) {
+                        finalTeamAStars.push(starIdx);
+                        allPlayersInTeams.push(player);
+                    }
+                }
+            });
         });
 
-        logger.debug(`     Team A stars: [${finalTeamAStars.join(",")}]`);
-        logger.debug(`     Team B stars: [${finalTeamBStars.join(",")}]`);
+        // Collect all players from team B
+        bestResult.teams.teamB.positions.forEach(positionPlayers => {
+            positionPlayers.forEach(player => {
+                if (player.isStarPlayer) {
+                    const starIdx = starPlayers.findIndex(sp => sp.original.id === player.original.id);
+                    if (starIdx !== -1) {
+                        finalTeamBStars.push(starIdx);
+                        allPlayersInTeams.push(player);
+                    }
+                }
+            });
+        });
+
+        // Format with player names for easier verification
+        const teamAStarsWithNames = finalTeamAStars.map(idx => `${idx}:${starPlayers[idx]?.original?.name || 'Unknown'}`).join(", ");
+        const teamBStarsWithNames = finalTeamBStars.map(idx => `${idx}:${starPlayers[idx]?.original?.name || 'Unknown'}`).join(", ");
+
+        logger.debug(`     Team A stars: [${teamAStarsWithNames}]`);
+        logger.debug(`     Team B stars: [${teamBStarsWithNames}]`);
 
         // Find this split in the ranked list
         if (extendedStats.rankedSplits.length > 0) {
