@@ -49,7 +49,7 @@
 import { logger } from "@/lib/logger";
 import type { ScoredGamePlayer } from "@/types/players";
 import type { Formation } from "@/types/positions";
-import { convertToGamePlayers, runOptimizedMonteCarlo } from "./algorithm";
+import { convertToGamePlayers, runGuidedMonteCarlo } from "./algorithm";
 import { diagnosticReport } from "./debug-tools";
 import { calculateMetrics } from "./metrics";
 import { type BalanceConfiguration, DEFAULT_BALANCE_CONFIG } from "./metrics-config";
@@ -183,14 +183,15 @@ export function autoBalance(
     const fastPlayers = players.map(toFastPlayer);
 
     // Run optimized Monte Carlo
-    const result = runOptimizedMonteCarlo(fastPlayers, config, true);
+    // const result = runOptimizedMonteCarlo(fastPlayers, config, true);
+    const result = runGuidedMonteCarlo(fastPlayers, config, true);
 
     if (!result) {
         throw new Error("Failed to balance teams - no valid formation found");
     }
 
     // Calculate metrics
-    const metricsResult = calculateMetrics(result.teams.teamA, result.teams.teamB, config, true);
+    const metricsResult = calculateMetrics(result.teams.teamA, result.teams.teamB, config, false);
 
     // Generate enhanced diagnostic report
     const diagnostic = diagnosticReport(
@@ -202,7 +203,7 @@ export function autoBalance(
     );
 
     // if (debugMode) {
-    logger.debug(diagnostic);
+        logger.debug(diagnostic);
     // }
 
     const convertedTeams = convertToGamePlayers(result);
@@ -301,7 +302,8 @@ export function autoBalanceWithConfig(
     const fastPlayers = players.map(toFastPlayer);
 
     // Run optimized Monte Carlo
-    const result = runOptimizedMonteCarlo(fastPlayers, config, verbose);
+    // const result = runOptimizedMonteCarlo(fastPlayers, config, verbose);
+    const result = runGuidedMonteCarlo(fastPlayers, config, verbose);
 
     if (!result) {
         throw new Error("Failed to balance teams");

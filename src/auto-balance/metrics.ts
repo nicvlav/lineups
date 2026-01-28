@@ -21,7 +21,18 @@ import {
 import { calibratedScore, Steepness } from "./metric-transformations";
 import type { BalanceConfiguration } from "./metrics-config";
 import { DEFAULT_BALANCE_CONFIG } from "./metrics-config";
-import type { BalanceMetrics, FastPlayer, FastTeam, TeamStarDistribution } from "./types";
+import type {
+    BalanceMetrics,
+    DynamicStrictness,
+    ExtendedOptimalStats,
+    FastPlayer,
+    FastTeam,
+    GuidedSelectionConfig,
+    PoolCharacteristics,
+    RankedStarSplit,
+    TeamStarDistribution,
+    ZoneAffinityProfile,
+} from "./types";
 
 /**
  * Helper function to format a simple comparison for debug output
@@ -1136,6 +1147,781 @@ const PENALTY_WEIGHTS = {
     },
 } as const;
 
+// ===== ZONE AFFINITY SYSTEM (Gradient Specialist Profiles) =====
+
+/**
+ * Calculate zone affinity profile for a player
+ *
+ * Replaces binary specialist classification with a continuous affinity vector
+ * that captures "how much" of a specialist a player is.
+ *
+ * Uses softmax normalization for controllable sharpness and entropy-based
+ * specialist strength measurement.
+ *
+ * @param defScore Best defensive zone score
+ * @param midScore Best midfield zone score
+ * @param attScore Best attacking zone score
+ * @param temperature Softmax temperature (lower = sharper distinctions, default 1.0)
+ * @returns Zone affinity profile with gradient values
+ */
+/**
+ * Continuous zone affinity profile for a player (star-tuned)
+ *
+ * Key change vs your original:
+ * - Softmax "sharpness" is driven by RELATIVE SPREAD (how decisive the best zone is),
+ *   not by absolute quality/mean. This prevents elite all-rounders from being mis-labeled
+ *   as extreme specialists due to tiny margins.
+ *
+ * Also:
+ * - Dominant zone is guarded by a minimum spread (so tiny spreads don't force dominance).
+ */
+export function calculateZoneAffinity(
+    defScore: number,
+    midScore: number,
+    attScore: number,
+    opts?: {
+        // Softmax base multiplier
+        baseSharpness?: number;
+
+        // Spread -> sharpness mapping (logistic)
+        spreadPivot?: number;        // relative spread at which sharpness ramps up (e.g. 0.05 = 5%)
+        spreadSteepness?: number;    // logistic steepness
+        sharpnessMin?: number;       // minimum spreadFactor
+        sharpnessMax?: number;       // maximum spreadFactor
+
+        // Dominance rules
+        dominanceThreshold?: number; // top affinity threshold
+        dominanceMargin?: number;    // top - second threshold
+        spreadMinForDominance?: number; // absolute spread points required to declare dominance
+        hardMarginOverride?: number; // if top-second >= this, dominance allowed even if spread small
+
+        // Flexibility knobs (star-aware)
+        scoreRangeMax?: number;      // e.g. 100
+        starFlexFactor?: number;     // how strongly specialistStrength reduces flexibility
+        meanFlexPenalty?: number;    // additional reduction proportional to mean quality
+        flexCurveExponent?: number;  // <1 softens penalty, >1 harshens
+        clampFlexTo?: { min?: number; max?: number };
+
+        sanitizeInputs?: boolean;
+    }
+): ZoneAffinityProfile {
+    const {
+        // --- new defaults (recommended starting point)
+        baseSharpness = 1.0,
+
+        spreadPivot = 0.05,        // 5% relative spread is "noticeable"
+        spreadSteepness = 25,      // how quickly sharpness ramps as spread grows
+        sharpnessMin = 0.6,        // keeps balanced stars soft
+        sharpnessMax = 2.8,        // allows decisive specialists
+
+        dominanceThreshold = 0.45,
+        dominanceMargin = 0.12,
+        spreadMinForDominance = 3.0, // don't label dominance for tiny spreads
+        hardMarginOverride = 0.25,   // unless top-second is HUGE
+
+        scoreRangeMax = 100,
+
+        // Flexibility defaults (star-relative)
+        starFlexFactor = 0.65,
+        meanFlexPenalty = 0.12,
+        flexCurveExponent = 0.7,
+        clampFlexTo = { min: 0.05, max: 0.99 },
+
+        sanitizeInputs = true,
+    } = opts || {};
+
+    if (sanitizeInputs) {
+        defScore = Number.isFinite(defScore) ? defScore : 0;
+        midScore = Number.isFinite(midScore) ? midScore : 0;
+        attScore = Number.isFinite(attScore) ? attScore : 0;
+    }
+
+    const maxScore = Math.max(defScore, midScore, attScore);
+    const minScore = Math.min(defScore, midScore, attScore);
+
+    // Edge case: all zero
+    if (maxScore === 0 && minScore === 0) {
+        return {
+            rawScores: { def: 0, mid: 0, att: 0 },
+            affinity: { def: 1 / 3, mid: 1 / 3, att: 1 / 3 },
+            specialistStrength: 0,
+            flexibility: 1.0,
+            dominantZone: "balanced",
+        };
+    }
+
+    // Mean + centered deltas (preserves small but meaningful differences at high quality)
+    const mean = (defScore + midScore + attScore) / 3;
+    const dDef = defScore - mean;
+    const dMid = midScore - mean;
+    const dAtt = attScore - mean;
+
+    // --- Spread-driven sharpness (fixes "elite all-rounder becomes extreme specialist")
+    const spread = maxScore - minScore; // absolute points spread
+    const relSpread = spread / (mean + 1e-9); // scale-free
+
+    // Logistic mapping to [sharpnessMin, sharpnessMax]
+    const sigmoid = 1 / (1 + Math.exp(-spreadSteepness * (relSpread - spreadPivot)));
+    const spreadFactor = sharpnessMin + (sharpnessMax - sharpnessMin) * sigmoid;
+
+    const sharpness = Math.max(0.01, baseSharpness * spreadFactor);
+
+    // Softmax over scaled deltas (stable form: subtract max)
+    const sDef = dDef * sharpness;
+    const sMid = dMid * sharpness;
+    const sAtt = dAtt * sharpness;
+
+    const maxScaled = Math.max(sDef, sMid, sAtt);
+    const eDef = Math.exp(sDef - maxScaled);
+    const eMid = Math.exp(sMid - maxScaled);
+    const eAtt = Math.exp(sAtt - maxScaled);
+    const sumExp = eDef + eMid + eAtt + 1e-12;
+
+    const affinity = {
+        def: eDef / sumExp,
+        mid: eMid / sumExp,
+        att: eAtt / sumExp,
+    };
+
+    // Specialist strength from entropy (1 = concentrated, 0 = uniform)
+    const eps = 1e-12;
+    const maxEntropy = Math.log(3);
+    const actualEntropy = -(
+        affinity.def * Math.log(affinity.def + eps) +
+        affinity.mid * Math.log(affinity.mid + eps) +
+        affinity.att * Math.log(affinity.att + eps)
+    );
+    const specialistStrength = 1.0 - actualEntropy / maxEntropy;
+
+    // Flexibility (star-relative): base flexibility from spread (std), then penalize by specialist + mean
+    const variance =
+        (Math.pow(defScore - mean, 2) +
+            Math.pow(midScore - mean, 2) +
+            Math.pow(attScore - mean, 2)) / 3;
+    const std = Math.sqrt(variance);
+
+    const maxStdApprox = (scoreRangeMax || 100) * 0.47;
+    const baseFlex = 1 - Math.min(1, std / (maxStdApprox + 1e-9)); // [0,1]
+
+    const quality01 = Math.max(0, Math.min(1, mean / (scoreRangeMax || 1)));
+    const penalty = Math.max(
+        0,
+        Math.min(0.95, specialistStrength * starFlexFactor + quality01 * meanFlexPenalty)
+    );
+
+    const flexScale = Math.pow(1 - penalty, flexCurveExponent);
+    let flexibility = baseFlex * flexScale;
+
+    const minClamp = clampFlexTo.min ?? 0.05;
+    const maxClamp = clampFlexTo.max ?? 0.99;
+    flexibility = Math.max(minClamp, Math.min(maxClamp, flexibility));
+
+    // Dominant zone selection with spread guard
+    const items = [
+        { key: "def" as const, val: affinity.def },
+        { key: "mid" as const, val: affinity.mid },
+        { key: "att" as const, val: affinity.att },
+    ].sort((a, b) => b.val - a.val);
+
+    const top = items[0];
+    const second = items[1];
+
+    let dominantZone: "def" | "mid" | "att" | "balanced" = "balanced";
+    const passesAffinityRule =
+        top.val >= dominanceThreshold || top.val - second.val >= dominanceMargin;
+
+    if (passesAffinityRule) {
+        const passesSpreadGuard =
+            spread >= spreadMinForDominance || top.val - second.val >= hardMarginOverride;
+        dominantZone = passesSpreadGuard ? top.key : "balanced";
+    }
+
+    return {
+        rawScores: { def: defScore, mid: midScore, att: attScore },
+        affinity,
+        specialistStrength,
+        flexibility,
+        dominantZone,
+    };
+}
+
+/**
+ * Calculate peak talent balance - prevents concentration of top players in each zone on one team
+ *
+ * This catches the case where "best defender + best attacker end up on same team".
+ * We compare the affinity-weighted "peaks" in each zone rather than just totals.
+ *
+ * Method:
+ * 1. For each zone (def/mid/att), find the highest affinity on each team
+ * 2. Compare these peak affinities between teams
+ * 3. If one team has the peak talent in multiple zones, penalize
+ *
+ * @param teamAProfiles Zone affinity profiles for team A's stars
+ * @param teamBProfiles Zone affinity profiles for team B's stars
+ * @returns Balance score from 0 (terrible) to 1 (perfect)
+ */
+export function calculatePeakTalentBalance(
+    teamAProfiles: ZoneAffinityProfile[],
+    teamBProfiles: ZoneAffinityProfile[]
+): number {
+    if (teamAProfiles.length === 0 || teamBProfiles.length === 0) return 1.0;
+
+    // Find peak affinity in each zone for each team
+    const teamAPeaks = {
+        def: Math.max(...teamAProfiles.map((p) => p.affinity.def)),
+        mid: Math.max(...teamAProfiles.map((p) => p.affinity.mid)),
+        att: Math.max(...teamAProfiles.map((p) => p.affinity.att)),
+    };
+
+    const teamBPeaks = {
+        def: Math.max(...teamBProfiles.map((p) => p.affinity.def)),
+        mid: Math.max(...teamBProfiles.map((p) => p.affinity.mid)),
+        att: Math.max(...teamBProfiles.map((p) => p.affinity.att)),
+    };
+
+    // Calculate balance for each zone's peak
+    const defPeakBalance = calculateBasicDifferenceRatio(teamAPeaks.def, teamBPeaks.def);
+    const midPeakBalance = calculateBasicDifferenceRatio(teamAPeaks.mid, teamBPeaks.mid);
+    const attPeakBalance = calculateBasicDifferenceRatio(teamAPeaks.att, teamBPeaks.att);
+
+    // Geometric mean - all zones must have balanced peaks
+    return Math.pow(defPeakBalance * midPeakBalance * attPeakBalance, 1 / 3);
+}
+
+/**
+ * Calculate count-based split penalty with derived values instead of magic numbers
+ *
+ * Penalty magnitude is derived from the actual pool size and achievable range,
+ * not hardcoded constants like 0.35 or 0.25.
+ *
+ * @param countA Count on team A
+ * @param countB Count on team B
+ * @param shapingPower Exponential shaping (higher = harsher penalties)
+ * @returns Penalty score from 0 (terrible) to 1 (perfect)
+ */
+export function calculateCountSplitPenalty(countA: number, countB: number, shapingPower: number): number {
+    const total = countA + countB;
+    if (total === 0) return 1.0; // No items = no penalty
+
+    const isOdd = total % 2 === 1;
+    const tolerance = isOdd ? 1 : 0; // Odd totals allow 1 diff
+    const actualDiff = Math.abs(countA - countB);
+
+    // Within tolerance = perfect
+    if (actualDiff <= tolerance) return 1.0;
+
+    // Deviation beyond tolerance, normalized by maximum possible deviation
+    const excessDeviation = actualDiff - tolerance;
+    const maxDeviation = Math.floor(total / 2); // Worst case: all on one team
+
+    if (maxDeviation === 0) return 1.0; // Edge case
+
+    const normalized = excessDeviation / maxDeviation;
+
+    // Apply shaping power: higher power = harsher penalties for deviations
+    return 1.0 - Math.pow(normalized, shapingPower);
+}
+
+/**
+ * Calculate affinity-weighted zone balance between two teams
+ *
+ * Instead of counting "3 defenders vs 2 defenders" (binary), we sum affinity:
+ * - Team A: 0.7 + 0.8 + 0.3 = 1.8 defensive affinity
+ * - Team B: 0.6 + 0.5 + 0.4 = 1.5 defensive affinity
+ * - Imbalance ratio calculated from these continuous sums
+ *
+ * @param teamAProfiles Zone affinity profiles for team A's stars
+ * @param teamBProfiles Zone affinity profiles for team B's stars
+ * @returns Balance score from 0 (terrible) to 1 (perfect)
+ */
+export function calculateAffinityBalanceScore(
+    teamAProfiles: ZoneAffinityProfile[],
+    teamBProfiles: ZoneAffinityProfile[]
+): number {
+    // Handle edge cases
+    if (teamAProfiles.length === 0 && teamBProfiles.length === 0) return 1.0;
+    if (teamAProfiles.length === 0 || teamBProfiles.length === 0) return 0.5;
+
+    // Sum affinities per zone for each team
+    const teamASums = { def: 0, mid: 0, att: 0 };
+    const teamBSums = { def: 0, mid: 0, att: 0 };
+
+    for (const profile of teamAProfiles) {
+        teamASums.def += profile.affinity.def;
+        teamASums.mid += profile.affinity.mid;
+        teamASums.att += profile.affinity.att;
+    }
+
+    for (const profile of teamBProfiles) {
+        teamBSums.def += profile.affinity.def;
+        teamBSums.mid += profile.affinity.mid;
+        teamBSums.att += profile.affinity.att;
+    }
+
+    // Calculate balance ratio for each zone
+    const defBalance = calculateBasicDifferenceRatio(teamASums.def, teamBSums.def);
+    const midBalance = calculateBasicDifferenceRatio(teamASums.mid, teamBSums.mid);
+    const attBalance = calculateBasicDifferenceRatio(teamASums.att, teamBSums.att);
+
+    // Geometric mean ensures all zones must be balanced (one bad zone tanks score)
+    return Math.pow(defBalance * midBalance * attBalance, 1 / 3);
+}
+
+/**
+ * Calculate flexibility balance between two teams
+ *
+ * Teams with higher average flexibility can adapt better during the game.
+ * We want both teams to have similar flexibility levels.
+ *
+ * @param teamAProfiles Zone affinity profiles for team A's stars
+ * @param teamBProfiles Zone affinity profiles for team B's stars
+ * @returns Balance score from 0 (terrible) to 1 (perfect)
+ */
+export function calculateFlexibilityBalance(
+    teamAProfiles: ZoneAffinityProfile[],
+    teamBProfiles: ZoneAffinityProfile[]
+): number {
+    if (teamAProfiles.length === 0 || teamBProfiles.length === 0) return 1.0;
+
+    const avgFlexA = teamAProfiles.reduce((sum, p) => sum + p.flexibility, 0) / teamAProfiles.length;
+    const avgFlexB = teamBProfiles.reduce((sum, p) => sum + p.flexibility, 0) / teamBProfiles.length;
+
+    return calculateBasicDifferenceRatio(avgFlexA, avgFlexB);
+}
+
+/**
+ * Analyze pool characteristics for dynamic strictness calculation
+ *
+ * @param starProfiles Zone affinity profiles for all stars
+ * @param starQualities Best scores for all stars
+ * @param splitScores Scores from all tested splits
+ * @returns Pool characteristics object
+ */
+export function analyzePoolCharacteristics(
+    starProfiles: ZoneAffinityProfile[],
+    starQualities: number[],
+    splitScores: number[]
+): PoolCharacteristics {
+    const numStars = starProfiles.length;
+
+    if (numStars === 0) {
+        return {
+            numStars: 0,
+            qualityVariance: 0,
+            specializationEntropy: 1.0,
+            bestAchievableSplit: 1.0,
+            meanSplitScore: 1.0,
+            optimizationPotential: 1.0,
+        };
+    }
+
+    // Quality variance (standard deviation)
+    const meanQuality = starQualities.reduce((a, b) => a + b, 0) / numStars;
+    const qualityVariance = Math.sqrt(
+        starQualities.reduce((sum, q) => sum + (q - meanQuality) ** 2, 0) / numStars
+    );
+
+    // Specialization entropy: how diverse are the specialist types?
+    const zoneCounts = { def: 0, mid: 0, att: 0, balanced: 0 };
+    for (const profile of starProfiles) {
+        zoneCounts[profile.dominantZone]++;
+    }
+
+    // Calculate entropy of zone distribution
+    let specializationEntropy = 0;
+    for (const zone of ["def", "mid", "att", "balanced"] as const) {
+        const p = zoneCounts[zone] / numStars;
+        if (p > 0) {
+            specializationEntropy -= p * Math.log(p);
+        }
+    }
+    // Normalize by max entropy (log(4))
+    specializationEntropy /= Math.log(4);
+
+    // Split statistics
+    const bestAchievableSplit = splitScores.length > 0 ? Math.max(...splitScores) : 1.0;
+    const meanSplitScore =
+        splitScores.length > 0 ? splitScores.reduce((a, b) => a + b, 0) / splitScores.length : 1.0;
+    const optimizationPotential = meanSplitScore > 0 ? bestAchievableSplit / meanSplitScore : 1.0;
+
+    return {
+        numStars,
+        qualityVariance,
+        specializationEntropy,
+        bestAchievableSplit,
+        meanSplitScore,
+        optimizationPotential,
+    };
+}
+
+/**
+ * Calculate dynamic strictness parameters based on pool characteristics
+ *
+ * Key principles:
+ * 1. More stars = more splits possible = can be stricter
+ * 2. Higher quality variance = harder to balance = be gentler
+ * 3. Higher specialization entropy = more flexibility = can be stricter
+ * 4. Higher optimization potential = more differentiation between splits = be stricter
+ *
+ * @param characteristics Pool characteristics
+ * @returns Dynamic strictness parameters
+ */
+export function calculateDynamicStrictness(characteristics: PoolCharacteristics): DynamicStrictness {
+    const { numStars, qualityVariance, specializationEntropy, optimizationPotential } = characteristics;
+
+    // Base shaping exponent (how aggressively to penalize deviation)
+    // Range: 1.0 (very gentle) to 4.0 (very harsh)
+    let baseShaping = 2.0;
+
+    // Adjust for number of stars
+    // More stars = more combinations = more room for optimization = be stricter
+    if (numStars >= 8) {
+        baseShaping += 0.5;
+    } else if (numStars <= 4) {
+        baseShaping -= 0.5;
+    }
+
+    // Adjust for quality variance
+    // High variance makes balancing harder - be gentler
+    // qualityVariance typically 0-5 points
+    const varianceAdjustment = -0.2 * Math.min(qualityVariance / 5, 1);
+    baseShaping += varianceAdjustment;
+
+    // Adjust for specialization diversity
+    // High entropy (diverse specialists) = easier to balance = be stricter
+    // Low entropy (homogeneous specialists) = harder to balance = be gentler
+    const entropyAdjustment = 0.4 * (specializationEntropy - 0.5);
+    baseShaping += entropyAdjustment;
+
+    // Clamp to valid range
+    const shapingExponent = Math.max(1.0, Math.min(4.0, baseShaping));
+
+    // Concentration parameter for guided selection
+    // Higher optimization potential = more differentiation = concentrate on top splits
+    let concentrationParameter = 2.0 + 3.0 * (optimizationPotential - 1.0);
+    concentrationParameter = Math.max(1.0, Math.min(8.0, concentrationParameter));
+
+    // Quality penalty weight
+    // When quality variance is high, quality balance becomes more important
+    let qualityPenaltyWeight = 0.3 + 0.2 * (qualityVariance / 5);
+    qualityPenaltyWeight = Math.max(0.2, Math.min(0.5, qualityPenaltyWeight));
+
+    return {
+        shapingExponent,
+        concentrationParameter,
+        qualityPenaltyWeight,
+    };
+}
+
+/**
+ * Score a star split using gradient affinity profiles
+ *
+ * This replaces the magic constant-based scoring with mathematically derived values.
+ *
+ * @param teamAProfiles Zone affinity profiles for team A's stars
+ * @param teamBProfiles Zone affinity profiles for team B's stars
+ * @param teamAQualities Best scores for team A's stars
+ * @param teamBQualities Best scores for team B's stars
+ * @param strictness Dynamic strictness parameters
+ * @returns Score and component breakdown
+ */
+export function scoreStarSplit(
+    teamAProfiles: ZoneAffinityProfile[],
+    teamBProfiles: ZoneAffinityProfile[],
+    teamAQualities: number[],
+    teamBQualities: number[],
+    strictness: DynamicStrictness
+): {
+    score: number;
+    breakdown: {
+        affinityBalance: number;
+        qualityBalance: number;
+        flexibilityBalance: number;
+        specialistCountBalance: number;
+        peakTalentBalance: number;
+    };
+} {
+    const EPS = 1e-9;
+
+    const shapingExponent = finiteOr(strictness.shapingExponent, 1.0);
+    const adjustedQualityWeight = finiteOr(strictness.qualityPenaltyWeight, 0);
+
+    // weights (updated to include peak talent)
+    const affinityWeight = 0.30;
+    const flexibilityWeight = 0.10;
+    const countWeight = 0.15;
+    const peakWeight = 0.15;
+
+    const totalWeight = affinityWeight + adjustedQualityWeight + flexibilityWeight + countWeight + peakWeight;
+    if (!(totalWeight > 0)) {
+        // fail safe
+        return {
+            score: 0,
+            breakdown: {
+                affinityBalance: 0,
+                qualityBalance: 0,
+                flexibilityBalance: 0,
+                specialistCountBalance: 0,
+                peakTalentBalance: 0,
+            },
+        };
+    }
+
+    // 1) affinity balance
+    const affinityBalance = clamp01Safe(calculateAffinityBalanceScore(teamAProfiles, teamBProfiles), EPS);
+
+    // 2) quality balance
+    const qualityA = teamAQualities.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+    const qualityB = teamBQualities.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+
+    // IMPORTANT: qualityRatio must be in [0,1] where 1 is best
+    const qualityRatioRaw = calculateBasicDifferenceRatio(qualityA, qualityB);
+    const qualityRatio = clamp(finiteOr(qualityRatioRaw, 0), 0, 1);
+    const qualityBalance = clamp01Safe(Math.pow(qualityRatio, shapingExponent), EPS);
+
+    // 3) flexibility balance
+    const flexibilityBalance = clamp01Safe(calculateFlexibilityBalance(teamAProfiles, teamBProfiles), EPS);
+
+    // 4) count balance
+    const countByZone = (profiles: ZoneAffinityProfile[], zone: "def" | "mid" | "att") =>
+        profiles.filter((p) => p.dominantZone === zone).length;
+
+    const defScore = clamp01Safe(
+        calculateCountSplitPenalty(countByZone(teamAProfiles, "def"), countByZone(teamBProfiles, "def"), shapingExponent),
+        EPS
+    );
+
+    const attScore = clamp01Safe(
+        calculateCountSplitPenalty(countByZone(teamAProfiles, "att"), countByZone(teamBProfiles, "att"), shapingExponent),
+        EPS
+    );
+
+    const midScore = clamp01Safe(
+        calculateCountSplitPenalty(
+            countByZone(teamAProfiles, "mid"),
+            countByZone(teamBProfiles, "mid"),
+            shapingExponent * 0.8
+        ),
+        EPS
+    );
+
+    const specialistCountBalance = clamp01Safe(Math.pow(defScore * attScore * midScore, 1 / 3), EPS);
+
+    // 5) peak talent balance
+    const peakTalentBalance = clamp01Safe(calculatePeakTalentBalance(teamAProfiles, teamBProfiles), EPS);
+
+    // weighted geometric mean in log space
+    const wA = affinityWeight / totalWeight;
+    const wQ = adjustedQualityWeight / totalWeight;
+    const wF = flexibilityWeight / totalWeight;
+    const wC = countWeight / totalWeight;
+    const wP = peakWeight / totalWeight;
+
+    // If adjustedQualityWeight is 0, quality still contributes neutrally since wQ==0
+    const score =
+        Math.exp(
+            wA * Math.log(affinityBalance) +
+            wQ * Math.log(qualityBalance) +
+            wF * Math.log(flexibilityBalance) +
+            wC * Math.log(specialistCountBalance) +
+            wP * Math.log(peakTalentBalance)
+        );
+
+    return {
+        score: Number.isFinite(score) ? score : 0,
+        breakdown: {
+            affinityBalance,
+            qualityBalance,
+            flexibilityBalance,
+            specialistCountBalance,
+            peakTalentBalance,
+        },
+    };
+
+    // helpers
+    function finiteOr(x: number, fallback: number) {
+        return Number.isFinite(x) ? x : fallback;
+    }
+
+    function clamp(x: number, lo: number, hi: number) {
+        if (!Number.isFinite(x)) return lo;
+        return Math.max(lo, Math.min(hi, x));
+    }
+
+    function clamp01Safe(x: number, eps: number) {
+        // clamp to [eps, 1] to avoid log(0) / pow(neg, frac)
+        if (!Number.isFinite(x)) return eps;
+        if (x <= eps) return eps;
+        if (x >= 1) return 1;
+        return x;
+    }
+}
+
+
+/**
+ * Generate and rank all possible star splits
+ *
+ * Pre-computes all C(n, n/2) possible distributions and scores them
+ * using gradient affinity metrics. Returns sorted by score descending.
+ *
+ * @param starProfiles Zone affinity profiles for all stars
+ * @param starQualities Best scores for all stars
+ * @param strictness Dynamic strictness parameters
+ * @returns Array of ranked star splits
+ */
+export function generateRankedStarSplits(
+    starProfiles: ZoneAffinityProfile[],
+    starQualities: number[],
+    strictness: DynamicStrictness
+): RankedStarSplit[] {
+    const n = starProfiles.length;
+    if (n <= 1) return []; // No splitting needed
+
+    const teamASize = Math.floor(n / 2);
+    const combinations = generateCombinations(n, teamASize);
+
+    const rankedSplits: RankedStarSplit[] = [];
+
+    for (const teamAIndices of combinations) {
+        // Build team B indices
+        const teamBIndices: number[] = [];
+        for (let i = 0; i < n; i++) {
+            if (!teamAIndices.includes(i)) {
+                teamBIndices.push(i);
+            }
+        }
+
+        // Extract profiles and qualities for each team
+        const teamAProfiles = teamAIndices.map((i) => starProfiles[i]);
+        const teamBProfiles = teamBIndices.map((i) => starProfiles[i]);
+        const teamAQuals = teamAIndices.map((i) => starQualities[i]);
+        const teamBQuals = teamBIndices.map((i) => starQualities[i]);
+
+        // Score this split
+        const { score, breakdown } = scoreStarSplit(
+            teamAProfiles,
+            teamBProfiles,
+            teamAQuals,
+            teamBQuals,
+            strictness
+        );
+
+        rankedSplits.push({
+            teamAIndices,
+            teamBIndices,
+            score,
+            rank: 0, // Will be set after sorting
+            breakdown,
+        });
+    }
+
+    // Sort by score descending (best first)
+    rankedSplits.sort((a, b) => b.score - a.score);
+
+    // Assign ranks
+    rankedSplits.forEach((split, index) => {
+        split.rank = index;
+    });
+
+    return rankedSplits;
+}
+
+/**
+ * Select a star split using weighted probability favoring better splits
+ *
+ * Uses softmax-style selection where:
+ * - Top splits have highest probability
+ * - Lower splits still have non-zero probability (exploration)
+ * - Concentration parameter controls the sharpness
+ *
+ * @param rankedSplits Pre-ranked star splits
+ * @param config Guided selection configuration
+ * @returns Selected star split
+ */
+export function selectGuidedStarSplit(
+    rankedSplits: RankedStarSplit[],
+    config: GuidedSelectionConfig
+): RankedStarSplit {
+    if (rankedSplits.length === 0) {
+        throw new Error("No star splits available");
+    }
+
+    if (rankedSplits.length === 1) {
+        return rankedSplits[0];
+    }
+
+    // Calculate selection probabilities using rank-based softmax
+    // P(i) proportional to exp(-concentration * rank / numSplits)
+    const n = rankedSplits.length;
+    const weights: number[] = [];
+
+    for (const split of rankedSplits) {
+        const normalizedRank = split.rank / (n - 1); // 0 = best, 1 = worst
+        const weight = Math.exp(-config.concentrationParameter * normalizedRank);
+        weights.push(Math.max(weight, config.minProbability));
+    }
+
+    // Normalize to probabilities
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    const probabilities = weights.map((w) => w / totalWeight);
+
+    // Sample according to probabilities
+    const random = Math.random();
+    let cumulative = 0;
+
+    for (let i = 0; i < rankedSplits.length; i++) {
+        cumulative += probabilities[i];
+        if (random < cumulative) {
+            return rankedSplits[i];
+        }
+    }
+
+    // Fallback to last split (shouldn't reach here due to floating point)
+    return rankedSplits[rankedSplits.length - 1];
+}
+
+/**
+ * Calculate guided selection configuration based on split statistics
+ *
+ * @param splitStats Statistics from pre-ranked splits
+ * @param totalPlayers Total player count in pool
+ * @returns Guided selection configuration
+ */
+export function calculateGuidedSelectionConfig(
+    splitStats: { best: number; mean: number; worst: number; count: number },
+    totalPlayers: number
+): GuidedSelectionConfig {
+    // Optimization potential: ratio of best to mean
+    const optimizationPotential = splitStats.mean > 0 ? splitStats.best / splitStats.mean : 1.0;
+
+    // Base concentration
+    // Higher potential = more valuable to pick good splits = higher concentration
+    let concentration = 2.0;
+
+    if (optimizationPotential > 1.5) {
+        concentration = 5.0; // Strong differentiation - concentrate heavily
+    } else if (optimizationPotential > 1.2) {
+        concentration = 3.5; // Moderate differentiation
+    } else if (optimizationPotential > 1.1) {
+        concentration = 2.5; // Mild differentiation
+    }
+    // else keep at 2.0 - minimal differentiation, more exploration
+
+    // Adjust for player count (more players = more non-star variation = can explore more)
+    if (totalPlayers >= 20) {
+        concentration *= 0.9; // Slightly more exploration
+    }
+
+    // Minimum probability ensures we don't completely ignore poor splits
+    // This maintains some exploration for edge cases
+    const minProbability = Math.max(0.01 / splitStats.count, 0.001);
+
+    return {
+        concentrationParameter: concentration,
+        minProbability,
+    };
+}
+
 function calculateTeamStarMetrics(classifications: StarZoneClassification[]): {
     defSpecialistCount: number;
     attSpecialistCount: number;
@@ -1753,6 +2539,135 @@ export function calculateOptimalStarDistribution(
         mean: avgPenalty,
         numStars,
         combinations: combinations.length,
+    };
+}
+
+/**
+ * Extended version of calculateOptimalStarDistribution that includes:
+ * - Pre-ranked star splits for guided Monte Carlo selection
+ * - Pool characteristics for dynamic strictness calculation
+ * - Zone affinity profiles for gradient-based scoring
+ *
+ * This is the NEW entry point for the guided Monte Carlo system.
+ *
+ * @param players All available players
+ * @param config Balance configuration with star threshold
+ * @returns Extended optimal stats with ranked splits and pool characteristics
+ */
+export function calculateExtendedOptimalStarDistribution(
+    players: FastPlayer[],
+    config: BalanceConfiguration
+): ExtendedOptimalStats {
+    const starThreshold = config.starPlayers.absoluteMinimum;
+
+    // Identify all star players
+    const starPlayers: FastPlayer[] = [];
+    for (const player of players) {
+        if (player.bestScore >= starThreshold) {
+            starPlayers.push(player);
+        }
+    }
+
+    const numStars = starPlayers.length;
+
+    // If no stars or only 1 star, return default perfect stats
+    if (numStars <= 1) {
+        const defaultStrictness: DynamicStrictness = {
+            shapingExponent: 2.0,
+            concentrationParameter: 2.0,
+            qualityPenaltyWeight: 0.3,
+        };
+
+        return {
+            best: 1.0,
+            worst: 1.0,
+            mean: 1.0,
+            numStars,
+            combinations: 1,
+            rankedSplits: [],
+            poolCharacteristics: {
+                numStars,
+                qualityVariance: 0,
+                specializationEntropy: 1.0,
+                bestAchievableSplit: 1.0,
+                meanSplitScore: 1.0,
+                optimizationPotential: 1.0,
+            },
+            strictness: defaultStrictness,
+        };
+    }
+
+    // Calculate zone affinity profiles for all stars
+    // Using zone scores: [GK, DEF, MID, ATT] - we skip GK (index 0)
+    const starProfiles: ZoneAffinityProfile[] = starPlayers.map((p) =>
+        calculateZoneAffinity(
+            p.zoneScores[1], // DEF
+            p.zoneScores[2], // MID
+            p.zoneScores[3] // ATT
+        )
+    );
+
+    const starQualities = starPlayers.map((p) => p.bestScore);
+
+    // Calculate initial strictness for split scoring (will be refined after)
+    const initialPoolChars: PoolCharacteristics = analyzePoolCharacteristics(starProfiles, starQualities, []);
+    const initialStrictness = calculateDynamicStrictness(initialPoolChars);
+
+    // Generate and rank all possible star splits using gradient affinity scoring
+    const rankedSplits = generateRankedStarSplits(starProfiles, starQualities, initialStrictness);
+
+    // Extract split scores for final pool characteristics
+    const splitScores = rankedSplits.map((s) => s.score);
+
+    // Calculate final pool characteristics with actual split statistics
+    const poolCharacteristics = analyzePoolCharacteristics(starProfiles, starQualities, splitScores);
+
+    // Calculate final dynamic strictness with complete information
+    const strictness = calculateDynamicStrictness(poolCharacteristics);
+
+    // Calculate traditional stats for backward compatibility
+    const best = splitScores.length > 0 ? Math.max(...splitScores) : 1.0;
+    const worst = splitScores.length > 0 ? Math.min(...splitScores) : 1.0;
+    const mean = splitScores.length > 0 ? splitScores.reduce((a, b) => a + b, 0) / splitScores.length : 1.0;
+
+    logger.debug(`[calculateExtendedOptimalStarDistribution] ${numStars} stars, ${rankedSplits.length} combinations`);
+    logger.debug(`  Best: ${best.toFixed(4)}, Worst: ${worst.toFixed(4)}, Mean: ${mean.toFixed(4)}`);
+    logger.debug(`  Score RANGE: ${(best - worst).toFixed(4)} (${((best - worst) / best * 100).toFixed(1)}% spread)`);
+    logger.debug(`  Strictness: exponent=${strictness.shapingExponent.toFixed(2)}, concentration=${strictness.concentrationParameter.toFixed(2)}`);
+    logger.debug(`  Pool: variance=${poolCharacteristics.qualityVariance.toFixed(2)}, entropy=${poolCharacteristics.specializationEntropy.toFixed(2)}`);
+
+    // Log star profiles for debugging
+    logger.debug(`  Star profiles:`);
+    starProfiles.forEach((profile, i) => {
+        logger.debug(`    [${i}] ${starQualities[i].toFixed(0)} | dom=${profile.dominantZone.padEnd(8)} | aff: D=${profile.affinity.def.toFixed(2)} M=${profile.affinity.mid.toFixed(2)} A=${profile.affinity.att.toFixed(2)} | str=${profile.specialistStrength.toFixed(2)} flex=${profile.flexibility.toFixed(2)}`);
+    });
+
+    // Log top 5 and bottom 3 splits for comparison
+    if (rankedSplits.length > 0) {
+        logger.debug(`  Top 5 splits:`);
+        rankedSplits.slice(0, 5).forEach((split, i) => {
+            const { breakdown } = split;
+            logger.debug(`    #${i}: score=${split.score.toFixed(4)} | aff=${breakdown.affinityBalance.toFixed(3)} qual=${breakdown.qualityBalance.toFixed(3)} flex=${breakdown.flexibilityBalance.toFixed(3)} cnt=${breakdown.specialistCountBalance.toFixed(3)} peak=${breakdown.peakTalentBalance.toFixed(3)} | A=[${split.teamAIndices.join(',')}] B=[${split.teamBIndices.join(',')}]`);
+        });
+
+        if (rankedSplits.length > 5) {
+            logger.debug(`  Bottom 3 splits:`);
+            rankedSplits.slice(-3).forEach((split) => {
+                const { breakdown } = split;
+                logger.debug(`    #${split.rank}: score=${split.score.toFixed(4)} | aff=${breakdown.affinityBalance.toFixed(3)} qual=${breakdown.qualityBalance.toFixed(3)} flex=${breakdown.flexibilityBalance.toFixed(3)} cnt=${breakdown.specialistCountBalance.toFixed(3)} peak=${breakdown.peakTalentBalance.toFixed(3)} | A=[${split.teamAIndices.join(',')}] B=[${split.teamBIndices.join(',')}]`);
+            });
+        }
+    }
+
+    return {
+        best,
+        worst,
+        mean,
+        numStars,
+        combinations: rankedSplits.length,
+        rankedSplits,
+        poolCharacteristics,
+        strictness,
     };
 }
 

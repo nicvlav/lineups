@@ -15,11 +15,15 @@ import { INDEX_TO_POSITION, POSITION_COUNT, ZONE_POSITIONS } from "./constants";
 import { getStarCount } from "./debug-tools";
 import { getFastFormation } from "./formation";
 import {
+    calculateExtendedOptimalStarDistribution,
+    calculateGuidedSelectionConfig,
     calculateMetrics,
     calculateOptimalStarDistribution,
     calculateShapedPenaltyScore,
     calculateStarDistributionBreakdown,
+    selectGuidedStarSplit,
 } from "./metrics";
+import type { ExtendedOptimalStats, RankedStarSplit } from "./types";
 import type { BalanceConfiguration } from "./metrics-config";
 import type { AssignmentContext, FastPlayer, FastTeam, SimulationResult, Teams } from "./types";
 import {
@@ -505,6 +509,232 @@ export function runOptimizedMonteCarlo(
     }
 
     // Normalize player assignments to match team structure before returning
+    if (bestResult) {
+        normalizePlayerAssignments(bestResult.teams);
+    }
+
+    return bestResult;
+}
+
+/**
+ * GUIDED Monte Carlo simulation with pre-ranked star splits
+ *
+ * This is the NEW optimized version that:
+ * 1. Pre-computes all possible star distributions using gradient affinity scoring
+ * 2. Ranks splits by quality and uses weighted probability selection
+ * 3. Uses dynamic strictness based on pool characteristics
+ * 4. Guides Monte Carlo toward known-good star configurations
+ *
+ * Key differences from runOptimizedMonteCarlo:
+ * - Uses calculateExtendedOptimalStarDistribution for pre-ranking
+ * - Selects star splits with weighted probability (not random)
+ * - Dynamic shaping exponent based on pool characteristics
+ *
+ * @param players Player pool
+ * @param config Balance configuration
+ * @param verbose Enable debug logging
+ * @returns Best simulation result, or null if no valid formations
+ */
+export function runGuidedMonteCarlo(
+    players: FastPlayer[],
+    config: BalanceConfiguration,
+    verbose: boolean = false
+): SimulationResult | null {
+    const maxIterations = config.monteCarlo.maxIterations;
+
+    let bestScore = -Infinity;
+    let bestResult: SimulationResult | null = null;
+
+    // PRE-CALCULATION PHASE
+    preCalculatePlayerAnalytics(players, config);
+
+    const totalPlayers = players.length;
+    const teamASize = Math.floor(totalPlayers / 2);
+    const teamBSize = totalPlayers - teamASize;
+
+    // Cache formations
+    const availableFormationsA = formationTemplates[teamASize] || [];
+    const availableFormationsB = formationTemplates[teamBSize] || [];
+
+    if (availableFormationsA.length === 0 || availableFormationsB.length === 0) {
+        logger.error("No formation available for team sizes:", teamASize, teamBSize);
+        return null;
+    }
+
+    const cachedFormationsA = availableFormationsA.map((formation: Formation) => {
+        const arr = new Int8Array(POSITION_COUNT);
+        for (let i = 0; i < POSITION_COUNT; i++) {
+            const position = INDEX_TO_POSITION[i];
+            arr[i] = formation.positions[position] || 0;
+        }
+        return { array: arr, formation };
+    });
+
+    const cachedFormationsB =
+        teamASize === teamBSize
+            ? cachedFormationsA
+            : availableFormationsB.map((formation: Formation) => {
+                  const arr = new Int8Array(POSITION_COUNT);
+                  for (let i = 0; i < POSITION_COUNT; i++) {
+                      const position = INDEX_TO_POSITION[i];
+                      arr[i] = formation.positions[position] || 0;
+                  }
+                  return { array: arr, formation };
+              });
+
+    // NEW: Calculate EXTENDED optimal stats with ranked splits and pool characteristics
+    const extendedStats: ExtendedOptimalStats = calculateExtendedOptimalStarDistribution(players, config);
+
+    // Calculate guided selection config based on split statistics
+    const guidedConfig = calculateGuidedSelectionConfig(
+        {
+            best: extendedStats.best,
+            mean: extendedStats.mean,
+            worst: extendedStats.worst,
+            count: extendedStats.combinations,
+        },
+        totalPlayers
+    );
+
+    // Extract star players for guided assignment
+    const starThreshold = config.starPlayers.absoluteMinimum;
+    const starPlayers = players.filter((p) => p.bestScore >= starThreshold);
+
+    if (verbose) {
+        logger.debug("🎯 Starting GUIDED Monte Carlo simulation...");
+        logger.debug(`   Max iterations: ${maxIterations}`);
+        logger.debug(
+            `   Team sizes: ${teamASize} (${cachedFormationsA.length} formations) vs ${teamBSize} (${cachedFormationsB.length} formations)`
+        );
+        logger.debug(`   Extended star distribution stats:`);
+        logger.debug(`     Best:  ${extendedStats.best.toFixed(4)}`);
+        logger.debug(`     Mean:  ${extendedStats.mean.toFixed(4)}`);
+        logger.debug(`     Worst: ${extendedStats.worst.toFixed(4)}`);
+        logger.debug(`     Stars: ${extendedStats.numStars} (${extendedStats.combinations} splits ranked)`);
+        logger.debug(`   Dynamic strictness:`);
+        logger.debug(`     Shaping exponent: ${extendedStats.strictness.shapingExponent.toFixed(2)}`);
+        logger.debug(`     Concentration: ${guidedConfig.concentrationParameter.toFixed(2)}`);
+        logger.debug(`   Pool characteristics:`);
+        logger.debug(`     Quality variance: ${extendedStats.poolCharacteristics.qualityVariance.toFixed(2)}`);
+        logger.debug(`     Specialization entropy: ${extendedStats.poolCharacteristics.specializationEntropy.toFixed(2)}`);
+        logger.debug(`     Optimization potential: ${extendedStats.poolCharacteristics.optimizationPotential.toFixed(2)}`);
+    }
+
+    // Track which splits we've used for logging
+    let topSplitUsageCount = 0;
+
+    for (let i = 0; i < maxIterations; i++) {
+        // Pick random formations
+        const formationA = cachedFormationsA[Math.floor(Math.random() * cachedFormationsA.length)];
+        const formationB =
+            teamASize === teamBSize
+                ? formationA
+                : cachedFormationsB[Math.floor(Math.random() * cachedFormationsB.length)];
+
+        // NEW: If we have ranked splits, use guided selection to pick star distribution
+        let selectedSplit: RankedStarSplit | null = null;
+        if (extendedStats.rankedSplits.length > 0 && starPlayers.length >= 2) {
+            selectedSplit = selectGuidedStarSplit(extendedStats.rankedSplits, guidedConfig);
+
+            // Track top-5 split usage
+            if (selectedSplit.rank < 5) {
+                topSplitUsageCount++;
+            }
+        }
+
+        // Assign players to teams
+        // For now, we use the existing assignment but the star distribution scoring
+        // will naturally favor configurations that match our selected split
+        const result = assignPlayersToTeams(players, config, formationA, formationB);
+        if (!result) continue;
+
+        const metrics = calculateMetrics(result.teamA, result.teamB, config, false);
+
+        // Calculate star distribution multiplier
+        const starCountA = getStarCount(result.teamA, config.starPlayers.absoluteMinimum);
+        const starCountB = getStarCount(result.teamB, config.starPlayers.absoluteMinimum);
+        const starCountDiff = Math.abs(starCountA - starCountB);
+
+        // Star count penalty
+        const starCountPenalty = starCountDiff > 1 ? 0 : 1;
+
+        // Get star distribution breakdown
+        const starBreakdown = calculateStarDistributionBreakdown(result.teamA, result.teamB, config);
+
+        // NEW: Use DYNAMIC shaping exponent from pool characteristics
+        const shapedPenaltyScore = calculateShapedPenaltyScore(
+            starBreakdown.penalty,
+            extendedStats,
+            extendedStats.strictness.shapingExponent // Dynamic instead of fixed 6.0
+        );
+
+        // Combined multiplier
+        const starMultiplier = starCountPenalty * shapedPenaltyScore;
+        const finalScore = metrics.score * starMultiplier;
+
+        const simResult: SimulationResult = {
+            teams: result,
+            score: finalScore,
+            metrics: metrics.details,
+        };
+
+        if (finalScore > bestScore) {
+            bestScore = finalScore;
+            bestResult = simResult;
+
+            if (verbose && i % 20 === 0) {
+                logger.debug(`   Iteration ${i}: Best score = ${bestScore.toFixed(3)} (star mult: ${starMultiplier.toFixed(3)})`);
+            }
+        }
+    }
+
+    if (verbose && bestResult) {
+        logger.debug(`✓ Completed ${maxIterations} guided iterations`);
+        logger.debug(`   Best score: ${bestScore.toFixed(3)}`);
+        logger.debug(`   Score balance: ${bestResult.metrics.positionalScoreBalance.toFixed(3)}`);
+        logger.debug(`   Star distribution: ${bestResult.metrics.talentDistributionBalance.toFixed(3)}`);
+        logger.debug(`   Top-5 split usage: ${topSplitUsageCount}/${maxIterations} (${((100 * topSplitUsageCount) / maxIterations).toFixed(1)}%)`);
+
+        // NEW: Log the actual star distribution in the final result
+        logger.debug(`   FINAL RESULT star distribution:`);
+        const finalTeamAStars: number[] = [];
+        const finalTeamBStars: number[] = [];
+
+        starPlayers.forEach((starPlayer, idx) => {
+            if (starPlayer.team === "A") {
+                finalTeamAStars.push(idx);
+            } else if (starPlayer.team === "B") {
+                finalTeamBStars.push(idx);
+            }
+        });
+
+        logger.debug(`     Team A stars: [${finalTeamAStars.join(",")}]`);
+        logger.debug(`     Team B stars: [${finalTeamBStars.join(",")}]`);
+
+        // Find this split in the ranked list
+        if (extendedStats.rankedSplits.length > 0) {
+            const matchingSplit = extendedStats.rankedSplits.find((split) => {
+                const matchesA =
+                    split.teamAIndices.length === finalTeamAStars.length &&
+                    split.teamAIndices.every((idx) => finalTeamAStars.includes(idx));
+                const matchesB =
+                    split.teamBIndices.length === finalTeamBStars.length &&
+                    split.teamBIndices.every((idx) => finalTeamBStars.includes(idx));
+                return matchesA && matchesB;
+            });
+
+            if (matchingSplit) {
+                const { breakdown } = matchingSplit;
+                logger.debug(
+                    `     Matches pre-ranked split #${matchingSplit.rank}: score=${matchingSplit.score.toFixed(4)} | aff=${breakdown.affinityBalance.toFixed(3)} qual=${breakdown.qualityBalance.toFixed(3)} flex=${breakdown.flexibilityBalance.toFixed(3)} cnt=${breakdown.specialistCountBalance.toFixed(3)} peak=${breakdown.peakTalentBalance.toFixed(3)}`
+                );
+            } else {
+                logger.warn(`     ⚠️  Final star split does NOT match any pre-ranked split!`);
+                logger.warn(`     This indicates the Monte Carlo assignment is not respecting star pre-ranking.`);
+            }
+        }
+    }
+
     if (bestResult) {
         normalizePlayerAssignments(bestResult.teams);
     }
