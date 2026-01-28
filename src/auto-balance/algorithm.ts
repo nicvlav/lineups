@@ -1,7 +1,13 @@
 /**
  * Auto-Balance Core Algorithm
  *
- * Core team assignment and optimization logic.
+ * Core team assignment and optimization logic using gradient-based star distribution.
+ *
+ * STAR DISTRIBUTION SYSTEM:
+ * All star distribution evaluation uses a centralized gradient-based scoring system:
+ * - Pre-computation: calculateExtendedOptimalStarDistribution() generates ranked splits
+ * - Per-iteration: evaluateAssignedStarDistribution() scores actual teams
+ * - Both use scoreStarSplit() as single source of truth for gradient affinity metrics
  *
  * @module auto-balance/algorithm
  */
@@ -18,9 +24,7 @@ import {
     calculateExtendedOptimalStarDistribution,
     calculateGuidedSelectionConfig,
     calculateMetrics,
-    calculateOptimalStarDistribution,
     calculateShapedPenaltyScore,
-    calculateStarDistributionBreakdown,
     evaluateAssignedStarDistribution,
     selectGuidedStarSplit,
 } from "./metrics";
@@ -366,155 +370,6 @@ function normalizePlayerAssignments(teams: Teams): void {
             player.team = "B";
         }
     }
-}
-
-/**
- * Optimized Monte Carlo simulation with early termination
- *
- * Replaces triple nested loop (500×100×100 = 5M iterations) with
- * single-tier smart search (~200-250 iterations).
- *
- * Features:
- * - Early exit when excellent result found
- * - Configurable iteration limit
- * - Progress tracking
- * - Optional diagnostic output
- */
-export function runOptimizedMonteCarlo(
-    players: FastPlayer[],
-    config: BalanceConfiguration,
-    verbose: boolean = false
-): SimulationResult | null {
-    const maxIterations = config.monteCarlo.maxIterations;
-
-    let bestScore = -Infinity;
-    let bestResult: SimulationResult | null = null;
-
-    // PRE-CALCULATION PHASE: Calculate all invariant player analytics ONCE before Monte Carlo
-    // This moves expensive stat calculations outside the loop for massive performance gains
-    preCalculatePlayerAnalytics(players, config);
-
-    // OPTIMIZATION: Cache ALL available formations for random selection
-    // Profiling showed getFastFormation consumed ~4.5% of execution time (89 calls)
-    // Instead of calling getFastFormation each iteration, we cache all options and pick randomly
-    const totalPlayers = players.length;
-    const teamASize = Math.floor(totalPlayers / 2);
-    const teamBSize = totalPlayers - teamASize;
-
-    // Pre-convert all available formations to fast arrays
-    const availableFormationsA = formationTemplates[teamASize] || [];
-    const availableFormationsB = formationTemplates[teamBSize] || [];
-
-    if (availableFormationsA.length === 0 || availableFormationsB.length === 0) {
-        logger.error("No formation available for team sizes:", teamASize, teamBSize);
-        return null;
-    }
-
-    // Pre-calculate fast arrays for all formations
-    const cachedFormationsA = availableFormationsA.map((formation: Formation) => {
-        const arr = new Int8Array(POSITION_COUNT);
-        for (let i = 0; i < POSITION_COUNT; i++) {
-            const position = INDEX_TO_POSITION[i];
-            arr[i] = formation.positions[position] || 0;
-        }
-        return { array: arr, formation };
-    });
-
-    const cachedFormationsB =
-        teamASize === teamBSize
-            ? cachedFormationsA
-            : availableFormationsB.map((formation: Formation) => {
-                  const arr = new Int8Array(POSITION_COUNT);
-                  for (let i = 0; i < POSITION_COUNT; i++) {
-                      const position = INDEX_TO_POSITION[i];
-                      arr[i] = formation.positions[position] || 0;
-                  }
-                  return { array: arr, formation };
-              });
-
-    // Calculate optimal star distribution statistics BEFORE Monte Carlo loop
-    const optimalStats = calculateOptimalStarDistribution(players, config);
-
-    if (verbose) {
-        logger.debug("🎲 Starting optimized Monte Carlo simulation...");
-        logger.debug(`   Max iterations: ${maxIterations}`);
-        logger.debug(
-            `   Team sizes: ${teamASize} (${cachedFormationsA.length} formations) vs ${teamBSize} (${cachedFormationsB.length} formations)`
-        );
-        logger.debug(`   Optimal star distribution stats:`);
-        logger.debug(`     Best:  ${optimalStats.best.toFixed(4)}`);
-        logger.debug(`     Mean:  ${optimalStats.mean.toFixed(4)}`);
-        logger.debug(`     Worst: ${optimalStats.worst.toFixed(4)}`);
-        logger.debug(`     Stars: ${optimalStats.numStars} (${optimalStats.combinations} combinations tested)`);
-    }
-
-    for (let i = 0; i < maxIterations; i++) {
-        // Pick random formations from cached arrays (very fast!)
-        const formationA = cachedFormationsA[Math.floor(Math.random() * cachedFormationsA.length)];
-        // CONSISTENCY: If both teams have same size, use the same formation for fairness
-        const formationB =
-            teamASize === teamBSize
-                ? formationA
-                : cachedFormationsB[Math.floor(Math.random() * cachedFormationsB.length)];
-
-        const result = assignPlayersToTeams(players, config, formationA, formationB);
-        if (!result) continue;
-
-        const metrics = calculateMetrics(result.teamA, result.teamB, config, false);
-
-        // Calculate star distribution multiplier
-        const starCountA = getStarCount(result.teamA, config.starPlayers.absoluteMinimum);
-        const starCountB = getStarCount(result.teamB, config.starPlayers.absoluteMinimum);
-        const starCountDiff = Math.abs(starCountA - starCountB);
-
-        // Star count penalty: >1 difference is unacceptable (0), 1 diff is bad (0.7), 0 diff is perfect (1.0)
-        const starCountPenalty = starCountDiff > 1 ? 0 : 1;
-
-        // Get full star distribution penalty breakdown for smart scaling
-        const starBreakdown = calculateStarDistributionBreakdown(result.teamA, result.teamB, config);
-
-        // Calculate shaped penalty score that exponentially penalizes deviation from optimal
-        // Maps the actual penalty to a score using the distribution statistics:
-        // - At best (optimal): score = 1.0
-        // - At mean: score ≈ 0.05 (heavily penalized)
-        // - Below mean: score ≈ 0.0 (essentially eliminated)
-        const shapedPenaltyScore = calculateShapedPenaltyScore(starBreakdown.penalty, optimalStats, 6.0);
-
-        // Combined star multiplier: count * smart component multiplier * shaped distribution score
-        const starMultiplier = starCountPenalty * shapedPenaltyScore;
-
-        // Apply multiplier to get final score
-        const finalScore = metrics.score * starMultiplier;
-
-        const simResult: SimulationResult = {
-            teams: result,
-            score: finalScore,
-            metrics: metrics.details,
-        };
-
-        if (finalScore > bestScore) {
-            bestScore = finalScore;
-            bestResult = simResult;
-
-            if (verbose && i % 20 === 0) {
-                logger.debug(`   Iteration ${i}: Best score = ${bestScore.toFixed(3)}`);
-            }
-        }
-    }
-
-    if (verbose && bestResult) {
-        logger.debug(`✓ Completed ${maxIterations} iterations`);
-        logger.debug(`   Best score: ${bestScore.toFixed(3)}`);
-        logger.debug(`   Score balance: ${bestResult.metrics.positionalScoreBalance.toFixed(3)}`);
-        logger.debug(`   Star distribution: ${bestResult.metrics.talentDistributionBalance.toFixed(3)}`);
-    }
-
-    // Normalize player assignments to match team structure before returning
-    if (bestResult) {
-        normalizePlayerAssignments(bestResult.teams);
-    }
-
-    return bestResult;
 }
 
 /**
