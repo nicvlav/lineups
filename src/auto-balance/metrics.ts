@@ -215,7 +215,7 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
     const bTotalWR = bAttWR + bDefWR;
 
     // Raw balance of total workrate
-    const attWRRatio = calculateBasicDifferenceRatio(aAttWR, aAttWR);
+    const attWRRatio = calculateBasicDifferenceRatio(aAttWR, bAttWR);
     const defWRRatio = calculateBasicDifferenceRatio(aDefWR, bDefWR);
     const totalWRRatio = calculateBasicDifferenceRatio(aTotalWR, bTotalWR);
 
@@ -949,11 +949,6 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 
     // Combined midfield penalty (average of both teams)
     const combinedMidfieldPenalty = teamAMidfieldPenalty * teamBMidfieldPenalty;
-    calibratedScore(
-        teamAMidfieldPenalty * teamBMidfieldPenalty,
-        DEFAULT_BALANCE_CONFIG.thresholds.starDistribution,
-        Steepness.VeryGentle
-    );
     const midDiffRatio = calculateBasicDifferenceRatio(teamAZoneAverages[2], teamBZoneAverages[2]);
 
     const midRatio = midDiffRatio * combinedMidfieldPenalty;

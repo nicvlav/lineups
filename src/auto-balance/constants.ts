@@ -18,7 +18,7 @@ export { type BalanceConfiguration, DEFAULT_BALANCE_CONFIG } from "./metrics-con
  * This overrides any other debug settings in the code
  * ═══════════════════════════════════════════════════════════════════════════
  */
-export const ENABLE_DEBUG = true; // ← CHANGE THIS TO false TO DISABLE DEBUG
+export const ENABLE_DEBUG = false;
 
 /** Position indices for array-based operations */
 export const POSITION_INDICES = {
