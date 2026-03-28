@@ -109,6 +109,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const [gamePlayers, setGamePlayers] = useState<Record<string, ScoredGamePlayer>>({});
     const [currentFormation, setCurrentFormation] = useState<Formation | null>(null);
     const loadingState = useRef(false);
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
     // Create unique tab key per browser tab (survives refresh but not tab sharing)
     const getOrCreateTabKey = () => {
@@ -253,13 +254,18 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         });
     }, [urlState, isStaticRoute]);
 
-    // Auto-save to IndexedDB when game state changes
+    // Auto-save to IndexedDB when game state changes (debounced)
     useEffect(() => {
         if (isStaticRoute) return;
 
         if (!loadingState.current && Object.keys(gamePlayers).length > 0) {
-            saveState(gamePlayers, currentFormation);
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = setTimeout(() => {
+                saveState(gamePlayers, currentFormation);
+            }, 500);
         }
+
+        return () => clearTimeout(saveTimeoutRef.current);
     }, [gamePlayers, currentFormation, isStaticRoute]);
 
     const saveState = async (
@@ -281,10 +287,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         await saveToDB(tabKeyRef.current, JSON.stringify(stateObject));
     };
 
-    // Clear game data
+    // Clear game data (also clears IndexedDB so refresh doesn't restore old state)
     const clearGame = async () => {
+        clearTimeout(saveTimeoutRef.current);
         setGamePlayers({});
         setCurrentFormation(null);
+        await saveToDB(tabKeyRef.current, JSON.stringify({ gamePlayers: {}, currentFormation: null }));
     };
 
     // switch a player to a dummy player
