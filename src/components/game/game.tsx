@@ -36,10 +36,10 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
 
     return (
         <div className="w-full h-full p-4">
-            {/* Layout for small screens (stacked and tall) */}
-            <div className="flex flex-col h-full w-full max-w-full">
+            <div className="flex flex-col h-full w-full max-w-full space-y-3">
                 {/* Action Bar - Professional alignment using unified component */}
                 <ActionBarTwoColumn
+                    className="h-9"
                     left={<FormationSelector />}
                     right={
                         <div className="flex gap-2">

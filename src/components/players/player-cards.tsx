@@ -4,7 +4,6 @@ import PlayerCard from "@/components/players/player-card";
 import { ActionBarSingle } from "@/components/ui/action-bar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePlayers } from "@/hooks/use-players";
 import { calculateArchetypeScores } from "@/lib/positions/calculator";
 import { cn } from "@/lib/utils";
@@ -36,36 +35,21 @@ const PlayerCards = () => {
 
     return (
         <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
-            {/* Search + Card View Selector */}
-            <ActionBarSingle className="h-15">
-                <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-3">
-                        <Input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search players..."
-                            className="w-full"
-                        />
-                    </div>
-
-                    <Select value={cardViewMode} onValueChange={(value) => setCardViewMode(value as CardViewMode)}>
-                        <SelectTrigger className="w-40 h-9">
-                            <SelectValue placeholder="Card View" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="minimal">Minimal</SelectItem>
-                            <SelectItem value="archetypes">Archetypes</SelectItem>
-                            <SelectItem value="face-stats">Face Stats</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+            {/* Search */}
+            <ActionBarSingle>
+                <Input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search players..."
+                    className="w-full"
+                />
             </ActionBarSingle>
 
             {/* Player Cards Grid */}
             <Card className="flex-1 flex flex-col min-h-0 bg-linear-to-r from-card to-muted/20 overflow-hidden">
                 <CardContent className="flex-1 h-full p-0">
-                    <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
+                    <div className="h-full overflow-y-auto px-4 custom-scrollbar">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 items-start">
                             {sortedPlayers.map((item, index) => (
                                 <motion.div
@@ -92,6 +76,25 @@ const PlayerCards = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* View mode selector — bottom */}
+            <div className="flex items-center justify-center gap-1 bg-muted/30 rounded-xl p-1">
+                {(["minimal", "archetypes", "face-stats"] as const).map((mode) => (
+                    <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setCardViewMode(mode)}
+                        className={cn(
+                            "flex-1 text-xs font-medium py-1.5 rounded-lg transition-all duration-200",
+                            cardViewMode === mode
+                                ? "bg-background text-foreground shadow-sm"
+                                : "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        {mode === "face-stats" ? "Stats" : mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </button>
+                ))}
+            </div>
         </div>
     );
 };

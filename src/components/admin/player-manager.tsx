@@ -153,23 +153,15 @@ export default function PlayerManager() {
 
     return (
         <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
-            {/* Stats Bar */}
-            <ActionBarSingle className="h-15">
-                <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-3">
-                        <Input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search players..."
-                            className="w-full"
-                        />
-                    </div>
-                    <Button onClick={() => setShowAddDialog(true)} size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Player
-                    </Button>
-                </div>
+            {/* Search */}
+            <ActionBarSingle>
+                <Input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search players..."
+                    className="w-full"
+                />
             </ActionBarSingle>
 
             {/* Tabbed Panel */}
@@ -208,7 +200,12 @@ export default function PlayerManager() {
                 </CardContent>
             </Card>
 
-            {/* Add Player Dialog */}
+            {/* Add Player */}
+            <Button onClick={() => setShowAddDialog(true)} className="w-full h-10 font-semibold">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Player
+            </Button>
+
             <AddPlayerDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
         </div>
     );

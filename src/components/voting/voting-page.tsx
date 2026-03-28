@@ -132,25 +132,17 @@ export default function VotingPage() {
 
     return (
         <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
-            {/* Stats Bar */}
-            <ActionBarSingle className="h-15">
-                <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-3">
-                        <Input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search players..."
-                            className="w-full"
-                        />
-                    </div>
-
-                    {associatedPlayer && (
-                        <p className="text-xs text-blue-600 dark:text-blue-400">
-                            Excluding {associatedPlayer.name} (your profile)
-                        </p>
-                    )}
-                </div>
+            {/* Search */}
+            <ActionBarSingle>
+                <Input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={
+                        associatedPlayer ? `Search (excluding ${associatedPlayer.name})...` : "Search players..."
+                    }
+                    className="w-full"
+                />
             </ActionBarSingle>
 
             {/* Tabbed Panel */}
