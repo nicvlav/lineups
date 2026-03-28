@@ -5,7 +5,6 @@ import { getCardUnderlineColor, getStatBarColor } from "@/lib/color-system";
 import { getTopArchetypes } from "@/lib/positions/calculator";
 import { getArchetypeById } from "@/types/archetypes";
 import { Player, PlayerArchetypeScores, ZoneAverages } from "@/types/players";
-import { Position, ZoneScores } from "@/types/positions";
 import { StatsKey } from "@/types/stats";
 import type { CardViewMode } from "./player-cards";
 
@@ -13,9 +12,6 @@ interface PlayerCardProps {
     player: Player;
     playerName: string;
     overall: number;
-    zoneFit: ZoneScores;
-    top3Positions: string;
-    topScoresWithArchetypes: Array<{ position: Position; score: number; archetypeId: string }>;
     archetypeScores: PlayerArchetypeScores;
     averages: ZoneAverages;
     stats: Record<StatsKey, number>;
@@ -26,9 +22,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     player,
     playerName,
     overall,
-    zoneFit: _zoneFit,
-    top3Positions: _top3Positions,
-    topScoresWithArchetypes: _topScoresWithArchetypes,
     archetypeScores,
     averages,
     stats,

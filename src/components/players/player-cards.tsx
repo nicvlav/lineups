@@ -22,25 +22,10 @@ const PlayerCards = () => {
             const archetypeScores = calculateArchetypeScores(player.stats);
             const topScores = getTopPositions(archetypeScores, 3);
 
-            // Convert to ZoneScores for backward compatibility
-            const zoneFit = Object.entries(archetypeScores).reduce(
-                (acc, [pos, data]) => {
-                    acc[pos as keyof typeof acc] = data.bestScore;
-                    return acc;
-                },
-                { GK: 0, CB: 0, FB: 0, DM: 0, CM: 0, WM: 0, AM: 0, ST: 0, WR: 0 }
-            );
-
             return {
                 player,
                 overall: Math.max(...topScores.map((t) => t.score)),
-                zoneFit,
-                topPositions: topScores
-                    .slice(0, 3)
-                    .map((t) => t.position)
-                    .join(", "),
-                topScoresWithArchetypes: topScores, // Pass full archetype data
-                archetypeScores, // Pass full archetype breakdown
+                archetypeScores,
                 averages: getZoneAverages(player),
             };
         });
@@ -94,9 +79,6 @@ const PlayerCards = () => {
                                     playerName={item.player.name}
                                     stats={item.player.stats}
                                     overall={item.overall}
-                                    zoneFit={item.zoneFit}
-                                    top3Positions={item.topPositions}
-                                    topScoresWithArchetypes={item.topScoresWithArchetypes}
                                     archetypeScores={item.archetypeScores}
                                     averages={item.averages}
                                     viewMode={cardViewMode}
