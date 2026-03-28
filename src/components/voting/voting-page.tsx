@@ -131,15 +131,7 @@ export default function VotingPage() {
     }
 
     return (
-        <div className={cn("flex flex-col h-full w-full p-4 space-y-4")}>
-            {/* Header Section */}
-            <div className="space-y-2">
-                <h1 className="text-2xl font-bold tracking-tight">Player Evaluation</h1>
-                <p className="text-muted-foreground">
-                    Vote for the ratings of any player (final ratings are aggregated)
-                </p>
-            </div>
-
+        <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
             {/* Stats Bar */}
             <ActionBarSingle className="h-15">
                 <div className="flex items-center justify-between w-full">
@@ -194,28 +186,25 @@ export default function VotingPage() {
                 </CardHeader>
                 <CardContent className="flex-1 h-full p-0">
                     <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
-                        <div className="flex gap-3 text-center">
-                            <CheckCircle className="w-4 text-muted-foreground" />
-                            <span className="font-medium">
-                                {votedPlayers.length}/{eligiblePlayers.length} rated
+                        {/* Progress + Sort */}
+                        <div className="flex items-center gap-3 py-2">
+                            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                                <div
+                                    className="h-2 bg-(--quality-elite) rounded-full transition-all duration-500"
+                                    style={{ width: `${progressPercent}%` }}
+                                />
+                            </div>
+                            <span className="text-xs font-medium text-muted-foreground tabular-nums shrink-0">
+                                {votedPlayers.length}/{eligiblePlayers.length}
                             </span>
-                            <span className="text-muted-foreground">({progressPercent.toFixed(0)}%)</span>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setSortBy(sortBy === "name" ? "votes" : "name")}
                                 title={sortBy === "name" ? "Sort by vote count" : "Sort by name"}
                             >
-                                <ArrowUpDown className="" />
+                                <ArrowUpDown />
                             </Button>
-                        </div>
-
-                        {/* Search and Sort */}
-                        <div className="flex gap-2"></div>
-
-                        {/* Sort indicator */}
-                        <div className="text-xs text-muted-foreground">
-                            Sorted by: {sortBy === "name" ? "Name (A-Z)" : "Vote Count (Fewest First)"}
                         </div>
 
                         {/* Player List */}

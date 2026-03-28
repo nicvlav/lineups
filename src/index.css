@@ -158,6 +158,19 @@
   }
 }
 
+/* Atmospheric background glow — subtle floodlight effect in dark mode */
+.dark body {
+  background-image: radial-gradient(ellipse at 50% 0%, oklch(0.20 0.04 220 / 0.4), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Tier-based card left border colors */
+.tier-border-elite { border-left-color: var(--quality-elite); }
+.tier-border-excellent { border-left-color: var(--quality-excellent); }
+.tier-border-great { border-left-color: var(--quality-great); }
+.tier-border-good { border-left-color: var(--quality-good); }
+.tier-border-solid { border-left-color: var(--quality-solid); }
+
 /* Modern Custom Scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;

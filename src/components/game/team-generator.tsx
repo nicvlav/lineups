@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { CheckCircle2, Users, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -91,20 +92,22 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
     const allSelected = selectedPlayers.length === playersArr.length;
 
     return (
-        <div className={cn("flex flex-col h-full w-full p-4 space-y-4")}>
-            {/* Modern Header */}
-            <div className="space-y-2">
-                <h1 className="text-2xl font-bold tracking-tight">Team Generator</h1>
-                <p className="text-muted-foreground">Select players and and auto generate balanced teams</p>
-            </div>
-
-            {/* Status Bar with Modern Design */}
+        <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
+            {/* Status Bar */}
             <ActionBarSingle className="h-15">
                 <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
                         <Badge variant={canGenerate ? "default" : "secondary"} className="gap-1.5">
-                            <Users className="" />
-                            {selectedPlayers.length}/{playersArr.length} selected
+                            <Users />
+                            <motion.span
+                                key={selectedPlayers.length}
+                                initial={{ scale: 1.3, opacity: 0.5 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                            >
+                                {selectedPlayers.length}
+                            </motion.span>
+                            /{playersArr.length} selected
                         </Badge>
 
                         {!canGenerate && <span className="text-xs text-muted-foreground">Need 10-24 players</span>}
@@ -157,7 +160,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                                     "border cursor-pointer select-none",
                                                     "transition-all duration-200",
                                                     selectedPlayers.includes(player.id)
-                                                        ? "bg-primary/10 border-primary/30 shadow-sm"
+                                                        ? "bg-(--quality-elite-soft) border-l-2 tier-border-elite border-border/30 shadow-sm"
                                                         : "bg-card hover:bg-accent/50 border-border hover:border-accent",
                                                     "hover:scale-[1.02] active:scale-[0.98]"
                                                 )}
@@ -166,18 +169,18 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                                     checked={selectedPlayers.includes(player.id)}
                                                     onCheckedChange={() => togglePlayer(player.id)}
                                                     onClick={(e) => e.stopPropagation()}
-                                                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                    className="data-[state=checked]:bg-(--quality-elite) data-[state=checked]:border-(--quality-elite)"
                                                 />
                                                 <span
                                                     className={cn(
                                                         "flex-1 text-sm font-medium",
-                                                        selectedPlayers.includes(player.id) && "text-primary"
+                                                        selectedPlayers.includes(player.id) && "text-(--quality-elite)"
                                                     )}
                                                 >
                                                     {player.name}
                                                 </span>
                                                 {selectedPlayers.includes(player.id) && (
-                                                    <CheckCircle2 className="h-4 w-4 text-primary opacity-60" />
+                                                    <CheckCircle2 className="h-4 w-4 text-(--quality-elite) opacity-60" />
                                                 )}
                                             </div>
                                         ))}

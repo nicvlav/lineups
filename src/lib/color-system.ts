@@ -124,6 +124,21 @@ export function getCardUnderlineColor(rating: number): string {
     return getRatingTierScheme(rating).subtle;
 }
 
+const TIER_BORDER_CLASSES: Record<ColorTier, string> = {
+    elite: "tier-border-elite",
+    excellent: "tier-border-excellent",
+    great: "tier-border-great",
+    good: "tier-border-good",
+    solid: "tier-border-solid",
+};
+
+/**
+ * Get CSS class for card left-border colored by quality tier
+ */
+export function getTierBorderClass(rating: number): string {
+    return TIER_BORDER_CLASSES[getRatingTier(rating)];
+}
+
 // ============ Archetype Bars (Relative to Best) ============
 
 /**

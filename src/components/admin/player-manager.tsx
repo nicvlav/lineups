@@ -152,13 +152,7 @@ export default function PlayerManager() {
     }
 
     return (
-        <div className={cn("flex flex-col h-full w-full p-4 space-y-4")}>
-            {/* Header Section */}
-            <div className="space-y-2">
-                <h1 className="text-2xl font-bold tracking-tight">Manage Players</h1>
-                <p className="text-muted-foreground">Add, edit, and manage players</p>
-            </div>
-
+        <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
             {/* Stats Bar */}
             <ActionBarSingle className="h-15">
                 <div className="flex items-center justify-between w-full">

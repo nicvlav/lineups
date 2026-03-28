@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { useState } from "react";
 import PlayerCard from "@/components/players/player-card";
 import { ActionBarSingle } from "@/components/ui/action-bar";
@@ -34,13 +35,7 @@ const PlayerCards = () => {
     const sortedPlayers = [...filteredPlayers].sort((a, b) => b.overall - a.overall);
 
     return (
-        <div className={cn("flex flex-col h-full w-full p-4 space-y-4")}>
-            {/* Section Header */}
-            <div className="space-y-2">
-                <h1 className="text-2xl font-bold tracking-tight">Player Cards</h1>
-                <p className="text-muted-foreground">View player strengths and profiles based on voted ratings</p>
-            </div>
-
+        <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
             {/* Search + Card View Selector */}
             <ActionBarSingle className="h-15">
                 <div className="flex items-center justify-between w-full">
@@ -72,17 +67,26 @@ const PlayerCards = () => {
                 <CardContent className="flex-1 h-full p-0">
                     <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 items-start">
-                            {sortedPlayers.map((item) => (
-                                <PlayerCard
+                            {sortedPlayers.map((item, index) => (
+                                <motion.div
                                     key={item.player.id}
-                                    player={item.player}
-                                    playerName={item.player.name}
-                                    stats={item.player.stats}
-                                    overall={item.overall}
-                                    archetypeScores={item.archetypeScores}
-                                    averages={item.averages}
-                                    viewMode={cardViewMode}
-                                />
+                                    initial={{ opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{
+                                        duration: 0.2,
+                                        delay: Math.min(index * 0.03, 0.3),
+                                    }}
+                                >
+                                    <PlayerCard
+                                        player={item.player}
+                                        playerName={item.player.name}
+                                        stats={item.player.stats}
+                                        overall={item.overall}
+                                        archetypeScores={item.archetypeScores}
+                                        averages={item.averages}
+                                        viewMode={cardViewMode}
+                                    />
+                                </motion.div>
                             ))}
                         </div>
                     </div>
