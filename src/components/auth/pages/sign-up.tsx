@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, Eye, EyeOff, Facebook, Loader2, Lock, Mail, UserPlus } from "lucide-react";
+import { AlertCircle, CheckCircle, Eye, EyeOff, CircleFadingPlus, Loader2, Lock, Mail, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -155,7 +155,7 @@ export default function SignUpPage() {
                             {loading ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
-                                <Facebook className="mr-2 h-4 w-4" />
+                                <CircleFadingPlus className="mr-2 h-4 w-4" />
                             )}
                             Continue with Facebook
                         </Button>

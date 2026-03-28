@@ -2649,7 +2649,7 @@ export function calculateOptimalStarDistribution(
     let worstPenalty = Infinity;
     let totalPenalties = 0;
     let zeroCount = 0;
-    let indices = combinations.at(0);
+    let indices = combinations[0];
 
     // Test each possible split
     for (const teamAIndices of combinations) {
