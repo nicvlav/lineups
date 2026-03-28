@@ -1,4 +1,3 @@
-import { User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import PitchPlayerDialog from "@/components/players/player-dialog";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
@@ -16,6 +15,14 @@ interface PitchPlayerProps {
     containerHeight: number;
 }
 
+/** "Connor Mackinnon" → "Connor M", "Nav" → "Nav", "TK Kelleher" → "TK K" */
+function shortName(fullName: string): string {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 1) return fullName;
+    const last = parts[parts.length - 1];
+    return `${parts.slice(0, -1).join(" ")} ${last[0]}`;
+}
+
 const PitchPlayer: React.FC<PitchPlayerProps> = ({
     player,
     name,
@@ -31,37 +38,18 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
     const [hasAnimated, setHasAnimated] = useState(false);
     const previousPositionRef = useRef({ left: initialLeft, top: initialTop });
 
-    // Get the full Player data (with avatar_url) from the players record
     const fullPlayer = player.id ? players[player.id] : null;
 
-    // Use tap handler to distinguish between tap and scroll
     const tapHandlers = useTapHandler({
         onTap: () => setIsDialogOpen(true),
-        threshold: 10, // 10px movement threshold
+        threshold: 10,
     });
 
     const circleSize = Math.max(playerSize * 0.8, 40);
-    const iconSize = circleSize * 0.4;
-    const nameOffset = -(circleSize / 2);
-
     const halfCircle = circleSize / 2;
-    const minLeft = halfCircle;
-    const maxLeft = containerWidth - halfCircle;
 
-    const minTop = halfCircle;
-    const maxTop = containerHeight - halfCircle;
-
-    // Split name into words by spaces
-    const words = name.trim().split(/\s+/); // split on any whitespace, ignoring multiple spaces
-
-    const maxLines = 3;
-    // Number of lines = number of words (words.length)
-    const numLines = Math.min(words.length, maxLines);
-
-    const adjustedNameOffset = nameOffset - (numLines - 1) * 15;
-
-    const clampedLeft = Math.min(Math.max(initialLeft, minLeft), maxLeft);
-    const clampedTop = Math.min(Math.max(initialTop, minTop), maxTop);
+    const clampedLeft = Math.min(Math.max(initialLeft, halfCircle), containerWidth - halfCircle);
+    const clampedTop = Math.min(Math.max(initialTop, halfCircle), containerHeight - halfCircle);
 
     // Track if position actually changed (not just a re-render)
     useEffect(() => {
@@ -70,21 +58,17 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
             Math.abs(previousPositionRef.current.top - clampedTop) > 1;
 
         if (positionChanged && shouldAnimate && !hasAnimated) {
-            // Position changed and we should animate
             setHasAnimated(true);
             previousPositionRef.current = { left: clampedLeft, top: clampedTop };
         } else if (!shouldAnimate) {
-            // Reset animation state when animations are turned off
             setHasAnimated(false);
             previousPositionRef.current = { left: clampedLeft, top: clampedTop };
         }
     }, [clampedLeft, clampedTop, shouldAnimate, hasAnimated]);
 
-    // Calculate animation delay based on player index (staggered effect)
     const getAnimationDelay = () => {
         if (!shouldAnimate || !hasAnimated) return 0;
 
-        // Use player ID to generate a consistent but pseudo-random delay
         const hashCode = (player.id || "").split("").reduce((a, b) => {
             a = (a << 5) - a + b.charCodeAt(0);
             return a & a;
@@ -98,15 +82,14 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
     const animationDelay = getAnimationDelay();
     const shouldPlayAnimation = shouldAnimate && hasAnimated;
 
+    const posLabel = player.exactPosition ?? "";
+    const displayName = shortName(name);
+
     return (
         <div>
             <div
                 {...tapHandlers}
-                className={`
-          absolute flex flex-col items-center z-0
-          cursor-pointer hover:scale-105
-          ${shouldPlayAnimation ? "transition-all duration-500" : "transition-all duration-300"}
-        `}
+                className={`absolute flex flex-col items-center z-0 cursor-pointer hover:scale-105 ${shouldPlayAnimation ? "transition-all duration-500" : "transition-all duration-300"}`}
                 style={{
                     left: `${clampedLeft}px`,
                     top: `${clampedTop}px`,
@@ -118,22 +101,9 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
                         : {}),
                 }}
             >
+                {/* Circle — position label inside, avatar if available */}
                 <div
-                    className={`
-    absolute text-foreground drop-shadow-lg text-xs font-bold rounded-md
-    p pointer-events-none text-center flex flex-col
-  `}
-                    style={{ top: `${adjustedNameOffset}px` }}
-                >
-                    {name.split(" ").map((word) => (
-                        <span key={word} style={{ whiteSpace: "nowrap", marginBottom: "0.1em" }}>
-                            {word}
-                        </span>
-                    ))}
-                </div>
-
-                <div
-                    className={`z-200 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden transition-all duration-200 ${
+                    className={`rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden transition-all duration-200 ${
                         player.team === "A"
                             ? "bg-cyan-400 border-cyan-500 text-white shadow-cyan-400/20"
                             : "bg-lime-400 border-lime-500 text-gray-900 shadow-lime-400/20"
@@ -141,27 +111,34 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
                     style={{
                         width: `${circleSize}px`,
                         height: `${circleSize}px`,
-                        fontSize: `${Math.max(circleSize * 0.4, 14)}px`,
                     }}
                 >
-                    <div>
-                        {fullPlayer?.avatar_url ? (
-                            <img
-                                src={fullPlayer.avatar_url}
-                                alt={name}
-                                className="w-full h-full object-cover rounded-full"
-                                onError={(e) => {
-                                    // Fallback to User icon if image fails to load
-                                    e.currentTarget.style.display = "none";
-                                    e.currentTarget.nextElementSibling?.classList.remove("hidden");
-                                }}
-                            />
-                        ) : (
-                            <User size={iconSize} />
-                        )}
-                        {fullPlayer?.avatar_url && <User size={iconSize} className="hidden" />}
-                    </div>
+                    {fullPlayer?.avatar_url ? (
+                        <img
+                            src={fullPlayer.avatar_url}
+                            alt={name}
+                            className="w-full h-full object-cover rounded-full"
+                            onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                                e.currentTarget.nextElementSibling?.classList.remove("hidden");
+                            }}
+                        />
+                    ) : null}
+                    <span
+                        className={`font-bold select-none ${fullPlayer?.avatar_url ? "hidden" : ""}`}
+                        style={{ fontSize: `${Math.max(circleSize * 0.35, 12)}px` }}
+                    >
+                        {posLabel}
+                    </span>
                 </div>
+
+                {/* Name below circle — first name + last initial, single line */}
+                <span
+                    className="mt-0.5 text-foreground text-[10px] font-semibold drop-shadow-lg pointer-events-none whitespace-nowrap select-none max-w-20 truncate text-center"
+                    style={{ lineHeight: 1.2 }}
+                >
+                    {displayName}
+                </span>
             </div>
 
             <PitchPlayerDialog player={player} isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} />
