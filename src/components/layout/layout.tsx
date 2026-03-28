@@ -11,15 +11,17 @@ import SignUpPage from "@/components/auth/pages/sign-up";
 import UpdatePasswordPage from "@/components/auth/pages/update-password";
 import Game from "@/components/game/game";
 import TeamGenerator from "@/components/game/team-generator";
-import HeaderBar from "@/components/layout/header-bar";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import NotFound from "@/components/layout/not-found";
 import ProtectedRoute from "@/components/layout/protected-route";
+import { TopBar } from "@/components/layout/top-bar";
 import PlayerCards from "@/components/players/player-cards";
 import VotingPage from "@/components/voting/voting-page";
 import { useAuth } from "@/context/auth-context";
 import { GameProvider } from "@/context/game-provider";
 import { PitchAnimationProvider } from "@/context/pitch-animation-context";
 import { useWindowSize } from "@/hooks/use-window-size";
+import { cn } from "@/lib/utils";
 
 const LayoutContent = () => {
     const { needsVerification, user } = useAuth();
@@ -46,15 +48,15 @@ const LayoutContent = () => {
                     </div>
                 )}
 
-                {/* Conditionally show header - not on auth routes */}
+                {/* Top bar - minimal logo + auth/theme */}
                 {!isAuthRoute && (
                     <div className="sticky top-0 z-50">
-                        <HeaderBar compact={isCompact} />
+                        <TopBar />
                     </div>
                 )}
 
                 {/* Main content area */}
-                <main className="flex-1 overflow-auto">
+                <main className={cn("flex-1 overflow-auto", !isAuthRoute && "pb-16")}>
                     <Routes>
                         {/* Auth routes - accessible to all */}
                         <Route path="auth/sign-in" element={<SignInPage />} />
@@ -90,6 +92,9 @@ const LayoutContent = () => {
                         <Route path="*" element={<NotFound />} />
                     </Routes>
                 </main>
+
+                {/* Bottom navigation */}
+                {!isAuthRoute && <BottomNav />}
 
                 {/* Verification dialogs for users who need them */}
                 {user && needsVerification && !isAuthRoute && (
