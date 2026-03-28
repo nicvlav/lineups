@@ -89,6 +89,19 @@ export function calculateBasicDifferenceRatio(a: number, b: number): number {
 }
 
 /**
+ * Baseline score for odd-count star splits
+ *
+ * When teams have unequal star counts (e.g. 3v4), structural metrics like
+ * zone affinity and flexibility are inherently unbalanced. This baseline
+ * returns a near-neutral score that fades as teams get larger (where the
+ * 1-player difference matters less):
+ *   1v2 → 0.85, 2v3 → 0.75, 3v4 → 0.70, 4v5 → 0.65, 5v6+ → 0.60
+ */
+export function oddSplitBaseline(smallerCount: number): number {
+    return Math.max(0.6, 0.95 - smallerCount * 0.1);
+}
+
+/**
  * Calculates the inner variance of a team's zones
  *
  * @param zoneScores Float32Array of zone scores

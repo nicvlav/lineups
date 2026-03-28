@@ -25,6 +25,73 @@ import {
 } from "./metrics-helpers";
 import type { BalanceMetrics, FastTeam } from "./types";
 
+// ─── Positional Score Balance ──────────────────────────────────────────────────
+
+/**
+ * Component weights for positional score balance — sum to 1.0
+ *
+ * Efficiency measures global quality (placed vs peak), variance catches uneven
+ * treatment across players, weighted gap applies progressive penalties for the
+ * worst placements, and worst outlier prevents catastrophic single-player misfit.
+ */
+const POSITIONAL_BALANCE_WEIGHTS = {
+    efficiency: 0.35,
+    variance: 0.3,
+    weightedGap: 0.2,
+    worstOutlier: 0.15,
+} as const;
+
+/**
+ * Normalizers define "maximum bad" for each gap penalty component.
+ * Values are derived from the stat scale (scores range ~60-95).
+ */
+const GAP_PENALTY = {
+    /** StdDev above 4 points ≈ 1 star rating spread across gaps */
+    varianceDivisor: 4.0,
+    varianceExponent: 2.2,
+    /** 30 weighted-gap-points is the practical ceiling */
+    weightedGapDivisor: 30.0,
+    /** Average gap above 6 points ≈ half a star rating misplacement */
+    meanGapDivisor: 6.0,
+    meanGapExponent: 2.0,
+    /** Single gap above 12 points ≈ full star rating out of position */
+    worstGapDivisor: 12.0,
+    worstGapExponent: 2.5,
+} as const;
+
+// ─── Energy Balance ────────────────────────────────────────────────────────────
+
+/**
+ * Floor prevents perfect balance in one dimension from zeroing out the score.
+ * 10% weight ensures even worst-case imbalances remain differentiable.
+ */
+const ENERGY_CANCELLATION_FLOOR = 0.1;
+
+/**
+ * Blend weight range for raw-quality vs cancellation-adjusted scoring.
+ * Good raw quality (>0.9) leans on raw; poor (<0.5) leans on cancellation.
+ */
+const ENERGY_BLEND = { min: 0.2, max: 0.8 } as const;
+
+// ─── Striker Balance ───────────────────────────────────────────────────────────
+
+/** Points awarded per striker viability tier (based on ST score) */
+const STRIKER_TIER_POINTS = {
+    /** score >= 90: elite striker, dominant impact */
+    high: 20,
+    /** score >= 75: competent, can fill the role */
+    medium: 12,
+    /** score >= 65: emergency option, minimal contribution */
+    low: 3,
+} as const;
+
+/** Component weights for the three-factor striker balance — sum to 1.0 */
+const STRIKER_BALANCE_WEIGHTS = {
+    specialist: 0.3,
+    viable: 0.4,
+    quality: 0.3,
+} as const;
+
 /**
  * Calculates penalty when one team dominates multiple zones
  *
@@ -144,10 +211,7 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
         cancellationFactor *= 1.0 - Math.abs(aAttAdvantage + aDefAdvantage) / 4.0;
     }
 
-    // IMPORTANT: Add a floor to cancellationFactor to allow differentiation in all-bad scenarios
-    // Without this, perfect balance in one metric (ratio=1.0) zeros out the entire score
-    // Floor of 0.1 means even worst-case imbalances can still be compared (10% weight on raw ratios)
-    cancellationFactor = Math.max(0.1, cancellationFactor);
+    cancellationFactor = Math.max(ENERGY_CANCELLATION_FLOOR, cancellationFactor);
 
     // SMART BLENDING: Combine raw quality with cancellation bonus
     //
@@ -169,7 +233,7 @@ function calculateEnergyBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean
     // If rawQuality is 0.95: blendWeight = 0.2 (mostly raw)
     // If rawQuality is 0.70: blendWeight = 0.5 (50/50 blend)
     // If rawQuality is 0.50: blendWeight = 0.7 (mostly cancellation)
-    const blendWeight = Math.min(0.8, Math.max(0.2, 1.0 - rawQuality));
+    const blendWeight = Math.min(ENERGY_BLEND.max, Math.max(ENERGY_BLEND.min, 1.0 - rawQuality));
 
     // Blend: bad scenarios lean on cancellation, good scenarios lean on raw quality
     const workrateRatio = rawQuality * (1 - blendWeight) + cancellationAdjusted * blendWeight;
@@ -234,6 +298,49 @@ function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug
 }
 
 /**
+ * Single-pass team analysis: peak vs placed scores, gap statistics
+ *
+ * Skips goalkeepers (position 0) because GK scores are universally low
+ * and would distort the gap distribution.
+ */
+function analyzeTeamGaps(team: FastTeam) {
+    let peakTotal = 0;
+    let placedTotal = 0;
+    const gaps: number[] = [];
+    let worstGap = 0;
+    let worstPlayerName = "";
+
+    for (let posIdx = 0; posIdx < team.positions.length; posIdx++) {
+        const positionGroup = team.positions[posIdx];
+        for (const player of positionGroup) {
+            // Use the position index from the team structure, not player.assignedPosition
+            // which may have been mutated by subsequent Monte Carlo iterations
+            const assignedScore = player.scores[posIdx];
+            const bestScore = player.bestScore;
+            const gap = bestScore - assignedScore;
+
+            if (posIdx !== 0) {
+                peakTotal += bestScore;
+                placedTotal += assignedScore;
+                gaps.push(gap);
+
+                if (gap > worstGap) {
+                    worstGap = gap;
+                    worstPlayerName = player.original.name;
+                }
+            }
+        }
+    }
+
+    const meanGap = gaps.reduce((sum, g) => sum + g, 0) / gaps.length;
+    const variance = gaps.reduce((sum, g) => sum + (g - meanGap) ** 2, 0) / gaps.length;
+    const stdDev = Math.sqrt(variance);
+    const mad = gaps.reduce((sum, g) => sum + Math.abs(g - meanGap), 0) / gaps.length;
+
+    return { peakTotal, placedTotal, gaps, meanGap, stdDev, mad, worstGap, worstPlayerName };
+}
+
+/**
  * Calculates positional score balance by comparing actual team scores
  *
  * This measures how balanced the teams are based on players' actual scores
@@ -246,61 +353,8 @@ function calculateOverallStrengthBalance(teamA: FastTeam, teamB: FastTeam, debug
  * @returns Balance score from 0 (imbalanced) to 1 (perfectly balanced)
  */
 function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug: boolean): number {
-    // Single-pass analysis: calculate peak vs placed scores AND variance penalty
-    const analyzeTeam = (team: FastTeam) => {
-        let peakTotal = 0;
-        let placedTotal = 0;
-        const gaps: number[] = [];
-        let worstGap = 0;
-        let worstPlayerName = "";
-
-        for (let posIdx = 0; posIdx < team.positions.length; posIdx++) {
-            const positionGroup = team.positions[posIdx];
-            for (const player of positionGroup) {
-                // Use the position index from the team structure, not player.assignedPosition
-                // which may have been mutated by subsequent Monte Carlo iterations
-                const assignedScore = player.scores[posIdx];
-                const bestScore = player.bestScore;
-                const gap = bestScore - assignedScore;
-
-                // Accumulate scores (skip GK from peak since nobody is good at it)
-                if (posIdx !== 0) {
-                    peakTotal += bestScore;
-                    placedTotal += assignedScore;
-
-                    // Track gap for variance calculation (also skip GKs)
-                    gaps.push(gap);
-
-                    if (gap > worstGap) {
-                        worstGap = gap;
-                        worstPlayerName = player.original.name;
-                    }
-                }
-            }
-        }
-
-        // Calculate variance of gaps - punishes general spread
-        const meanGap = gaps.reduce((sum, g) => sum + g, 0) / gaps.length;
-        const variance = gaps.reduce((sum, g) => sum + (g - meanGap) ** 2, 0) / gaps.length;
-        const stdDev = Math.sqrt(variance);
-
-        // Calculate mean absolute deviation (MAD) - more robust to outliers
-        const mad = gaps.reduce((sum, g) => sum + Math.abs(g - meanGap), 0) / gaps.length;
-
-        return {
-            peakTotal,
-            placedTotal,
-            gaps,
-            meanGap,
-            stdDev,
-            mad,
-            worstGap,
-            worstPlayerName,
-        };
-    };
-
-    const teamAStats = analyzeTeam(teamA);
-    const teamBStats = analyzeTeam(teamB);
+    const teamAStats = analyzeTeamGaps(teamA);
+    const teamBStats = analyzeTeamGaps(teamB);
 
     // Calculate efficiency scores
     const aRatio = calculateBasicDifferenceRatio(teamAStats.placedTotal, teamAStats.peakTotal);
@@ -342,32 +396,34 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
     const weightedGapSum = combinedGaps.reduce((sum, gap) => sum + calculateGapPenalty(gap), 0);
     const avgWeightedGap = weightedGapSum / combinedGaps.length;
 
-    // Convert variance to penalty
-    // StdDev of 0 = perfect (all same gap), StdDev of 3+ = very bad
-    // Use exponential curve: low variance is fine, high variance gets punished hard
-    const variancePenalty = Math.min(1.0, (combinedStdDev / 4.0) ** 2.2);
+    // Variance penalty: high spread in positional gaps = inconsistent treatment
+    const variancePenalty = Math.min(
+        1.0,
+        (combinedStdDev / GAP_PENALTY.varianceDivisor) ** GAP_PENALTY.varianceExponent
+    );
     const varianceScore = 1.0 - variancePenalty;
 
-    // Weighted gap penalty (uses the progressive multipliers)
-    const weightedGapPenalty = Math.min(1.0, avgWeightedGap / 30.0);
+    // Weighted gap penalty (uses the progressive multipliers from calculateGapPenalty)
+    const weightedGapPenalty = Math.min(1.0, avgWeightedGap / GAP_PENALTY.weightedGapDivisor);
     const weightedGapScore = 1.0 - weightedGapPenalty;
 
-    // Mean gap penalty: punish having a high average gap
-    // Mean gap of 0 = perfect, 5+ = terrible
-    const meanGapPenalty = Math.min(1.0, (combinedMean / 6.0) ** 2.0);
+    // Mean gap penalty: high average gap = everyone is slightly misplaced
+    const meanGapPenalty = Math.min(1.0, (combinedMean / GAP_PENALTY.meanGapDivisor) ** GAP_PENALTY.meanGapExponent);
     const meanGapScore = 1.0 - meanGapPenalty;
 
-    // Worst outlier penalty: still keep some punishment for catastrophic placements
+    // Worst outlier penalty: catastrophic single-player misplacement
     const worstOverallGap = Math.max(teamAStats.worstGap, teamBStats.worstGap);
-    const worstGapPenalty = Math.min(1.0, (worstOverallGap / 12.0) ** 2.5);
+    const worstGapPenalty = Math.min(
+        1.0,
+        (worstOverallGap / GAP_PENALTY.worstGapDivisor) ** GAP_PENALTY.worstGapExponent
+    );
     const worstGapScore = 1.0 - worstGapPenalty;
 
-    // Combine scores:
-    // - 35% efficiency (global peak vs placed)
-    // - 30% variance (punish uneven gaps - INCREASED)
-    // - 20% weighted gap (progressive penalty by gap size - REPLACES mean gap)
-    // - 15% worst outlier (catastrophic placements still matter)
-    const finalScore = efficiencyScore * 0.35 + varianceScore * 0.3 + weightedGapScore * 0.2 + worstGapScore * 0.15;
+    const finalScore =
+        efficiencyScore * POSITIONAL_BALANCE_WEIGHTS.efficiency +
+        varianceScore * POSITIONAL_BALANCE_WEIGHTS.variance +
+        weightedGapScore * POSITIONAL_BALANCE_WEIGHTS.weightedGap +
+        worstGapScore * POSITIONAL_BALANCE_WEIGHTS.worstOutlier;
 
     if (debug) {
         const t = DEFAULT_BALANCE_CONFIG.thresholds.scoreBalance;
@@ -412,8 +468,9 @@ function calculatePositionalScoreBalance(teamA: FastTeam, teamB: FastTeam, debug
         logger.debug(
             `    Worst Gap Score: ${worstGapScore.toFixed(3)} (worst=${worstOverallGap.toFixed(1)}, penalty=${worstGapPenalty.toFixed(3)})`
         );
+        const w = POSITIONAL_BALANCE_WEIGHTS;
         logger.debug(
-            `  Final: ${efficiencyScore.toFixed(3)}×0.35 + ${varianceScore.toFixed(3)}×0.30 + ${weightedGapScore.toFixed(3)}×0.20 + ${worstGapScore.toFixed(3)}×0.15 = ${finalScore.toFixed(3)}`
+            `  Final: ${efficiencyScore.toFixed(3)}×${w.efficiency} + ${varianceScore.toFixed(3)}×${w.variance} + ${weightedGapScore.toFixed(3)}×${w.weightedGap} + ${worstGapScore.toFixed(3)}×${w.worstOutlier} = ${finalScore.toFixed(3)}`
         );
     }
 
@@ -599,13 +656,13 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
                 }
 
                 if (stScore >= HIGH_SCORE_THRESHOLD) {
-                    points += 20;
+                    points += STRIKER_TIER_POINTS.high;
                     viable++;
                 } else if (stScore >= MEDIUM_SCORE_THRESHOLD) {
-                    points += 12;
+                    points += STRIKER_TIER_POINTS.medium;
                     viable++;
                 } else {
-                    points += 3;
+                    points += STRIKER_TIER_POINTS.low;
                     viable++;
                 }
             }
@@ -640,8 +697,10 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
     const qualityRatio = calculateBasicDifferenceRatio(teamA.strikerScore, teamB.strikerScore);
     const qualityScore = calibratedScore(qualityRatio, DEFAULT_BALANCE_CONFIG.thresholds.striker, Steepness.Moderate);
 
-    // Combine: specialist count matters most (50%), viable count secondary (30%), quality tertiary (20%)
-    const strikerBalanceRatio = specialistBalance * 0.3 + viableBalance * 0.4 + qualityScore * 0.3;
+    const strikerBalanceRatio =
+        specialistBalance * STRIKER_BALANCE_WEIGHTS.specialist +
+        viableBalance * STRIKER_BALANCE_WEIGHTS.viable +
+        qualityScore * STRIKER_BALANCE_WEIGHTS.quality;
 
     // if one team has more specialists than the other
     // we want the team with less specialists

@@ -191,82 +191,72 @@ export interface BalanceConfiguration {
  * Carefully calibrated based on real-world testing
  */
 export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
+    // ── Weights ─────────────────────────────────────────────────────────────
+    // Primary + secondary weights sum to 1.0.
+    // Primary drives the headline balance; secondary fine-tunes "feel".
     weights: {
         primary: {
-            // #1 Priority: Actual score balance (what users see and care about)
+            // How closely placed scores match peak potential per player
             scoreBalance: 0.1,
-
-            // #1 Priority: Top talent evenly distributed
+            // Even distribution of top-rated players across teams
             starDistribution: 0.1,
-
-            // #2 Priority: Each zone (DEF/MID/ATT) competitive
+            // Theoretical maximum team strength must be close
             peakPotential: 0.3,
         },
         secondary: {
-            // Peak potential matters less than actual scores
+            // Per-zone (DEF/MID/ATT) competitiveness between teams
             zoneBalance: 0.02,
-
-            // All-stat balance ensures no hidden advantages
+            // Sum of all raw stats — catches hidden attribute advantages
             allStatBalance: 0.05,
-
-            // Fine-tuning metrics
+            // Stamina + work rate balance — affects match endurance
             energy: 0.16,
+            // Vision, passing, composure — playmaking balance
             creativity: 0.15,
+            // Finishing, positioning — goalscoring threat balance
             striker: 0.12,
         },
     },
 
+    // ── Thresholds ────────────────────────────────────────────────────────
+    // Each metric gets a calibrated [perfect, acceptable, poor] curve via
+    // calibratedScore(). Values are ratio-based (1.0 = perfectly balanced).
     thresholds: {
-        // Score balance: Within 1% = perfect, within 3% = acceptable, >10% = poor
         scoreBalance: {
-            perfect: 0.95, // <1% difference (e.g., 400 vs 404 out of 800 total)
-            acceptable: 0.85, // <3% difference (e.g., 400 vs 412)
-            poor: 0.7, // >10% difference (e.g., 400 vs 440)
+            perfect: 0.95,
+            acceptable: 0.85,
+            poor: 0.7,
         },
-
-        // Star distribution: Perfect = equal split, acceptable = ±1 player, poor = ±3 players
         starDistribution: {
             perfect: 0.99,
             acceptable: 0.975,
             poor: 0.9,
         },
-
-        // Peak potential: Theoretical max strength
+        // Very strict — even tiny peak-potential gaps are noticeable
         peakPotential: {
-            perfect: 0.99995, // <2% difference in potential
-            acceptable: 0.999, // <5% difference
-            poor: 0.95, // >15% difference
+            perfect: 0.99995,
+            acceptable: 0.999,
+            poor: 0.95,
         },
-
-        // Zone balance: Each zone competitive between teams
         zoneBalance: {
-            perfect: 0.97, // All zones within 5% of each other
-            acceptable: 0.93, // Most zones balanced, one slightly off
-            poor: 0.8, // Multiple zones significantly imbalanced
+            perfect: 0.97,
+            acceptable: 0.93,
+            poor: 0.8,
         },
-
-        // Peak potential: Theoretical max strength
         allStatBalance: {
             perfect: 0.99,
             acceptable: 0.94,
             poor: 0.9,
         },
-
-        // Energy: Stamina + work rate
         energy: {
             perfect: 0.99,
             acceptable: 0.94,
             poor: 0.85,
         },
-
-        // Creativity: Vision, passing, composure
         creativity: {
             perfect: 0.99,
             acceptable: 0.975,
             poor: 0.9,
         },
-
-        // Energy: Stamina + work rate
         striker: {
             perfect: 0.99,
             acceptable: 0.94,
@@ -274,77 +264,69 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfiguration = {
         },
     },
 
+    // ── Algorithm ─────────────────────────────────────────────────────────
     algorithm: {
-        // Only randomize between players within 5 points of best
+        // Only randomize between players within this many points of the best candidate
         proximityThreshold: 5,
-
-        // Scale candidate pool with team size (20 players = top 4 candidates)
+        // Whether to scale candidate pool size with team size
         topNScaling: false,
+        // Number of top candidates to choose from at each position fill
         baseTopN: 5,
-
-        // Weighted probability for selecting from top N
-        selectionWeights: [0.5, 0.25, 0.15, 0.05, 0.05], //, 0.05, 0.025, 0.025, 0.025, 0.025],
+        // Weighted probability for selecting from top N (must match baseTopN length)
+        selectionWeights: [0.5, 0.25, 0.15, 0.05, 0.05],
     },
 
     monteCarlo: {
-        // Run up to 200 iterations
+        // Higher = better results but slower. 40k gives good convergence.
         maxIterations: 40000,
     },
 
     starPlayers: {
-        // Minimum 87 rating to be considered "star"
+        // Players scoring >= 87 in their best position are "star" tier.
+        // Roughly the top 20-30% in a typical pool of 18-22 players.
         absoluteMinimum: 87,
     },
 
+    // ── Composite Formulas ────────────────────────────────────────────────
+    // Weighted stat combinations used to derive team-level composite scores.
+    // Weight of 5 = primary driver; weight of 1 = contributing factor.
     formulas: {
         creativity: {
-            // Vision is most important for creativity
             vision: 5,
             teamwork: 1,
             decisions: 1,
             passing: 1,
             composure: 1,
         },
-
         striker: {
-            // Finishing is most important for striker quality
             finishing: 5,
             offTheBall: 1,
             technique: 1,
             attWorkrate: 1,
         },
-
+        // Tier weights for star distribution — superstars matter most
         starDistribution: {
-            // Superstar distribution matters most
             superstars: 0.6,
             stars: 0.3,
             solid: 0.1,
         },
-
         zoneDirectionality: {
-            // Consider zone balanced if within 0.5% (ratio >= 0.995)
+            // Zone within 0.5% is considered neutral (no winner)
             neutralEpsilon: 0.995,
-
-            // 90% penalty if one team wins all 3 zones (DEF/MID/ATT)
+            // 3-0 zone sweep: one team dominates all zones → 90% penalty
             dominationPenalty: 0.1,
-
-            // 60% penalty if one team wins 2 zones decisively
+            // 2-0-1 sweep: two decisive zones → 60% penalty
             twoZonePenalty: 0.4,
         },
-
         midfieldPreference: {
-            // Moderate penalty (50%) for not having midfield as strongest zone
+            // Penalize teams whose strongest zone isn't midfield (midfield controls the game)
             penaltyStrength: 0.2,
         },
-
         positionalBalance: {
-            // Efficiency difference matters more than absolute efficiency
             diffWeight: 0.8,
             efficiencyWeight: 0.2,
         },
-
         directionalImbalance: {
-            // 30% penalty per component that favors the same team
             penaltyPerComponent: 0.3,
         },
     },

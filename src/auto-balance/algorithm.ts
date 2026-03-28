@@ -46,6 +46,15 @@ import {
     selectPlayerWithProximity,
 } from "./utils";
 
+/** After filling a position, bump its priority to round-robin across positions */
+const PRIORITY_INCREMENT = 2;
+
+/** Log progress every N iterations during Monte Carlo */
+const LOG_FREQUENCY = 20;
+
+/** Track usage of top N star splits for diagnostics */
+const TOP_SPLIT_TRACKING_COUNT = 5;
+
 /**
  * Initialize the assignment context with all necessary state
  *
@@ -254,7 +263,7 @@ function assignOutfieldPlayers(context: AssignmentContext): void {
         targetTeam.peakPotential += player.bestScore;
         targetTeam.playerCount++;
         targetFormation[posIdx]--;
-        targetPriorities[posIdx] += 2; // Increment priority
+        targetPriorities[posIdx] += PRIORITY_INCREMENT;
     }
 }
 
@@ -502,8 +511,7 @@ export function runGuidedMonteCarlo(
         if (extendedStats.rankedSplits.length > 0 && starPlayers.length >= 2) {
             selectedSplit = selectGuidedStarSplit(extendedStats.rankedSplits, guidedConfig);
 
-            // Track top-5 split usage
-            if (selectedSplit.rank < 5) {
+            if (selectedSplit.rank < TOP_SPLIT_TRACKING_COUNT) {
                 topSplitUsageCount++;
             }
         }
@@ -554,7 +562,7 @@ export function runGuidedMonteCarlo(
             bestScore = finalScore;
             bestResult = simResult;
 
-            if (verbose && i % 20 === 0) {
+            if (verbose && i % LOG_FREQUENCY === 0) {
                 logger.debug(
                     `   Iteration ${i}: Best score = ${bestScore.toFixed(3)} (star mult: ${starMultiplier.toFixed(3)})`
                 );

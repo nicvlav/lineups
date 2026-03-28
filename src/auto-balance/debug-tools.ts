@@ -8,7 +8,7 @@
  */
 
 import type { BalanceConfiguration, MetricWeights } from "./metrics-config";
-import { getTotalWeight } from "./metrics-config";
+import { DEFAULT_BALANCE_CONFIG, getTotalWeight } from "./metrics-config";
 import type { BalanceMetrics, FastTeam } from "./types";
 
 /**
@@ -373,7 +373,10 @@ export interface TeamSummary {
 /**
  * Summarize team statistics
  */
-export function getStarCount(team: FastTeam, starThreshold: number = 87): number {
+export function getStarCount(
+    team: FastTeam,
+    starThreshold: number = DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum
+): number {
     // Count star players (players with bestScore >= threshold)
     let starCount = 0;
     for (const posPlayers of team.positions) {
@@ -390,7 +393,10 @@ export function getStarCount(team: FastTeam, starThreshold: number = 87): number
 /**
  * Summarize team statistics
  */
-export function summarizeTeam(team: FastTeam, starThreshold: number = 87): TeamSummary {
+export function summarizeTeam(
+    team: FastTeam,
+    starThreshold: number = DEFAULT_BALANCE_CONFIG.starPlayers.absoluteMinimum
+): TeamSummary {
     const starCount = getStarCount(team, starThreshold);
 
     return {
