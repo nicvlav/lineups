@@ -56,7 +56,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     "active:scale-95 active:bg-accent/80", // Add press feedback
                     isActive
-                        ? "bg-gradient-to-br from-primary/90 to-primary text-primary-foreground shadow-lg border-primary/20 ring-1 ring-primary/30"
+                        ? "bg-linear-to-br from-primary/90 to-primary text-primary-foreground shadow-lg border-primary/20 ring-1 ring-primary/30"
                         : "text-muted-foreground hover:text-foreground"
                 )
             }
@@ -123,7 +123,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                     <div
                         className={cn(
                             "flex items-center gap-2",
-                            "bg-gradient-to-l from-muted/40 to-muted/20 rounded-xl",
+                            "bg-linear-to-l from-muted/40 to-muted/20 rounded-xl",
                             compact ? "p-1.5" : "p-2"
                         )}
                     >

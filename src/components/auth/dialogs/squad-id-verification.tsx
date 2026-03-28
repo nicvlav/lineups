@@ -92,7 +92,7 @@ export function SquadIdVerification({ open, onClose, mandatory = false }: SquadI
 
                         <div className="bg-muted p-3 rounded-lg">
                             <div className="flex items-start gap-2">
-                                <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                                 <div className="text-sm text-muted-foreground">
                                     <p className="font-medium mb-1">Next Steps:</p>
                                     <ul className="space-y-1 text-xs">

@@ -37,9 +37,9 @@ export const PlayerVoteCard = ({ player, hasVoted, userVote, onVoteComplete }: P
             <div className="flex items-center justify-between py-3 px-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
                 <div className="flex items-center gap-3 flex-1">
                     {hasVoted ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
                     ) : (
-                        <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
                     )}
 
                     <div className="flex-1 min-w-0">
@@ -52,7 +52,7 @@ export const PlayerVoteCard = ({ player, hasVoted, userVote, onVoteComplete }: P
                     </div>
 
                     {player.vote_count > 0 && (
-                        <Badge variant="secondary" className="flex-shrink-0">
+                        <Badge variant="secondary" className="shrink-0">
                             {player.vote_count} {player.vote_count === 1 ? "vote" : "votes"}
                         </Badge>
                     )}
@@ -62,7 +62,7 @@ export const PlayerVoteCard = ({ player, hasVoted, userVote, onVoteComplete }: P
                     variant={hasVoted ? "ghost" : "default"}
                     size="sm"
                     onClick={handleOpenVoting}
-                    className="ml-3 flex-shrink-0"
+                    className="ml-3 shrink-0"
                 >
                     {hasVoted ? (
                         <>

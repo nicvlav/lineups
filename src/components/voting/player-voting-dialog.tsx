@@ -125,7 +125,7 @@ export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = fals
         <div className="space-y-3">
             <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">{statLabelMap[statKey]}</span>
-                <Badge variant="outline" className="min-w-[3rem] justify-center">
+                <Badge variant="outline" className="min-w-12 justify-center">
                     {votes[statKey]}/10
                 </Badge>
             </div>
@@ -162,7 +162,7 @@ export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = fals
     return (
         <Dialog open={true} onOpenChange={onClose}>
             <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-                <DialogHeader className="flex-shrink-0 space-y-4">
+                <DialogHeader className="shrink-0 space-y-4">
                     <DialogTitle>{isEditing ? "Edit Player Evaluation" : "Player Evaluation"}</DialogTitle>
 
                     <div className="bg-muted p-4 rounded-lg">
@@ -183,7 +183,7 @@ export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = fals
                     </div>
 
                     {/* Fixed button at bottom with better spacing */}
-                    <div className="flex-shrink-0 pt-4 border-t">
+                    <div className="shrink-0 pt-4 border-t">
                         <div className="flex gap-2">
                             <Button
                                 variant="outline"
