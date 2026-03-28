@@ -1,6 +1,6 @@
 import { Slot } from "@radix-ui/react-slot";
 import { ChevronRight, MoreHorizontal } from "lucide-react";
-import * as React from "react";
+import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -45,6 +45,8 @@ function BreadcrumbLink({
 
 function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
     return (
+        // biome-ignore lint/a11y/useFocusableInteractive: shadcn breadcrumb — aria-disabled link doesn't need focus
+        // biome-ignore lint/a11y/useSemanticElements: shadcn pattern — span with role="link" for disabled current page
         <span
             data-slot="breadcrumb-page"
             role="link"
@@ -87,10 +89,10 @@ function BreadcrumbEllipsis({ className, ...props }: React.ComponentProps<"span"
 
 export {
     Breadcrumb,
-    BreadcrumbList,
+    BreadcrumbEllipsis,
     BreadcrumbItem,
     BreadcrumbLink,
+    BreadcrumbList,
     BreadcrumbPage,
     BreadcrumbSeparator,
-    BreadcrumbEllipsis,
 };

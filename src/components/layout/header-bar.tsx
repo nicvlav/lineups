@@ -76,90 +76,85 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
     );
 
     return (
-        <>
-            <header className="w-full bg-background/95 border-b-2 border-border">
-                <div
-                    className={cn(
-                        "grid grid-cols-3 items-center w-full",
-                        "sm:grid-cols-3 grid-cols-[auto_1fr_auto]", // On mobile: auto-sized sides, flexible center
-                        "h-16", // h-16
-                        compact ? "px-4" : "px-4"
-                    )}
-                >
-                    {/* Brand/Logo - Left column */}
-                    <div className="flex justify-start">
-                        <h1
-                            className={cn(
-                                "font-bold text-foreground select-none tracking-tight rounded-xl",
-                                isStaging
-                                    ? "bg-linear-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30"
-                                    : "bg-linear-to-r from-muted/40 to-muted/20",
-                                compact ? "text-lg px-3 py-1.5" : "text-xl px-4 py-2"
-                            )}
-                        >
-                            {isStaging ? "LM 🚧" : "LM"}
-                        </h1>
-                    </div>
+        <header className="w-full bg-background/95 border-b-2 border-border">
+            <div
+                className={cn(
+                    "grid grid-cols-3 items-center w-full",
+                    "sm:grid-cols-3 grid-cols-[auto_1fr_auto]", // On mobile: auto-sized sides, flexible center
+                    "h-16", // h-16
+                    compact ? "px-4" : "px-4"
+                )}
+            >
+                {/* Brand/Logo - Left column */}
+                <div className="flex justify-start">
+                    <h1
+                        className={cn(
+                            "font-bold text-foreground select-none tracking-tight rounded-xl",
+                            isStaging
+                                ? "bg-linear-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30"
+                                : "bg-linear-to-r from-muted/40 to-muted/20",
+                            compact ? "text-lg px-3 py-1.5" : "text-xl px-4 py-2"
+                        )}
+                    >
+                        {isStaging ? "LM 🚧" : "LM"}
+                    </h1>
+                </div>
 
-                    {/* Navigation - Center column (always centered) */}
-                    <div className="flex justify-center">
-                        <nav
-                            className={cn("flex items-center justify-center", "bg-muted/10 rounded-2xl p-1", "gap-1")} // gap-1
-                            role="navigation"
-                            aria-label="Main navigation"
-                        >
-                            <TabIcon icon={Home} to="/" label="Home" />
+                {/* Navigation - Center column (always centered) */}
+                <div className="flex justify-center">
+                    <nav
+                        className={cn("flex items-center justify-center", "bg-muted/10 rounded-2xl p-1", "gap-1")} // gap-1
+                        aria-label="Main navigation"
+                    >
+                        <TabIcon icon={Home} to="/" label="Home" />
 
-                            <TabIcon icon={SquareUser} to="/cards" label="Cards" />
+                        <TabIcon icon={SquareUser} to="/cards" label="Cards" />
 
-                            <TabIcon icon={ListChecks} to="/generate" label="Generate Teams" />
+                        <TabIcon icon={ListChecks} to="/generate" label="Generate Teams" />
 
-                            {canVote && <TabIcon icon={TableProperties} to="/manage" label="Manage Players" />}
+                        {canVote && <TabIcon icon={TableProperties} to="/manage" label="Manage Players" />}
 
-                            {canVote && <TabIcon icon={Vote} to="/vote" label="Vote" />}
-                        </nav>
-                    </div>
+                        {canVote && <TabIcon icon={Vote} to="/vote" label="Vote" />}
+                    </nav>
+                </div>
 
-                    {/* Actions - Right column */}
-                    <div className="flex justify-end">
-                        <div
-                            className={cn(
-                                "flex items-center gap-2",
-                                "bg-gradient-to-l from-muted/40 to-muted/20 rounded-xl",
-                                compact ? "p-1.5" : "p-2"
-                            )}
-                        >
-                            {user ? (
-                                <>
-                                    <Button
-                                        variant="ghost"
-                                        size={compact ? "sm" : "default"}
-                                        onClick={handleSignOut}
-                                        className="text-muted-foreground hover:text-foreground"
-                                    >
-                                        <LogOut className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
-                                        {!compact && "Sign Out"}
-                                    </Button>
-                                </>
-                            ) : (
-                                <Button
-                                    asChild
-                                    variant="ghost"
-                                    size={compact ? "sm" : "default"}
-                                    className="text-muted-foreground hover:text-foreground"
-                                >
-                                    <NavLink to="/auth/sign-in">
-                                        <LogIn className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
-                                        {!compact && "Sign In"}
-                                    </NavLink>
-                                </Button>
-                            )}
-                            <ModeToggle />
-                        </div>
+                {/* Actions - Right column */}
+                <div className="flex justify-end">
+                    <div
+                        className={cn(
+                            "flex items-center gap-2",
+                            "bg-gradient-to-l from-muted/40 to-muted/20 rounded-xl",
+                            compact ? "p-1.5" : "p-2"
+                        )}
+                    >
+                        {user ? (
+                            <Button
+                                variant="ghost"
+                                size={compact ? "sm" : "default"}
+                                onClick={handleSignOut}
+                                className="text-muted-foreground hover:text-foreground"
+                            >
+                                <LogOut className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
+                                {!compact && "Sign Out"}
+                            </Button>
+                        ) : (
+                            <Button
+                                asChild
+                                variant="ghost"
+                                size={compact ? "sm" : "default"}
+                                className="text-muted-foreground hover:text-foreground"
+                            >
+                                <NavLink to="/auth/sign-in">
+                                    <LogIn className={cn("mr-1", compact ? "h-3 w-3" : "h-4 w-4")} />
+                                    {!compact && "Sign In"}
+                                </NavLink>
+                            </Button>
+                        )}
+                        <ModeToggle />
                     </div>
                 </div>
-            </header>
-        </>
+            </div>
+        </header>
     );
 };
 

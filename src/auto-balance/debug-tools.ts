@@ -310,9 +310,9 @@ export function analyzeWeightSensitivity(
 
         // Check if metric is in primary or secondary
         if (metricToVary in weights.primary) {
-            (modifiedWeights.primary as any)[metricToVary] = newWeight;
+            (modifiedWeights.primary as Record<string, number>)[metricToVary] = newWeight;
         } else if (metricToVary in weights.secondary) {
-            (modifiedWeights.secondary as any)[metricToVary] = newWeight;
+            (modifiedWeights.secondary as Record<string, number>)[metricToVary] = newWeight;
         }
 
         // Normalize weights to sum to 1.0
@@ -320,10 +320,10 @@ export function analyzeWeightSensitivity(
         const scaleFactor = 1.0 / total;
 
         for (const key in modifiedWeights.primary) {
-            (modifiedWeights.primary as any)[key] *= scaleFactor;
+            (modifiedWeights.primary as Record<string, number>)[key] *= scaleFactor;
         }
         for (const key in modifiedWeights.secondary) {
-            (modifiedWeights.secondary as any)[key] *= scaleFactor;
+            (modifiedWeights.secondary as Record<string, number>)[key] *= scaleFactor;
         }
 
         // Calculate score with modified weights

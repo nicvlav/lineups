@@ -1,5 +1,5 @@
 import { Slot } from "@radix-ui/react-slot";
-import { cva, VariantProps } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -68,13 +68,14 @@ function SidebarProvider({
                 _setOpen(openState);
             }
 
-            // This sets the cookie to keep the sidebar state.
+            // biome-ignore lint/suspicious/noDocumentCookie: shadcn sidebar persists state via cookie
             document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
         },
         [setOpenProp, open]
     );
 
     // Helper to toggle the sidebar.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: shadcn pattern — setOpenMobile is stable but included for clarity
     const toggleSidebar = React.useCallback(() => {
         return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
     }, [isMobile, setOpen, setOpenMobile]);
@@ -96,6 +97,7 @@ function SidebarProvider({
     // This makes it easier to style the sidebar with Tailwind classes.
     const state = open ? "expanded" : "collapsed";
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: shadcn pattern — setOpenMobile is stable but included for clarity
     const contextValue = React.useMemo<SidebarContext>(
         () => ({
             state,
@@ -257,6 +259,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 
     return (
         <button
+            type="button"
             data-sidebar="rail"
             data-slot="sidebar-rail"
             aria-label="Toggle Sidebar"

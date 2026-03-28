@@ -311,13 +311,13 @@ export function compareTransformations(
     const names = Object.keys(transforms);
 
     // Header
-    lines.push("Ratio   | " + names.map((n) => n.padEnd(10)).join(" | "));
+    lines.push(`Ratio   | ${names.map((n) => n.padEnd(10)).join(" | ")}`);
     lines.push("─".repeat(10 + names.length * 13));
 
     // Data rows
     for (const ratio of testRatios) {
         const scores = names.map((name) => transforms[name](ratio).toFixed(3));
-        lines.push(`${ratio.toFixed(2)}    | ` + scores.join(" | "));
+        lines.push(`${ratio.toFixed(2)}    | ${scores.join(" | ")}`);
     }
 
     return lines.join("\n");

@@ -12,14 +12,14 @@ import { logger } from "@/lib/logger";
 import { classifyPlayerByZone } from "@/lib/player-quality";
 import { getFormationsForCount } from "@/types/formations";
 import type { Position, StarZoneClassification } from "@/types/positions";
-import { calculateBasicDifferenceRatio, generateCombinations } from "./metrics-helpers";
 import type { BalanceConfiguration } from "./metrics-config";
-import { calculateZoneAffinity } from "./metrics-zone-affinity";
+import { calculateBasicDifferenceRatio, generateCombinations } from "./metrics-helpers";
 import {
     analyzePoolCharacteristics,
     calculateDynamicStrictness,
     generateRankedStarSplits,
 } from "./metrics-star-scoring";
+import { calculateZoneAffinity } from "./metrics-zone-affinity";
 import type {
     DynamicStrictness,
     ExtendedOptimalStats,

@@ -26,7 +26,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                 duration: 3000,
                 icon: "🔗",
             });
-        } catch (error) {
+        } catch {
             toast.error("Failed to copy link", {
                 description: "Please try again",
                 duration: 3000,

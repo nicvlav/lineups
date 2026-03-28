@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/auth-context";
+import { logger } from "@/lib/logger";
 
 export default function ResetPasswordPage() {
     const navigate = useNavigate();
@@ -43,7 +44,8 @@ export default function ResetPasswordPage() {
             } else {
                 setSuccess(true);
             }
-        } catch (err) {
+        } catch (error) {
+            logger.warn("AUTH: Password reset failed:", error);
             setError("An unexpected error occurred");
         } finally {
             setLoading(false);

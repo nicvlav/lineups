@@ -10,7 +10,8 @@
  */
 
 import { List } from "lucide-react";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import PlayerQualityIndicator from "@/components/players/player-quality-indicator";
 import RelativeArchetypeBars from "@/components/players/relative-archetype-bars";
 import Modal from "@/components/shared/modal";
@@ -22,10 +23,10 @@ import { getAllPositionArchetypeGroups, getTopPositionGroups } from "@/lib/posit
 import { calculateRelativeScore } from "@/lib/utils/relative-scoring";
 import { getArchetypeById } from "@/types/archetypes";
 import type { Player, PlayerArchetypeScores, ZoneAverages } from "@/types/players";
-import { emptyZoneScores } from "@/types/positions";
 import type { Position } from "@/types/positions";
-import { CategorizedStats, statLabelMap } from "@/types/stats";
+import { emptyZoneScores } from "@/types/positions";
 import type { StatCategory, StatsKey } from "@/types/stats";
+import { CategorizedStats, statLabelMap } from "@/types/stats";
 
 interface ModernPlayerStatsModalProps {
     player: Player | null;
@@ -112,6 +113,7 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
 
                         {isAdmin(user?.id) && (
                             <button
+                                type="button"
                                 onClick={() => setShowDetailedStats(!showDetailedStats)}
                                 className="text-xs px-3 py-1.5 rounded-md bg-accent hover:bg-accent/80 transition-colors font-medium"
                             >
@@ -125,9 +127,9 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                         {/* Buzzwords */}
                         {buzzwords.length > 0 && (
                             <div className="flex flex-wrap gap-1.5">
-                                {buzzwords.map((word, idx) => (
+                                {buzzwords.map((word) => (
                                     <span
-                                        key={idx}
+                                        key={word}
                                         className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30"
                                     >
                                         {word}
@@ -150,6 +152,7 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                         }
                         headerAction={
                             <button
+                                type="button"
                                 onClick={() => setShowAllPositions(!showAllPositions)}
                                 className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-muted hover:bg-muted/80 transition-colors"
                             >

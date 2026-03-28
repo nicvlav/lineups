@@ -85,6 +85,7 @@ export default function PlayerManager() {
     const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
         <TableHead>
             <button
+                type="button"
                 onClick={() => toggleSort(field)}
                 className="flex items-center gap-2 hover:text-primary transition-colors font-medium"
             >

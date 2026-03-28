@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import PlayerStatsModal from "@/components/players/player-stats-modal";
 import { useTapHandler } from "@/hooks/use-tap-handler";
 import { getCardUnderlineColor, getStatBarColor } from "@/lib/color-system";
@@ -75,16 +76,16 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 {viewMode === "archetypes" && (
                     // Archetypes: Top 5 Archetypes Block (always 5 rows for consistent height)
                     <div className="bg-muted/30 rounded-md p-2 space-y-1 mb-3">
-                        {Array.from({ length: 5 }).map((_, index) => {
-                            const archetypeData = topArchetypes[index];
+                        {[0, 1, 2, 3, 4].map((slotIndex) => {
+                            const archetypeData = topArchetypes[slotIndex];
 
                             if (!archetypeData) {
                                 // Empty slot for consistent height
-                                return <div key={`empty-${index}`} className="h-4" />;
+                                return <div key={`empty-slot-${slotIndex}`} className="h-4" />;
                             }
 
                             const archetype = getArchetypeById(archetypeData.archetypeId);
-                            if (!archetype) return <div key={`empty-${index}`} className="h-4" />;
+                            if (!archetype) return <div key={`missing-${archetypeData.archetypeId}`} className="h-4" />;
 
                             return (
                                 <div

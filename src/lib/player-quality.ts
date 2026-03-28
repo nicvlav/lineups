@@ -117,20 +117,16 @@ export function classifyPlayerByZone(
         }, 0);
 
     const bestScore = Math.max(bestDefensiveScore, bestMidfieldScore, bestAttackingScore);
-    let sum = 0;
-    let count = 0;
 
     const qualifyingPositions: Position[] = [];
 
-    Object.keys(zoneFit).forEach((key) => {
+    for (const key of Object.keys(zoneFit)) {
         const pos = key as Position;
         const score = zoneFit[pos];
-        sum += score;
-        count++;
         if (score >= 90 || score >= bestScore - 3) {
             qualifyingPositions.push(pos);
         }
-    });
+    }
 
     // Calculate weighted zone scores
     let defScore = 0;

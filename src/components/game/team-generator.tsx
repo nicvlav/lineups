@@ -144,8 +144,11 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                 )}
                             >
                                 {columns.map((columnPlayers, columnIndex) => (
+                                    // biome-ignore lint/suspicious/noArrayIndexKey: columns are a fixed grid split, never reorder
                                     <div key={columnIndex} className={cn("space-y-2", "gap-1")}>
                                         {columnPlayers.map((player) => (
+                                            // biome-ignore lint/a11y/useKeyWithClickEvents: click target wraps interactive Checkbox
+                                            // biome-ignore lint/a11y/noStaticElementInteractions: click target wraps interactive Checkbox
                                             <div
                                                 key={player.id}
                                                 onClick={() => togglePlayer(player.id)}

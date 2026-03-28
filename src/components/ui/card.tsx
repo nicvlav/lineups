@@ -1,4 +1,4 @@
-import * as React from "react";
+import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -35,4 +35,4 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
     return <div data-slot="card-footer" className={cn("flex items-center px-6", className)} {...props} />;
 }
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
+export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle };

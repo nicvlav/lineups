@@ -10,7 +10,8 @@
 
 import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { getArchetypeBarColor, getArchetypeTextColor } from "@/lib/color-system";
 import { applyVisualScaling, calculateRelativeScore } from "@/lib/utils/relative-scoring";
 import { getArchetypeById } from "@/types/archetypes";
@@ -86,7 +87,7 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
                         <div className="flex items-center gap-1.5 min-w-[140px]">
                             <span
                                 className={`text-xs ${
-                                    score == relativeMax
+                                    score === relativeMax
                                         ? "font-semibold text-foreground"
                                         : "font-normal text-muted-foreground"
                                 } ${compact ? "text-[11px]" : ""}`}
@@ -126,6 +127,7 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
             {/* Expand/Collapse Button */}
             {hasHidden && (
                 <button
+                    type="button"
                     onClick={() => setExpanded(!expanded)}
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-2 px-2 py-1 rounded hover:bg-accent/50"
                 >

@@ -293,7 +293,7 @@ export function scoreStarSplit(
                 if (totalRange > 0) {
                     // Exponential penalty: 1 point gap = ~0.7, 2 points = ~0.5, 3+ = ~0.3
                     const normalizedGap = gapFromBest / totalRange;
-                    rankPenalty = Math.pow(1.0 - normalizedGap, 3.0); // Cubic for harshness
+                    rankPenalty = (1.0 - normalizedGap) ** 3.0; // Cubic for harshness
                 } else {
                     rankPenalty = 1.0; // All stars same quality
                 }
@@ -310,14 +310,14 @@ export function scoreStarSplit(
         const avgWeight = smallerCount === 1 ? 0.3 : 0.7;
         const rankWeight = smallerCount === 1 ? 0.7 : 0.3;
         const combinedRatio = avgWeight * avgScore + rankWeight * rankPenalty;
-        qualityBalance = clamp01Safe(Math.pow(combinedRatio, shapingExponent * 1.5), EPS);
+        qualityBalance = clamp01Safe(combinedRatio ** (shapingExponent * 1.5), EPS);
     } else {
         // EVEN SPLIT: Use sum of qualities (original logic)
         const qualityA = teamAQualities.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
         const qualityB = teamBQualities.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
         const qualityRatioRaw = calculateBasicDifferenceRatio(qualityA, qualityB);
         const qualityRatio = clamp(finiteOr(qualityRatioRaw, 0), 0, 1);
-        qualityBalance = clamp01Safe(Math.pow(qualityRatio, shapingExponent), EPS);
+        qualityBalance = clamp01Safe(qualityRatio ** shapingExponent, EPS);
     }
 
     // 3) flexibility balance
@@ -366,7 +366,7 @@ export function scoreStarSplit(
             EPS
         );
 
-        specialistCountBalance = clamp01Safe(Math.pow(defScore * attScore * midScore, 1 / 3), EPS);
+        specialistCountBalance = clamp01Safe((defScore * attScore * midScore) ** (1 / 3), EPS);
     }
 
     // 5) peak talent balance

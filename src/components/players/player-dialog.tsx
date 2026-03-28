@@ -55,7 +55,7 @@ const OverviewTabComponent: React.FC<OverviewTabComponentProps> = ({ player, ful
     // Get top 3 alternative positions (using relative scores)
     const getAlternativePositions = () => {
         const alternatives = Object.entries(relativeScores)
-            .filter(([pos]) => pos !== player.exactPosition && pos != "GK")
+            .filter(([pos]) => pos !== player.exactPosition && pos !== "GK")
             .sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
             .slice(0, 3);
 
@@ -163,6 +163,7 @@ const SwapTabComponent: React.FC<SwapTabComponentProps> = ({ player, players, on
                         const isInGame = p.id in gamePlayers;
                         return (
                             <button
+                                type="button"
                                 key={p.id}
                                 onClick={() => handleSwapPlayer(p)}
                                 className={`w-full p-3 text-left rounded-lg border transition-colors ${

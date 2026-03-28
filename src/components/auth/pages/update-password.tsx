@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/auth-context";
+import { logger } from "@/lib/logger";
 
 export default function UpdatePasswordPage() {
     const navigate = useNavigate();
@@ -69,7 +70,8 @@ export default function UpdatePasswordPage() {
                     navigate("/", { replace: true });
                 }, 2000);
             }
-        } catch (err) {
+        } catch (error) {
+            logger.warn("AUTH: Password update failed:", error);
             setError("An unexpected error occurred");
         } finally {
             setLoading(false);

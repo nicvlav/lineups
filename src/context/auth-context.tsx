@@ -8,9 +8,9 @@
  * See: https://github.com/supabase/gotrue-js/issues/762
  */
 
-import { AuthError, Session, User } from "@supabase/supabase-js";
+import type { AuthError, Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
-import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { squadKeys, userProfileKeys } from "@/hooks/use-user-profile";
 import { logger } from "@/lib/logger";
 import { clearVoteData } from "@/lib/session-manager";

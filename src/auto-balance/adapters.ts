@@ -11,6 +11,7 @@ import { getFormationsForCount } from "@/types/formations";
 import type { PlayerArchetypeScores, ScoredGamePlayer } from "@/types/players";
 import { isPositionSpecialist } from "@/types/players";
 import type { Position } from "@/types/positions";
+import type { PlayerStats } from "@/types/stats";
 import { INDEX_TO_POSITION, POSITION_COUNT, ZONE_POSITIONS } from "./constants";
 import type { BalanceConfiguration } from "./metrics-config";
 import type { FastPlayer } from "./types";
@@ -80,7 +81,7 @@ export function playerWithArchetypesToScoredGamePlayer(
         id: string;
         name: string;
         archetypeScores: PlayerArchetypeScores;
-        rawStats: any;
+        rawStats: PlayerStats;
     },
     team: string = "",
     position: { x: number; y: number } = { x: 0.5, y: 0.5 }
@@ -113,7 +114,7 @@ export function convertPlayersToFastPlayers(
         id: string;
         name: string;
         archetypeScores: PlayerArchetypeScores;
-        rawStats: any;
+        rawStats: PlayerStats;
     }>
 ): FastPlayer[] {
     return players.map((player) => {

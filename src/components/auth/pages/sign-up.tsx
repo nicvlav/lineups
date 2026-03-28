@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, Eye, EyeOff, CircleFadingPlus, Loader2, Lock, Mail, UserPlus } from "lucide-react";
+import { AlertCircle, CheckCircle, CircleFadingPlus, Eye, EyeOff, Loader2, Lock, Mail, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/auth-context";
+import { logger } from "@/lib/logger";
 
 export default function SignUpPage() {
     const navigate = useNavigate();
@@ -67,7 +68,8 @@ export default function SignUpPage() {
             } else {
                 setSuccess(true);
             }
-        } catch (err) {
+        } catch (error) {
+            logger.warn("AUTH: Sign-up failed:", error);
             setError("An unexpected error occurred");
         } finally {
             setLoading(false);
@@ -86,7 +88,8 @@ export default function SignUpPage() {
                 setLoading(false);
             }
             // If successful, OAuth will redirect to callback page
-        } catch (err) {
+        } catch (error) {
+            logger.warn("AUTH: Facebook sign-up failed:", error);
             setError("Failed to sign up with Facebook");
             setLoading(false);
         }

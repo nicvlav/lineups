@@ -125,8 +125,8 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
   `}
                     style={{ top: `${adjustedNameOffset}px` }}
                 >
-                    {name.split(" ").map((word, i) => (
-                        <span key={i} style={{ whiteSpace: "nowrap", marginBottom: "0.1em" }}>
+                    {name.split(" ").map((word) => (
+                        <span key={word} style={{ whiteSpace: "nowrap", marginBottom: "0.1em" }}>
                             {word}
                         </span>
                     ))}

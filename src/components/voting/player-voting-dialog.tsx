@@ -4,11 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/context/auth-context";
-import { logger } from "@/lib/logger";
 import type { UserVoteEntry } from "@/hooks/use-voting";
+import { logger } from "@/lib/logger";
 import type { Player } from "@/types/players";
-import { CategorizedStats, StatCategoryNameMap, statLabelMap } from "@/types/stats";
 import type { StatCategory, StatsKey } from "@/types/stats";
+import { CategorizedStats, StatCategoryNameMap, statLabelMap } from "@/types/stats";
 
 interface VoteData {
     playerId: string;
@@ -38,7 +38,7 @@ export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = fals
             try {
                 logger.debug("Existing votes data:", existingVotes.votes);
                 // Check if it's already an object or needs parsing
-                let existingVoteData;
+                let existingVoteData: Record<string, number>;
                 if (typeof existingVotes.votes === "string") {
                     existingVoteData = JSON.parse(existingVotes.votes);
                 } else {
@@ -124,29 +124,29 @@ export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = fals
     const VoteSlider = ({ statKey }: { statKey: StatsKey }) => (
         <div className="space-y-3">
             <div className="flex justify-between items-center">
-                <label className="text-sm font-medium">{statLabelMap[statKey]}</label>
+                <span className="text-sm font-medium">{statLabelMap[statKey]}</span>
                 <Badge variant="outline" className="min-w-[3rem] justify-center">
                     {votes[statKey]}/10
                 </Badge>
             </div>
 
             <div className="grid grid-cols-10 gap-1">
-                {Array.from({ length: 10 }, (_, i) => (
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((rating) => (
                     <button
-                        key={i + 1}
+                        key={rating}
                         type="button"
-                        onClick={(e) => handleVoteChange(statKey, i + 1, e)}
+                        onClick={(e) => handleVoteChange(statKey, rating, e)}
                         className={`
               h-10 w-full rounded-md border-2 transition-all duration-150 text-xs font-medium
               flex items-center justify-center touch-manipulation
               ${
-                  votes[statKey] === i + 1
+                  votes[statKey] === rating
                       ? "border-primary bg-primary text-primary-foreground shadow-md"
                       : "border-muted bg-background hover:border-primary/50 hover:bg-muted"
               }
             `}
                     >
-                        {i + 1}
+                        {rating}
                     </button>
                 ))}
             </div>

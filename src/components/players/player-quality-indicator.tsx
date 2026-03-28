@@ -5,7 +5,7 @@
  * Uses centralized quality thresholds for consistency across the app.
  */
 
-import React from "react";
+import type React from "react";
 import { getRatingTierScheme } from "@/lib/color-system";
 
 interface PlayerQualityIndicatorProps {

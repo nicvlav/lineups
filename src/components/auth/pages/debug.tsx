@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function AuthDebugPage() {
     const navigate = useNavigate();
-    const [debugInfo, setDebugInfo] = useState<any>({});
+    const [debugInfo, setDebugInfo] = useState<Record<string, unknown>>({});
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {

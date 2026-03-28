@@ -469,7 +469,7 @@ function calculateZonalDistributionBalance(teamA: FastTeam, teamB: FastTeam, deb
         logger.debug(formatZoneScores(teamA, teamB));
         logger.debug(formatZonePeakScores(teamA, teamB));
         logger.debug(formatZoneAverageRatings(teamA, teamB));
-        logger.debug("  Per-Zone Raw Ratios (DEF, MID, ATT): " + rawZoneRatios.map((r) => r.toFixed(3)).join(", "));
+        logger.debug(`  Per-Zone Raw Ratios (DEF, MID, ATT): ${rawZoneRatios.map((r) => r.toFixed(3)).join(", ")}`);
         logger.debug(`  Thresholds: Perfect≥${t.perfect}, Acceptable≥${t.acceptable}, Poor≤${t.poor}`);
         logger.debug(`  Zone Winners: ${directionality.winners.join(", ")}`);
         logger.debug(
@@ -622,7 +622,7 @@ function calculateStrikerBalance(teamA: FastTeam, teamB: FastTeam, debug: boolea
 
     const totalSpecialists = teamAMetrics.specialists + teamBMetrics.specialists;
 
-    if (totalSpecialists == 0) {
+    if (totalSpecialists === 0) {
         specialistBalance = 1.0;
     } else if (totalSpecialists % 2 === 1) {
         specialistBalance =

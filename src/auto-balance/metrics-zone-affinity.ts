@@ -141,7 +141,7 @@ export function calculateZoneAffinity(
     const specialistStrength = 1.0 - actualEntropy / maxEntropy;
 
     // Flexibility (star-relative): base flexibility from spread (std), then penalize by specialist + mean
-    const variance = (Math.pow(defScore - mean, 2) + Math.pow(midScore - mean, 2) + Math.pow(attScore - mean, 2)) / 3;
+    const variance = ((defScore - mean) ** 2 + (midScore - mean) ** 2 + (attScore - mean) ** 2) / 3;
     const std = Math.sqrt(variance);
 
     const maxStdApprox = (scoreRangeMax || 100) * 0.47;
@@ -150,7 +150,7 @@ export function calculateZoneAffinity(
     const quality01 = Math.max(0, Math.min(1, mean / (scoreRangeMax || 1)));
     const penalty = Math.max(0, Math.min(0.95, specialistStrength * starFlexFactor + quality01 * meanFlexPenalty));
 
-    const flexScale = Math.pow(1 - penalty, flexCurveExponent);
+    const flexScale = (1 - penalty) ** flexCurveExponent;
     let flexibility = baseFlex * flexScale;
 
     const minClamp = clampFlexTo.min ?? 0.05;
@@ -235,7 +235,7 @@ export function calculatePeakTalentBalance(
     const attPeakBalance = calculateBasicDifferenceRatio(teamAPeaks.att, teamBPeaks.att);
 
     // Geometric mean - all zones must have balanced peaks
-    return Math.pow(defPeakBalance * midPeakBalance * attPeakBalance, 1 / 3);
+    return (defPeakBalance * midPeakBalance * attPeakBalance) ** (1 / 3);
 }
 
 /**
@@ -269,7 +269,7 @@ export function calculateCountSplitPenalty(countA: number, countB: number, shapi
     const normalized = excessDeviation / maxDeviation;
 
     // Apply shaping power: higher power = harsher penalties for deviations
-    return 1.0 - Math.pow(normalized, shapingPower);
+    return 1.0 - normalized ** shapingPower;
 }
 
 /**
@@ -326,7 +326,7 @@ export function calculateAffinityBalanceScore(
     const attBalance = calculateBasicDifferenceRatio(teamASums.att, teamBSums.att);
 
     // Geometric mean ensures all zones must be balanced (one bad zone tanks score)
-    return Math.pow(defBalance * midBalance * attBalance, 1 / 3);
+    return (defBalance * midBalance * attBalance) ** (1 / 3);
 }
 
 /**

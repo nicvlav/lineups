@@ -161,6 +161,7 @@ export function PlayerRow({ player }: PlayerRowProps) {
                         </div>
                     ) : (
                         <button
+                            type="button"
                             onClick={handleStartEdit}
                             className="text-left hover:text-primary transition-colors font-medium"
                         >

@@ -1,5 +1,6 @@
 import { openDB } from "idb";
-import React, { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
+import type React from "react";
+import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { autoBalance } from "@/auto-balance";
@@ -9,15 +10,15 @@ import { usePlayers } from "@/hooks/use-players";
 import { logger } from "@/lib/logger";
 import { gameStateSchema } from "@/lib/schemas";
 import { decodeStateFromURL } from "@/lib/utils/url-state";
-import { calculateScoresForStats } from "@/types/players";
 import type { GamePlayer, Player, ScoredGamePlayer } from "@/types/players";
+import { calculateScoresForStats } from "@/types/players";
 import {
     emptyZoneScores,
-    Formation,
+    type Formation,
     getPointForPosition,
     normalizedDefaultWeights,
-    Point,
-    Position,
+    type Point,
+    type Position,
 } from "@/types/positions";
 
 const DB_NAME = "GameDB";
@@ -247,6 +248,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     };
 
     // Initialize on mount and URL state changes
+    // biome-ignore lint/correctness/useExhaustiveDependencies: initializeGameState excluded to prevent re-init loops; urlState triggers re-init on URL change
     useEffect(() => {
         if (isStaticRoute) return;
 
@@ -256,6 +258,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }, [urlState, isStaticRoute]);
 
     // Auto-save to IndexedDB when game state changes (debounced)
+    // biome-ignore lint/correctness/useExhaustiveDependencies: saveState excluded to prevent save loops on every render
     useEffect(() => {
         if (isStaticRoute) return;
 

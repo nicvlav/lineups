@@ -3,8 +3,8 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlayerVoting } from "@/components/voting/player-voting-dialog";
-import { useSubmitVote } from "@/hooks/use-voting";
 import type { UserVoteEntry } from "@/hooks/use-voting";
+import { useSubmitVote } from "@/hooks/use-voting";
 import type { Player } from "@/types/players";
 
 interface PlayerVoteCardProps {

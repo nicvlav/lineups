@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import PitchPlayer from "@/components/game/pitch/pitch-player";
 import { usePlayers } from "@/hooks/use-players";
 import type { ScoredGamePlayer } from "@/types/players";
@@ -32,12 +32,12 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
     // Update container size on mount, resize, and whenever the container might change
-    const updateContainerSize = () => {
+    const updateContainerSize = useCallback(() => {
         if (containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
             setContainerSize({ width: rect.width, height: rect.height });
         }
-    };
+    }, []);
 
     useEffect(() => {
         // Initial size calculation
@@ -47,7 +47,7 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
         window.addEventListener("resize", updateContainerSize);
 
         return () => window.removeEventListener("resize", updateContainerSize);
-    }, []);
+    }, [updateContainerSize]);
 
     // Observe container size changes (for sidebar toggle, etc.)
     useEffect(() => {
@@ -63,7 +63,7 @@ const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, pl
             }
             observer.disconnect();
         };
-    }, []);
+    }, [updateContainerSize]);
 
     const findPlayerName = (player: ScoredGamePlayer) => {
         if (!player.isGuest && player.id in players) {

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --bun vite",
-    "build": "bun run typecheck && bun --bun vite build",
+    "build": "bun run typecheck && bun run lint && bun --bun vite build",
     "build:node": "npm run typecheck:node && npx vite build",
     "typecheck": "bun tsc -b --noEmit",
     "typecheck:node": "npx tsc -b --noEmit",

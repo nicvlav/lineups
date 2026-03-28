@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/context/auth-context";
 import { useAddPlayer, usePlayers } from "@/hooks/use-players";
@@ -148,7 +148,7 @@ export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
                     )}
 
                     <div className="space-y-2">
-                        <Label className="text-sm font-medium">Select Player:</Label>
+                        <span className="text-sm font-medium">Select Player:</span>
                         {!showCreateNew ? (
                             <>
                                 <Select value={selectedPlayerId || ""} onValueChange={setSelectedPlayerId}>

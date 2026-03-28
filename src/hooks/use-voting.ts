@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/context/auth-context";
-import { usePlayers } from "@/hooks/use-players";
-import { playersKeys } from "@/hooks/use-players";
+import { playersKeys, usePlayers } from "@/hooks/use-players";
 import { categorizeError, ensureValidSession } from "@/lib/session-manager";
 import { STAT_TO_DB } from "@/lib/stat-mapping";
 import { supabase } from "@/lib/supabase";

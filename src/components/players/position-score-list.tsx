@@ -1,9 +1,7 @@
 "use client";
 
-import React from "react";
-import {} from "@/types/players";
-import { normalizedDefaultWeights, Position, ZoneScores } from "@/types/positions";
-import {} from "@/types/stats";
+import type React from "react";
+import { normalizedDefaultWeights, type Position, type ZoneScores } from "@/types/positions";
 
 type PositionScoreListProps = {
     zoneFit: ZoneScores;

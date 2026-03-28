@@ -16,8 +16,8 @@ import { categorizeError, ensureValidSession } from "@/lib/session-manager";
 import { DB_AVG_TO_STAT, STAT_TO_DB } from "@/lib/stat-mapping";
 import { supabase } from "@/lib/supabase";
 import type { Player } from "@/types/players";
-import { defaultStatScores } from "@/types/stats";
 import type { PlayerStats } from "@/types/stats";
+import { defaultStatScores } from "@/types/stats";
 
 // =====================================================
 // QUERY KEYS
@@ -68,7 +68,7 @@ function convertColumnsToPlayerStats(player: Record<string, unknown>): PlayerSta
             stats[statKey] = value * 10;
         } else if (typeof value === "string") {
             const numValue = parseFloat(value);
-            if (!isNaN(numValue) && numValue > 0) {
+            if (!Number.isNaN(numValue) && numValue > 0) {
                 stats[statKey] = numValue * 10;
             }
         }

@@ -21,15 +21,22 @@ import { INDEX_TO_POSITION, POSITION_COUNT, ZONE_POSITIONS } from "./constants";
 import { getStarCount } from "./debug-tools";
 import { getFastFormation } from "./formation";
 import { calculateMetrics } from "./metrics-balance";
+import type { BalanceConfiguration } from "./metrics-config";
+import { calculateExtendedOptimalStarDistribution, calculateShapedPenaltyScore } from "./metrics-star-penalty";
 import {
     calculateGuidedSelectionConfig,
     evaluateAssignedStarDistribution,
     selectGuidedStarSplit,
 } from "./metrics-star-scoring";
-import { calculateExtendedOptimalStarDistribution, calculateShapedPenaltyScore } from "./metrics-star-penalty";
-import type { ExtendedOptimalStats, RankedStarSplit } from "./types";
-import type { BalanceConfiguration } from "./metrics-config";
-import type { AssignmentContext, FastPlayer, FastTeam, SimulationResult, Teams } from "./types";
+import type {
+    AssignmentContext,
+    ExtendedOptimalStats,
+    FastPlayer,
+    FastTeam,
+    RankedStarSplit,
+    SimulationResult,
+    Teams,
+} from "./types";
 import {
     createFastTeam,
     createPositionComparator,
