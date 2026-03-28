@@ -10,13 +10,17 @@ import { queryClient } from "@/lib/query-client";
 
 const App = () => {
     const currentUrl = new URL(window.location.href);
-    const urlState = currentUrl.search;
+    // Only capture the "state" param (game state sharing URLs), not auth params like "code"
+    const hasGameState = currentUrl.searchParams.has("state");
+    const urlState = hasGameState ? currentUrl.search : null;
 
     useEffect(() => {
-        if (urlState) {
-            window.history.replaceState(null, "", currentUrl.pathname);
+        if (hasGameState) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("state");
+            window.history.replaceState(null, "", url.pathname + url.search);
         }
-    }, [urlState]);
+    }, [hasGameState]);
 
     return (
         <QueryClientProvider client={queryClient}>

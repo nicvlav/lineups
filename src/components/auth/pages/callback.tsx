@@ -13,142 +13,54 @@ export default function AuthCallbackPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const handleAuthCallback = async () => {
-            try {
-                // Check Facebook auth debug info
-                const fbDebug = localStorage.getItem("fb_auth_debug");
+        // Check for OAuth errors in URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const authError = urlParams.get("error");
+        const errorCode = urlParams.get("error_code");
+        const errorDescription = urlParams.get("error_description");
 
-                // Log mobile browser state and detect mode switching
-                const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-                    navigator.userAgent
-                );
-                const currentViewport = window.innerWidth;
-                const isDesktopMode = currentViewport > 768 && isMobileDevice;
+        if (authError) {
+            logger.error("Auth callback error:", { authError, errorCode, errorDescription });
+            if (errorCode === "otp_expired") {
+                setError("Email verification link has expired. Please sign up again to get a new link.");
+            } else {
+                setError(errorDescription ? decodeURIComponent(errorDescription) : authError);
+            }
+            setLoading(false);
+            return;
+        }
 
-                // Mobile state detection for recovery logic
-
-                // Check if Facebook forced desktop mode on a mobile device
-                if (fbDebug) {
-                    const debugInfo = JSON.parse(fbDebug);
-                    const wasInitiallyMobile = debugInfo.isMobileDevice && debugInfo.currentViewport < 768;
-                    const nowInDesktopMode = isDesktopMode;
-
-                    if (wasInitiallyMobile && nowInDesktopMode) {
-                        // Store session tokens in localStorage for mobile mode recovery
-                        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                        const accessToken = hashParams.get("access_token");
-                        const refreshToken = hashParams.get("refresh_token");
-
-                        if (accessToken) {
-                            localStorage.setItem(
-                                "mobile_session_recovery",
-                                JSON.stringify({
-                                    access_token: accessToken,
-                                    refresh_token: refreshToken,
-                                    timestamp: Date.now(),
-                                    originalViewport: debugInfo.currentViewport,
-                                })
-                            );
-                        }
-                    }
-                }
-
-                // First, get the current URL hash and search params
-                const urlParams = new URLSearchParams(window.location.search);
-                const hashParams = new URLSearchParams(window.location.hash.substring(1));
-
-                // Check for errors first
-                const authError = urlParams.get("error") || hashParams.get("error");
-                const errorCode = urlParams.get("error_code") || hashParams.get("error_code");
-                const errorDescription = urlParams.get("error_description") || hashParams.get("error_description");
-
-                if (authError) {
-                    logger.error("Auth error from URL:", { authError, errorCode, errorDescription });
-
-                    if (errorCode === "otp_expired") {
-                        setError("Email verification link has expired. Please sign up again to get a new link.");
-                    } else {
-                        setError(errorDescription ? decodeURIComponent(errorDescription) : authError);
-                    }
-                    setLoading(false);
-                    return;
-                }
-
-                // Check if we have auth tokens in the hash
-                const accessToken = hashParams.get("access_token");
-                const refreshToken = hashParams.get("refresh_token");
-
-                if (accessToken) {
-                    logger.info("Found access token in URL, setting session...");
-
-                    // Set the session using the tokens from the URL
-                    const { data, error } = await supabase.auth.setSession({
-                        access_token: accessToken,
-                        refresh_token: refreshToken || "",
-                    });
-
-                    if (error) {
-                        logger.error("Error setting session:", error);
-                        setError(error.message);
-                    } else if (data.session) {
-                        logger.info("Session set successfully:", data.session.user.email);
-                        navigate("/", { replace: true });
-                    } else {
-                        setError("Failed to create session from tokens");
-                    }
-                    setLoading(false);
-                    return;
-                }
-
-                // Fallback: Handle the OAuth callback with URL parameters or existing session
-                logger.debug("CALLBACK: About to call getSession in callback...");
-
-                // Add timeout to getSession in callback too (mobile issue)
-                const callbackSessionPromise = supabase.auth.getSession();
-                const callbackTimeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("callback getSession timeout")), 2000)
-                );
-
-                let sessionResult;
-                try {
-                    sessionResult = await Promise.race([callbackSessionPromise, callbackTimeoutPromise]);
-                } catch (timeoutError) {
-                    logger.warn("CALLBACK: getSession timed out, assuming auth is already handled...");
-                    // If getSession times out in callback, just redirect - auth context has already handled it
-                    logger.debug("CALLBACK: Redirecting to home due to timeout...");
-                    navigate("/", { replace: true });
-                    return;
-                }
-
-                const { data, error } = sessionResult as any;
-                logger.debug("CALLBACK: getSession result:", { hasSession: !!data.session, error: error?.message });
-
-                if (error) {
-                    logger.error("Auth callback error:", error);
-                    setError(error.message);
-                } else if (data.session) {
-                    logger.info("Session found:", data.session.user.email);
-                    logger.debug("CALLBACK: Redirecting to home from session found...");
-                    // Successfully authenticated, redirect to home
-                    navigate("/", { replace: true });
-                } else {
-                    logger.debug("No session in callback, but user might already be signed in. Redirecting to home...");
-                    logger.debug("CALLBACK: Redirecting to home from no session...");
-                    // If we're here, the auth listener has likely already handled the session
-                    // Just redirect to home and let the main app handle the auth state
-                    navigate("/", { replace: true });
-                }
-            } catch (err) {
-                logger.error("Unexpected error:", err);
-                setError("An unexpected error occurred during authentication");
-                setLoading(false);
+        // With PKCE flow, Supabase exchanges the ?code= param for a session automatically.
+        // Wait for the session to establish, then redirect home.
+        let redirected = false;
+        const redirect = () => {
+            if (!redirected) {
+                redirected = true;
+                navigate("/", { replace: true });
             }
         };
 
-        // Add a small delay to ensure the auth state has time to update
-        const timer = setTimeout(handleAuthCallback, 1000);
+        // Listen for auth state change (PKCE code exchange triggers SIGNED_IN)
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((event) => {
+            if (event === "SIGNED_IN") {
+                redirect();
+            }
+        });
 
-        return () => clearTimeout(timer);
+        // Session may already be established before the listener was set up
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) redirect();
+        });
+
+        // Safety timeout — redirect home regardless after 5s
+        const timeout = setTimeout(redirect, 5000);
+
+        return () => {
+            subscription.unsubscribe();
+            clearTimeout(timeout);
+        };
     }, [navigate]);
 
     if (loading) {
@@ -202,6 +114,5 @@ export default function AuthCallbackPage() {
         );
     }
 
-    // This shouldn't render, but just in case
     return null;
 }
