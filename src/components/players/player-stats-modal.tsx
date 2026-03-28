@@ -1,23 +1,25 @@
 /**
- * Modern Player Stats Modal
+ * Player Stats Modal
  *
- * Completely redesigned player stats popup with:
- * - Relative archetype visualization (always starts at 100%)
- * - Quality level indicators with centralized star system
- * - Specialist determination with play style descriptors
- * - Responsive grid layout (stacks on mobile)
- * - Admin-only detailed stats section
+ * Opened from player cards. Shows:
+ * - Quality tier + zone classification + play style buzzwords
+ * - Position fit with relative archetype bars
+ * - Admin-only detailed stats breakdown
  */
 
 import { List } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import PlayerQualityIndicator from "@/components/players/player-quality-indicator";
 import RelativeArchetypeBars from "@/components/players/relative-archetype-bars";
 import Modal from "@/components/shared/modal";
-import Panel, { PanelSection } from "@/components/shared/panel";
 import { useAuth } from "@/context/auth-context";
-import { getArchetypeTextColor, getStatBarColor, getStatTextColor } from "@/lib/color-system";
+import {
+    getArchetypeTextColor,
+    getRatingTierScheme,
+    getStatBarColor,
+    getStatTextColor,
+    getTierBgClass,
+} from "@/lib/color-system";
 import { classifyPlayerByZone, getPlayStyleBuzzwords, getPrimaryArchetypeId } from "@/lib/player-quality";
 import { getAllPositionArchetypeGroups, getTopPositionGroups } from "@/lib/positions/calculator";
 import { calculateRelativeScore } from "@/lib/utils/relative-scoring";
@@ -38,14 +40,8 @@ interface ModernPlayerStatsModalProps {
     stats: Record<StatsKey, number>;
 }
 
-// Admin check
 const ADMIN_USER_ID = "24115871-04fe-4111-b048-18f7e3e976fc";
-const isAdmin = (userId: string | undefined): boolean => {
-    if (!userId) return false;
-    return userId === ADMIN_USER_ID;
-};
-
-// Color utilities now imported from unified color system
+const isAdmin = (userId: string | undefined): boolean => userId === ADMIN_USER_ID;
 
 const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
     player,
@@ -63,74 +59,63 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
     if (!player) return null;
 
     const overallRounded = Math.round(overall);
+    const tierScheme = getRatingTierScheme(overallRounded);
+    const tierBg = getTierBgClass(overallRounded);
 
-    // Get specialist info
     const primaryArchetypeId = getPrimaryArchetypeId(archetypeScores);
     const buzzwords = primaryArchetypeId ? getPlayStyleBuzzwords(primaryArchetypeId) : [];
 
     const zoneScores = structuredClone(emptyZoneScores);
-
     for (const position in archetypeScores) {
         zoneScores[position as Position] = archetypeScores[position].bestScore;
     }
-
-    // Get zone classification
     const zoneClassification = classifyPlayerByZone(zoneScores);
 
-    // Get top position groups with threshold
     const topPositionGroups = getTopPositionGroups(archetypeScores, 5, 3);
-
-    // Get top position groups with threshold
     const bestScore = topPositionGroups.length
-        ? topPositionGroups[0].archetypes.reduce((prev, current) => {
-              return prev.score > current.score ? prev : current;
-          }).score
+        ? topPositionGroups[0].archetypes.reduce((prev, current) => (prev.score > current.score ? prev : current)).score
         : 0;
-
-    // Get ALL position groups for expanded view
     const allPositionGroups = getAllPositionArchetypeGroups(archetypeScores);
 
-    // Calculate stats for admin view
     const values = Object.entries(stats).map(([_, value]) => value);
     const allStatAverage = values.reduce((sum, v) => sum + v, 0) / (values.length || 1);
 
     return (
         <Modal title={player.name} isOpen={isOpen} onClose={onClose}>
-            <div className="flex flex-col h-[85vh] min-w-[300px] max-w-[1100px] ">
-                {/* ============ HEADER: Quality + Zone Classification ============ */}
-                <div className="sticky top-0 bg-background/95 sm z-10 pb-4 border-b border-border/40 space-y-3">
-                    <div></div>
-                    {/* Quality Badge + Zone Badge */}
-                    <div className="flex justify-between flex-wrap">
-                        <div className="flex items-center">
-                            <PlayerQualityIndicator overall={overallRounded} size="md" variant="badge" />
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border/40">
-                                <span className="text-xs font-semibold text-foreground">
+            <div className="flex flex-col h-[85vh] min-w-75 max-w-275">
+                {/* Header */}
+                <div className="border-b border-border/40 pt-3 pb-3 flex gap-3">
+                    <div className={`w-0.5 rounded-full my-1 ${tierBg}`} />
+                    <div className="flex-1 space-y-2">
+                        {/* Tier + Zone + Admin toggle */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${tierScheme.subtle}`}>
+                                    {tierScheme.label}
+                                </span>
+                                <span className="text-xs font-medium text-muted-foreground">
                                     {zoneClassification.specialistType}
                                 </span>
                             </div>
+
+                            {isAdmin(user?.id) && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDetailedStats(!showDetailedStats)}
+                                    className="text-xs px-2 py-1 rounded-md bg-muted hover:bg-muted/80 transition-colors font-medium"
+                                >
+                                    {showDetailedStats ? "Hide Numbers" : "Show Numbers"}
+                                </button>
+                            )}
                         </div>
 
-                        {isAdmin(user?.id) && (
-                            <button
-                                type="button"
-                                onClick={() => setShowDetailedStats(!showDetailedStats)}
-                                className="text-xs px-3 py-1.5 rounded-md bg-accent hover:bg-accent/80 transition-colors font-medium"
-                            >
-                                {showDetailedStats ? "Hide Numbers" : "Show Numbers"}
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Specialist Info */}
-                    <div className="space-y-2">
                         {/* Buzzwords */}
                         {buzzwords.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
+                            <div className="flex flex-wrap gap-1">
                                 {buzzwords.map((word) => (
                                     <span
                                         key={word}
-                                        className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30"
+                                        className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20"
                                     >
                                         {word}
                                     </span>
@@ -140,163 +125,147 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                     </div>
                 </div>
 
-                {/* ============ MAIN CONTENT ============ */}
-                <div className="mt-4 space-y-4 pb-4 pr-4 pl-4 overflow-y-auto">
-                    {/* Top Position Groups with Relative Archetype Bars */}
-                    <PanelSection
-                        title="Position Fit"
-                        subtitle={
-                            showAllPositions
-                                ? "All positions with archetype scores"
-                                : "Top positions shown relative to best archetype"
-                        }
-                        headerAction={
-                            <button
-                                type="button"
-                                onClick={() => setShowAllPositions(!showAllPositions)}
-                                className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-muted hover:bg-muted/80 transition-colors"
-                            >
-                                <List className="w-3 h-3 " />
-                                {showAllPositions ? "Show Top Only" : "Show All"}
-                            </button>
-                        }
-                    >
-                        <div className="space-y-3 ">
-                            {(showAllPositions ? allPositionGroups : topPositionGroups).map((posGroup) => {
-                                // Handle both data structures
-                                const position = posGroup.position;
-                                const bestArchetypeId =
-                                    "bestArchetypeId" in posGroup
-                                        ? posGroup.bestArchetypeId
-                                        : (posGroup.archetypes.find((a) => a.isBest)?.archetypeId ?? "");
-                                const archetypes =
-                                    "allArchetypes" in posGroup ? posGroup.allArchetypes : posGroup.archetypes;
+                {/* Content */}
+                <div className="mt-3 space-y-3 pb-4 px-1 overflow-y-auto">
+                    {/* Position Fit header */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-sm font-semibold">Position Fit</h3>
+                            <p className="text-[10px] text-muted-foreground">
+                                {showAllPositions ? "All positions" : "Top positions relative to best"}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowAllPositions(!showAllPositions)}
+                            className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+                        >
+                            <List className="w-3 h-3" />
+                            {showAllPositions ? "Top" : "All"}
+                        </button>
+                    </div>
 
-                                const archetypeData = getArchetypeById(bestArchetypeId);
-                                const bestArchetype =
-                                    archetypes.find((a) => a.archetypeId === bestArchetypeId) ?? archetypes[0];
+                    {/* Position groups */}
+                    <div className="space-y-2">
+                        {(showAllPositions ? allPositionGroups : topPositionGroups).map((posGroup) => {
+                            const position = posGroup.position;
+                            const bestArchetypeId =
+                                "bestArchetypeId" in posGroup
+                                    ? posGroup.bestArchetypeId
+                                    : (posGroup.archetypes.find((a) => a.isBest)?.archetypeId ?? "");
+                            const archetypes =
+                                "allArchetypes" in posGroup ? posGroup.allArchetypes : posGroup.archetypes;
 
-                                return (
-                                    <Panel key={position} variant="card" padding="md">
-                                        {/* Position Header */}
-                                        <div className="mb-3 pb-2 border-b border-border/30">
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-bold text-base text-foreground">{position}</span>
-                                                {showDetailedStats && bestArchetype && (
-                                                    <span
-                                                        className={`text-sm font-semibold ${getArchetypeTextColor(
-                                                            calculateRelativeScore(bestArchetype.score, bestScore)
-                                                        )}`}
-                                                    >
-                                                        {Math.round(bestArchetype.score)}
-                                                    </span>
-                                                )}
-                                            </div>
+                            const archetypeData = getArchetypeById(bestArchetypeId);
+                            const bestArchetype =
+                                archetypes.find((a) => a.archetypeId === bestArchetypeId) ?? archetypes[0];
+
+                            return (
+                                <div key={position} className="bg-card border border-border/30 rounded-lg p-3">
+                                    {/* Position header */}
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div>
+                                            <span className="font-bold text-sm">{position}</span>
                                             {archetypeData && (
-                                                <span className="text-xs text-muted-foreground">
-                                                    {archetypeData.strengthLabels.slice(0, 2).join(" • ")}
+                                                <span className="text-[10px] text-muted-foreground ml-2">
+                                                    {archetypeData.strengthLabels.slice(0, 2).join(" · ")}
                                                 </span>
                                             )}
                                         </div>
+                                        {showDetailedStats && bestArchetype && (
+                                            <span
+                                                className={`text-xs font-semibold ${getArchetypeTextColor(
+                                                    calculateRelativeScore(bestArchetype.score, bestScore)
+                                                )}`}
+                                            >
+                                                {Math.round(bestArchetype.score)}
+                                            </span>
+                                        )}
+                                    </div>
 
-                                        {/* Relative Bars */}
-                                        <RelativeArchetypeBars
-                                            archetypes={archetypes.map((a) => ({
-                                                archetypeId: a.archetypeId,
-                                                score: a.score,
-                                            }))}
-                                            bestScore={bestScore}
-                                            maxVisibleDefault={showAllPositions ? 999 : 3}
-                                            showNumbers={showDetailedStats}
-                                            compact={true}
-                                        />
-                                    </Panel>
-                                );
-                            })}
-                        </div>
-                    </PanelSection>
+                                    <RelativeArchetypeBars
+                                        archetypes={archetypes.map((a) => ({
+                                            archetypeId: a.archetypeId,
+                                            score: a.score,
+                                        }))}
+                                        bestScore={bestScore}
+                                        maxVisibleDefault={showAllPositions ? 999 : 3}
+                                        showNumbers={showDetailedStats}
+                                        compact={true}
+                                    />
+                                </div>
+                            );
+                        })}
+                    </div>
 
-                    {/* Admin: Detailed Stats Section */}
+                    {/* Admin: Detailed Stats */}
                     {isAdmin(user?.id) && showDetailedStats && (
-                        <PanelSection title="Detailed Statistics" subtitle="Raw player attributes">
-                            <Panel variant="glass" padding="md">
-                                {/* Summary Stats */}
-                                <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-accent/20 rounded-lg">
-                                    <div className="flex justify-between">
-                                        <span className="text-sm font-medium text-muted-foreground">
-                                            Overall Rating:
-                                        </span>
-                                        <span className={`text-sm font-bold ${getStatTextColor(overallRounded)}`}>
-                                            {overallRounded}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-sm font-medium text-muted-foreground">Avg Stat:</span>
-                                        <span className={`text-sm font-bold ${getStatTextColor(allStatAverage)}`}>
-                                            {Math.round(allStatAverage)}
-                                        </span>
-                                    </div>
+                        <div className="space-y-3 pt-2 border-t border-border/30">
+                            {/* Summary */}
+                            <div className="flex gap-4 text-xs">
+                                <div className="flex gap-1">
+                                    <span className="text-muted-foreground">Overall:</span>
+                                    <span className={`font-bold ${getStatTextColor(overallRounded)}`}>
+                                        {overallRounded}
+                                    </span>
                                 </div>
+                                <div className="flex gap-1">
+                                    <span className="text-muted-foreground">Avg:</span>
+                                    <span className={`font-bold ${getStatTextColor(allStatAverage)}`}>
+                                        {Math.round(allStatAverage)}
+                                    </span>
+                                </div>
+                            </div>
 
-                                {/* Category Breakdown */}
-                                <div className="space-y-4">
-                                    {Object.entries(CategorizedStats)
-                                        .filter(([category]) => category !== "morale")
-                                        .map(([category, keys]) => {
-                                            const avg = averages[category as StatCategory] ?? 0;
-                                            const avgRounded = Math.round(avg);
+                            {/* Category breakdown */}
+                            {Object.entries(CategorizedStats)
+                                .filter(([category]) => category !== "morale")
+                                .map(([category, keys]) => {
+                                    const avg = averages[category as StatCategory] ?? 0;
+                                    const avgRounded = Math.round(avg);
 
-                                            return (
-                                                <div key={category} className="space-y-2">
-                                                    {/* Category Header */}
-                                                    <div className="flex items-center justify-between">
-                                                        <h4 className="font-bold text-sm uppercase tracking-wide text-foreground">
-                                                            {category}
-                                                        </h4>
-                                                        <span
-                                                            className={`text-sm font-bold ${getStatTextColor(avgRounded)}`}
-                                                        >
-                                                            {avgRounded}
-                                                        </span>
-                                                    </div>
+                                    return (
+                                        <div key={category} className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="font-bold text-xs uppercase tracking-wider">
+                                                    {category}
+                                                </h4>
+                                                <span className={`text-xs font-bold ${getStatTextColor(avgRounded)}`}>
+                                                    {avgRounded}
+                                                </span>
+                                            </div>
 
-                                                    {/* Category Progress Bar */}
-                                                    <div className="w-full h-2 bg-muted rounded-full">
+                                            <div className="w-full h-1.5 bg-muted rounded-full">
+                                                <div
+                                                    className={`${getStatBarColor(avgRounded)} h-1.5 rounded-full`}
+                                                    style={{ width: `${Math.min(avgRounded, 100)}%` }}
+                                                />
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-1.5">
+                                                {keys.map((key) => {
+                                                    const statRounded = Math.round(stats[key] ?? 0);
+                                                    return (
                                                         <div
-                                                            className={`${getStatBarColor(avgRounded)} h-2 rounded-full`}
-                                                            style={{ width: `${Math.min(avgRounded, 100)}%` }}
-                                                        />
-                                                    </div>
-
-                                                    {/* Individual Stats Grid */}
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        {keys.map((key) => {
-                                                            const statValue = stats[key] ?? 0;
-                                                            const statRounded = Math.round(statValue);
-
-                                                            return (
-                                                                <div
-                                                                    key={key}
-                                                                    className="flex justify-between items-center bg-accent/50 rounded-md p-2"
-                                                                >
-                                                                    <span className="text-xs font-medium text-muted-foreground">
-                                                                        {statLabelMap[key]}
-                                                                    </span>
-                                                                    <span
-                                                                        className={`text-xs font-bold ${getStatTextColor(statRounded)}`}
-                                                                    >
-                                                                        {statRounded}
-                                                                    </span>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                </div>
-                            </Panel>
-                        </PanelSection>
+                                                            key={key}
+                                                            className="flex justify-between items-center bg-muted/30 rounded px-2 py-1"
+                                                        >
+                                                            <span className="text-[10px] text-muted-foreground">
+                                                                {statLabelMap[key]}
+                                                            </span>
+                                                            <span
+                                                                className={`text-[10px] font-bold tabular-nums ${getStatTextColor(statRounded)}`}
+                                                            >
+                                                                {statRounded}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                        </div>
                     )}
                 </div>
             </div>

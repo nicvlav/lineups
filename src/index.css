@@ -164,12 +164,17 @@
   background-attachment: fixed;
 }
 
-/* Tier-based card left border colors */
+/* Tier-based accent colors (borders + backgrounds) */
 .tier-border-elite { border-left-color: var(--quality-elite); }
 .tier-border-excellent { border-left-color: var(--quality-excellent); }
 .tier-border-great { border-left-color: var(--quality-great); }
 .tier-border-good { border-left-color: var(--quality-good); }
 .tier-border-solid { border-left-color: var(--quality-solid); }
+.tier-bg-elite { background-color: var(--quality-elite); }
+.tier-bg-excellent { background-color: var(--quality-excellent); }
+.tier-bg-great { background-color: var(--quality-great); }
+.tier-bg-good { background-color: var(--quality-good); }
+.tier-bg-solid { background-color: var(--quality-solid); }
 
 /* Modern Custom Scrollbar */
 .custom-scrollbar {

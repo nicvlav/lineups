@@ -139,6 +139,21 @@ export function getTierBorderClass(rating: number): string {
     return TIER_BORDER_CLASSES[getRatingTier(rating)];
 }
 
+const TIER_BG_CLASSES: Record<ColorTier, string> = {
+    elite: "tier-bg-elite",
+    excellent: "tier-bg-excellent",
+    great: "tier-bg-great",
+    good: "tier-bg-good",
+    solid: "tier-bg-solid",
+};
+
+/**
+ * Get CSS class for background colored by quality tier
+ */
+export function getTierBgClass(rating: number): string {
+    return TIER_BG_CLASSES[getRatingTier(rating)];
+}
+
 // ============ Archetype Bars (Relative to Best) ============
 
 /**
