@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { Toaster } from "sonner";
 import Layout from "@/components/layout/layout";
 import { AuthProvider } from "@/context/auth-context";
-import { SupabaseProvider } from "@/context/supabase-provider";
+
 import { ThemeProvider } from "@/context/theme-provider";
 import { queryClient } from "@/lib/query-client";
 
@@ -20,16 +20,14 @@ const App = () => {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <SupabaseProvider>
-                <div className="h-dvh flex flex-col">
-                    <AuthProvider url={urlState}>
-                        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-                            <Layout />
-                            <Toaster />
-                        </ThemeProvider>
-                    </AuthProvider>
-                </div>
-            </SupabaseProvider>
+            <div className="h-dvh flex flex-col">
+                <AuthProvider url={urlState}>
+                    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+                        <Layout />
+                        <Toaster />
+                    </ThemeProvider>
+                </AuthProvider>
+            </div>
             {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
         </QueryClientProvider>
     );
