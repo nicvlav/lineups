@@ -4,6 +4,7 @@ import { useAuth } from "@/context/auth-context";
 import { usePlayers } from "@/context/players-provider";
 import { playersKeys } from "@/hooks/use-players";
 import { categorizeError, ensureValidSession } from "@/lib/session-manager";
+import { STAT_TO_DB } from "@/lib/stat-mapping";
 import { supabase } from "@/lib/supabase";
 
 interface VoteData {
@@ -19,37 +20,6 @@ interface VotingStats {
     playersVoted: number;
     totalVoters: number;
 }
-
-const STAT_MAPPING: Record<string, string> = {
-    anticipation: "anticipation",
-    defWorkrate: "def_workrate",
-    composure: "composure",
-    offTheBall: "off_the_ball",
-    vision: "vision",
-    firstTouch: "first_touch",
-    passing: "passing",
-    tackling: "tackling",
-    finishing: "finishing",
-    speed: "speed",
-    strength: "strength",
-    agility: "agility",
-    attWorkrate: "att_workrate",
-    crossing: "crossing",
-    positioning: "positioning",
-    technique: "technique",
-    dribbling: "dribbling",
-    decisions: "decisions",
-    marking: "marking",
-    heading: "heading",
-    aggression: "aggression",
-    flair: "flair",
-    longShots: "long_shots",
-    stamina: "stamina",
-    teamwork: "teamwork",
-    determination: "determination",
-    leadership: "leadership",
-    concentration: "concentration",
-};
 
 // Query Keys
 export const votingKeys = {
@@ -147,7 +117,7 @@ async function submitVoteToDatabase(voteData: VoteData, userProfileId: string) {
         updated_at: new Date().toISOString(),
     };
 
-    for (const [frontendKey, dbColumn] of Object.entries(STAT_MAPPING)) {
+    for (const [frontendKey, dbColumn] of Object.entries(STAT_TO_DB)) {
         const voteValue = voteData.votes[frontendKey];
         if (typeof voteValue === "number") {
             dbVoteData[dbColumn] = voteValue;

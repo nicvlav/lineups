@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { v4 as uuidv4 } from "uuid";
 import { categorizeError, ensureValidSession } from "@/lib/session-manager";
 import { supabase } from "@/lib/supabase";
+import { DB_AVG_TO_STAT, STAT_TO_DB } from "@/lib/stat-mapping";
 import { Player } from "@/types/players";
 import { defaultStatScores, PlayerStats } from "@/types/stats";
 
@@ -48,48 +49,17 @@ interface UpdatePlayerParams {
 // STAT CONVERSION UTILITIES
 // =====================================================
 
-const statMapping: Record<string, keyof PlayerStats> = {
-    anticipation_avg: "anticipation",
-    def_workrate_avg: "defWorkrate",
-    composure_avg: "composure",
-    off_the_ball_avg: "offTheBall",
-    vision_avg: "vision",
-    first_touch_avg: "firstTouch",
-    passing_avg: "passing",
-    tackling_avg: "tackling",
-    finishing_avg: "finishing",
-    speed_avg: "speed",
-    strength_avg: "strength",
-    agility_avg: "agility",
-    att_workrate_avg: "attWorkrate",
-    crossing_avg: "crossing",
-    positioning_avg: "positioning",
-    technique_avg: "technique",
-    dribbling_avg: "dribbling",
-    decisions_avg: "decisions",
-    marking_avg: "marking",
-    heading_avg: "heading",
-    aggression_avg: "aggression",
-    flair_avg: "flair",
-    long_shots_avg: "longShots",
-    stamina_avg: "stamina",
-    teamwork_avg: "teamwork",
-    determination_avg: "determination",
-    leadership_avg: "leadership",
-    concentration_avg: "concentration",
-};
-
 function convertPlayerStatsToColumns(stats: PlayerStats): Record<string, number> {
     const columns: Record<string, number> = {};
-    for (const [dbColumn, statKey] of Object.entries(statMapping)) {
-        columns[dbColumn] = Math.round(stats[statKey] / 10);
+    for (const [stat, dbColumn] of Object.entries(STAT_TO_DB)) {
+        columns[`${dbColumn}_avg`] = Math.round(stats[stat as keyof PlayerStats] / 10);
     }
     return columns;
 }
 
 function convertColumnsToPlayerStats(player: Record<string, unknown>): PlayerStats {
     const stats = { ...defaultStatScores };
-    for (const [dbColumn, statKey] of Object.entries(statMapping)) {
+    for (const [dbColumn, statKey] of Object.entries(DB_AVG_TO_STAT)) {
         const value = player[dbColumn];
         if (typeof value === "number" && value > 0) {
             stats[statKey] = value * 10;
