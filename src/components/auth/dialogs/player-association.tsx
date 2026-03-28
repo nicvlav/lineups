@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/context/auth-context";
-import { usePlayers } from "@/context/players-provider";
+import { useAddPlayer, usePlayers } from "@/hooks/use-players";
 
 interface PlayerAssociationProps {
     open: boolean;
@@ -17,7 +17,8 @@ interface PlayerAssociationProps {
 
 export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
     const { user, updateAssociatedPlayer } = useAuth();
-    const { players: playersRecord, addPlayer } = usePlayers();
+    const { data: playersRecord = {} } = usePlayers();
+    const addPlayerMutation = useAddPlayer();
     const players = Object.values(playersRecord);
 
     const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(
@@ -38,10 +39,10 @@ export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
         }
 
         setLoading(true);
-        try {
-            // Create new player with default stats (most: 6.0, finishing/composure/concentration: 4.0, dribbling/offTheBall: 5.0)
-            addPlayer(
-                {
+        // Create new player with default stats (most: 6.0, finishing/composure/concentration: 4.0, dribbling/offTheBall: 5.0)
+        addPlayerMutation.mutate(
+            {
+                player: {
                     name: newPlayerName.trim(),
                     stats: {
                         anticipation: 60,
@@ -75,8 +76,9 @@ export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
                     },
                     vote_count: 0,
                 },
-                async (newPlayer) => {
-                    // Associate with the newly created player
+            },
+            {
+                onSuccess: async (newPlayer) => {
                     const { error } = await updateAssociatedPlayer(newPlayer.id);
                     if (error) {
                         toast.error(`Failed to associate with new player: ${error.message}`);
@@ -86,13 +88,14 @@ export function PlayerAssociation({ open, onClose }: PlayerAssociationProps) {
                         setNewPlayerName("");
                         onClose();
                     }
-                }
-            );
-        } catch {
-            toast.error("Failed to create new player");
-        } finally {
-            setLoading(false);
-        }
+                    setLoading(false);
+                },
+                onError: (error) => {
+                    toast.error(`Failed to create new player: ${error.message}`);
+                    setLoading(false);
+                },
+            }
+        );
     };
 
     const handleSave = async () => {

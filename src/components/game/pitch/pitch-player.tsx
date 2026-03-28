@@ -2,7 +2,7 @@ import { User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import PitchPlayerDialog from "@/components/players/player-dialog";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
-import { usePlayers } from "@/context/players-provider";
+import { usePlayers } from "@/hooks/use-players";
 import { useTapHandler } from "@/hooks/use-tap-handler";
 import { ScoredGamePlayer } from "@/types/players";
 
@@ -26,7 +26,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
     containerHeight,
 }) => {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const { players } = usePlayers();
+    const { data: players = {} } = usePlayers();
     const { shouldAnimate, animationSource } = usePitchAnimation();
     const [hasAnimated, setHasAnimated] = useState(false);
     const previousPositionRef = useRef({ left: initialLeft, top: initialTop });

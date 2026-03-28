@@ -4,7 +4,7 @@ import Modal from "@/components/shared/modal";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGame } from "@/context/game-provider";
-import { usePlayers } from "@/context/players-provider";
+import { usePlayers } from "@/hooks/use-players";
 import { getArchetypeBarColor } from "@/lib/color-system";
 import { calculateScoresForStats } from "@/lib/utils/player-scoring";
 import { applyVisualScaling, calculateAllRelativeScores } from "@/lib/utils/relative-scoring";
@@ -191,7 +191,7 @@ interface PlayerDialogProps {
 }
 
 const PitchPlayerDialog: React.FC<PlayerDialogProps> = ({ player, isOpen, onClose }) => {
-    const { players } = usePlayers();
+    const { data: players = {} } = usePlayers();
     const { removeFromGame, currentFormation } = useGame();
 
     const fullPlayer = player.id ? players[player.id] : null;

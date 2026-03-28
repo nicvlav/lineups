@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/context/auth-context";
-import { usePlayers } from "@/context/players-provider";
+import { usePlayers } from "@/hooks/use-players";
 
 interface PlayerAssignmentProps {
     open: boolean;
@@ -17,7 +17,7 @@ interface PlayerAssignmentProps {
 
 export function PlayerAssignment({ open, onClose, mandatory = false }: PlayerAssignmentProps) {
     const { user, assignPlayer, forceSignOut } = useAuth();
-    const { players: playersRecord } = usePlayers();
+    const { data: playersRecord = {} } = usePlayers();
     const players = Object.values(playersRecord);
 
     const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");

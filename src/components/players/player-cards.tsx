@@ -4,7 +4,7 @@ import { ActionBarSingle } from "@/components/ui/action-bar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usePlayers } from "@/context/players-provider";
+import { usePlayers } from "@/hooks/use-players";
 import { calculateArchetypeScores } from "@/lib/positions/calculator";
 import { cn } from "@/lib/utils";
 import { getTopPositions, getZoneAverages } from "@/types/players";
@@ -12,7 +12,7 @@ import { getTopPositions, getZoneAverages } from "@/types/players";
 export type CardViewMode = "minimal" | "archetypes" | "face-stats";
 
 const PlayerCards = () => {
-    const { players } = usePlayers();
+    const { data: players = {} } = usePlayers();
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [cardViewMode, setCardViewMode] = useState<CardViewMode>("archetypes");
 

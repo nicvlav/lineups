@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/context/auth-context";
-import { usePlayers } from "@/context/players-provider";
+import { usePlayers } from "@/hooks/use-players";
 import { playersKeys } from "@/hooks/use-players";
 import { categorizeError, ensureValidSession } from "@/lib/session-manager";
 import { STAT_TO_DB } from "@/lib/stat-mapping";
@@ -191,7 +191,7 @@ export function useUserVotes() {
 // Hook: Submit Vote Mutation
 export function useSubmitVote() {
     const { user } = useAuth();
-    const { players } = usePlayers();
+    const { data: players = {} } = usePlayers();
     const queryClient = useQueryClient();
 
     return useMutation({

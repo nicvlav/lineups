@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useGame } from "@/context/game-provider";
-import { usePlayers } from "@/context/players-provider";
+import { usePlayers } from "@/hooks/use-players";
 import { ANIMATIONS, GAP } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ interface TeamGeneratorProps {
 
 const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
-    const { players } = usePlayers();
+    const { data: players = {} } = usePlayers();
     const { gamePlayers, generateTeams } = useGame();
     const navigate = useNavigate();
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import PitchPlayer from "@/components/game/pitch/pitch-player";
-import { usePlayers } from "@/context/players-provider";
+import { usePlayers } from "@/hooks/use-players";
 import { ScoredGamePlayer } from "@/types/players";
 
 interface PlayerContainerProps {
@@ -28,7 +28,7 @@ const getPlayerPosition = (
 
 const PlayerContainer: React.FC<PlayerContainerProps> = ({ team, teamPlayers, playerSize }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const { players } = usePlayers();
+    const { data: players = {} } = usePlayers();
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
     // Update container size on mount, resize, and whenever the container might change

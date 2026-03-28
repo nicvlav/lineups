@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { autoBalance } from "@/auto-balance";
 import { useAuth } from "@/context/auth-context";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
-import { usePlayers } from "@/context/players-provider";
+import { usePlayers } from "@/hooks/use-players";
 import { logger } from "@/lib/logger";
 import { gameStateSchema } from "@/lib/schemas";
 import { decodeStateFromURL } from "@/lib/utils/url-state";
@@ -99,7 +99,7 @@ interface GameProviderProps {
 
 export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const { urlState, clearUrlState } = useAuth();
-    const { players } = usePlayers();
+    const { data: players = {} } = usePlayers();
     const { triggerAnimation } = usePitchAnimation();
     const location = useLocation();
 

@@ -9,7 +9,7 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PlayerVoting } from "@/components/voting/player-voting-dialog";
 import { useAuth } from "@/context/auth-context";
-import { useVoting } from "@/context/voting-provider";
+import { useSubmitVote, useUserVotes } from "@/hooks/use-voting";
 import { useDeletePlayer, useUpdatePlayer } from "@/hooks/use-players";
 import { Player } from "@/types/players";
 
@@ -25,7 +25,8 @@ export function PlayerRow({ player }: PlayerRowProps) {
 
     const updatePlayerMutation = useUpdatePlayer();
     const deletePlayerMutation = useDeletePlayer();
-    const { submitVote, userVotes } = useVoting();
+    const submitVoteMutation = useSubmitVote();
+    const { data: userVotes = new Map() } = useUserVotes();
     const { user } = useAuth();
 
     const canDelete = player.vote_count === 0;
@@ -103,7 +104,7 @@ export function PlayerRow({ player }: PlayerRowProps) {
     };
 
     const handleVoteSubmit = async (voteData: { playerId: string; votes: Record<string, number> }) => {
-        await submitVote(voteData);
+        await submitVoteMutation.mutateAsync(voteData);
         handleCloseVoting();
     };
 

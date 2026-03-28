@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlayerVoteCard } from "@/components/voting/player-vote-card";
 import { useAuth } from "@/context/auth-context";
-import { useVoting } from "@/context/voting-provider";
-import { usePlayers as usePlayersQuery } from "@/hooks/use-players";
+import { usePlayers } from "@/hooks/use-players";
+import { useUserVotes } from "@/hooks/use-voting";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 
@@ -19,12 +19,12 @@ export default function VotingPage() {
     const { user, canVote, isVerified } = useAuth();
 
     // Use direct query hook with background refresh for voting page
-    const { data: playersRecord = {} } = usePlayersQuery({
+    const { data: playersRecord = {} } = usePlayers({
         refetchInterval: 30000, // 30s background refresh while on voting page
         refetchIntervalInBackground: false, // Stop when tab inactive
     });
 
-    const { userVotes } = useVoting();
+    const { data: userVotes = new Map() } = useUserVotes();
 
     const players = Object.values(playersRecord);
 

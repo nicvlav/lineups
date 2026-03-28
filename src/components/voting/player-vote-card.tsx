@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlayerVoting } from "@/components/voting/player-voting-dialog";
-import { useVoting } from "@/context/voting-provider";
+import { useSubmitVote } from "@/hooks/use-voting";
 import { Player } from "@/types/players";
 
 interface PlayerVoteCardProps {
@@ -15,7 +15,7 @@ interface PlayerVoteCardProps {
 
 export const PlayerVoteCard = ({ player, hasVoted, userVote, onVoteComplete }: PlayerVoteCardProps) => {
     const [isVoting, setIsVoting] = useState(false);
-    const { submitVote } = useVoting();
+    const submitVoteMutation = useSubmitVote();
 
     const handleOpenVoting = () => {
         setIsVoting(true);
@@ -27,7 +27,7 @@ export const PlayerVoteCard = ({ player, hasVoted, userVote, onVoteComplete }: P
     };
 
     const handleVoteSubmit = async (voteData: { playerId: string; votes: Record<string, number> }) => {
-        await submitVote(voteData);
+        await submitVoteMutation.mutateAsync(voteData);
         handleCloseVoting();
     };
 
