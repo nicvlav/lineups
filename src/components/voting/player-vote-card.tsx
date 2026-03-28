@@ -34,7 +34,7 @@ export const PlayerVoteCard = ({ player, hasVoted, userVote, onVoteComplete }: P
 
     return (
         <>
-            <div className="flex items-center justify-between py-3 px-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+            <div className="flex items-center justify-between py-4 px-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
                 <div className="flex items-center gap-3 flex-1">
                     {hasVoted ? (
                         <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />

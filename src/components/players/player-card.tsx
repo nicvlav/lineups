@@ -2,7 +2,7 @@ import type React from "react";
 import { useState } from "react";
 import PlayerStatsModal from "@/components/players/player-stats-modal";
 import { useTapHandler } from "@/hooks/use-tap-handler";
-import { getCardUnderlineColor, getStatBarColor } from "@/lib/color-system";
+import { getStatBarColor, getTierBorderClass } from "@/lib/color-system";
 import { getTopArchetypes } from "@/lib/positions/calculator";
 import { getArchetypeById } from "@/types/archetypes";
 import type { Player, PlayerArchetypeScores, ZoneAverages } from "@/types/players";
@@ -37,19 +37,19 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     });
 
     const overallRounded = Math.round(overall);
-    const accentColor = getCardUnderlineColor(overallRounded);
+    const tierBorder = getTierBorderClass(overallRounded);
 
     // Get top 5 archetypes sorted by score (no threshold, just top 5)
-    // Use 999 as threshold to effectively disable threshold filtering
     const topArchetypes = getTopArchetypes(archetypeScores, 5, 3);
+    const topPosition = topArchetypes[0]?.position;
 
     return (
         <>
             <div
                 {...tapHandlers}
-                className="select-none flex flex-col bg-card/95 hover:bg-card hover:shadow-lg border border-border/30 hover:border-border/50 transition-all duration-200 rounded-lg p-3 cursor-pointer group"
+                className={`select-none flex flex-col bg-card/95 hover:bg-card hover:shadow-lg border border-border/20 border-l-2 ${tierBorder} hover:border-border/40 transition-all duration-200 rounded-lg p-3 cursor-pointer group`}
             >
-                {/* Name + Avatar Row */}
+                {/* Name + Position Row */}
                 <div className="flex items-center gap-2 mb-2">
                     {player.avatar_url && (
                         <img
@@ -62,10 +62,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                         />
                     )}
                     <span className="font-semibold text-sm text-foreground truncate flex-1">{playerName}</span>
+                    {topPosition && (
+                        <span className="text-[10px] font-semibold text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded shrink-0">
+                            {topPosition}
+                        </span>
+                    )}
                 </div>
-
-                {/* Subtle colored separator */}
-                <div className={`h-0.5 w-full ${accentColor} rounded-full mb-3`} />
 
                 {/* Conditional Content Based on View Mode */}
                 {viewMode === "minimal" && (
@@ -115,12 +117,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                             const statRounded = Math.round(stat.value);
                             return (
                                 <div key={stat.label} className="flex items-center gap-2">
-                                    <span className="text-[9px] font-medium text-muted-foreground w-6 uppercase">
+                                    <span className="text-xs font-medium text-muted-foreground w-6 uppercase">
                                         {stat.label}
                                     </span>
-                                    <div className="flex-1 h-1 bg-muted rounded-full">
+                                    <div className="flex-1 h-1.5 bg-muted rounded-full">
                                         <div
-                                            className={`${getStatBarColor(statRounded)} h-1 rounded-full transition-all duration-300`}
+                                            className={`${getStatBarColor(statRounded)} h-1.5 rounded-full transition-all duration-300`}
                                             style={{ width: `${Math.min(statRounded, 100)}%` }}
                                         />
                                     </div>
