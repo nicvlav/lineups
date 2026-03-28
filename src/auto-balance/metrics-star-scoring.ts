@@ -8,7 +8,7 @@
  */
 
 import type { BalanceConfiguration } from "./metrics-config";
-import { calculateBasicDifferenceRatio, generateCombinations } from "./metrics-helpers";
+import { calculateBasicDifferenceRatio, generateCombinations, oddSplitBaseline } from "./metrics-helpers";
 import {
     calculateAffinityBalanceScore,
     calculateCountSplitPenalty,
@@ -331,8 +331,7 @@ export function scoreStarSplit(
         // Quality already ensures better stars go to smaller team - zone diversity is secondary
         const smallerCount = Math.min(countA, countB);
 
-        // Fading baseline: 1v2: 0.85, 2v3: 0.75, 3v4: 0.70, 4v5: 0.65, etc.
-        const baselineScore = Math.max(0.6, 0.95 - smallerCount * 0.1);
+        const baselineScore = oddSplitBaseline(smallerCount);
         specialistCountBalance = baselineScore;
     } else {
         // EVEN SPLITS: Calculate actual specialist count balance

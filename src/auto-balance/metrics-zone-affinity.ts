@@ -8,7 +8,7 @@
  * @module auto-balance/metrics-zone-affinity
  */
 
-import { calculateBasicDifferenceRatio } from "./metrics-helpers";
+import { calculateBasicDifferenceRatio, oddSplitBaseline } from "./metrics-helpers";
 import type { ZoneAffinityProfile } from "./types";
 
 /**
@@ -211,9 +211,7 @@ export function calculatePeakTalentBalance(
     const isOdd = (teamAProfiles.length + teamBProfiles.length) % 2 === 1;
 
     if (isOdd) {
-        // 1v2: 0.85, 2v3: 0.75, 3v4: 0.70, 4v5: 0.65, etc.
-        const baselineScore = Math.max(0.6, 0.95 - smallerCount * 0.1);
-        return baselineScore;
+        return oddSplitBaseline(smallerCount);
     }
 
     // Find peak affinity in each zone for each team
@@ -298,10 +296,7 @@ export function calculateAffinityBalanceScore(
     const isOdd = (teamAProfiles.length + teamBProfiles.length) % 2 === 1;
 
     if (isOdd) {
-        // Return near-neutral baseline that fades as teams get larger
-        // 1v2: 0.85, 2v3: 0.75, 3v4: 0.70, 4v5: 0.65, etc.
-        const baselineScore = Math.max(0.6, 0.95 - smallerCount * 0.1);
-        return baselineScore;
+        return oddSplitBaseline(smallerCount);
     }
 
     // Sum affinities per zone for each team
@@ -353,14 +348,12 @@ export function calculateFlexibilityBalance(
         const smallerCount = Math.min(countA, countB);
 
         // ALL ODD SPLITS: Flexibility less important than quality
-        // Use fading neutralization: 1v2: 0.85, 2v3: 0.75, 3v4: 0.70, etc.
         const avgFlexA = teamAProfiles.reduce((sum, p) => sum + p.flexibility, 0) / countA;
         const avgFlexB = teamBProfiles.reduce((sum, p) => sum + p.flexibility, 0) / countB;
         const smallerIsA = countA < countB;
         const smallerFlex = smallerIsA ? avgFlexA : avgFlexB;
 
-        // Calculate baseline that fades with team size
-        const baseline = Math.max(0.6, 0.95 - smallerCount * 0.1);
+        const baseline = oddSplitBaseline(smallerCount);
 
         // Add small bonus/penalty based on actual flexibility (max ±0.10)
         const flexScore = baseline + (smallerFlex - 0.5) * 0.2;
