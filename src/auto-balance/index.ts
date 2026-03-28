@@ -18,9 +18,9 @@ import type { BalanceMetrics } from "./types";
 import { toFastPlayer } from "./utils";
 
 /** 5v5 is the smallest meaningful game */
-const MIN_PLAYERS_FOR_BALANCE = 10;
+export const MIN_PLAYERS_FOR_BALANCE = 10;
 /** 13v13 is the largest supported formation */
-const MAX_PLAYERS_FOR_BALANCE = 26;
+export const MAX_PLAYERS_FOR_BALANCE = 26;
 
 /**
  * @param players - Array of scored players to balance

@@ -3,11 +3,13 @@ import { CheckCircle2, Users, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { MAX_PLAYERS_FOR_BALANCE, MIN_PLAYERS_FOR_BALANCE } from "@/auto-balance";
 import { ActionBarSingle } from "@/components/ui/action-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { useGame } from "@/context/game-provider";
 import { usePlayers } from "@/hooks/use-players";
 import { cn } from "@/lib/utils";
@@ -18,12 +20,18 @@ interface TeamGeneratorProps {
 
 const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
     const { data: players = {} } = usePlayers();
     const { gamePlayers, generateTeams } = useGame();
     const navigate = useNavigate();
 
     const playersArr = Object.values(players);
-    const sortedPlayers = useMemo(() => [...playersArr].sort((a, b) => a.name.localeCompare(b.name)), [playersArr]);
+    const sortedPlayers = useMemo(() => {
+        const filtered = searchQuery
+            ? playersArr.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            : playersArr;
+        return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    }, [playersArr, searchQuery]);
 
     // Initialize selected players from game
     useEffect(() => {
@@ -57,8 +65,8 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
     }, [sortedPlayers, windowWidth]);
 
     const handleGenerateTeams = async () => {
-        if (selectedPlayers.length < 10) {
-            toast.error("Need at least 10 players", {
+        if (selectedPlayers.length < MIN_PLAYERS_FOR_BALANCE) {
+            toast.error(`Need at least ${MIN_PLAYERS_FOR_BALANCE} players`, {
                 description: "Select more players to generate teams",
                 duration: 3000,
             });
@@ -88,47 +96,21 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
         );
     };
 
-    const canGenerate = selectedPlayers.length >= 10 && selectedPlayers.length <= 26;
+    const canGenerate =
+        selectedPlayers.length >= MIN_PLAYERS_FOR_BALANCE && selectedPlayers.length <= MAX_PLAYERS_FOR_BALANCE;
     const allSelected = selectedPlayers.length === playersArr.length;
 
     return (
         <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
-            {/* Status Bar */}
-            <ActionBarSingle className="h-15">
-                <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-3">
-                        <Badge variant={canGenerate ? "default" : "secondary"} className="gap-1.5">
-                            <Users />
-                            <motion.span
-                                key={selectedPlayers.length}
-                                initial={{ scale: 1.3, opacity: 0.5 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                            >
-                                {selectedPlayers.length}
-                            </motion.span>
-                            /{playersArr.length} selected
-                        </Badge>
-
-                        {!canGenerate && <span className="text-xs text-muted-foreground">Need 10-24 players</span>}
-                    </div>
-
-                    <Button
-                        variant={allSelected ? "destructive" : "outline"}
-                        size="sm"
-                        onClick={toggleAll}
-                        className={cn("h-7 text-xs", "transition-all duration-200")}
-                    >
-                        {allSelected ? (
-                            <>Clear All</>
-                        ) : (
-                            <>
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Select All
-                            </>
-                        )}
-                    </Button>
-                </div>
+            {/* Search */}
+            <ActionBarSingle>
+                <Input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search players..."
+                    className="w-full"
+                />
             </ActionBarSingle>
 
             {/* Modern Player Selection Grid */}
@@ -200,23 +182,63 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                 </CardContent>
             </Card>
 
-            {/* Modern Generate Button */}
-            <Button
-                onClick={handleGenerateTeams}
-                disabled={!canGenerate}
-                size="lg"
-                className={cn(
-                    "w-full h-12 font-semibold text-base",
-                    "transition-all duration-300",
-                    canGenerate && "shadow-lg hover:shadow-xl hover:scale-[0.98] active:scale-[0.96]",
-                    canGenerate
-                        ? "bg-linear-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-                        : "opacity-50"
-                )}
-            >
-                <Wand2 className={cn("mr-2 h-5 w-5", canGenerate && "animate-pulse")} />
-                Generate Balanced Teams
-            </Button>
+            {/* Bottom — progress row + generate button */}
+            <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                            className={cn(
+                                "h-1.5 rounded-full transition-all duration-300",
+                                canGenerate
+                                    ? "bg-(--quality-elite)"
+                                    : selectedPlayers.length > MAX_PLAYERS_FOR_BALANCE
+                                      ? "bg-destructive"
+                                      : "bg-muted-foreground/40"
+                            )}
+                            style={{
+                                width: `${Math.min((selectedPlayers.length / MAX_PLAYERS_FOR_BALANCE) * 100, 100)}%`,
+                            }}
+                        />
+                    </div>
+
+                    <Badge variant={canGenerate ? "default" : "destructive"} className="gap-0.5 tabular-nums shrink-0">
+                        <motion.span
+                            key={selectedPlayers.length}
+                            initial={{ scale: 1.3, opacity: 0.5 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                        >
+                            {selectedPlayers.length}
+                        </motion.span>
+                        /{MAX_PLAYERS_FOR_BALANCE}
+                    </Badge>
+
+                    <Button
+                        variant={allSelected ? "destructive" : "outline"}
+                        size="sm"
+                        onClick={toggleAll}
+                        className="h-7 text-xs shrink-0"
+                    >
+                        {allSelected ? "None" : "All"}
+                    </Button>
+                </div>
+
+                <Button
+                    onClick={handleGenerateTeams}
+                    disabled={!canGenerate}
+                    className={cn(
+                        "w-full h-10 font-semibold",
+                        "transition-all duration-300",
+                        canGenerate && "shadow-lg hover:shadow-xl active:scale-[0.98]",
+                        canGenerate
+                            ? "bg-linear-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                            : "opacity-50"
+                    )}
+                >
+                    <Wand2 className={cn("mr-2 h-4 w-4", canGenerate && "animate-pulse")} />
+                    Generate Balanced Teams
+                </Button>
+            </div>
         </div>
     );
 };
