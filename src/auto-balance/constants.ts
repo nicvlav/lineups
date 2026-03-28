@@ -11,13 +11,7 @@ import type { Position } from "@/types/positions";
 // Re-export new configuration system
 export { type BalanceConfiguration, DEFAULT_BALANCE_CONFIG } from "./metrics-config";
 
-/**
- * 🔍 GLOBAL DEBUG SWITCH
- * ═══════════════════════════════════════════════════════════════════════════
- * Set this to true/false to enable/disable ALL debug output
- * This overrides any other debug settings in the code
- * ═══════════════════════════════════════════════════════════════════════════
- */
+/** Global debug switch — controls all auto-balance debug output */
 export const ENABLE_DEBUG = false;
 
 /** Position indices for array-based operations */
@@ -158,19 +152,4 @@ export function getInternalZoneSkillPower(numPlayers: number): number {
     return getScaledPower(numPlayers, 0.75, 2.5);
 }
 
-/**
- * Calculates dynamic power scaling for internal variance ratio based on number of players
- *
- * Used for zone balance calculations - ensures stricter requirements for larger teams.
- *
- * @param numPlayers Total number of players
- * @returns Power value to use for internal variance scaling
- *
- * Examples:
- * - 18 players → 1.0 (gentle/linear)
- * - 20 players → 1.5 (moderate)
- * - 22+ players → 2.0 (harsh)
- */
-export function getInternalVariancePower(numPlayers: number): number {
-    return getScaledPower(numPlayers, 0.75, 1.5);
-}
+

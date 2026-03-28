@@ -182,8 +182,6 @@ export function autoBalance(
     // Convert to optimized format
     const fastPlayers = players.map(toFastPlayer);
 
-    // Run optimized Monte Carlo
-    // const result = runOptimizedMonteCarlo(fastPlayers, config, true);
     const result = runGuidedMonteCarlo(fastPlayers, config, true);
 
     if (!result) {
@@ -301,8 +299,6 @@ export function autoBalanceWithConfig(
     // Convert to optimized format
     const fastPlayers = players.map(toFastPlayer);
 
-    // Run optimized Monte Carlo
-    // const result = runOptimizedMonteCarlo(fastPlayers, config, verbose);
     const result = runGuidedMonteCarlo(fastPlayers, config, verbose);
 
     if (!result) {

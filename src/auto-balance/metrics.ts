@@ -46,7 +46,6 @@ function formatComparison(label: string, valueA: number, valueB: number, ratio: 
  * Helper function to format zone scores in a compact table
  */
 function formatZoneScores(teamA: FastTeam, teamB: FastTeam): string {
-    // const zones = ['GK', 'DEF', 'MID', 'ATT'];
     let output = "  Zone Scores:\n";
     output += "         GK      DEF     MID     ATT\n";
     output += `  A:  ${Array.from(teamA.zoneScores)
@@ -953,17 +952,7 @@ function calculateTalentDistributionBalance(teamA: FastTeam, teamB: FastTeam, de
 
     const midRatio = midDiffRatio * combinedMidfieldPenalty;
 
-    // Get dynamic power scaling for internal variance based on player count
-    // More players = harsher penalty for zone imbalance
     const skillZonePower = getInternalZoneSkillPower(numPlayers);
-
-    // Get dynamic power scaling for internal variance based on player count
-    // More players = harsher penalty for zone imbalance
-    // const internalVariancePower = getInternalVariancePower(numPlayers);
-
-    // Apply dynamic power scaling to heavily penalize distribution mismatches
-    // Power scales with player count: 18 players → power 1.0, 22+ players → power 2.0
-    // const talentDistributionRatio = (Math.pow(rawRatio, internalVariancePower) * 0.25 + Math.pow(internalSkillRatio, skillZonePower) * 0.75) * combinedMidfieldPenalty;
 
     if (debug) {
         logger.debug("Talent Distribution Balance (Player Score Std Dev):");
