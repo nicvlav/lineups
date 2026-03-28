@@ -16,6 +16,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { logger } from "@/lib/logger";
+import { squadRowSchema, userProfileRowSchema } from "@/lib/schemas";
 import { categorizeError, ensureValidSession } from "@/lib/session-manager";
 import { supabase } from "@/lib/supabase";
 
@@ -100,7 +101,7 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
     }
 
     logger.debug("USER_PROFILE: Profile fetched successfully");
-    return data;
+    return userProfileRowSchema.parse(data);
 }
 
 /**
@@ -121,8 +122,16 @@ async function fetchSquads(): Promise<Squad[]> {
         throw error;
     }
 
-    logger.debug(`SQUADS: Fetched ${data?.length || 0} squads successfully`);
-    return data || [];
+    const validSquads = (data || []).filter((row) => {
+        const parsed = squadRowSchema.safeParse(row);
+        if (!parsed.success) {
+            logger.warn("Skipping invalid squad row:", row, parsed.error.issues);
+            return false;
+        }
+        return true;
+    });
+    logger.debug(`SQUADS: Fetched ${validSquads.length} squads successfully`);
+    return validSquads as Squad[];
 }
 
 // =====================================================

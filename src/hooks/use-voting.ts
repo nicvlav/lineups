@@ -67,6 +67,7 @@ async function fetchUserVotes(userId: string | undefined): Promise<Map<string, a
 
     const votesMap = new Map();
     data?.forEach((voteRow) => {
+        if (!voteRow.player_id) return;
         const votes: Record<string, number> = {
             anticipation: voteRow.anticipation || 0,
             defWorkrate: voteRow.def_workrate || 0,

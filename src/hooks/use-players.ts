@@ -10,9 +10,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { v4 as uuidv4 } from "uuid";
+import { logger } from "@/lib/logger";
+import { playerRowSchema } from "@/lib/schemas";
 import { categorizeError, ensureValidSession } from "@/lib/session-manager";
-import { supabase } from "@/lib/supabase";
 import { DB_AVG_TO_STAT, STAT_TO_DB } from "@/lib/stat-mapping";
+import { supabase } from "@/lib/supabase";
 import { Player } from "@/types/players";
 import { defaultStatScores, PlayerStats } from "@/types/stats";
 
@@ -93,12 +95,18 @@ async function fetchPlayers(): Promise<Record<string, Player>> {
     }
 
     const playerRecord: Record<string, Player> = {};
-    for (const player of data) {
+    for (const row of data) {
+        const parsed = playerRowSchema.safeParse(row);
+        if (!parsed.success) {
+            logger.warn("Skipping invalid player row:", row, parsed.error.issues);
+            continue;
+        }
+        const player = parsed.data;
         playerRecord[player.id] = {
             id: player.id,
             name: player.name,
-            vote_count: player.vote_count || 0,
-            created_at: player.created_at,
+            vote_count: player.vote_count ?? 0,
+            created_at: player.created_at ?? undefined,
             stats: convertColumnsToPlayerStats(player as Record<string, unknown>),
         };
     }

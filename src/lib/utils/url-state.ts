@@ -7,6 +7,7 @@
 
 import LZString from "lz-string";
 import { logger } from "@/lib/logger";
+import { gameStateSchema } from "@/lib/schemas";
 import type { GamePlayer } from "@/types/players";
 import type { Formation } from "@/types/positions";
 
@@ -19,7 +20,13 @@ export const decodeStateFromURL = (search: string) => {
 
     if (encodedState) {
         try {
-            return JSON.parse(LZString.decompressFromEncodedURIComponent(encodedState));
+            const raw = JSON.parse(LZString.decompressFromEncodedURIComponent(encodedState));
+            const parsed = gameStateSchema.safeParse(raw);
+            if (!parsed.success) {
+                logger.warn("Invalid URL state shape:", parsed.error.issues);
+                return null;
+            }
+            return parsed.data;
         } catch (e) {
             logger.error("Invalid URL state", e);
         }

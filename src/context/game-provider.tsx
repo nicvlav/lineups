@@ -7,6 +7,7 @@ import { useAuth } from "@/context/auth-context";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
 import { usePlayers } from "@/context/players-provider";
 import { logger } from "@/lib/logger";
+import { gameStateSchema } from "@/lib/schemas";
 import { decodeStateFromURL } from "@/lib/utils/url-state";
 import { calculateScoresForStats, GamePlayer, Player, ScoredGamePlayer } from "@/types/players";
 import {
@@ -218,13 +219,18 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             const savedState = await getFromDB(tabKeyRef.current);
             if (savedState) {
                 try {
-                    const parsedData = JSON.parse(savedState);
-                    logger.debug(
-                        "GAME: Loaded game state from IndexedDB:",
-                        parsedData.gamePlayers ? Object.keys(parsedData.gamePlayers).length : 0,
-                        "players"
-                    );
-                    await loadJSONGamePlayers(parsedData.gamePlayers, parsedData.currentFormation);
+                    const raw = JSON.parse(savedState);
+                    const parsed = gameStateSchema.safeParse(raw);
+                    if (!parsed.success) {
+                        logger.warn("GAME: Invalid IndexedDB state shape:", parsed.error.issues);
+                    } else {
+                        logger.debug(
+                            "GAME: Loaded game state from IndexedDB:",
+                            Object.keys(parsed.data.gamePlayers).length,
+                            "players"
+                        );
+                        await loadJSONGamePlayers(parsed.data.gamePlayers, parsed.data.currentFormation ?? null);
+                    }
                 } catch (error) {
                     logger.error("GAME: Error loading from IndexedDB:", error);
                 }
