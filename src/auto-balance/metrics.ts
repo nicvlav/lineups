@@ -1168,22 +1168,22 @@ export function calculateZoneAffinity(
         baseSharpness?: number;
 
         // Spread -> sharpness mapping (logistic)
-        spreadPivot?: number;        // relative spread at which sharpness ramps up (e.g. 0.05 = 5%)
-        spreadSteepness?: number;    // logistic steepness
-        sharpnessMin?: number;       // minimum spreadFactor
-        sharpnessMax?: number;       // maximum spreadFactor
+        spreadPivot?: number; // relative spread at which sharpness ramps up (e.g. 0.05 = 5%)
+        spreadSteepness?: number; // logistic steepness
+        sharpnessMin?: number; // minimum spreadFactor
+        sharpnessMax?: number; // maximum spreadFactor
 
         // Dominance rules
         dominanceThreshold?: number; // top affinity threshold
-        dominanceMargin?: number;    // top - second threshold
+        dominanceMargin?: number; // top - second threshold
         spreadMinForDominance?: number; // absolute spread points required to declare dominance
         hardMarginOverride?: number; // if top-second >= this, dominance allowed even if spread small
 
         // Flexibility knobs (star-aware)
-        scoreRangeMax?: number;      // e.g. 100
-        starFlexFactor?: number;     // how strongly specialistStrength reduces flexibility
-        meanFlexPenalty?: number;    // additional reduction proportional to mean quality
-        flexCurveExponent?: number;  // <1 softens penalty, >1 harshens
+        scoreRangeMax?: number; // e.g. 100
+        starFlexFactor?: number; // how strongly specialistStrength reduces flexibility
+        meanFlexPenalty?: number; // additional reduction proportional to mean quality
+        flexCurveExponent?: number; // <1 softens penalty, >1 harshens
         clampFlexTo?: { min?: number; max?: number };
 
         sanitizeInputs?: boolean;
@@ -1193,15 +1193,15 @@ export function calculateZoneAffinity(
         // --- new defaults (recommended starting point)
         baseSharpness = 1.0,
 
-        spreadPivot = 0.05,        // 5% relative spread is "noticeable"
-        spreadSteepness = 25,      // how quickly sharpness ramps as spread grows
-        sharpnessMin = 0.6,        // keeps balanced stars soft
-        sharpnessMax = 2.8,        // allows decisive specialists
+        spreadPivot = 0.05, // 5% relative spread is "noticeable"
+        spreadSteepness = 25, // how quickly sharpness ramps as spread grows
+        sharpnessMin = 0.6, // keeps balanced stars soft
+        sharpnessMax = 2.8, // allows decisive specialists
 
         dominanceThreshold = 0.45,
         dominanceMargin = 0.12,
         spreadMinForDominance = 3.0, // don't label dominance for tiny spreads
-        hardMarginOverride = 0.25,   // unless top-second is HUGE
+        hardMarginOverride = 0.25, // unless top-second is HUGE
 
         scoreRangeMax = 100,
 
@@ -1278,20 +1278,14 @@ export function calculateZoneAffinity(
     const specialistStrength = 1.0 - actualEntropy / maxEntropy;
 
     // Flexibility (star-relative): base flexibility from spread (std), then penalize by specialist + mean
-    const variance =
-        (Math.pow(defScore - mean, 2) +
-            Math.pow(midScore - mean, 2) +
-            Math.pow(attScore - mean, 2)) / 3;
+    const variance = (Math.pow(defScore - mean, 2) + Math.pow(midScore - mean, 2) + Math.pow(attScore - mean, 2)) / 3;
     const std = Math.sqrt(variance);
 
     const maxStdApprox = (scoreRangeMax || 100) * 0.47;
     const baseFlex = 1 - Math.min(1, std / (maxStdApprox + 1e-9)); // [0,1]
 
     const quality01 = Math.max(0, Math.min(1, mean / (scoreRangeMax || 1)));
-    const penalty = Math.max(
-        0,
-        Math.min(0.95, specialistStrength * starFlexFactor + quality01 * meanFlexPenalty)
-    );
+    const penalty = Math.max(0, Math.min(0.95, specialistStrength * starFlexFactor + quality01 * meanFlexPenalty));
 
     const flexScale = Math.pow(1 - penalty, flexCurveExponent);
     let flexibility = baseFlex * flexScale;
@@ -1311,12 +1305,10 @@ export function calculateZoneAffinity(
     const second = items[1];
 
     let dominantZone: "def" | "mid" | "att" | "balanced" = "balanced";
-    const passesAffinityRule =
-        top.val >= dominanceThreshold || top.val - second.val >= dominanceMargin;
+    const passesAffinityRule = top.val >= dominanceThreshold || top.val - second.val >= dominanceMargin;
 
     if (passesAffinityRule) {
-        const passesSpreadGuard =
-            spread >= spreadMinForDominance || top.val - second.val >= hardMarginOverride;
+        const passesSpreadGuard = spread >= spreadMinForDominance || top.val - second.val >= hardMarginOverride;
         dominantZone = passesSpreadGuard ? top.key : "balanced";
     }
 
@@ -1357,7 +1349,7 @@ export function calculatePeakTalentBalance(
 
     if (isOdd) {
         // 1v2: 0.85, 2v3: 0.75, 3v4: 0.70, 4v5: 0.65, etc.
-        const baselineScore = Math.max(0.60, 0.95 - smallerCount * 0.10);
+        const baselineScore = Math.max(0.6, 0.95 - smallerCount * 0.1);
         return baselineScore;
     }
 
@@ -1445,7 +1437,7 @@ export function calculateAffinityBalanceScore(
     if (isOdd) {
         // Return near-neutral baseline that fades as teams get larger
         // 1v2: 0.85, 2v3: 0.75, 3v4: 0.70, 4v5: 0.65, etc.
-        const baselineScore = Math.max(0.60, 0.95 - smallerCount * 0.10);
+        const baselineScore = Math.max(0.6, 0.95 - smallerCount * 0.1);
         return baselineScore;
     }
 
@@ -1505,11 +1497,11 @@ export function calculateFlexibilityBalance(
         const smallerFlex = smallerIsA ? avgFlexA : avgFlexB;
 
         // Calculate baseline that fades with team size
-        const baseline = Math.max(0.60, 0.95 - smallerCount * 0.10);
+        const baseline = Math.max(0.6, 0.95 - smallerCount * 0.1);
 
         // Add small bonus/penalty based on actual flexibility (max ±0.10)
-        const flexScore = baseline + (smallerFlex - 0.5) * 0.20;
-        return Math.max(0.50, Math.min(1.0, flexScore));
+        const flexScore = baseline + (smallerFlex - 0.5) * 0.2;
+        return Math.max(0.5, Math.min(1.0, flexScore));
     } else {
         // EVEN SPLIT: Standard flexibility balance
         const avgFlexA = teamAProfiles.reduce((sum, p) => sum + p.flexibility, 0) / countA;
@@ -1546,9 +1538,7 @@ export function analyzePoolCharacteristics(
 
     // Quality variance (standard deviation)
     const meanQuality = starQualities.reduce((a, b) => a + b, 0) / numStars;
-    const qualityVariance = Math.sqrt(
-        starQualities.reduce((sum, q) => sum + (q - meanQuality) ** 2, 0) / numStars
-    );
+    const qualityVariance = Math.sqrt(starQualities.reduce((sum, q) => sum + (q - meanQuality) ** 2, 0) / numStars);
 
     // Specialization entropy: how diverse are the specialist types?
     const zoneCounts = { def: 0, mid: 0, att: 0, balanced: 0 };
@@ -1569,8 +1559,7 @@ export function analyzePoolCharacteristics(
 
     // Split statistics
     const bestAchievableSplit = splitScores.length > 0 ? Math.max(...splitScores) : 1.0;
-    const meanSplitScore =
-        splitScores.length > 0 ? splitScores.reduce((a, b) => a + b, 0) / splitScores.length : 1.0;
+    const meanSplitScore = splitScores.length > 0 ? splitScores.reduce((a, b) => a + b, 0) / splitScores.length : 1.0;
     const optimizationPotential = meanSplitScore > 0 ? bestAchievableSplit / meanSplitScore : 1.0;
 
     return {
@@ -1681,8 +1670,8 @@ export function scoreStarSplit(
     const isOdd = (countA + countB) % 2 === 1;
 
     // weights (adjusted for odd splits to emphasize quality over affinity)
-    let affinityWeight = 0.30;
-    let flexibilityWeight = 0.10;
+    let affinityWeight = 0.3;
+    let flexibilityWeight = 0.1;
     let countWeight = 0.15;
     let peakWeight = 0.15;
 
@@ -1692,23 +1681,23 @@ export function scoreStarSplit(
 
         if (smallerTeamSize === 1) {
             // SINGLE STAR: Quality is 70% of the decision - the best star MUST be alone
-            affinityWeight = 0.05;      // Minimal
-            flexibilityWeight = 0.10;   // Some importance
-            countWeight = 0.05;         // Minimal
-            peakWeight = 0.10;          // Minimal (quality already covers this)
+            affinityWeight = 0.05; // Minimal
+            flexibilityWeight = 0.1; // Some importance
+            countWeight = 0.05; // Minimal
+            peakWeight = 0.1; // Minimal (quality already covers this)
             // adjustedQualityWeight will be ~0.70 from dynamic strictness
         } else if (smallerTeamSize === 2) {
             // 2v3 SPLIT: Quality is 50% of decision
-            affinityWeight = 0.10;
+            affinityWeight = 0.1;
             flexibilityWeight = 0.15;
             countWeight = 0.05;
-            peakWeight = 0.20;
+            peakWeight = 0.2;
         } else {
             // Larger odd splits: More balanced weights
-            affinityWeight = 0.20;
+            affinityWeight = 0.2;
             flexibilityWeight = 0.15;
-            countWeight = 0.10;
-            peakWeight = 0.20;
+            countWeight = 0.1;
+            peakWeight = 0.2;
         }
     }
 
@@ -1827,7 +1816,7 @@ export function scoreStarSplit(
         const smallerCount = Math.min(countA, countB);
 
         // Fading baseline: 1v2: 0.85, 2v3: 0.75, 3v4: 0.70, 4v5: 0.65, etc.
-        const baselineScore = Math.max(0.60, 0.95 - smallerCount * 0.10);
+        const baselineScore = Math.max(0.6, 0.95 - smallerCount * 0.1);
         specialistCountBalance = baselineScore;
     } else {
         // EVEN SPLITS: Calculate actual specialist count balance
@@ -1835,12 +1824,20 @@ export function scoreStarSplit(
             profiles.filter((p) => p.dominantZone === zone).length;
 
         const defScore = clamp01Safe(
-            calculateCountSplitPenalty(countByZone(teamAProfiles, "def"), countByZone(teamBProfiles, "def"), shapingExponent),
+            calculateCountSplitPenalty(
+                countByZone(teamAProfiles, "def"),
+                countByZone(teamBProfiles, "def"),
+                shapingExponent
+            ),
             EPS
         );
 
         const attScore = clamp01Safe(
-            calculateCountSplitPenalty(countByZone(teamAProfiles, "att"), countByZone(teamBProfiles, "att"), shapingExponent),
+            calculateCountSplitPenalty(
+                countByZone(teamAProfiles, "att"),
+                countByZone(teamBProfiles, "att"),
+                shapingExponent
+            ),
             EPS
         );
 
@@ -1867,14 +1864,13 @@ export function scoreStarSplit(
     const wP = peakWeight / totalWeight;
 
     // If adjustedQualityWeight is 0, quality still contributes neutrally since wQ==0
-    const score =
-        Math.exp(
-            wA * Math.log(affinityBalance) +
+    const score = Math.exp(
+        wA * Math.log(affinityBalance) +
             wQ * Math.log(qualityBalance) +
             wF * Math.log(flexibilityBalance) +
             wC * Math.log(specialistCountBalance) +
             wP * Math.log(peakTalentBalance)
-        );
+    );
 
     return {
         score: Number.isFinite(score) ? score : 0,
@@ -1930,16 +1926,16 @@ export function evaluateAssignedStarDistribution(
     const teamAStars: FastPlayer[] = [];
     const teamBStars: FastPlayer[] = [];
 
-    teamA.positions.forEach(positionPlayers => {
-        positionPlayers.forEach(player => {
+    teamA.positions.forEach((positionPlayers) => {
+        positionPlayers.forEach((player) => {
             if (player.bestScore >= starThreshold) {
                 teamAStars.push(player);
             }
         });
     });
 
-    teamB.positions.forEach(positionPlayers => {
-        positionPlayers.forEach(player => {
+    teamB.positions.forEach((positionPlayers) => {
+        positionPlayers.forEach((player) => {
             if (player.bestScore >= starThreshold) {
                 teamBStars.push(player);
             }
@@ -1961,16 +1957,16 @@ export function evaluateAssignedStarDistribution(
     }
 
     // Calculate zone affinity profiles for each star
-    const teamAProfiles = teamAStars.map(p =>
+    const teamAProfiles = teamAStars.map((p) =>
         calculateZoneAffinity(p.zoneScores[1], p.zoneScores[2], p.zoneScores[3])
     );
-    const teamBProfiles = teamBStars.map(p =>
+    const teamBProfiles = teamBStars.map((p) =>
         calculateZoneAffinity(p.zoneScores[1], p.zoneScores[2], p.zoneScores[3])
     );
 
     // Get star qualities (best scores)
-    const teamAQualities = teamAStars.map(p => p.bestScore);
-    const teamBQualities = teamBStars.map(p => p.bestScore);
+    const teamAQualities = teamAStars.map((p) => p.bestScore);
+    const teamBQualities = teamBStars.map((p) => p.bestScore);
 
     // Use the same scoring function as pre-ranking
     return scoreStarSplit(teamAProfiles, teamBProfiles, teamAQualities, teamBQualities, strictness);
@@ -2016,13 +2012,7 @@ export function generateRankedStarSplits(
         const teamBQuals = teamBIndices.map((i) => starQualities[i]);
 
         // Score this split
-        const { score, breakdown } = scoreStarSplit(
-            teamAProfiles,
-            teamBProfiles,
-            teamAQuals,
-            teamBQuals,
-            strictness
-        );
+        const { score, breakdown } = scoreStarSplit(teamAProfiles, teamBProfiles, teamAQuals, teamBQuals, strictness);
 
         rankedSplits.push({
             teamAIndices,
@@ -2056,10 +2046,7 @@ export function generateRankedStarSplits(
  * @param config Guided selection configuration
  * @returns Selected star split
  */
-export function selectGuidedStarSplit(
-    rankedSplits: RankedStarSplit[],
-    config: GuidedSelectionConfig
-): RankedStarSplit {
+export function selectGuidedStarSplit(rankedSplits: RankedStarSplit[], config: GuidedSelectionConfig): RankedStarSplit {
     if (rankedSplits.length === 0) {
         throw new Error("No star splits available");
     }
@@ -2850,15 +2837,21 @@ export function calculateExtendedOptimalStarDistribution(
 
     logger.debug(`[calculateExtendedOptimalStarDistribution] ${numStars} stars, ${rankedSplits.length} combinations`);
     logger.debug(`  Best: ${best.toFixed(4)}, Worst: ${worst.toFixed(4)}, Mean: ${mean.toFixed(4)}`);
-    logger.debug(`  Score RANGE: ${(best - worst).toFixed(4)} (${((best - worst) / best * 100).toFixed(1)}% spread)`);
-    logger.debug(`  Strictness: exponent=${strictness.shapingExponent.toFixed(2)}, concentration=${strictness.concentrationParameter.toFixed(2)}`);
-    logger.debug(`  Pool: variance=${poolCharacteristics.qualityVariance.toFixed(2)}, entropy=${poolCharacteristics.specializationEntropy.toFixed(2)}`);
+    logger.debug(`  Score RANGE: ${(best - worst).toFixed(4)} (${(((best - worst) / best) * 100).toFixed(1)}% spread)`);
+    logger.debug(
+        `  Strictness: exponent=${strictness.shapingExponent.toFixed(2)}, concentration=${strictness.concentrationParameter.toFixed(2)}`
+    );
+    logger.debug(
+        `  Pool: variance=${poolCharacteristics.qualityVariance.toFixed(2)}, entropy=${poolCharacteristics.specializationEntropy.toFixed(2)}`
+    );
 
     // Log star profiles for debugging
     logger.debug(`  Star profiles:`);
     starProfiles.forEach((profile, i) => {
-        const playerName = starPlayers[i]?.original?.name || 'Unknown';
-        logger.debug(`    [${i}] ${playerName.padEnd(15)} | ${starQualities[i].toFixed(0)} | dom=${profile.dominantZone.padEnd(8)} | aff: D=${profile.affinity.def.toFixed(2)} M=${profile.affinity.mid.toFixed(2)} A=${profile.affinity.att.toFixed(2)} | str=${profile.specialistStrength.toFixed(2)} flex=${profile.flexibility.toFixed(2)}`);
+        const playerName = starPlayers[i]?.original?.name || "Unknown";
+        logger.debug(
+            `    [${i}] ${playerName.padEnd(15)} | ${starQualities[i].toFixed(0)} | dom=${profile.dominantZone.padEnd(8)} | aff: D=${profile.affinity.def.toFixed(2)} M=${profile.affinity.mid.toFixed(2)} A=${profile.affinity.att.toFixed(2)} | str=${profile.specialistStrength.toFixed(2)} flex=${profile.flexibility.toFixed(2)}`
+        );
     });
 
     // Log top 5 and bottom 3 splits for comparison
@@ -2866,14 +2859,18 @@ export function calculateExtendedOptimalStarDistribution(
         logger.debug(`  Top 5 splits:`);
         rankedSplits.slice(0, 5).forEach((split, i) => {
             const { breakdown } = split;
-            logger.debug(`    #${i}: score=${split.score.toFixed(4)} | aff=${breakdown.affinityBalance.toFixed(3)} qual=${breakdown.qualityBalance.toFixed(3)} flex=${breakdown.flexibilityBalance.toFixed(3)} cnt=${breakdown.specialistCountBalance.toFixed(3)} peak=${breakdown.peakTalentBalance.toFixed(3)} | A=[${split.teamAIndices.join(',')}] B=[${split.teamBIndices.join(',')}]`);
+            logger.debug(
+                `    #${i}: score=${split.score.toFixed(4)} | aff=${breakdown.affinityBalance.toFixed(3)} qual=${breakdown.qualityBalance.toFixed(3)} flex=${breakdown.flexibilityBalance.toFixed(3)} cnt=${breakdown.specialistCountBalance.toFixed(3)} peak=${breakdown.peakTalentBalance.toFixed(3)} | A=[${split.teamAIndices.join(",")}] B=[${split.teamBIndices.join(",")}]`
+            );
         });
 
         if (rankedSplits.length > 5) {
             logger.debug(`  Bottom 3 splits:`);
             rankedSplits.slice(-3).forEach((split) => {
                 const { breakdown } = split;
-                logger.debug(`    #${split.rank}: score=${split.score.toFixed(4)} | aff=${breakdown.affinityBalance.toFixed(3)} qual=${breakdown.qualityBalance.toFixed(3)} flex=${breakdown.flexibilityBalance.toFixed(3)} cnt=${breakdown.specialistCountBalance.toFixed(3)} peak=${breakdown.peakTalentBalance.toFixed(3)} | A=[${split.teamAIndices.join(',')}] B=[${split.teamBIndices.join(',')}]`);
+                logger.debug(
+                    `    #${split.rank}: score=${split.score.toFixed(4)} | aff=${breakdown.affinityBalance.toFixed(3)} qual=${breakdown.qualityBalance.toFixed(3)} flex=${breakdown.flexibilityBalance.toFixed(3)} cnt=${breakdown.specialistCountBalance.toFixed(3)} peak=${breakdown.peakTalentBalance.toFixed(3)} | A=[${split.teamAIndices.join(",")}] B=[${split.teamBIndices.join(",")}]`
+                );
             });
         }
     }

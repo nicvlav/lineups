@@ -472,8 +472,12 @@ export function runGuidedMonteCarlo(
         logger.debug(`     Concentration: ${guidedConfig.concentrationParameter.toFixed(2)}`);
         logger.debug(`   Pool characteristics:`);
         logger.debug(`     Quality variance: ${extendedStats.poolCharacteristics.qualityVariance.toFixed(2)}`);
-        logger.debug(`     Specialization entropy: ${extendedStats.poolCharacteristics.specializationEntropy.toFixed(2)}`);
-        logger.debug(`     Optimization potential: ${extendedStats.poolCharacteristics.optimizationPotential.toFixed(2)}`);
+        logger.debug(
+            `     Specialization entropy: ${extendedStats.poolCharacteristics.specializationEntropy.toFixed(2)}`
+        );
+        logger.debug(
+            `     Optimization potential: ${extendedStats.poolCharacteristics.optimizationPotential.toFixed(2)}`
+        );
     }
 
     // Track which splits we've used for logging
@@ -545,7 +549,9 @@ export function runGuidedMonteCarlo(
             bestResult = simResult;
 
             if (verbose && i % 20 === 0) {
-                logger.debug(`   Iteration ${i}: Best score = ${bestScore.toFixed(3)} (star mult: ${starMultiplier.toFixed(3)})`);
+                logger.debug(
+                    `   Iteration ${i}: Best score = ${bestScore.toFixed(3)} (star mult: ${starMultiplier.toFixed(3)})`
+                );
             }
         }
     }
@@ -555,7 +561,9 @@ export function runGuidedMonteCarlo(
         logger.debug(`   Best score: ${bestScore.toFixed(3)}`);
         logger.debug(`   Score balance: ${bestResult.metrics.positionalScoreBalance.toFixed(3)}`);
         logger.debug(`   Star distribution: ${bestResult.metrics.talentDistributionBalance.toFixed(3)}`);
-        logger.debug(`   Top-5 split usage: ${topSplitUsageCount}/${maxIterations} (${((100 * topSplitUsageCount) / maxIterations).toFixed(1)}%)`);
+        logger.debug(
+            `   Top-5 split usage: ${topSplitUsageCount}/${maxIterations} (${((100 * topSplitUsageCount) / maxIterations).toFixed(1)}%)`
+        );
 
         // NEW: Log the actual star distribution in the final result
         logger.debug(`   FINAL RESULT star distribution:`);
@@ -566,10 +574,10 @@ export function runGuidedMonteCarlo(
         const allPlayersInTeams: FastPlayer[] = [];
 
         // Collect all players from team A
-        bestResult.teams.teamA.positions.forEach(positionPlayers => {
-            positionPlayers.forEach(player => {
+        bestResult.teams.teamA.positions.forEach((positionPlayers) => {
+            positionPlayers.forEach((player) => {
                 if (player.isStarPlayer) {
-                    const starIdx = starPlayers.findIndex(sp => sp.original.id === player.original.id);
+                    const starIdx = starPlayers.findIndex((sp) => sp.original.id === player.original.id);
                     if (starIdx !== -1) {
                         finalTeamAStars.push(starIdx);
                         allPlayersInTeams.push(player);
@@ -579,10 +587,10 @@ export function runGuidedMonteCarlo(
         });
 
         // Collect all players from team B
-        bestResult.teams.teamB.positions.forEach(positionPlayers => {
-            positionPlayers.forEach(player => {
+        bestResult.teams.teamB.positions.forEach((positionPlayers) => {
+            positionPlayers.forEach((player) => {
                 if (player.isStarPlayer) {
-                    const starIdx = starPlayers.findIndex(sp => sp.original.id === player.original.id);
+                    const starIdx = starPlayers.findIndex((sp) => sp.original.id === player.original.id);
                     if (starIdx !== -1) {
                         finalTeamBStars.push(starIdx);
                         allPlayersInTeams.push(player);
@@ -592,8 +600,12 @@ export function runGuidedMonteCarlo(
         });
 
         // Format with player names for easier verification
-        const teamAStarsWithNames = finalTeamAStars.map(idx => `${idx}:${starPlayers[idx]?.original?.name || 'Unknown'}`).join(", ");
-        const teamBStarsWithNames = finalTeamBStars.map(idx => `${idx}:${starPlayers[idx]?.original?.name || 'Unknown'}`).join(", ");
+        const teamAStarsWithNames = finalTeamAStars
+            .map((idx) => `${idx}:${starPlayers[idx]?.original?.name || "Unknown"}`)
+            .join(", ");
+        const teamBStarsWithNames = finalTeamBStars
+            .map((idx) => `${idx}:${starPlayers[idx]?.original?.name || "Unknown"}`)
+            .join(", ");
 
         logger.debug(`     Team A stars: [${teamAStarsWithNames}]`);
         logger.debug(`     Team B stars: [${teamBStarsWithNames}]`);

@@ -151,5 +151,3 @@ export function getMidfieldPenaltyPower(numPlayers: number): number {
 export function getInternalZoneSkillPower(numPlayers: number): number {
     return getScaledPower(numPlayers, 0.75, 2.5);
 }
-
-

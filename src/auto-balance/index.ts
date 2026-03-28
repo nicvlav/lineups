@@ -201,7 +201,7 @@ export function autoBalance(
     );
 
     // if (debugMode) {
-        logger.debug(diagnostic);
+    logger.debug(diagnostic);
     // }
 
     const convertedTeams = convertToGamePlayers(result);
