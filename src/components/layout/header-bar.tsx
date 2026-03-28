@@ -18,13 +18,11 @@ interface TabIconProps {
 }
 
 const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
-    const { user, signOut } = useAuth();
+    const { user, signOut, canVote } = useAuth();
     const iconSize = compact ? 16 : 20;
 
     // Detect staging environment
     const isStaging = window.location.hostname.includes("staging");
-
-    const canVote = user !== null;
 
     const handleSignOut = async (e: React.MouseEvent) => {
         e.preventDefault();

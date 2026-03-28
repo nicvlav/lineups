@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import PlayerManager from "@/components/admin/player-manager";
 import { PlayerAssignment } from "@/components/auth/dialogs/player-assignment";
 import { SquadIdVerification } from "@/components/auth/dialogs/squad-id-verification";
@@ -12,6 +12,8 @@ import UpdatePasswordPage from "@/components/auth/pages/update-password";
 import Game from "@/components/game/game";
 import TeamGenerator from "@/components/game/team-generator";
 import HeaderBar from "@/components/layout/header-bar";
+import NotFound from "@/components/layout/not-found";
+import ProtectedRoute from "@/components/layout/protected-route";
 import PlayerCards from "@/components/players/player-cards";
 import VotingPage from "@/components/voting/voting-page";
 import { useAuth } from "@/context/auth-context";
@@ -25,8 +27,6 @@ const LayoutContent = () => {
 
     // Detect if we're on staging
     const isStaging = window.location.hostname.includes("staging");
-
-    const canVote = user !== null;
 
     // Check if current route is an auth route
     const isAuthRoute = location.pathname.startsWith("/auth");
@@ -80,15 +80,14 @@ const LayoutContent = () => {
                         <Route path="cards" element={<PlayerCards />} />
                         <Route path="generate" element={<TeamGenerator isCompact={isCompact} />} />
 
-                        {/* Admin routes - only for verified users */}
-                        {canVote && <Route path="manage" element={<PlayerManager />} />}
-                        {!canVote && <Route path="manage" element={<Navigate to="/" />} />}
+                        {/* Protected routes - only for verified users */}
+                        <Route element={<ProtectedRoute />}>
+                            <Route path="manage" element={<PlayerManager />} />
+                            <Route path="vote" element={<VotingPage />} />
+                        </Route>
 
-                        {canVote && <Route path="vote" element={<VotingPage />} />}
-                        {!canVote && <Route path="vote" element={<Navigate to="/" />} />}
-
-                        {/* Catch all - redirect to home */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
+                        {/* 404 */}
+                        <Route path="*" element={<NotFound />} />
                     </Routes>
                 </main>
 
