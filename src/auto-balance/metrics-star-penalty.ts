@@ -12,6 +12,7 @@ import { logger } from "@/lib/logger";
 import { classifyPlayerByZone } from "@/lib/player-quality";
 import { getFormationsForCount } from "@/types/formations";
 import type { Position, StarZoneClassification } from "@/types/positions";
+import { ENABLE_DEBUG } from "./constants";
 import type { BalanceConfiguration } from "./metrics-config";
 import { calculateBasicDifferenceRatio, generateCombinations } from "./metrics-helpers";
 import {
@@ -31,14 +32,18 @@ import type {
 } from "./types";
 
 /**
- * Comprehensive penalty weight configuration for star distribution
- * ALL weights centralized for easy tuning and experimentation
+ * Star distribution penalty weights
  *
- * Key Changes from Previous System:
- * - Stronger quality balance emphasis (individual + grand total)
- * - Grand total quality tracking (sum of best scores, not averages)
- * - Improved odd star handling (higher base scale, stronger quality weights)
- * - Organized by even/odd for clarity
+ * Philosophy: penalties are multiplicative — a single bad dimension tanks
+ * the overall score, which forces the optimizer to find globally balanced splits
+ * rather than splits that ace one metric and ignore others.
+ *
+ * Even splits demand strict symmetry because a perfect 50/50 is achievable.
+ * Odd splits relax structural penalties (count, zone) and lean harder on
+ * quality balance so the smaller team compensates with better individual players.
+ *
+ * Weights are empirically calibrated against 18–22 player pools. When tuning,
+ * change one weight at a time and compare ranked splits before/after.
  */
 const PENALTY_WEIGHTS = {
     /**
@@ -627,7 +632,7 @@ export function calculateOptimalStarDistribution(
 
         const result = calculateStarDistributionPenalty(teamAClassifications, teamBClassifications);
 
-        if (result.penalty > 0.3) {
+        if (ENABLE_DEBUG && result.penalty > 0.3) {
             logger.debug("==============Start Optimal Run==================", result.penalty);
             let aAttSum = 0;
             let aMidSum = 0;
