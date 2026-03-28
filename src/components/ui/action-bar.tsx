@@ -1,5 +1,4 @@
 import React from "react";
-import { ANIMATIONS, GAP } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 
 interface ActionBarProps {
@@ -33,7 +32,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({ children, className, varia
                 "dark:border-border/80 dark:shadow-lg dark:shadow-black/20",
                 variant === "compact" ? "p-2 h-12" : "p-3 h-14",
                 "mb-4",
-                ANIMATIONS.transition.normal,
+                "transition-all duration-200",
                 className
             )}
         >
@@ -82,8 +81,8 @@ export const ActionBarGroup: React.FC<ActionBarGroupProps> = ({ children, classN
                 "inline-flex items-center rounded-xl border",
                 "p-1.5 shadow-sm",
                 variantClasses[variant],
-                GAP.xs, // gap-1
-                ANIMATIONS.transition.normal,
+                "gap-1", // gap-1
+                "transition-all duration-200",
                 className
             )}
         >

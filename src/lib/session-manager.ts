@@ -140,7 +140,7 @@ export function clearVoteData(userId?: string): void {
         }
 
         keysToRemove.forEach((key) => localStorage.removeItem(key));
-    } catch {
-        // Storage access may fail in some contexts
+    } catch (error) {
+        logger.debug("SESSION: Storage cleanup failed:", error);
     }
 }

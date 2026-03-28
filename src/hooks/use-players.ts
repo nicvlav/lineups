@@ -15,8 +15,9 @@ import { playerRowSchema } from "@/lib/schemas";
 import { categorizeError, ensureValidSession } from "@/lib/session-manager";
 import { DB_AVG_TO_STAT, STAT_TO_DB } from "@/lib/stat-mapping";
 import { supabase } from "@/lib/supabase";
-import { Player } from "@/types/players";
-import { defaultStatScores, PlayerStats } from "@/types/stats";
+import type { Player } from "@/types/players";
+import { defaultStatScores } from "@/types/stats";
+import type { PlayerStats } from "@/types/stats";
 
 // =====================================================
 // QUERY KEYS

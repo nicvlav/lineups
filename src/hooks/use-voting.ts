@@ -12,6 +12,14 @@ interface VoteData {
     votes: Record<string, number>;
 }
 
+export interface UserVoteEntry {
+    player_id: string;
+    votes: Record<string, number>;
+    created_at: string;
+    isPending?: boolean;
+    optimisticTimestamp?: number;
+}
+
 // In-flight mutation tracker for deduplication
 const inFlightVotes = new Set<string>();
 
@@ -51,7 +59,7 @@ async function fetchPlayersWithVotes(): Promise<Set<string>> {
 }
 
 // Fetch user votes
-async function fetchUserVotes(userId: string | undefined): Promise<Map<string, any>> {
+async function fetchUserVotes(userId: string | undefined): Promise<Map<string, UserVoteEntry>> {
     if (!userId) return new Map();
 
     const { data: userProfile } = await supabase.from("user_profiles").select("id").eq("user_id", userId).single();
@@ -111,7 +119,7 @@ async function fetchUserVotes(userId: string | undefined): Promise<Map<string, a
 
 // Submit vote to database
 async function submitVoteToDatabase(voteData: VoteData, userProfileId: string) {
-    const dbVoteData: any = {
+    const dbVoteData: Record<string, string | number> = {
         voter_user_profile_id: userProfileId,
         player_id: voteData.playerId,
         created_at: new Date().toISOString(),
@@ -145,10 +153,10 @@ async function submitVoteToDatabase(voteData: VoteData, userProfileId: string) {
             }
             throw error;
         }
-    } catch (err: any) {
+    } catch (err: unknown) {
         clearTimeout(timeoutId);
 
-        if (err.name === "AbortError" || err?.message?.includes("aborted")) {
+        if (err instanceof Error && (err.name === "AbortError" || err.message?.includes("aborted"))) {
             throw new Error("Request timed out - please try again");
         }
 
@@ -222,10 +230,10 @@ export function useSubmitVote() {
         onMutate: async (voteData) => {
             await queryClient.cancelQueries({ queryKey: votingKeys.userVotes(user?.id) });
 
-            const previousVotes = queryClient.getQueryData<Map<string, any>>(votingKeys.userVotes(user?.id));
+            const previousVotes = queryClient.getQueryData<Map<string, UserVoteEntry>>(votingKeys.userVotes(user?.id));
 
             const optimisticTimestamp = Date.now();
-            queryClient.setQueryData<Map<string, any>>(votingKeys.userVotes(user?.id), (old) => {
+            queryClient.setQueryData<Map<string, UserVoteEntry>>(votingKeys.userVotes(user?.id), (old) => {
                 const updated = new Map(old || new Map());
                 updated.set(voteData.playerId, {
                     player_id: voteData.playerId,
@@ -275,8 +283,8 @@ export function useSubmitVote() {
                 toast.dismiss(context.toastId);
             }
         },
-        retry: (failureCount, error: any) => {
-            if (error?.message?.includes("Session expired") || error?.message?.includes("not authenticated")) {
+        retry: (failureCount, error: Error) => {
+            if (error.message?.includes("Session expired") || error.message?.includes("not authenticated")) {
                 return false;
             }
             return failureCount < 3;

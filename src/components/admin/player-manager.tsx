@@ -19,7 +19,7 @@ export default function PlayerManager() {
     const { user, canVote, isVerified } = useAuth();
 
     // Use direct query hook with background refresh for voting page
-    const { data: playersRecord = {}, isLoading } = usePlayersQuery({
+    const { data: playersRecord = {}, isPending } = usePlayersQuery({
         refetchInterval: 30000, // 30s background refresh while on voting page
         refetchIntervalInBackground: false, // Stop when tab inactive
     });
@@ -113,7 +113,7 @@ export default function PlayerManager() {
         );
     }
 
-    if (isLoading) {
+    if (isPending) {
         return (
             <div className="flex justify-center items-center h-full">
                 <div className="text-center space-y-4">

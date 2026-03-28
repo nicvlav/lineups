@@ -146,8 +146,8 @@ async function fetchSquads(): Promise<Squad[]> {
  * @returns Query result with profile data, loading, and error states
  *
  * @example
- * const { data: profile, isLoading } = useUserProfile(user.id);
- * if (isLoading) return <Loading />;
+ * const { data: profile, isPending } = useUserProfile(user.id);
+ * if (isPending) return <Loading />;
  * return <ProfileCard profile={profile} />;
  */
 export function useUserProfile(userId: string | null | undefined, enabled = true) {
@@ -167,8 +167,8 @@ export function useUserProfile(userId: string | null | undefined, enabled = true
  * @returns Query result with squads data, loading, and error states
  *
  * @example
- * const { data: squads, isLoading } = useSquads();
- * if (isLoading) return <Loading />;
+ * const { data: squads, isPending } = useSquads();
+ * if (isPending) return <Loading />;
  * return <SquadSelector squads={squads} />;
  */
 export function useSquads() {

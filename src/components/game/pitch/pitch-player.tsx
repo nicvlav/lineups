@@ -4,7 +4,7 @@ import PitchPlayerDialog from "@/components/players/player-dialog";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
 import { usePlayers } from "@/hooks/use-players";
 import { useTapHandler } from "@/hooks/use-tap-handler";
-import { ScoredGamePlayer } from "@/types/players";
+import type { ScoredGamePlayer } from "@/types/players";
 
 interface PitchPlayerProps {
     player: ScoredGamePlayer;

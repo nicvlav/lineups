@@ -4,8 +4,8 @@ import { useTapHandler } from "@/hooks/use-tap-handler";
 import { getCardUnderlineColor, getStatBarColor } from "@/lib/color-system";
 import { getTopArchetypes } from "@/lib/positions/calculator";
 import { getArchetypeById } from "@/types/archetypes";
-import { Player, PlayerArchetypeScores, ZoneAverages } from "@/types/players";
-import { StatsKey } from "@/types/stats";
+import type { Player, PlayerArchetypeScores, ZoneAverages } from "@/types/players";
+import type { StatsKey } from "@/types/stats";
 import type { CardViewMode } from "./player-cards";
 
 interface PlayerCardProps {

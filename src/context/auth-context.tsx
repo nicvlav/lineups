@@ -40,8 +40,8 @@ interface UserProfile {
 interface AuthUser {
     id: string;
     email: string | null;
-    user_metadata?: Record<string, any>;
-    app_metadata?: Record<string, any>;
+    user_metadata?: Record<string, unknown>;
+    app_metadata?: Record<string, unknown>;
     profile?: UserProfile;
 }
 
@@ -343,8 +343,8 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
         // Sign out from Supabase
         try {
             await supabase.auth.signOut();
-        } catch {
-            // Ignore errors - local state is already cleared
+        } catch (error) {
+            logger.debug("AUTH: Supabase sign-out failed (local state already cleared):", error);
         }
     };
 
@@ -417,7 +417,8 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
 
             queryClient.setQueryData(squadKeys.list(), data || []);
             return data || [];
-        } catch {
+        } catch (error) {
+            logger.warn("AUTH: Failed to fetch squads:", error);
             return [];
         }
     };
@@ -432,7 +433,8 @@ export const AuthProvider = ({ children, url }: AuthProviderProps) => {
             if (error) throw error;
 
             return { valid: true };
-        } catch {
+        } catch (error) {
+            logger.warn("AUTH: Squad validation failed:", error);
             return { valid: false, error: "Failed to validate squad" };
         }
     };

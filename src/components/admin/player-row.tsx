@@ -9,9 +9,9 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PlayerVoting } from "@/components/voting/player-voting-dialog";
 import { useAuth } from "@/context/auth-context";
-import { useSubmitVote, useUserVotes } from "@/hooks/use-voting";
 import { useDeletePlayer, useUpdatePlayer } from "@/hooks/use-players";
-import { Player } from "@/types/players";
+import { useSubmitVote, useUserVotes } from "@/hooks/use-voting";
+import type { Player } from "@/types/players";
 
 interface PlayerRowProps {
     player: Player;

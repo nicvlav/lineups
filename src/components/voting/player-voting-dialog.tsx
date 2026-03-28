@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/context/auth-context";
 import { logger } from "@/lib/logger";
-import { Player } from "@/types/players";
-import { CategorizedStats, StatCategory, StatCategoryNameMap, StatsKey, statLabelMap } from "@/types/stats";
+import type { UserVoteEntry } from "@/hooks/use-voting";
+import type { Player } from "@/types/players";
+import { CategorizedStats, StatCategoryNameMap, statLabelMap } from "@/types/stats";
+import type { StatCategory, StatsKey } from "@/types/stats";
 
 interface VoteData {
     playerId: string;
@@ -18,7 +20,7 @@ interface PlayerVotingProps {
     onVoteComplete: (voteData: VoteData) => Promise<void>;
     onClose: () => void;
     isEditing?: boolean;
-    existingVotes?: any;
+    existingVotes?: UserVoteEntry;
 }
 
 export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = false, existingVotes }: PlayerVotingProps) {

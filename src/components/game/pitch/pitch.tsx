@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import PitchPlayer from "@/components/game/pitch/pitch-player";
 import { usePlayers } from "@/hooks/use-players";
-import { ScoredGamePlayer } from "@/types/players";
+import type { ScoredGamePlayer } from "@/types/players";
 
 interface PlayerContainerProps {
     team: string;

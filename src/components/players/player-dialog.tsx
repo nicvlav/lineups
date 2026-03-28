@@ -8,8 +8,8 @@ import { usePlayers } from "@/hooks/use-players";
 import { getArchetypeBarColor } from "@/lib/color-system";
 import { calculateScoresForStats } from "@/lib/utils/player-scoring";
 import { applyVisualScaling, calculateAllRelativeScores } from "@/lib/utils/relative-scoring";
-import { Player, ScoredGamePlayer, ZoneScores } from "@/types/players";
-import { Position } from "@/types/positions";
+import type { Player, ScoredGamePlayer, ZoneScores } from "@/types/players";
+import type { Position } from "@/types/positions";
 
 const POSITION_NAMES: Record<Position, string> = {
     GK: "Goalkeeper",

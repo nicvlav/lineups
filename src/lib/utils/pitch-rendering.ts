@@ -1,15 +1,12 @@
 /**
  * Pitch Rendering Utilities
  *
- * Functions for calculating player positions and threat scores on the pitch.
- * These are legacy functions maintained for backward compatibility.
- * TODO: Gradually migrate components to use simpler archetype-based rendering.
+ * Functions for calculating player positions on the pitch.
  */
 
 import type { Formation } from "@/types/formations";
 import type { Point, ZoneScores } from "@/types/players";
-import type { Position, PositionDefinition } from "@/types/positions";
-import { POSITIONS } from "@/types/positions";
+import type { PositionDefinition } from "@/types/positions";
 import type { PositionWeighting } from "./player-scoring";
 
 /**
@@ -82,99 +79,6 @@ export function getPointForPosition(
         x: getXForPlayerPosition(position, positionIndex, numPositionEntries),
         y: yPosition,
     };
-}
-
-/**
- * @deprecated No longer used - kept for reference only
- * Calculate proximity score between a point and a position
- */
-function getProximityScore(absolutePosition: Point, position: PositionLike): number {
-    const centerThreshold = 0.3;
-    const y = 1 - Math.abs(position.absoluteYPosition - absolutePosition.y);
-    let score = y;
-
-    if (absolutePosition.x <= 1 - centerThreshold && absolutePosition.x >= centerThreshold) {
-        score = position.isCentral ? y : 0;
-    } else {
-        const x =
-            (absolutePosition.x < centerThreshold ? absolutePosition.x : 1 - absolutePosition.x) / centerThreshold;
-        score = position.isCentral ? Math.max(0, x) * y : Math.max(0, 1 - x) * y;
-    }
-
-    return score ** 10;
-}
-
-interface PositionWithWeight {
-    positionKey: Position;
-    position: PositionDefinition;
-    weight: number;
-}
-
-/**
- * @deprecated No longer used - kept for reference only
- * Filter positions by vertical proximity
- */
-function filterByVerticalProximity(positions: PositionWithWeight[], y: number): PositionWithWeight[] {
-    positions.sort((a, b) => Math.abs(a.position.absoluteYPosition - y) - Math.abs(b.position.absoluteYPosition - y));
-
-    const filteredPositions: PositionWithWeight[] = [];
-    let foundAboveOrEqual = false;
-    let foundBelow = false;
-
-    for (const pos of positions) {
-        if (pos.position.absoluteYPosition < y) {
-            if (foundBelow) continue;
-            filteredPositions.push(pos);
-            foundBelow = true;
-            if (foundAboveOrEqual) break;
-        } else {
-            if (foundAboveOrEqual) continue;
-            filteredPositions.push(pos);
-            foundAboveOrEqual = true;
-            if (foundBelow) break;
-        }
-    }
-
-    return filteredPositions;
-}
-
-/**
- * @deprecated No longer used - kept for reference only
- * Get positions with proximity weights for a point
- */
-// @ts-expect-error - Kept for reference only
-function _getProximityPositions(point: Point): PositionWithWeight[] {
-    const zonePositions: PositionWithWeight[] = [];
-
-    for (const position of Object.values(POSITIONS)) {
-        zonePositions.push({
-            position,
-            positionKey: position.position,
-            weight: 0,
-        });
-    }
-
-    const centrals = filterByVerticalProximity(
-        zonePositions.filter((z) => z.position.isCentral),
-        point.y
-    );
-    const wides = filterByVerticalProximity(
-        zonePositions.filter((z) => !z.position.isCentral),
-        point.y
-    );
-
-    const weights = [...centrals, ...wides].map((position) => {
-        return { ...position, weight: getProximityScore(point, position.position) };
-    });
-
-    const filtered = weights.filter((position) => position.weight > 0);
-    filtered.sort((a, b) => b.weight - a.weight);
-
-    if (filtered.length > 0 && filtered[0].weight === 1) {
-        return filtered.slice(0, 1);
-    }
-
-    return filtered;
 }
 
 /**

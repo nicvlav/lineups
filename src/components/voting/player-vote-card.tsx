@@ -4,12 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlayerVoting } from "@/components/voting/player-voting-dialog";
 import { useSubmitVote } from "@/hooks/use-voting";
-import { Player } from "@/types/players";
+import type { UserVoteEntry } from "@/hooks/use-voting";
+import type { Player } from "@/types/players";
 
 interface PlayerVoteCardProps {
     player: Player;
     hasVoted: boolean;
-    userVote?: any;
+    userVote?: UserVoteEntry;
     onVoteComplete?: () => void;
 }
 

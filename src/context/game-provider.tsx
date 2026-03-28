@@ -9,7 +9,8 @@ import { usePlayers } from "@/hooks/use-players";
 import { logger } from "@/lib/logger";
 import { gameStateSchema } from "@/lib/schemas";
 import { decodeStateFromURL } from "@/lib/utils/url-state";
-import { calculateScoresForStats, GamePlayer, Player, ScoredGamePlayer } from "@/types/players";
+import { calculateScoresForStats } from "@/types/players";
+import type { GamePlayer, Player, ScoredGamePlayer } from "@/types/players";
 import {
     emptyZoneScores,
     Formation,

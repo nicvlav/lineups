@@ -21,9 +21,11 @@ import { classifyPlayerByZone, getPlayStyleBuzzwords, getPrimaryArchetypeId } fr
 import { getAllPositionArchetypeGroups, getTopPositionGroups } from "@/lib/positions/calculator";
 import { calculateRelativeScore } from "@/lib/utils/relative-scoring";
 import { getArchetypeById } from "@/types/archetypes";
-import { Player, PlayerArchetypeScores, ZoneAverages } from "@/types/players";
-import { emptyZoneScores, Position } from "@/types/positions";
-import { CategorizedStats, StatCategory, StatsKey, statLabelMap } from "@/types/stats";
+import type { Player, PlayerArchetypeScores, ZoneAverages } from "@/types/players";
+import { emptyZoneScores } from "@/types/positions";
+import type { Position } from "@/types/positions";
+import { CategorizedStats, statLabelMap } from "@/types/stats";
+import type { StatCategory, StatsKey } from "@/types/stats";
 
 interface ModernPlayerStatsModalProps {
     player: Player | null;

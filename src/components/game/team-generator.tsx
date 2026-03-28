@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useGame } from "@/context/game-provider";
 import { usePlayers } from "@/hooks/use-players";
-import { ANIMATIONS, GAP } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 
 interface TeamGeneratorProps {
@@ -115,7 +114,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                         variant={allSelected ? "destructive" : "outline"}
                         size="sm"
                         onClick={toggleAll}
-                        className={cn("h-7 text-xs", ANIMATIONS.transition.normal)}
+                        className={cn("h-7 text-xs", "transition-all duration-200")}
                     >
                         {allSelected ? (
                             <>Clear All</>
@@ -145,7 +144,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                 )}
                             >
                                 {columns.map((columnPlayers, columnIndex) => (
-                                    <div key={columnIndex} className={cn("space-y-2", GAP.xs)}>
+                                    <div key={columnIndex} className={cn("space-y-2", "gap-1")}>
                                         {columnPlayers.map((player) => (
                                             <div
                                                 key={player.id}

@@ -3,7 +3,6 @@ import { NavLink } from "react-router-dom";
 import { ModeToggle } from "@/components/layout/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
-import { ANIMATIONS, GAP, LAYOUT } from "@/lib/design-tokens";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 
@@ -52,7 +51,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                     "relative group inline-flex items-center justify-center",
                     compact ? "size-10" : "size-12",
                     "rounded-xl border border-transparent",
-                    ANIMATIONS.transition.normal, // transition-all duration-200
+                    "transition-all duration-200", // transition-all duration-200
                     "hover:bg-accent/60 hover:text-accent-foreground hover:border-border/30",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     "active:scale-95 active:bg-accent/80", // Add press feedback
@@ -83,7 +82,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                     className={cn(
                         "grid grid-cols-3 items-center w-full",
                         "sm:grid-cols-3 grid-cols-[auto_1fr_auto]", // On mobile: auto-sized sides, flexible center
-                        LAYOUT.header.height, // h-16
+                        "h-16", // h-16
                         compact ? "px-4" : "px-4"
                     )}
                 >
@@ -105,7 +104,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ compact }) => {
                     {/* Navigation - Center column (always centered) */}
                     <div className="flex justify-center">
                         <nav
-                            className={cn("flex items-center justify-center", "bg-muted/10 rounded-2xl p-1", GAP.xs)} // gap-1
+                            className={cn("flex items-center justify-center", "bg-muted/10 rounded-2xl p-1", "gap-1")} // gap-1
                             role="navigation"
                             aria-label="Main navigation"
                         >

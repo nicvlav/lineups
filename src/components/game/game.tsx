@@ -6,7 +6,6 @@ import Panel from "@/components/shared/panel";
 import { ActionBarTwoColumn } from "@/components/ui/action-bar";
 import { Button } from "@/components/ui/button";
 import { useGame } from "@/context/game-provider";
-import { ANIMATIONS } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 import { encodeStateToURL } from "@/lib/utils/url-state";
 
@@ -50,7 +49,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                                 className={cn(
                                     "text-red-600 hover:text-red-700 hover:bg-red-50 w-16",
                                     "dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/30",
-                                    ANIMATIONS.transition.normal
+                                    "transition-all duration-200"
                                 )}
                                 onClick={clearGame}
                             >
@@ -63,7 +62,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                                 size="sm"
                                 className={cn(
                                     "hover:bg-accent hover:text-accent-foreground w-16",
-                                    ANIMATIONS.transition.normal
+                                    "transition-all duration-200"
                                 )}
                                 onClick={handleShare}
                             >
