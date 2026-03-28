@@ -142,7 +142,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                                     "border cursor-pointer select-none",
                                                     "transition-all duration-200",
                                                     selectedPlayers.includes(player.id)
-                                                        ? "bg-(--quality-elite-soft) border-l-2 tier-border-elite border-border/30 shadow-sm"
+                                                        ? "bg-(--quality-elite-soft)/40 border-l-2 tier-border-elite border-border/30 shadow-sm"
                                                         : "bg-card hover:bg-accent/50 border-border hover:border-accent",
                                                     "hover:scale-[1.02] active:scale-[0.98]"
                                                 )}
