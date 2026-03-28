@@ -205,7 +205,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                 className={cn(
                     "w-full h-12 font-semibold text-base",
                     "transition-all duration-300",
-                    canGenerate && "shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]",
+                    canGenerate && "shadow-lg hover:shadow-xl hover:scale-[0.98] active:scale-[0.96]",
                     canGenerate
                         ? "bg-linear-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
                         : "opacity-50"
