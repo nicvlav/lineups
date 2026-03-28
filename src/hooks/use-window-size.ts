@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface WindowSize {
     width: number;
@@ -11,18 +11,21 @@ export function useWindowSize(): WindowSize {
         height: window.innerHeight,
     });
 
+    const rafId = useRef(0);
+
     useEffect(() => {
         const handleResize = () => {
-            setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+            cancelAnimationFrame(rafId.current);
+            rafId.current = requestAnimationFrame(() => {
+                setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+            });
         };
 
         window.addEventListener("resize", handleResize);
-
-        // Initial resize on mount
-        handleResize();
-
-        // Cleanup the event listener on unmount
-        return () => window.removeEventListener("resize", handleResize);
+        return () => {
+            window.removeEventListener("resize", handleResize);
+            cancelAnimationFrame(rafId.current);
+        };
     }, []);
 
     return windowSize;
