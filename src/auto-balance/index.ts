@@ -51,7 +51,7 @@ import type { ScoredGamePlayer } from "@/types/players";
 import type { Formation } from "@/types/positions";
 import { convertToGamePlayers, runGuidedMonteCarlo } from "./algorithm";
 import { diagnosticReport } from "./debug-tools";
-import { calculateMetrics } from "./metrics";
+import { calculateMetrics } from "./metrics-balance";
 import { type BalanceConfiguration, DEFAULT_BALANCE_CONFIG } from "./metrics-config";
 // Import internal modules
 import type { BalanceMetrics } from "./types";
@@ -64,7 +64,7 @@ export { canAutoBalance, getAvailableFormations } from "./formation";
 // Re-export transformations for custom metrics
 export { calibratedScore, Steepness, visualizeTransformation } from "./metric-transformations";
 // Re-export modern metrics API
-export { calculateMetrics } from "./metrics";
+export { calculateMetrics } from "./metrics-balance";
 // Re-export types for external use
 export type { BalanceConfiguration } from "./metrics-config";
 // Re-export new configuration system
