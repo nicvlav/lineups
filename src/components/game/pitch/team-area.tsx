@@ -12,15 +12,8 @@ const TeamArea: React.FC<TeamAreaProps> = ({ team, playerSize }) => {
     const teamPlayers = Object.values(gamePlayers).filter((p) => p.team === team);
 
     return (
-        <div className="w-full h-full flex flex-co bg-card">
-            {" "}
-            {/* Ensure column flex layout */}
-            {/* Team Title Bar */}
-            {/* <div className="flex-none h-[20px] rounded-lg shadow-lg flex items-center pl-2">
-         Team {team}
-      </div> */}
-            {/* Player Container (fills remaining space) */}
-            <div className="flex-1 rounded-lg shadow-lg overflow-x-clip">
+        <div className="w-full h-full flex flex-col">
+            <div className="flex-1 rounded-lg overflow-x-clip">
                 <Pitch team={team} teamPlayers={teamPlayers} playerSize={playerSize} />
             </div>
         </div>

@@ -103,14 +103,18 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
             >
                 {/* Circle — position label inside, avatar if available */}
                 <div
-                    className={`rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden transition-all duration-200 ${
+                    className={`rounded-full border-2 flex items-center justify-center overflow-hidden transition-all duration-200 ${
                         player.team === "A"
-                            ? "bg-cyan-400 border-cyan-500 text-white shadow-cyan-400/20"
-                            : "bg-lime-400 border-lime-500 text-gray-900 shadow-lime-400/20"
+                            ? "bg-cyan-400 border-cyan-300/60 text-white"
+                            : "bg-lime-400 border-lime-300/60 text-gray-900"
                     }`}
                     style={{
                         width: `${circleSize}px`,
                         height: `${circleSize}px`,
+                        boxShadow:
+                            player.team === "A"
+                                ? "0 0 12px 3px hsl(200 80% 60%/0.25), 0 0 4px 1px hsl(200 80% 60%/0.1)"
+                                : "0 0 12px 3px hsl(84 70% 55%/0.25), 0 0 4px 1px hsl(84 70% 55%/0.1)",
                     }}
                 >
                     {fullPlayer?.avatar_url ? (

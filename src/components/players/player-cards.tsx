@@ -47,7 +47,7 @@ const PlayerCards = () => {
             </ActionBarSingle>
 
             {/* Player Cards Grid */}
-            <Card className="flex-1 flex flex-col min-h-0 bg-linear-to-r from-card to-muted/20 overflow-hidden">
+            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden">
                 <CardContent className="flex-1 h-full p-0">
                     <div className="h-full overflow-y-auto px-4 custom-scrollbar">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">

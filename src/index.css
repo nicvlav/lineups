@@ -159,6 +159,16 @@
 }
 
 
+/* Pitch backgrounds — team-colored atmospheric surfaces */
+.pitch-team-a {
+  background: linear-gradient(180deg, hsl(200 60% 50%/0.12), hsl(200 60% 40%/0.06));
+  border: 1px solid hsl(200 50% 50%/0.15);
+}
+.pitch-team-b {
+  background: linear-gradient(180deg, hsl(84 50% 45%/0.12), hsl(84 50% 35%/0.06));
+  border: 1px solid hsl(84 50% 50%/0.15);
+}
+
 /* Tier-based accent colors (borders + backgrounds) */
 .tier-border-elite { border-left-color: var(--quality-elite); }
 .tier-border-excellent { border-left-color: var(--quality-excellent); }

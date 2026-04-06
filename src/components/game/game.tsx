@@ -75,7 +75,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                                 onClick={() => navigate("/generate")}
                                 className={cn(
                                     "h-10 w-full font-semibold",
-                                    "bg-linear-to-r from-(--quality-elite) to-(--quality-excellent)",
+                                    "bg-(--quality-elite) hover:bg-(--quality-elite)/90",
                                     "text-white shadow-lg hover:shadow-xl",
                                     "transition-all duration-200 active:scale-[0.98]"
                                 )}

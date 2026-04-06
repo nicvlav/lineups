@@ -154,7 +154,7 @@ export default function VotingPage() {
             </ActionBarSingle>
 
             {/* Tabbed Panel */}
-            <Card className="flex-1 flex flex-col min-h-0 bg-linear-to-r from-card to-muted/20 overflow-hidden">
+            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden">
                 <CardHeader className="text-center">
                     <CardTitle>
                         {/* Tab Buttons */}

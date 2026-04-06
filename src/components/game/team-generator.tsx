@@ -88,7 +88,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
             </ActionBarSingle>
 
             {/* Modern Player Selection Grid */}
-            <Card className="flex-1 flex flex-col min-h-0 bg-linear-to-r from-card to-muted/20 overflow-hidden">
+            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden">
                 <CardContent className="flex-1 h-full p-0">
                     <div className="h-full overflow-y-auto px-4 custom-scrollbar">
                         {sortedPlayers.length > 0 ? (
@@ -199,9 +199,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                         "w-full h-10 font-semibold",
                         "transition-all duration-300",
                         canGenerate && "shadow-lg hover:shadow-xl active:scale-[0.98]",
-                        canGenerate
-                            ? "bg-linear-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-                            : "opacity-50"
+                        canGenerate ? "bg-primary hover:bg-primary/90" : "opacity-50"
                     )}
                 >
                     <Wand2 className={cn("mr-2 h-4 w-4", canGenerate && "animate-pulse")} />

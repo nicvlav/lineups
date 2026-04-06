@@ -165,7 +165,7 @@ export default function PlayerManager() {
             </ActionBarSingle>
 
             {/* Tabbed Panel */}
-            <Card className="flex-1 flex flex-col min-h-0 bg-linear-to-r from-card to-muted/20 overflow-hidden">
+            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden">
                 <CardContent className="flex-1 h-full p-0">
                     <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
                         {/* Player List */}
