@@ -75,9 +75,9 @@ const RadarChart: React.FC<RadarChartProps> = ({ axes, size = 200, tierRating })
                         .join(" ")}
                     fill="none"
                     stroke="var(--border)"
-                    strokeOpacity={scale === 1.0 ? 0.7 : 0.35}
-                    strokeWidth={scale === 1.0 ? 1.5 : 0.75}
-                    strokeDasharray={scale < 1.0 ? "2 3" : undefined}
+                    strokeOpacity={scale === 1.0 ? 0.8 : 0.4}
+                    strokeWidth={scale === 1.0 ? 1.5 : 1}
+                    strokeDasharray={scale < 1.0 ? "3 3" : undefined}
                 />
             ))}
 
@@ -92,8 +92,8 @@ const RadarChart: React.FC<RadarChartProps> = ({ axes, size = 200, tierRating })
                         x2={p.x}
                         y2={p.y}
                         stroke="var(--border)"
-                        strokeOpacity={0.4}
-                        strokeWidth={0.75}
+                        strokeOpacity={0.5}
+                        strokeWidth={1}
                     />
                 );
             })}
