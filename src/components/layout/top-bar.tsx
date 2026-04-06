@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Home, ListChecks, LogIn, LogOut, SquareUser, TableProperties, Vote } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { ModeToggle } from "@/components/layout/mode-toggle";
@@ -35,6 +36,9 @@ export function TopBar({ isCompact }: TopBarProps) {
 
     const visibleTabs = NAV_TABS.filter((tab) => !tab.authRequired || canVote);
 
+    // Match active tab — exact for "/" , startsWith for others
+    const activeTab = visibleTabs.find((tab) => (tab.to === "/" ? pathname === "/" : pathname.startsWith(tab.to)));
+
     const handleSignOut = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -70,36 +74,44 @@ export function TopBar({ isCompact }: TopBarProps) {
                     </h1>
                 </div>
 
-                {/* Desktop: inline nav tabs | Mobile: page title */}
+                {/* Desktop: inline nav tabs with sliding indicator | Mobile: page title */}
                 {isCompact ? (
                     <div className="flex-1 flex justify-center">
                         <span className="text-sm font-medium text-muted-foreground select-none">{pageTitle}</span>
                     </div>
                 ) : (
                     <nav className="flex-1 flex items-center justify-center gap-1" aria-label="Main navigation">
-                        {visibleTabs.map((tab) => (
-                            <NavLink
-                                key={tab.to}
-                                to={tab.to}
-                                end={tab.to === "/"}
-                                className={({ isActive }) =>
-                                    cn(
-                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium",
-                                        "transition-colors duration-200",
-                                        isActive
-                                            ? "text-(--quality-elite) bg-(--quality-elite-soft)/40"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                                    )
-                                }
-                            >
-                                {({ isActive }) => (
-                                    <>
+                        {visibleTabs.map((tab) => {
+                            const isActive = activeTab?.to === tab.to;
+                            return (
+                                <NavLink
+                                    key={tab.to}
+                                    to={tab.to}
+                                    end={tab.to === "/"}
+                                    className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200"
+                                >
+                                    {/* Sliding background indicator */}
+                                    {isActive && (
+                                        <motion.span
+                                            layoutId="nav-indicator"
+                                            className="absolute inset-0 rounded-lg bg-(--quality-elite-soft)/40"
+                                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                        />
+                                    )}
+                                    <span
+                                        className={cn(
+                                            "relative z-10 flex items-center gap-1.5",
+                                            isActive
+                                                ? "text-(--quality-elite)"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
                                         <tab.icon size={14} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
                                         {tab.label}
-                                    </>
-                                )}
-                            </NavLink>
-                        ))}
+                                    </span>
+                                </NavLink>
+                            );
+                        })}
                     </nav>
                 )}
 
