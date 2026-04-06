@@ -50,7 +50,7 @@ const PlayerCards = () => {
             <Card className="flex-1 flex flex-col min-h-0 bg-linear-to-r from-card to-muted/20 overflow-hidden">
                 <CardContent className="flex-1 h-full p-0">
                     <div className="h-full overflow-y-auto px-4 custom-scrollbar">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 items-start">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                             {sortedPlayers.map((item, index) => (
                                 <motion.div
                                     key={item.player.id}
@@ -60,6 +60,7 @@ const PlayerCards = () => {
                                         duration: 0.2,
                                         delay: Math.min(index * 0.03, 0.3),
                                     }}
+                                    className="h-full"
                                 >
                                     <PlayerCard
                                         player={item.player}

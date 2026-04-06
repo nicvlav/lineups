@@ -26,11 +26,11 @@ interface PlayerVotingProps {
 export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = false, existingVotes }: PlayerVotingProps) {
     const { user } = useAuth();
     const [votes, setVotes] = useState<Record<StatsKey, number>>({} as Record<StatsKey, number>);
-    const [currentCategory, setCurrentCategory] = useState<StatCategory>("technical");
+    const [currentCategory, setCurrentCategory] = useState<StatCategory>("attacking");
     const [categoryIndex, setCategoryIndex] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const categories: StatCategory[] = ["technical", "tactical", "mental", "physical"];
+    const categories: StatCategory[] = ["attacking", "creative", "defending", "physical", "mental"];
 
     // Initialize votes on mount
     useEffect(() => {

@@ -216,6 +216,34 @@ function getStatTier(score: number): ColorTier {
     return "solid";
 }
 
+// ============ CSS Variable Names (for inline styles) ============
+
+const TIER_CSS_VARS: Record<ColorTier, string> = {
+    elite: "--quality-elite",
+    excellent: "--quality-excellent",
+    great: "--quality-great",
+    good: "--quality-good",
+    solid: "--quality-solid",
+};
+
+const TIER_SOFT_CSS_VARS: Record<ColorTier, string> = {
+    elite: "--quality-elite-soft",
+    excellent: "--quality-excellent-soft",
+    great: "--quality-great-soft",
+    good: "--quality-good-soft",
+    solid: "--quality-solid-soft",
+};
+
+/** Get the CSS variable name for a rating's tier color (e.g., "--quality-elite") */
+export function getTierCssVar(rating: number): string {
+    return TIER_CSS_VARS[getRatingTier(rating)];
+}
+
+/** Get the soft CSS variable name for a rating's tier (e.g., "--quality-elite-soft") */
+export function getTierSoftCssVar(rating: number): string {
+    return TIER_SOFT_CSS_VARS[getRatingTier(rating)];
+}
+
 // ============ Export All Color Schemes ============
 
 /**

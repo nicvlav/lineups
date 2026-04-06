@@ -31,29 +31,25 @@ export interface PositionWeighting {
 export type Weighting = Record<Position, PositionWeighting>;
 
 /**
- * Calculate zone averages by stat category
+ * Category averages — one value per stat category
  */
 export interface ZoneAverages {
-    technical: number;
-    tactical: number;
+    attacking: number;
+    creative: number;
+    defending: number;
     physical: number;
     mental: number;
 }
 
 /**
- * Get zone averages for a player
+ * Get category averages for a player
  */
 export function getZoneAverages(player: Player): ZoneAverages {
-    const result: ZoneAverages = {
-        technical: 0,
-        tactical: 0,
-        physical: 0,
-        mental: 0,
-    };
+    const result = {} as ZoneAverages;
 
-    for (const [zone, stats] of Object.entries(CategorizedStats)) {
+    for (const [category, stats] of Object.entries(CategorizedStats)) {
         const total = stats.reduce((sum, stat) => sum + player.stats[stat], 0);
-        result[zone as StatCategory] = Math.round(total / stats.length);
+        result[category as StatCategory] = Math.round(total / stats.length);
     }
 
     return result;

@@ -171,34 +171,37 @@ export const defaultStatScores: PlayerStats = Object.fromEntries(statKeys.map((k
 
 /**
  * Stat categories for grouping and display
+ *
+ * 6 play-style categories designed so different player types are visibly distinct.
+ * A striker spikes Attacking, a playmaker spikes Creative, a defender spikes Defending.
  */
-export type StatCategory = "technical" | "tactical" | "physical" | "mental";
+export type StatCategory = "attacking" | "creative" | "defending" | "physical" | "mental";
 
-export const StatCategoryKeys: StatCategory[] = ["technical", "tactical", "physical", "mental"] as const;
+export const StatCategoryKeys: StatCategory[] = ["attacking", "creative", "defending", "physical", "mental"] as const;
 
 export const StatCategoryNameMap: Record<StatCategory, string> = {
-    technical: "Technical",
-    tactical: "Tactical",
+    attacking: "Attacking",
+    creative: "Creative",
+    defending: "Defending",
     physical: "Physical",
     mental: "Mental",
 } as const;
 
+export const StatCategoryShortMap: Record<StatCategory, string> = {
+    attacking: "ATK",
+    creative: "CRE",
+    defending: "DEF",
+    physical: "PHY",
+    mental: "MEN",
+} as const;
+
 /**
- * Stats grouped by category
+ * Stats grouped by play-style category (28 stats, each assigned to exactly one category)
  */
 export const CategorizedStats: Record<StatCategory, StatsKey[]> = {
-    technical: ["passing", "firstTouch", "crossing", "dribbling", "technique", "finishing", "longShots"],
-    tactical: [
-        "anticipation",
-        "vision",
-        "positioning",
-        "offTheBall",
-        "decisions",
-        "marking",
-        "tackling",
-        "attWorkrate",
-        "defWorkrate",
-    ],
-    mental: ["composure", "concentration", "determination", "leadership", "teamwork", "aggression", "flair"],
+    attacking: ["finishing", "longShots", "positioning", "offTheBall", "attWorkrate"],
+    creative: ["passing", "vision", "flair", "dribbling", "crossing", "technique", "firstTouch"],
+    defending: ["tackling", "marking", "defWorkrate", "aggression", "anticipation"],
     physical: ["speed", "strength", "agility", "stamina", "heading"],
+    mental: ["composure", "concentration", "determination", "decisions", "leadership", "teamwork"],
 } as const;
