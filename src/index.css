@@ -158,11 +158,6 @@
   }
 }
 
-/* Atmospheric background glow — subtle floodlight effect in dark mode */
-.dark body {
-  background-image: radial-gradient(ellipse at 50% 0%, oklch(0.20 0.04 220 / 0.4), transparent 60%);
-  background-attachment: fixed;
-}
 
 /* Tier-based accent colors (borders + backgrounds) */
 .tier-border-elite { border-left-color: var(--quality-elite); }
