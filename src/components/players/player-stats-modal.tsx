@@ -139,7 +139,7 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                                 {buzzwords.map((word) => (
                                     <span
                                         key={word}
-                                        className="text-[10px] px-1.5 py-0.5 rounded-full border border-border/40 bg-muted/40 text-foreground"
+                                        className="text-[11px] px-1.5 py-0.5 rounded-full border border-border/40 bg-muted/40 text-foreground"
                                     >
                                         {word}
                                     </span>
@@ -161,7 +161,7 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                                 {standoutTraits.map((trait) => (
                                     <span
                                         key={trait}
-                                        className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted/50 text-foreground"
+                                        className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted/50 text-foreground"
                                     >
                                         {trait}
                                     </span>
@@ -175,14 +175,14 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                         <div className="flex items-center justify-between mb-2">
                             <div>
                                 <h3 className="text-sm font-semibold">Position Fit</h3>
-                                <p className="text-[10px] text-muted-foreground">
+                                <p className="text-[11px] text-muted-foreground">
                                     {showAllPositions ? "All positions" : "Top positions relative to best"}
                                 </p>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setShowAllPositions(!showAllPositions)}
-                                className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+                                className="flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
                             >
                                 <List className="w-3 h-3" />
                                 {showAllPositions ? "Top" : "All"}
@@ -209,7 +209,7 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                                             <div>
                                                 <span className="font-bold text-sm">{position}</span>
                                                 {archetypeData && (
-                                                    <span className="text-[10px] text-muted-foreground ml-2">
+                                                    <span className="text-[11px] text-muted-foreground ml-2">
                                                         {archetypeData.strengthLabels.slice(0, 2).join(" · ")}
                                                     </span>
                                                 )}
@@ -289,11 +289,11 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                                                         key={key}
                                                         className="flex justify-between items-center bg-muted/30 rounded px-2 py-1"
                                                     >
-                                                        <span className="text-[10px] text-muted-foreground">
+                                                        <span className="text-[11px] text-muted-foreground">
                                                             {statLabelMap[key]}
                                                         </span>
                                                         <span
-                                                            className={`text-[10px] font-bold tabular-nums ${getStatTextColor(statRounded)}`}
+                                                            className={`text-[11px] font-bold tabular-nums ${getStatTextColor(statRounded)}`}
                                                         >
                                                             {statRounded}
                                                         </span>

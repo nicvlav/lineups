@@ -138,7 +138,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
 
                 {/* Name below circle — first name + last initial, single line */}
                 <span
-                    className="mt-0.5 text-foreground text-[10px] font-semibold drop-shadow-lg pointer-events-none whitespace-nowrap select-none max-w-20 truncate text-center"
+                    className="mt-0.5 text-foreground text-[11px] font-semibold drop-shadow-lg pointer-events-none whitespace-nowrap select-none max-w-20 truncate text-center"
                     style={{ lineHeight: 1.2 }}
                 >
                     {displayName}

@@ -54,7 +54,7 @@ export function BottomNav() {
                             {({ isActive }) => (
                                 <>
                                     <tab.icon size={20} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
-                                    <span className="text-[10px] font-medium">{tab.label}</span>
+                                    <span className="text-[11px] font-medium">{tab.label}</span>
                                 </>
                             )}
                         </NavLink>

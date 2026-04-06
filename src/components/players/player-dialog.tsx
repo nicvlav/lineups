@@ -87,7 +87,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ player, fullPlayer }) => {
             {/* Tier + zone */}
             <div className="flex items-center gap-2">
                 <span
-                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                    className="text-[11px] font-semibold px-1.5 py-0.5 rounded"
                     style={{
                         color: `var(${tierVar})`,
                         backgroundColor: `color-mix(in oklch, var(${tierVar}), transparent 85%)`,
@@ -95,7 +95,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ player, fullPlayer }) => {
                 >
                     {tierScheme.label}
                 </span>
-                <span className="text-[10px] font-medium text-muted-foreground">
+                <span className="text-[11px] font-medium text-muted-foreground">
                     {zoneClassification.specialistType}
                 </span>
             </div>
@@ -106,7 +106,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ player, fullPlayer }) => {
                     {buzzwords.map((word) => (
                         <span
                             key={word}
-                            className="text-[9px] px-1.5 py-0.5 rounded-full border border-border/40 bg-muted/40 text-foreground"
+                            className="text-[11px] px-1.5 py-0.5 rounded-full border border-border/40 bg-muted/40 text-foreground"
                         >
                             {word}
                         </span>
@@ -126,7 +126,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ player, fullPlayer }) => {
                             return (
                                 <span
                                     key={key}
-                                    className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-muted/50 text-foreground"
+                                    className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-muted/50 text-foreground"
                                 >
                                     {label}
                                 </span>
@@ -194,14 +194,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ player, fullPlayer }) => {
                                             strokeLinecap="round"
                                         />
                                     </svg>
-                                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-muted-foreground tabular-nums">
+                                    <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-muted-foreground tabular-nums">
                                         {pct}
                                     </span>
                                 </div>
 
                                 <div className="flex-1 min-w-0">
                                     <span className="font-bold text-xs">{posGroup.position}</span>
-                                    <span className="text-[10px] text-muted-foreground ml-1.5">
+                                    <span className="text-[11px] text-muted-foreground ml-1.5">
                                         {sortedArchetypes
                                             .map((a) => getArchetypeById(a.archetypeId)?.name)
                                             .filter(Boolean)
@@ -285,7 +285,7 @@ const SwapTab: React.FC<SwapTabProps> = ({ player, players, onClose }) => {
                         >
                             <div className="flex items-center justify-between">
                                 <span className="font-medium">{p.name}</span>
-                                {isInGame && <span className="text-[10px]">In game</span>}
+                                {isInGame && <span className="text-[11px]">In game</span>}
                             </div>
                         </button>
                     );
@@ -345,7 +345,7 @@ const PitchPlayerDialog: React.FC<PlayerDialogProps> = ({ player, isOpen, onClos
                     </div>
                     <div className="flex-1 min-w-0">
                         <h2 className="text-sm font-bold truncate">{playerName}</h2>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-[11px] text-muted-foreground">
                             {POSITION_NAMES[player.exactPosition]} · Team {player.team}
                             {currentFormation && ` · ${currentFormation.name}`}
                         </p>

@@ -83,7 +83,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                     <span className="font-semibold text-sm text-foreground truncate flex-1">{playerName}</span>
                     {positionClusters[0] && (
                         <span
-                            className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                            className="text-[11px] font-bold px-1.5 py-0.5 rounded shrink-0"
                             style={{
                                 color: `var(${tierVar})`,
                                 backgroundColor: `color-mix(in oklch, var(${tierVar}), transparent 85%)`,
@@ -126,7 +126,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                             const v = Math.round(stat.value);
                             return (
                                 <div key={stat.label} className="flex items-center gap-2">
-                                    <span className="text-[10px] font-medium text-muted-foreground w-6 uppercase">
+                                    <span className="text-[11px] font-medium text-muted-foreground w-6 uppercase">
                                         {stat.label}
                                     </span>
                                     <div className="flex-1 h-2 bg-muted/40 rounded-full overflow-hidden">

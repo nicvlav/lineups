@@ -181,7 +181,7 @@ export default function VotingPage() {
                             {tab.label}
                             <span
                                 className={cn(
-                                    "text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded",
+                                    "text-[11px] font-semibold tabular-nums px-1.5 py-0.5 rounded",
                                     activeTab === tab.key
                                         ? "bg-primary/20 text-primary"
                                         : "bg-muted/50 text-muted-foreground"

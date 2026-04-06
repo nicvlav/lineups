@@ -44,7 +44,7 @@ export const PlayerVoteCard = ({ player, hasVoted, userVote, onVoteComplete }: P
                     <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{player.name}</div>
                         {hasVoted && userVote && (
-                            <div className="text-[10px] text-muted-foreground">
+                            <div className="text-[11px] text-muted-foreground">
                                 {new Date(userVote.created_at).toLocaleDateString()}
                             </div>
                         )}
