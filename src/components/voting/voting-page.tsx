@@ -58,6 +58,13 @@ export default function VotingPage() {
         return eligiblePlayers.filter((player) => !userVotes.has(player.id));
     }, [eligiblePlayers, userVotes]);
 
+    // Auto-switch to "voted" tab when all players have been voted on
+    useEffect(() => {
+        if (eligiblePlayers.length > 0 && notVotedPlayers.length === 0) {
+            setActiveTab("voted");
+        }
+    }, [eligiblePlayers.length, notVotedPlayers.length]);
+
     // Apply search and sort
     const filteredAndSortedPlayers = useMemo(() => {
         const playersToShow = activeTab === "voted" ? votedPlayers : notVotedPlayers;
