@@ -46,7 +46,7 @@ export function BottomNav() {
                                 cn(
                                     "flex flex-col items-center justify-center gap-0.5 h-16",
                                     "transition-colors duration-200",
-                                    isActive ? "text-(--quality-elite)" : "text-muted-foreground hover:text-foreground"
+                                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                                 )
                             }
                             aria-label={tab.label}

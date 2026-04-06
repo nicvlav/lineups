@@ -1,6 +1,5 @@
 import { CheckCircle, Circle, Edit3 } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlayerVoting } from "@/components/voting/player-voting-dialog";
 import type { UserVoteEntry } from "@/hooks/use-voting";
@@ -34,35 +33,29 @@ export const PlayerVoteCard = ({ player, hasVoted, userVote, onVoteComplete }: P
 
     return (
         <>
-            <div className="flex items-center justify-between py-4 px-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                <div className="flex items-center gap-3 flex-1">
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                     {hasVoted ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                        <CheckCircle className="h-4 w-4 text-primary shrink-0" />
                     ) : (
-                        <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
                     )}
 
                     <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{player.name}</div>
+                        <div className="text-sm font-medium truncate">{player.name}</div>
                         {hasVoted && userVote && (
-                            <div className="text-xs text-muted-foreground">
-                                Voted on {new Date(userVote.created_at).toLocaleDateString()}
+                            <div className="text-[10px] text-muted-foreground">
+                                {new Date(userVote.created_at).toLocaleDateString()}
                             </div>
                         )}
                     </div>
-
-                    {player.vote_count > 0 && (
-                        <Badge variant="secondary" className="shrink-0">
-                            {player.vote_count} {player.vote_count === 1 ? "vote" : "votes"}
-                        </Badge>
-                    )}
                 </div>
 
                 <Button
-                    variant={hasVoted ? "ghost" : "default"}
+                    variant={hasVoted ? "ghost" : "outline"}
                     size="sm"
                     onClick={handleOpenVoting}
-                    className="ml-3 shrink-0"
+                    className="ml-3 shrink-0 text-xs"
                 >
                     {hasVoted ? (
                         <>

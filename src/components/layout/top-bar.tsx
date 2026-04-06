@@ -94,16 +94,14 @@ export function TopBar({ isCompact }: TopBarProps) {
                                     {isActive && (
                                         <motion.span
                                             layoutId="nav-indicator"
-                                            className="absolute inset-0 rounded-lg bg-(--quality-elite-soft)/40"
+                                            className="absolute inset-0 rounded-lg bg-primary/15"
                                             transition={{ type: "spring", stiffness: 380, damping: 30 }}
                                         />
                                     )}
                                     <span
                                         className={cn(
                                             "relative z-10 flex items-center gap-1.5",
-                                            isActive
-                                                ? "text-(--quality-elite)"
-                                                : "text-muted-foreground hover:text-foreground"
+                                            isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
                                         <tab.icon size={14} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />

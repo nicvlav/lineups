@@ -88,9 +88,9 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
             </ActionBarSingle>
 
             {/* Modern Player Selection Grid */}
-            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden">
+            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden py-2 gap-0">
                 <CardContent className="flex-1 h-full p-0">
-                    <div className="h-full overflow-y-auto px-4 custom-scrollbar">
+                    <div className="h-full overflow-y-auto px-2 custom-scrollbar">
                         {sortedPlayers.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                 {sortedPlayers.map((player, index) => (
@@ -112,7 +112,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                                 "border cursor-pointer select-none",
                                                 "transition-all duration-200",
                                                 selectedPlayers.includes(player.id)
-                                                    ? "bg-(--quality-elite-soft)/40 border-l-2 tier-border-elite border-border/30 shadow-sm"
+                                                    ? "bg-primary/10 border-l-2 border-l-primary border-border/30 shadow-sm"
                                                     : "bg-card hover:bg-accent/50 border-border hover:border-accent",
                                                 "hover:scale-[1.02] active:scale-[0.98]"
                                             )}
@@ -121,18 +121,17 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                                 checked={selectedPlayers.includes(player.id)}
                                                 onCheckedChange={() => togglePlayer(player.id)}
                                                 onClick={(e) => e.stopPropagation()}
-                                                className="data-[state=checked]:bg-(--quality-elite) data-[state=checked]:border-(--quality-elite)"
                                             />
                                             <span
                                                 className={cn(
                                                     "flex-1 text-sm font-medium",
-                                                    selectedPlayers.includes(player.id) && "text-(--quality-elite)"
+                                                    selectedPlayers.includes(player.id) && "text-primary"
                                                 )}
                                             >
                                                 {player.name}
                                             </span>
                                             {selectedPlayers.includes(player.id) && (
-                                                <CheckCircle2 className="h-4 w-4 text-(--quality-elite) opacity-60" />
+                                                <CheckCircle2 className="h-4 w-4 text-primary opacity-60" />
                                             )}
                                         </div>
                                     </motion.div>
@@ -159,7 +158,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                             className={cn(
                                 "h-1.5 rounded-full transition-all duration-300",
                                 canGenerate
-                                    ? "bg-(--quality-elite)"
+                                    ? "bg-primary"
                                     : selectedPlayers.length > MAX_PLAYERS_FOR_BALANCE
                                       ? "bg-destructive"
                                       : "bg-muted-foreground/40"
@@ -193,13 +192,15 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                 </div>
 
                 <Button
+                    variant="outline"
                     onClick={handleGenerateTeams}
                     disabled={!canGenerate}
                     className={cn(
                         "w-full h-10 font-semibold",
-                        "transition-all duration-300",
-                        canGenerate && "shadow-lg hover:shadow-xl active:scale-[0.98]",
-                        canGenerate ? "bg-primary hover:bg-primary/90" : "opacity-50"
+                        "transition-all duration-200",
+                        canGenerate
+                            ? "border-primary/40 text-primary hover:bg-primary/10 hover:border-primary/60 active:scale-[0.98]"
+                            : "opacity-50"
                     )}
                 >
                     <Wand2 className={cn("mr-2 h-4 w-4", canGenerate && "animate-pulse")} />

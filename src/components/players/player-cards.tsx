@@ -69,9 +69,9 @@ const PlayerCards = () => {
     }, [allPlayers, searchQuery, zoneFilter]);
 
     return (
-        <div className={cn("flex flex-col h-full w-full px-4 pt-2 pb-4 space-y-2")}>
+        <div className={cn("flex flex-col h-full w-full px-4 pt-2 pb-4 space-y-1.5")}>
             {/* Search + zone filters */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
                 <ActionBarSingle>
                     <Input
                         type="text"
@@ -91,7 +91,7 @@ const PlayerCards = () => {
                             className={cn(
                                 "text-xs font-medium px-3 py-1 rounded-lg transition-all duration-200",
                                 zoneFilter === filter.value
-                                    ? "bg-foreground/10 text-foreground"
+                                    ? "bg-primary/15 text-primary"
                                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                             )}
                         >
@@ -102,9 +102,9 @@ const PlayerCards = () => {
             </div>
 
             {/* Player Cards Grid */}
-            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden">
+            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden py-2 gap-0">
                 <CardContent className="flex-1 h-full p-0">
-                    <div className="h-full overflow-y-auto px-4 custom-scrollbar">
+                    <div className="h-full overflow-y-auto px-2 custom-scrollbar">
                         {filteredPlayers.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                                 {filteredPlayers.map((item, index) => (

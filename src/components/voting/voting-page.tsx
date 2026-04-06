@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { ArrowUpDown, CheckCircle, Vote } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ActionBarSingle } from "@/components/ui/action-bar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -154,43 +153,52 @@ export default function VotingPage() {
             </ActionBarSingle>
 
             {/* Tabbed Panel */}
-            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden">
-                <CardHeader className="text-center">
-                    <CardTitle>
-                        {/* Tab Buttons */}
-                        <div className="flex gap-2">
-                            <Button
-                                variant={activeTab === "not-voted" ? "default" : "outline"}
-                                onClick={() => setActiveTab("not-voted")}
-                                className="flex items-center gap-2"
+            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden py-2 gap-0">
+                <div className="flex items-center gap-1.5 px-2 pt-0 pb-0">
+                    {(
+                        [
+                            {
+                                key: "not-voted" as TabType,
+                                label: "Not Voted",
+                                icon: Vote,
+                                count: notVotedPlayers.length,
+                            },
+                            { key: "voted" as TabType, label: "Voted", icon: CheckCircle, count: votedPlayers.length },
+                        ] as const
+                    ).map((tab) => (
+                        <button
+                            key={tab.key}
+                            type="button"
+                            onClick={() => setActiveTab(tab.key)}
+                            className={cn(
+                                "flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-lg transition-all duration-200",
+                                activeTab === tab.key
+                                    ? "bg-primary/15 text-primary"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            )}
+                        >
+                            <tab.icon className="h-3.5 w-3.5" />
+                            {tab.label}
+                            <span
+                                className={cn(
+                                    "text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded",
+                                    activeTab === tab.key
+                                        ? "bg-primary/20 text-primary"
+                                        : "bg-muted/50 text-muted-foreground"
+                                )}
                             >
-                                <Vote className="h-4 w-4" />
-                                Not Voted
-                                <Badge variant={activeTab === "not-voted" ? "secondary" : "outline"}>
-                                    {notVotedPlayers.length}
-                                </Badge>
-                            </Button>
-                            <Button
-                                variant={activeTab === "voted" ? "default" : "outline"}
-                                onClick={() => setActiveTab("voted")}
-                                className="flex items-center gap-2"
-                            >
-                                <CheckCircle className="h-4 w-4" />
-                                Voted
-                                <Badge variant={activeTab === "voted" ? "secondary" : "outline"}>
-                                    {votedPlayers.length}
-                                </Badge>
-                            </Button>
-                        </div>
-                    </CardTitle>
-                </CardHeader>
+                                {tab.count}
+                            </span>
+                        </button>
+                    ))}
+                </div>
                 <CardContent className="flex-1 h-full p-0">
-                    <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
+                    <div className="h-full overflow-y-auto px-2 custom-scrollbar">
                         {/* Progress + Sort */}
-                        <div className="flex items-center gap-3 py-2">
+                        <div className="flex items-center gap-3 py-1.5">
                             <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                                 <div
-                                    className="h-2 bg-(--quality-elite) rounded-full transition-all duration-500"
+                                    className="h-2 bg-primary rounded-full transition-all duration-500"
                                     style={{ width: `${progressPercent}%` }}
                                 />
                             </div>

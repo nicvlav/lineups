@@ -72,11 +72,12 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
 
                         <div className="flex flex-col gap-2 w-full">
                             <Button
+                                variant="outline"
                                 onClick={() => navigate("/generate")}
                                 className={cn(
                                     "h-10 w-full font-semibold",
-                                    "bg-(--quality-elite) hover:bg-(--quality-elite)/90",
-                                    "text-white shadow-lg hover:shadow-xl",
+                                    "border-primary/40 text-primary",
+                                    "hover:bg-primary/10 hover:border-primary/60",
                                     "transition-all duration-200 active:scale-[0.98]"
                                 )}
                             >
@@ -106,8 +107,8 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                                 size="sm"
                                 className={cn(
                                     "gap-1.5 text-xs font-medium",
-                                    "border-(--quality-elite)/30 text-(--quality-elite)",
-                                    "hover:bg-(--quality-elite-soft)/40 hover:border-(--quality-elite)/50",
+                                    "border-primary/30 text-primary",
+                                    "hover:bg-primary/10 hover:border-primary/50",
                                     "transition-all duration-200 active:scale-[0.98]"
                                 )}
                                 onClick={handleRegenerate}

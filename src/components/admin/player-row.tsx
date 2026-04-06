@@ -171,7 +171,7 @@ export function PlayerRow({ player, animationDelay }: PlayerRowProps) {
                         <button
                             type="button"
                             onClick={handleStartEdit}
-                            className="text-left hover:text-primary transition-colors font-medium"
+                            className="text-left text-sm hover:text-primary transition-colors font-medium"
                         >
                             {player.name}
                         </button>

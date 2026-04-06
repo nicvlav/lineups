@@ -165,9 +165,9 @@ export default function PlayerManager() {
             </ActionBarSingle>
 
             {/* Tabbed Panel */}
-            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden">
+            <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden py-2 gap-0">
                 <CardContent className="flex-1 h-full p-0">
-                    <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
+                    <div className="h-full overflow-y-auto px-2 custom-scrollbar">
                         {/* Player List */}
                         <div className="space-y-2">
                             <Table>
@@ -205,7 +205,11 @@ export default function PlayerManager() {
             </Card>
 
             {/* Add Player */}
-            <Button onClick={() => setShowAddDialog(true)} className="w-full h-10 font-semibold">
+            <Button
+                variant="outline"
+                onClick={() => setShowAddDialog(true)}
+                className="w-full h-10 font-semibold border-primary/40 text-primary hover:bg-primary/10 hover:border-primary/60"
+            >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Player
             </Button>
