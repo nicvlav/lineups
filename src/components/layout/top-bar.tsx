@@ -1,4 +1,4 @@
-import { LogIn, LogOut } from "lucide-react";
+import { Home, ListChecks, LogIn, LogOut, SquareUser, TableProperties, Vote } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { ModeToggle } from "@/components/layout/mode-toggle";
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,26 @@ const ROUTE_TITLES: Record<string, string> = {
     "/vote": "Evaluate",
 };
 
-export function TopBar() {
-    const { user, signOut } = useAuth();
+const NAV_TABS = [
+    { icon: Home, label: "Home", to: "/" },
+    { icon: SquareUser, label: "Cards", to: "/cards" },
+    { icon: ListChecks, label: "Generate", to: "/generate" },
+    { icon: TableProperties, label: "Manage", to: "/manage", authRequired: true },
+    { icon: Vote, label: "Vote", to: "/vote", authRequired: true },
+];
+
+interface TopBarProps {
+    isCompact: boolean;
+}
+
+export function TopBar({ isCompact }: TopBarProps) {
+    const { user, canVote, signOut } = useAuth();
     const { pathname } = useLocation();
 
     const isStaging = window.location.hostname.includes("staging");
     const pageTitle = ROUTE_TITLES[pathname] ?? "";
+
+    const visibleTabs = NAV_TABS.filter((tab) => !tab.authRequired || canVote);
 
     const handleSignOut = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -41,9 +55,9 @@ export function TopBar() {
 
     return (
         <header className="w-full bg-background/95 backdrop-blur-md border-b border-border/30 pt-[env(safe-area-inset-top)]">
-            <div className="grid grid-cols-3 items-center h-11 px-4">
+            <div className="flex items-center h-11 px-4">
                 {/* Logo */}
-                <div className="flex justify-start">
+                <div className="flex items-center shrink-0">
                     <h1
                         className={cn(
                             "font-bold text-sm text-foreground select-none tracking-tight rounded-lg px-2.5 py-0.5",
@@ -56,13 +70,41 @@ export function TopBar() {
                     </h1>
                 </div>
 
-                {/* Page title — contextual center */}
-                <div className="flex justify-center">
-                    <span className="text-sm font-medium text-muted-foreground select-none">{pageTitle}</span>
-                </div>
+                {/* Desktop: inline nav tabs | Mobile: page title */}
+                {isCompact ? (
+                    <div className="flex-1 flex justify-center">
+                        <span className="text-sm font-medium text-muted-foreground select-none">{pageTitle}</span>
+                    </div>
+                ) : (
+                    <nav className="flex-1 flex items-center justify-center gap-1" aria-label="Main navigation">
+                        {visibleTabs.map((tab) => (
+                            <NavLink
+                                key={tab.to}
+                                to={tab.to}
+                                end={tab.to === "/"}
+                                className={({ isActive }) =>
+                                    cn(
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium",
+                                        "transition-colors duration-200",
+                                        isActive
+                                            ? "text-(--quality-elite) bg-(--quality-elite-soft)/40"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                                    )
+                                }
+                            >
+                                {({ isActive }) => (
+                                    <>
+                                        <tab.icon size={14} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
+                                        {tab.label}
+                                    </>
+                                )}
+                            </NavLink>
+                        ))}
+                    </nav>
+                )}
 
                 {/* Actions */}
-                <div className="flex justify-end items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                     {user ? (
                         <Button
                             variant="ghost"

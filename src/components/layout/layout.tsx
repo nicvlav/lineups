@@ -48,15 +48,15 @@ const LayoutContent = () => {
                     </div>
                 )}
 
-                {/* Top bar - minimal logo + auth/theme */}
+                {/* Top bar — logo + nav (desktop) or logo + title (mobile) + auth */}
                 {!isAuthRoute && (
                     <div className="sticky top-0 z-50">
-                        <TopBar />
+                        <TopBar isCompact={isCompact} />
                     </div>
                 )}
 
                 {/* Main content area */}
-                <main className={cn("flex-1 overflow-auto", !isAuthRoute && "pb-16")}>
+                <main className={cn("flex-1 overflow-auto", !isAuthRoute && isCompact && "pb-16")}>
                     <Routes>
                         {/* Auth routes - accessible to all */}
                         <Route path="auth/sign-in" element={<SignInPage />} />
@@ -93,8 +93,8 @@ const LayoutContent = () => {
                     </Routes>
                 </main>
 
-                {/* Bottom navigation */}
-                {!isAuthRoute && <BottomNav />}
+                {/* Bottom navigation — mobile only */}
+                {!isAuthRoute && isCompact && <BottomNav />}
 
                 {/* Verification dialogs for users who need them */}
                 {user && needsVerification && !isAuthRoute && (
