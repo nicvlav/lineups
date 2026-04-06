@@ -5,6 +5,9 @@
  * Uses normalized stat weights to produce scores in 0-100 range.
  */
 
+/** Max score difference from a player's best to still count as a "top" archetype/position */
+export const TOP_ARCHETYPE_THRESHOLD = 3;
+
 import { getArchetypesForPosition } from "@/types/archetypes";
 import type { PlayerArchetypeScores } from "@/types/players";
 import { type Position, positionKeys } from "@/types/positions";
@@ -134,7 +137,7 @@ export function calculateZoneScores(rawStats: PlayerStats): Record<Position, num
 export function getTopArchetypes(
     archetypeScores: PlayerArchetypeScores,
     maxCount: number = 5,
-    thresholdDifference: number = 3
+    thresholdDifference: number = TOP_ARCHETYPE_THRESHOLD
 ): Array<{ position: Position; archetypeId: string; score: number }> {
     const allArchetypes: Array<{ position: Position; archetypeId: string; score: number }> = [];
 
@@ -174,7 +177,7 @@ export function getTopArchetypes(
 export function getTopPositionGroups(
     archetypeScores: PlayerArchetypeScores,
     maxPositions: number = 5,
-    thresholdDifference: number = 3
+    thresholdDifference: number = TOP_ARCHETYPE_THRESHOLD
 ): Array<{
     position: Position;
     archetypes: Array<{ archetypeId: string; score: number; isBest: boolean }>;

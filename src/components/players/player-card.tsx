@@ -56,7 +56,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     const tierBorder = getTierBorderClass(overallRounded);
     const tierVar = getTierCssVar(overallRounded);
 
-    const topArchetypes = getTopArchetypes(archetypeScores, 5, 3);
+    const topArchetypes = getTopArchetypes(archetypeScores);
     const positionClusters = groupByPosition(topArchetypes);
 
     return (

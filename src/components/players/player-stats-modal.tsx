@@ -92,7 +92,7 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
     }
     const zoneClassification = classifyPlayerByZone(zoneScores);
 
-    const topPositionGroups = getTopPositionGroups(archetypeScores, 5, 3);
+    const topPositionGroups = getTopPositionGroups(archetypeScores);
     const bestScore = topPositionGroups.length
         ? topPositionGroups[0].archetypes.reduce((prev, current) => (prev.score > current.score ? prev : current)).score
         : 0;

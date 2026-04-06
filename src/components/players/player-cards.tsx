@@ -5,7 +5,7 @@ import { ActionBarSingle } from "@/components/ui/action-bar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { usePlayers } from "@/hooks/use-players";
-import { calculateArchetypeScores, getTopArchetypes } from "@/lib/positions/calculator";
+import { calculateArchetypeScores, getTopArchetypes, TOP_ARCHETYPE_THRESHOLD } from "@/lib/positions/calculator";
 import { cn } from "@/lib/utils";
 import { getTopPositions, getZoneAverages } from "@/types/players";
 import type { Position, Zone } from "@/types/positions";
@@ -33,7 +33,7 @@ const PlayerCards = () => {
             Object.values(players).map((player) => {
                 const archetypeScores = calculateArchetypeScores(player.stats);
                 const topScores = getTopPositions(archetypeScores, 3);
-                const topArchetypes = getTopArchetypes(archetypeScores, 5, 3);
+                const topArchetypes = getTopArchetypes(archetypeScores);
 
                 return {
                     player,
@@ -60,7 +60,7 @@ const PlayerCards = () => {
         if (zoneFilter !== "all") {
             const zonePositions = ZONE_POSITIONS[zoneFilter];
             result = result.filter((p) => {
-                const threshold = p.overall - 3;
+                const threshold = p.overall - TOP_ARCHETYPE_THRESHOLD;
                 return zonePositions.some((pos: Position) => (p.archetypeScores[pos]?.bestScore ?? 0) >= threshold);
             });
         }
