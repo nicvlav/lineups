@@ -12,7 +12,7 @@ import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { getArchetypeBarColor, getArchetypeTextColor } from "@/lib/color-system";
+import { getRatingTierScheme, getStatTextColor } from "@/lib/color-system";
 import { applyVisualScaling, calculateRelativeScore } from "@/lib/utils/relative-scoring";
 import { getArchetypeById } from "@/types/archetypes";
 
@@ -70,7 +70,7 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
 
     return (
         <div className="space-y-1.5">
-            {displayedArchetypes.map(({ archetypeId, score, relativeScore, visualWidth }) => {
+            {displayedArchetypes.map(({ archetypeId, score, visualWidth }) => {
                 const archetype = getArchetypeById(archetypeId);
                 if (!archetype) return null;
 
@@ -103,7 +103,7 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
                                     initial={{ width: 0 }}
                                     animate={{ width: `${visualWidth}%` }}
                                     transition={{ duration: 0.5, ease: "easeOut" }}
-                                    className={`h-1.5 rounded-full ${getArchetypeBarColor(relativeScore)}`}
+                                    className={`h-1.5 rounded-full ${getRatingTierScheme(Math.round(score)).solidBg}`}
                                 />
                             </div>
 
@@ -111,8 +111,8 @@ const RelativeArchetypeBars: React.FC<RelativeArchetypeBarsProps> = ({
                             {showNumbers && (
                                 <div className="flex items-center gap-1">
                                     <span
-                                        className={`text-xs font-semibold w-8 text-right tabular-nums ${getArchetypeTextColor(
-                                            relativeScore
+                                        className={`text-xs font-semibold w-8 text-right tabular-nums ${getStatTextColor(
+                                            Math.round(score)
                                         )}`}
                                     >
                                         {Math.round(score)}

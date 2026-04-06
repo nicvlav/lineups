@@ -17,7 +17,6 @@ import RelativeArchetypeBars from "@/components/players/relative-archetype-bars"
 import Modal from "@/components/shared/modal";
 import { useAuth } from "@/context/auth-context";
 import {
-    getArchetypeTextColor,
     getRatingTierScheme,
     getStatBarColor,
     getStatTextColor,
@@ -26,7 +25,6 @@ import {
 } from "@/lib/color-system";
 import { classifyPlayerByZone, getPlayStyleBuzzwords, getPrimaryArchetypeId } from "@/lib/player-quality";
 import { getAllPositionArchetypeGroups, getTopPositionGroups } from "@/lib/positions/calculator";
-import { calculateRelativeScore } from "@/lib/utils/relative-scoring";
 import { getArchetypeById } from "@/types/archetypes";
 import type { Player, PlayerArchetypeScores, ZoneAverages } from "@/types/players";
 import type { Position } from "@/types/positions";
@@ -218,8 +216,8 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                                             </div>
                                             {showDetailedStats && bestArchetype && (
                                                 <span
-                                                    className={`text-xs font-semibold ${getArchetypeTextColor(
-                                                        calculateRelativeScore(bestArchetype.score, bestScore)
+                                                    className={`text-xs font-semibold ${getStatTextColor(
+                                                        Math.round(bestArchetype.score)
                                                     )}`}
                                                 >
                                                     {Math.round(bestArchetype.score)}
