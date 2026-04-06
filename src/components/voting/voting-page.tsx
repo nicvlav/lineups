@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { ArrowUpDown, CheckCircle, Vote } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ActionBarSingle } from "@/components/ui/action-bar";
@@ -131,7 +132,7 @@ export default function VotingPage() {
     }
 
     return (
-        <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
+        <div className={cn("flex flex-col h-full w-full px-4 pt-2 pb-4 space-y-2")}>
             {/* Search */}
             <ActionBarSingle>
                 <Input
@@ -228,13 +229,22 @@ export default function VotingPage() {
                                     )}
                                 </div>
                             ) : (
-                                filteredAndSortedPlayers.map((player) => (
-                                    <PlayerVoteCard
+                                filteredAndSortedPlayers.map((player, index) => (
+                                    <motion.div
                                         key={player.id}
-                                        player={player}
-                                        hasVoted={userVotes.has(player.id)}
-                                        userVote={userVotes.get(player.id)}
-                                    />
+                                        initial={{ opacity: 0, y: 8 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{
+                                            duration: 0.2,
+                                            delay: Math.min(index * 0.03, 0.3),
+                                        }}
+                                    >
+                                        <PlayerVoteCard
+                                            player={player}
+                                            hasVoted={userVotes.has(player.id)}
+                                            userVote={userVotes.get(player.id)}
+                                        />
+                                    </motion.div>
                                 ))
                             )}
                         </div>

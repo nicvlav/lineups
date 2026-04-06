@@ -38,32 +38,6 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
         setSelectedPlayers(Object.keys(players).filter((id) => id in gamePlayers));
     }, [players, gamePlayers]);
 
-    // Responsive columns
-    const [windowWidth, setWindowWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1024));
-
-    useEffect(() => {
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    // Column distribution for responsive layout
-    const columns = useMemo(() => {
-        if (sortedPlayers.length === 0) return [];
-
-        const columnsCount = windowWidth >= 1024 ? 3 : windowWidth >= 768 ? 2 : 1;
-        const playersPerColumn = Math.ceil(sortedPlayers.length / columnsCount);
-
-        const cols = [];
-        for (let i = 0; i < columnsCount; i++) {
-            const start = i * playersPerColumn;
-            const end = Math.min(start + playersPerColumn, sortedPlayers.length);
-            cols.push(sortedPlayers.slice(start, end));
-        }
-
-        return cols;
-    }, [sortedPlayers, windowWidth]);
-
     const handleGenerateTeams = async () => {
         if (selectedPlayers.length < MIN_PLAYERS_FOR_BALANCE) {
             toast.error(`Need at least ${MIN_PLAYERS_FOR_BALANCE} players`, {
@@ -101,7 +75,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
     const allSelected = selectedPlayers.length === playersArr.length;
 
     return (
-        <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
+        <div className={cn("flex flex-col h-full w-full px-4 pt-2 pb-4 space-y-2")}>
             {/* Search */}
             <ActionBarSingle>
                 <Input
@@ -116,57 +90,52 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
             {/* Modern Player Selection Grid */}
             <Card className="flex-1 flex flex-col min-h-0 bg-linear-to-r from-card to-muted/20 overflow-hidden">
                 <CardContent className="flex-1 h-full p-0">
-                    <div className="h-full overflow-y-auto pl-4 pr-4 custom-scrollbar">
-                        {columns.length > 0 ? (
-                            <div
-                                className={cn(
-                                    "grid gap-4",
-                                    columns.length === 1
-                                        ? "grid-cols-1"
-                                        : columns.length === 2
-                                          ? "grid-cols-2"
-                                          : "grid-cols-3"
-                                )}
-                            >
-                                {columns.map((columnPlayers, columnIndex) => (
-                                    // biome-ignore lint/suspicious/noArrayIndexKey: columns are a fixed grid split, never reorder
-                                    <div key={columnIndex} className={cn("space-y-2", "gap-1")}>
-                                        {columnPlayers.map((player) => (
-                                            // biome-ignore lint/a11y/useKeyWithClickEvents: click target wraps interactive Checkbox
-                                            // biome-ignore lint/a11y/noStaticElementInteractions: click target wraps interactive Checkbox
-                                            <div
-                                                key={player.id}
-                                                onClick={() => togglePlayer(player.id)}
+                    <div className="h-full overflow-y-auto px-4 custom-scrollbar">
+                        {sortedPlayers.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                {sortedPlayers.map((player, index) => (
+                                    <motion.div
+                                        key={player.id}
+                                        initial={{ opacity: 0, y: 8 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{
+                                            duration: 0.2,
+                                            delay: Math.min(index * 0.03, 0.3),
+                                        }}
+                                    >
+                                        {/* biome-ignore lint/a11y/useKeyWithClickEvents: click target wraps interactive Checkbox */}
+                                        {/* biome-ignore lint/a11y/noStaticElementInteractions: click target wraps interactive Checkbox */}
+                                        <div
+                                            onClick={() => togglePlayer(player.id)}
+                                            className={cn(
+                                                "group flex items-center gap-3 p-3 rounded-lg",
+                                                "border cursor-pointer select-none",
+                                                "transition-all duration-200",
+                                                selectedPlayers.includes(player.id)
+                                                    ? "bg-(--quality-elite-soft)/40 border-l-2 tier-border-elite border-border/30 shadow-sm"
+                                                    : "bg-card hover:bg-accent/50 border-border hover:border-accent",
+                                                "hover:scale-[1.02] active:scale-[0.98]"
+                                            )}
+                                        >
+                                            <Checkbox
+                                                checked={selectedPlayers.includes(player.id)}
+                                                onCheckedChange={() => togglePlayer(player.id)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="data-[state=checked]:bg-(--quality-elite) data-[state=checked]:border-(--quality-elite)"
+                                            />
+                                            <span
                                                 className={cn(
-                                                    "group flex items-center gap-3 p-3 rounded-lg",
-                                                    "border cursor-pointer select-none",
-                                                    "transition-all duration-200",
-                                                    selectedPlayers.includes(player.id)
-                                                        ? "bg-(--quality-elite-soft)/40 border-l-2 tier-border-elite border-border/30 shadow-sm"
-                                                        : "bg-card hover:bg-accent/50 border-border hover:border-accent",
-                                                    "hover:scale-[1.02] active:scale-[0.98]"
+                                                    "flex-1 text-sm font-medium",
+                                                    selectedPlayers.includes(player.id) && "text-(--quality-elite)"
                                                 )}
                                             >
-                                                <Checkbox
-                                                    checked={selectedPlayers.includes(player.id)}
-                                                    onCheckedChange={() => togglePlayer(player.id)}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className="data-[state=checked]:bg-(--quality-elite) data-[state=checked]:border-(--quality-elite)"
-                                                />
-                                                <span
-                                                    className={cn(
-                                                        "flex-1 text-sm font-medium",
-                                                        selectedPlayers.includes(player.id) && "text-(--quality-elite)"
-                                                    )}
-                                                >
-                                                    {player.name}
-                                                </span>
-                                                {selectedPlayers.includes(player.id) && (
-                                                    <CheckCircle2 className="h-4 w-4 text-(--quality-elite) opacity-60" />
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                                                {player.name}
+                                            </span>
+                                            {selectedPlayers.includes(player.id) && (
+                                                <CheckCircle2 className="h-4 w-4 text-(--quality-elite) opacity-60" />
+                                            )}
+                                        </div>
+                                    </motion.div>
                                 ))}
                             </div>
                         ) : (

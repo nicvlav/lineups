@@ -35,8 +35,8 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
     };
 
     return (
-        <div className="w-full h-full p-4">
-            <div className="flex flex-col h-full w-full max-w-full space-y-3">
+        <div className="w-full h-full px-4 pt-2 pb-4">
+            <div className="flex flex-col h-full w-full max-w-full space-y-2">
                 {/* Action Bar - Professional alignment using unified component */}
                 <ActionBarTwoColumn
                     className="h-9"

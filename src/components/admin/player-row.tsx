@@ -15,9 +15,10 @@ import type { Player } from "@/types/players";
 
 interface PlayerRowProps {
     player: Player;
+    animationDelay?: number;
 }
 
-export function PlayerRow({ player }: PlayerRowProps) {
+export function PlayerRow({ player, animationDelay }: PlayerRowProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState(player.name);
     const [isVoting, setIsVoting] = useState(false);
@@ -128,7 +129,14 @@ export function PlayerRow({ player }: PlayerRowProps) {
 
     return (
         <>
-            <TableRow className="group">
+            <TableRow
+                className="group animate-slideUp"
+                style={
+                    animationDelay
+                        ? { animationDelay: `${animationDelay}s`, animationFillMode: "backwards" }
+                        : undefined
+                }
+            >
                 <TableCell>
                     {isEditing ? (
                         <div className="flex items-center gap-2 min-w-60">

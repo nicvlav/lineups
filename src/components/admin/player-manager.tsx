@@ -152,7 +152,7 @@ export default function PlayerManager() {
     }
 
     return (
-        <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
+        <div className={cn("flex flex-col h-full w-full px-4 pt-2 pb-4 space-y-2")}>
             {/* Search */}
             <ActionBarSingle>
                 <Input
@@ -189,8 +189,12 @@ export default function PlayerManager() {
                                             </td>
                                         </TableRow>
                                     ) : (
-                                        filteredAndSortedPlayers.map((player) => (
-                                            <PlayerRow key={player.id} player={player} />
+                                        filteredAndSortedPlayers.map((player, index) => (
+                                            <PlayerRow
+                                                key={player.id}
+                                                player={player}
+                                                animationDelay={Math.min(index * 0.03, 0.3)}
+                                            />
                                         ))
                                     )}
                                 </TableBody>

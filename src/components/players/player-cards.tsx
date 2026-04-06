@@ -34,7 +34,7 @@ const PlayerCards = () => {
     const sortedPlayers = [...filteredPlayers].sort((a, b) => b.overall - a.overall);
 
     return (
-        <div className={cn("flex flex-col h-full w-full p-4 space-y-3")}>
+        <div className={cn("flex flex-col h-full w-full px-4 pt-2 pb-4 space-y-2")}>
             {/* Search */}
             <ActionBarSingle>
                 <Input
