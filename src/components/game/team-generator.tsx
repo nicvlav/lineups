@@ -199,7 +199,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                         "w-full h-10 font-semibold",
                         "transition-all duration-200",
                         canGenerate
-                            ? "border-primary/40 text-primary hover:bg-primary/10 hover:border-primary/60 active:scale-[0.98]"
+                            ? "border-primary/40 text-primary hover:bg-primary/10 hover:border-primary/60"
                             : "opacity-50"
                     )}
                 >

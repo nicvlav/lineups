@@ -83,21 +83,33 @@ const PlayerCards = () => {
                 </ActionBarSingle>
 
                 <div className="flex gap-1.5">
-                    {ZONE_FILTERS.map((filter) => (
-                        <button
-                            key={filter.value}
-                            type="button"
-                            onClick={() => setZoneFilter(filter.value)}
-                            className={cn(
-                                "text-xs font-medium px-3 py-1 rounded-lg transition-all duration-200",
-                                zoneFilter === filter.value
-                                    ? "bg-primary/15 text-primary"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                            )}
-                        >
-                            {filter.label}
-                        </button>
-                    ))}
+                    {ZONE_FILTERS.map((filter) => {
+                        const isActive = zoneFilter === filter.value;
+                        return (
+                            <button
+                                key={filter.value}
+                                type="button"
+                                onClick={() => setZoneFilter(filter.value)}
+                                className="relative text-xs font-medium px-3 py-1 rounded-lg transition-colors duration-200 active:scale-[0.97]"
+                            >
+                                {isActive && (
+                                    <motion.span
+                                        layoutId="zone-filter"
+                                        className="absolute inset-0 rounded-lg bg-primary/15"
+                                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                    />
+                                )}
+                                <span
+                                    className={cn(
+                                        "relative z-10",
+                                        isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    {filter.label}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -149,13 +161,20 @@ const PlayerCards = () => {
                         type="button"
                         onClick={() => setCardViewMode(mode)}
                         className={cn(
-                            "flex-1 text-xs font-medium py-1.5 rounded-lg transition-all duration-200",
-                            cardViewMode === mode
-                                ? "bg-background text-foreground shadow-sm"
-                                : "text-muted-foreground hover:text-foreground"
+                            "relative flex-1 text-xs font-medium py-1.5 rounded-lg transition-colors duration-200",
+                            cardViewMode === mode ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                         )}
                     >
-                        {mode === "face-stats" ? "Stats" : mode.charAt(0).toUpperCase() + mode.slice(1)}
+                        {cardViewMode === mode && (
+                            <motion.span
+                                layoutId="card-view-mode"
+                                className="absolute inset-0 rounded-lg bg-background shadow-sm"
+                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                            />
+                        )}
+                        <span className="relative z-10">
+                            {mode === "face-stats" ? "Stats" : mode.charAt(0).toUpperCase() + mode.slice(1)}
+                        </span>
                     </button>
                 ))}
             </div>

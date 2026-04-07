@@ -78,7 +78,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                                     "h-10 w-full font-semibold",
                                     "border-primary/40 text-primary",
                                     "hover:bg-primary/10 hover:border-primary/60",
-                                    "transition-all duration-200 active:scale-[0.98]"
+                                    "transition-all duration-200 "
                                 )}
                             >
                                 <Shuffle className="mr-2 h-4 w-4" />
@@ -109,7 +109,7 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
                                     "gap-1.5 text-xs font-medium",
                                     "border-primary/30 text-primary",
                                     "hover:bg-primary/10 hover:border-primary/50",
-                                    "transition-all duration-200 active:scale-[0.98]"
+                                    "transition-all duration-200 "
                                 )}
                                 onClick={handleRegenerate}
                             >
