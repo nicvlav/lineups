@@ -217,7 +217,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ player, fullPlayer }) => {
                     <>
                         {currentGroup && (
                             <div className="space-y-1.5">
-                                <h3 className="text-xs font-semibold">Current Position</h3>
+                                <h3 className="text-xs font-semibold">Current Position Fit</h3>
                                 {renderPositionCard(currentGroup)}
                             </div>
                         )}

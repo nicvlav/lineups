@@ -1,7 +1,8 @@
 /**
  * Radar/Spider Chart for Player Play Style
  *
- * SVG hexagonal visualization with 6 play-style axes.
+ * SVG pentagonal visualization with 5 play-style axes.
+ * Supports single player or dual-player overlay for comparison.
  * The shape immediately communicates what kind of player this is —
  * a striker spikes ATK, a playmaker spikes CRE, a defender spikes DEF.
  */
@@ -16,10 +17,19 @@ interface RadarAxis {
     value: number; // 0-100
 }
 
+interface RadarDataset {
+    axes: RadarAxis[];
+    tierRating: number;
+}
+
 interface RadarChartProps {
     axes: RadarAxis[];
     size?: number;
     tierRating: number;
+    /** Optional second dataset for comparison overlay */
+    compare?: RadarDataset;
+    /** Override color for the compare polygon (defaults to tier color) */
+    compareColor?: string;
 }
 
 /** Build radar axes from pre-calculated category averages */
@@ -38,21 +48,29 @@ function polarToCartesian(cx: number, cy: number, radius: number, angleDeg: numb
     };
 }
 
-const RadarChart: React.FC<RadarChartProps> = ({ axes, size = 200, tierRating }) => {
-    const cx = size / 2;
-    const cy = size / 2;
-    const maxRadius = size * 0.34;
-    const labelRadius = size * 0.45;
-    const tierVar = getTierCssVar(tierRating);
-    const angleStep = 360 / axes.length;
-
-    const rings = [0.25, 0.5, 0.75, 1.0];
-
-    const dataPoints = axes.map((axis, i) => {
+function buildPoints(axes: RadarAxis[], cx: number, cy: number, maxRadius: number, angleStep: number) {
+    return axes.map((axis, i) => {
         const angle = i * angleStep;
         const r = (axis.value / 100) * maxRadius;
         return polarToCartesian(cx, cy, r, angle);
     });
+}
+
+const RadarChart: React.FC<RadarChartProps> = ({ axes, size = 200, tierRating, compare, compareColor }) => {
+    const cx = size / 2;
+    const cy = size / 2;
+    const maxRadius = size * 0.34;
+    const labelRadius = size * 0.45;
+    const angleStep = 360 / axes.length;
+
+    const rings = [0.25, 0.5, 0.75, 1.0];
+
+    const primaryVar = getTierCssVar(tierRating);
+    const primaryPoints = buildPoints(axes, cx, cy, maxRadius, angleStep);
+
+    const compareVarRaw = compare ? getTierCssVar(compare.tierRating) : null;
+    const cmpColor = compareColor ?? (compareVarRaw ? `var(${compareVarRaw})` : null);
+    const comparePoints = compare ? buildPoints(compare.axes, cx, cy, maxRadius, angleStep) : null;
 
     return (
         <svg
@@ -61,7 +79,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ axes, size = 200, tierRating })
             viewBox={`0 0 ${size} ${size}`}
             className="select-none"
             role="img"
-            aria-label="Player play style radar chart"
+            aria-label={compare ? "Player comparison radar chart" : "Player play style radar chart"}
         >
             {/* Background rings */}
             {rings.map((scale) => (
@@ -98,19 +116,45 @@ const RadarChart: React.FC<RadarChartProps> = ({ axes, size = 200, tierRating })
                 );
             })}
 
-            {/* Data polygon */}
+            {/* Compare polygon (drawn first, behind primary) */}
+            {comparePoints && cmpColor && (
+                <>
+                    <polygon
+                        points={comparePoints.map((p) => `${p.x},${p.y}`).join(" ")}
+                        fill={cmpColor}
+                        fillOpacity={0.08}
+                        stroke={cmpColor}
+                        strokeOpacity={0.5}
+                        strokeWidth={1.5}
+                        strokeLinejoin="round"
+                        strokeDasharray="4 3"
+                    />
+                    {comparePoints.map((p, i) => (
+                        <circle
+                            key={`cmp-dot-${axes[i].label}`}
+                            cx={p.x}
+                            cy={p.y}
+                            r={2.5}
+                            fill={cmpColor}
+                            fillOpacity={0.5}
+                        />
+                    ))}
+                </>
+            )}
+
+            {/* Primary polygon */}
             <polygon
-                points={dataPoints.map((p) => `${p.x},${p.y}`).join(" ")}
-                fill={`var(${tierVar})`}
-                fillOpacity={0.15}
-                stroke={`var(${tierVar})`}
+                points={primaryPoints.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill={`var(${primaryVar})`}
+                fillOpacity={compare ? 0.12 : 0.15}
+                stroke={`var(${primaryVar})`}
                 strokeWidth={2}
                 strokeLinejoin="round"
             />
 
-            {/* Data points */}
-            {dataPoints.map((p, i) => (
-                <circle key={`dot-${axes[i].label}`} cx={p.x} cy={p.y} r={3} fill={`var(${tierVar})`} />
+            {/* Primary data points */}
+            {primaryPoints.map((p, i) => (
+                <circle key={`dot-${axes[i].label}`} cx={p.x} cy={p.y} r={3} fill={`var(${primaryVar})`} />
             ))}
 
             {/* Labels */}
