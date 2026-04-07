@@ -58,7 +58,7 @@ export const POSITIONS: Record<Position, PositionDefinition> = {
         name: "Goalkeeper",
         shortName: "GK",
         isCentral: true,
-        absoluteYPosition: 1.0,
+        absoluteYPosition: 0.95,
         priority: 100,
         zone: "goalkeeper",
     },
