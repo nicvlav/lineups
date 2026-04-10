@@ -1,27 +1,34 @@
 /**
- * TanStack Query hooks for Players
+ * TanStack Query hooks for Players (V2 — 11 traits, 6 capabilities)
  *
- * Features:
- * - Automatic caching and background refetch
- * - Pre-mutation session validation
- * - Optimistic updates for mutations
- * - Loading and error states
+ * Fetches from the v2 players table with trait averages + computed capabilities.
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { v4 as uuidv4 } from "uuid";
+import { computeCapabilities, computeOverall, computeZoneEffectiveness } from "@/lib/capabilities";
 import { logger } from "@/lib/logger";
 import { playerRowSchema } from "@/lib/schemas";
 import { categorizeError, ensureValidSession } from "@/lib/session-manager";
-import { DB_AVG_TO_STAT, STAT_TO_DB } from "@/lib/stat-mapping";
 import { supabase } from "@/lib/supabase";
-import type { Player } from "@/types/players";
-import type { PlayerStats } from "@/types/stats";
-import { defaultStatScores } from "@/types/stats";
+import type { CapabilityKey, PlayerCapabilities, PlayerTraits, ZoneEffectiveness } from "@/types/traits";
+import { AVG_COL_TO_TRAIT, defaultTraits } from "@/types/traits";
 
-// =====================================================
-// QUERY KEYS
-// =====================================================
+// ─── Player Type (V2) ──────────────────────────────────────────────────────
+
+export interface PlayerV2 {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+    voteCount: number;
+    createdAt?: string;
+    traits: PlayerTraits;
+    capabilities: PlayerCapabilities;
+    zoneEffectiveness: ZoneEffectiveness;
+    overall: number;
+}
+
+// ─── Query Keys ─────────────────────────────────────────────────────────────
 
 export const playersKeys = {
     all: ["players"] as const,
@@ -31,16 +38,117 @@ export const playersKeys = {
     detail: (id: string) => [...playersKeys.details(), id] as const,
 };
 
-// =====================================================
-// TYPE DEFINITIONS
-// =====================================================
+// ─── Conversion ─────────────────────────────────────────────────────────────
 
-interface AddPlayerParams {
-    player: Partial<Player>;
+function convertRowToTraits(row: Record<string, unknown>): PlayerTraits {
+    const traits = { ...defaultTraits };
+    for (const [dbAvgCol, traitKey] of Object.entries(AVG_COL_TO_TRAIT)) {
+        const value = row[dbAvgCol];
+        if (typeof value === "number" && value > 0) {
+            traits[traitKey] = value;
+        } else if (typeof value === "string") {
+            const num = Number.parseFloat(value);
+            if (!Number.isNaN(num) && num > 0) {
+                traits[traitKey] = num;
+            }
+        }
+    }
+    return traits;
 }
 
-interface DeletePlayerParams {
-    id: string;
+function convertRowToCapabilities(row: Record<string, unknown>): PlayerCapabilities {
+    const caps: PlayerCapabilities = {
+        defending: 50,
+        playmaking: 50,
+        goalThreat: 50,
+        athleticism: 50,
+        engine: 50,
+        technique: 50,
+    };
+
+    const dbMap: Record<string, CapabilityKey> = {
+        cap_defending: "defending",
+        cap_playmaking: "playmaking",
+        cap_goal_threat: "goalThreat",
+        cap_athleticism: "athleticism",
+        cap_engine: "engine",
+        cap_technique: "technique",
+    };
+
+    for (const [dbCol, capKey] of Object.entries(dbMap)) {
+        const value = row[dbCol];
+        if (typeof value === "number") {
+            caps[capKey] = value;
+        } else if (typeof value === "string") {
+            const num = Number.parseFloat(value);
+            if (!Number.isNaN(num)) caps[capKey] = num;
+        }
+    }
+
+    return caps;
+}
+
+// ─── Query ──────────────────────────────────────────────────────────────────
+
+async function fetchPlayers(): Promise<Record<string, PlayerV2>> {
+    const { data, error } = await supabase.from("players").select("*").order("name", { ascending: false });
+
+    if (error) {
+        const categorized = categorizeError(error);
+        if (categorized.isAuthError) throw new Error("Session expired");
+        throw error;
+    }
+
+    if (!data || data.length === 0) return {};
+
+    const playerRecord: Record<string, PlayerV2> = {};
+    for (const row of data) {
+        const parsed = playerRowSchema.safeParse(row);
+        if (!parsed.success) {
+            logger.warn("Skipping invalid player row:", row, parsed.error.issues);
+            continue;
+        }
+        const p = parsed.data;
+        const traits = convertRowToTraits(p as Record<string, unknown>);
+        const capabilities = convertRowToCapabilities(p as Record<string, unknown>);
+        const overall = typeof p.overall === "number" ? p.overall : computeOverall(capabilities);
+
+        playerRecord[p.id] = {
+            id: p.id,
+            name: p.name,
+            avatarUrl: p.avatar_url ?? undefined,
+            voteCount: p.vote_count ?? 0,
+            createdAt: p.created_at ?? undefined,
+            traits,
+            capabilities,
+            zoneEffectiveness: computeZoneEffectiveness(capabilities),
+            overall,
+        };
+    }
+
+    return playerRecord;
+}
+
+export function usePlayers(options?: { refetchInterval?: number | false; refetchIntervalInBackground?: boolean }) {
+    return useQuery({
+        queryKey: playersKeys.all,
+        queryFn: fetchPlayers,
+        staleTime: 10 * 60 * 1000,
+        gcTime: 30 * 60 * 1000,
+        refetchOnWindowFocus: "always",
+        refetchOnReconnect: true,
+        retry: (failureCount, error) => {
+            if (error instanceof Error && error.message === "Session expired") return false;
+            return failureCount < 3;
+        },
+        ...options,
+    });
+}
+
+// ─── Mutations ──────────────────────────────────────────────────────────────
+
+interface AddPlayerParams {
+    player: { id?: string; name?: string };
 }
 
 interface UpdatePlayerParams {
@@ -48,135 +156,41 @@ interface UpdatePlayerParams {
     name: string;
 }
 
-// =====================================================
-// STAT CONVERSION UTILITIES
-// =====================================================
-
-function convertPlayerStatsToColumns(stats: PlayerStats): Record<string, number> {
-    const columns: Record<string, number> = {};
-    for (const [stat, dbColumn] of Object.entries(STAT_TO_DB)) {
-        columns[`${dbColumn}_avg`] = Math.round(stats[stat as keyof PlayerStats] / 10);
-    }
-    return columns;
+interface DeletePlayerParams {
+    id: string;
 }
-
-function convertColumnsToPlayerStats(player: Record<string, unknown>): PlayerStats {
-    const stats = { ...defaultStatScores };
-    for (const [dbColumn, statKey] of Object.entries(DB_AVG_TO_STAT)) {
-        const value = player[dbColumn];
-        if (typeof value === "number" && value > 0) {
-            stats[statKey] = value * 10;
-        } else if (typeof value === "string") {
-            const numValue = parseFloat(value);
-            if (!Number.isNaN(numValue) && numValue > 0) {
-                stats[statKey] = numValue * 10;
-            }
-        }
-    }
-    return stats;
-}
-
-// =====================================================
-// QUERY FUNCTIONS
-// =====================================================
-
-async function fetchPlayers(): Promise<Record<string, Player>> {
-    const { data, error } = await supabase.from("players").select("*").order("name", { ascending: false });
-
-    if (error) {
-        const categorized = categorizeError(error);
-        if (categorized.isAuthError) {
-            throw new Error("Session expired");
-        }
-        throw error;
-    }
-
-    if (!data || data.length === 0) {
-        return {};
-    }
-
-    const playerRecord: Record<string, Player> = {};
-    for (const row of data) {
-        const parsed = playerRowSchema.safeParse(row);
-        if (!parsed.success) {
-            logger.warn("Skipping invalid player row:", row, parsed.error.issues);
-            continue;
-        }
-        const player = parsed.data;
-        playerRecord[player.id] = {
-            id: player.id,
-            name: player.name,
-            vote_count: player.vote_count ?? 0,
-            created_at: player.created_at ?? undefined,
-            stats: convertColumnsToPlayerStats(player as Record<string, unknown>),
-        };
-    }
-
-    return playerRecord;
-}
-
-// =====================================================
-// QUERIES
-// =====================================================
-
-export function usePlayers(options?: { refetchInterval?: number | false; refetchIntervalInBackground?: boolean }) {
-    return useQuery({
-        queryKey: playersKeys.all,
-        queryFn: fetchPlayers,
-        staleTime: 10 * 60 * 1000, // 10 min - players change rarely
-        gcTime: 30 * 60 * 1000, // 30 min - keep in cache longer
-        refetchOnWindowFocus: "always", // Always check when returning
-        refetchOnReconnect: true,
-        retry: (failureCount, error) => {
-            if (error instanceof Error && error.message === "Session expired") {
-                return false;
-            }
-            return failureCount < 3;
-        },
-        ...options,
-    });
-}
-
-// =====================================================
-// MUTATIONS
-// =====================================================
 
 export function useAddPlayer() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ player }: AddPlayerParams): Promise<Player> => {
+        mutationFn: async ({ player }: AddPlayerParams): Promise<PlayerV2> => {
             const sessionValid = await ensureValidSession();
-            if (!sessionValid) {
-                throw new Error("Session expired - please sign in again");
-            }
+            if (!sessionValid) throw new Error("Session expired - please sign in again");
 
-            const playerStats = player.stats || defaultStatScores;
-            const newPlayer: Player = {
-                id: player.id || uuidv4(),
-                name: player.name || "Player Name",
-                vote_count: 0,
-                stats: playerStats,
-            };
+            const id = player.id || uuidv4();
+            const name = player.name || "Player Name";
 
-            const { error } = await supabase.from("players").insert([
-                {
-                    id: newPlayer.id,
-                    name: newPlayer.name,
-                    vote_count: 0,
-                    ...convertPlayerStatsToColumns(playerStats),
-                },
-            ]);
+            const { error } = await supabase.from("players").insert([{ id, name, vote_count: 0 }]);
 
             if (error) {
                 const categorized = categorizeError(error);
-                if (categorized.isAuthError) {
-                    throw new Error("Session expired - please sign in again");
-                }
+                if (categorized.isAuthError) throw new Error("Session expired - please sign in again");
                 throw error;
             }
 
-            return newPlayer;
+            const traits = { ...defaultTraits };
+            const capabilities = computeCapabilities(traits);
+
+            return {
+                id,
+                name,
+                voteCount: 0,
+                traits,
+                capabilities,
+                zoneEffectiveness: computeZoneEffectiveness(capabilities),
+                overall: computeOverall(capabilities),
+            };
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: playersKeys.all });
@@ -190,40 +204,29 @@ export function useUpdatePlayer() {
     return useMutation({
         mutationFn: async ({ id, name }: UpdatePlayerParams): Promise<void> => {
             const sessionValid = await ensureValidSession();
-            if (!sessionValid) {
-                throw new Error("Session expired - please sign in again");
-            }
+            if (!sessionValid) throw new Error("Session expired - please sign in again");
 
             const trimmedName = name.trim();
-            if (trimmedName.length < 2) {
-                throw new Error("Player name must be at least 2 characters");
-            }
-            if (trimmedName.length > 50) {
-                throw new Error("Player name must be less than 50 characters");
-            }
+            if (trimmedName.length < 2) throw new Error("Player name must be at least 2 characters");
+            if (trimmedName.length > 50) throw new Error("Player name must be less than 50 characters");
 
             const { error } = await supabase.from("players").update({ name: trimmedName }).eq("id", id);
 
             if (error) {
                 const categorized = categorizeError(error);
-                if (categorized.isAuthError) {
-                    throw new Error("Session expired - please sign in again");
-                }
+                if (categorized.isAuthError) throw new Error("Session expired - please sign in again");
                 throw error;
             }
         },
         onMutate: async ({ id, name }) => {
             await queryClient.cancelQueries({ queryKey: playersKeys.all });
-
-            const previousPlayers = queryClient.getQueryData<Record<string, Player>>(playersKeys.all);
-
+            const previousPlayers = queryClient.getQueryData<Record<string, PlayerV2>>(playersKeys.all);
             if (previousPlayers?.[id]) {
                 queryClient.setQueryData(playersKeys.all, {
                     ...previousPlayers,
                     [id]: { ...previousPlayers[id], name: name.trim() },
                 });
             }
-
             return { previousPlayers };
         },
         onError: (_error, _variables, context) => {
@@ -243,34 +246,25 @@ export function useDeletePlayer() {
     return useMutation({
         mutationFn: async ({ id }: DeletePlayerParams): Promise<void> => {
             const sessionValid = await ensureValidSession();
-            if (!sessionValid) {
-                throw new Error("Session expired - please sign in again");
-            }
+            if (!sessionValid) throw new Error("Session expired - please sign in again");
 
             const { error, count } = await supabase.from("players").delete({ count: "exact" }).eq("id", id);
 
             if (error) {
                 const categorized = categorizeError(error);
-                if (categorized.isAuthError) {
-                    throw new Error("Session expired - please sign in again");
-                }
+                if (categorized.isAuthError) throw new Error("Session expired - please sign in again");
                 throw error;
             }
 
-            if (count === 0) {
-                throw new Error("Player could not be deleted - check permissions or if player has votes");
-            }
+            if (count === 0) throw new Error("Player could not be deleted - check permissions or if player has votes");
         },
         onMutate: async ({ id }) => {
             await queryClient.cancelQueries({ queryKey: playersKeys.all });
-
-            const previousPlayers = queryClient.getQueryData<Record<string, Player>>(playersKeys.all);
-
+            const previousPlayers = queryClient.getQueryData<Record<string, PlayerV2>>(playersKeys.all);
             if (previousPlayers) {
                 const { [id]: _removed, ...remaining } = previousPlayers;
                 queryClient.setQueryData(playersKeys.all, remaining);
             }
-
             return { previousPlayers };
         },
         onError: (_error, _variables, context) => {

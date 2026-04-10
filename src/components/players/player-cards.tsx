@@ -31,7 +31,7 @@ const PlayerCards = () => {
     const allPlayers = useMemo(
         () =>
             Object.values(players).map((player) => {
-                const archetypeScores = calculateArchetypeScores(player.stats);
+                const archetypeScores = calculateArchetypeScores(player.traits);
                 const topScores = getTopPositions(archetypeScores, 3);
                 const topArchetypes = getTopArchetypes(archetypeScores);
 
@@ -133,7 +133,7 @@ const PlayerCards = () => {
                                         <PlayerCard
                                             player={item.player}
                                             playerName={item.player.name}
-                                            stats={item.player.stats}
+                                            stats={item.player.traits}
                                             overall={item.overall}
                                             archetypeScores={item.archetypeScores}
                                             averages={item.averages}

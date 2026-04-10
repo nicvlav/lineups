@@ -58,12 +58,12 @@ export default function PlayerManager() {
                     comparison = a.name.localeCompare(b.name);
                     break;
                 case "votes":
-                    comparison = (a.vote_count || 0) - (b.vote_count || 0);
+                    comparison = (a.voteCount || 0) - (b.voteCount || 0);
                     break;
                 case "created": {
                     // Parse dates and compare timestamps (newest first when desc)
-                    const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-                    const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
                     comparison = dateA - dateB;
                     break;
                 }

@@ -1,45 +1,25 @@
 /**
- * Player Loading Utilities
+ * Player Loading Utilities (V2 stub)
  *
- * Helpers for loading players from the database and enriching them with archetype scores.
+ * @deprecated Archetype enrichment is no longer used. Players now have
+ * capabilities computed directly from traits via the trigger/hook.
  */
 
 import type { Player, PlayerWithArchetypes } from "@/types/players";
-import { calculateArchetypeScores } from "./calculator";
 
-/**
- * Enrich a player loaded from database with archetype scores
- * Converts from legacy Player type to PlayerWithArchetypes
- */
+/** @deprecated No-op — players already have capabilities from the hook */
 export function enrichPlayerWithArchetypes(player: Player): PlayerWithArchetypes {
-    return {
-        id: player.id,
-        name: player.name,
-        rawStats: player.stats,
-        avatar_url: player.avatar_url,
-        vote_count: player.vote_count,
-        archetypeScores: calculateArchetypeScores(player.stats),
-    };
+    return player;
 }
 
-/**
- * Bulk enrich multiple players with archetype scores
- */
+/** @deprecated */
 export function enrichPlayersWithArchetypes(players: Player[]): PlayerWithArchetypes[] {
-    return players.map(enrichPlayerWithArchetypes);
+    return players;
 }
 
-/**
- * Enrich player record (keyed by ID) with archetype scores
- */
+/** @deprecated */
 export function enrichPlayerRecordWithArchetypes(
     playerRecord: Record<string, Player>
 ): Record<string, PlayerWithArchetypes> {
-    const enriched: Record<string, PlayerWithArchetypes> = {};
-
-    for (const [id, player] of Object.entries(playerRecord)) {
-        enriched[id] = enrichPlayerWithArchetypes(player);
-    }
-
-    return enriched;
+    return playerRecord;
 }

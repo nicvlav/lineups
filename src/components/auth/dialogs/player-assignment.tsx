@@ -86,9 +86,9 @@ export function PlayerAssignment({ open, onClose, mandatory = false }: PlayerAss
                                         <SelectItem key={player.id} value={player.id}>
                                             <div className="flex items-center gap-2">
                                                 <span>{player.name}</span>
-                                                {player.vote_count > 0 && (
+                                                {player.voteCount > 0 && (
                                                     <span className="text-xs text-muted-foreground">
-                                                        ({player.vote_count} votes)
+                                                        ({player.voteCount} votes)
                                                     </span>
                                                 )}
                                             </div>

@@ -11,8 +11,10 @@ export const TOP_ARCHETYPE_THRESHOLD = 3;
 import { getArchetypesForPosition } from "@/types/archetypes";
 import type { PlayerArchetypeScores } from "@/types/players";
 import { type Position, positionKeys } from "@/types/positions";
-import type { PlayerStats, StatsKey } from "@/types/stats";
-import { statKeys } from "@/types/stats";
+
+type PlayerStats = Record<string, number>;
+type StatsKey = string;
+const statKeys: string[] = [];
 
 /**
  * Normalize stat weights to sum to 1.0

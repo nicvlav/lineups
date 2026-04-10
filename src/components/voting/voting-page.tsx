@@ -81,7 +81,7 @@ export default function VotingPage() {
                 return a.name.localeCompare(b.name);
             } else {
                 // Sort by vote count (ascending - fewer votes first)
-                return (a.vote_count || 0) - (b.vote_count || 0);
+                return (a.voteCount || 0) - (b.voteCount || 0);
             }
         });
     }, [activeTab, votedPlayers, notVotedPlayers, searchQuery, sortBy]);

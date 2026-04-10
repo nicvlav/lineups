@@ -48,7 +48,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ player, fullPlayer }) => {
         );
     }
 
-    const stats = fullPlayer.stats;
+    const stats = fullPlayer.traits;
     const archetypeScores = calculateArchetypeScores(stats);
     const topScores = getTopPositions(archetypeScores, 3);
     const overall = Math.max(...topScores.map((t) => t.score));
@@ -333,9 +333,9 @@ const PitchPlayerDialog: React.FC<PlayerDialogProps> = ({ player, isOpen, onClos
                                     : "0 0 10px 2px hsl(84 70% 55%/0.2)",
                         }}
                     >
-                        {fullPlayer?.avatar_url ? (
+                        {fullPlayer?.avatarUrl ? (
                             <img
-                                src={fullPlayer.avatar_url}
+                                src={fullPlayer.avatarUrl}
                                 alt={playerName}
                                 className="w-full h-full rounded-full object-cover"
                             />

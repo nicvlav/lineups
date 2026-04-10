@@ -7,7 +7,6 @@ import { getTopArchetypes } from "@/lib/positions/calculator";
 import { getArchetypeById } from "@/types/archetypes";
 import type { Player, PlayerArchetypeScores, ZoneAverages } from "@/types/players";
 import type { Position } from "@/types/positions";
-import type { StatsKey } from "@/types/stats";
 import type { CardViewMode } from "./player-cards";
 
 interface PlayerCardProps {
@@ -16,7 +15,7 @@ interface PlayerCardProps {
     overall: number;
     archetypeScores: PlayerArchetypeScores;
     averages: ZoneAverages;
-    stats: Record<StatsKey, number>;
+    stats: Record<string, number>;
     viewMode: CardViewMode;
 }
 
@@ -70,9 +69,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             >
                 {/* Header: Name + top position badge */}
                 <div className="flex items-center gap-2 mb-2">
-                    {player.avatar_url && (
+                    {player.avatarUrl && (
                         <img
-                            src={player.avatar_url}
+                            src={player.avatarUrl}
                             alt={playerName}
                             className="w-8 h-8 object-cover rounded-full"
                             onError={(e) => {

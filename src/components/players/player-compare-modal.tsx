@@ -29,7 +29,7 @@ interface PlayerCompareModalProps {
 
 function usePlayerData(player: Player) {
     return useMemo(() => {
-        const archetypeScores = calculateArchetypeScores(player.stats);
+        const archetypeScores = calculateArchetypeScores(player.traits);
         const topScores = getTopPositions(archetypeScores, 3);
         const overall = Math.round(Math.max(...topScores.map((t) => t.score)));
         const averages = getZoneAverages(player);
