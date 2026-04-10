@@ -7,7 +7,6 @@
 import type { Formation } from "@/types/formations";
 import type { Point, ZoneScores } from "@/types/players";
 import type { PositionDefinition } from "@/types/positions";
-import type { PositionWeighting } from "./player-scoring";
 
 /**
  * Position-like interface for backward compatibility
@@ -48,10 +47,9 @@ function getXForPlayerPosition(position: PositionLike, positionIndex: number, nu
 
 /**
  * Get point coordinates for a position on the pitch
- * Accepts both PositionDefinition and PositionWeighting for backward compatibility
  */
 export function getPointForPosition(
-    position: PositionDefinition | PositionWeighting,
+    position: PositionDefinition | { isCentral: boolean; absoluteYPosition: number; shortName?: string },
     positionIndex: number,
     numPositionEntries: number,
     formation?: Formation

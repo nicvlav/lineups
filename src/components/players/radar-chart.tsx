@@ -1,16 +1,16 @@
 /**
- * Radar/Spider Chart for Player Play Style
+ * Radar/Spider Chart for Player Capabilities (V2)
  *
- * SVG pentagonal visualization with 5 play-style axes.
+ * SVG hexagonal visualization with 6 capability axes.
  * Supports single player or dual-player overlay for comparison.
  * The shape immediately communicates what kind of player this is —
- * a striker spikes ATK, a playmaker spikes CRE, a defender spikes DEF.
+ * a defender spikes DEF, a playmaker spikes PLY, a striker spikes GOL.
  */
 
 import type React from "react";
 import { getTierCssVar } from "@/lib/color-system";
-import type { ZoneAverages } from "@/types/players";
-import { type StatCategory, StatCategoryKeys, StatCategoryShortMap } from "@/types/stats";
+import type { PlayerCapabilities } from "@/types/traits";
+import { CAPABILITY_KEYS, capabilityShortLabelMap } from "@/types/traits";
 
 interface RadarAxis {
     label: string;
@@ -28,15 +28,15 @@ interface RadarChartProps {
     tierRating: number;
     /** Optional second dataset for comparison overlay */
     compare?: RadarDataset;
-    /** Override color for the compare polygon (defaults to tier color) */
+    /** Override color for the compare polygon */
     compareColor?: string;
 }
 
-/** Build radar axes from pre-calculated category averages */
-export function calculateRadarAxes(averages: ZoneAverages): RadarAxis[] {
-    return StatCategoryKeys.map((key: StatCategory) => ({
-        label: StatCategoryShortMap[key],
-        value: averages[key],
+/** Build radar axes from player capabilities (6 axes) */
+export function calculateRadarAxes(capabilities: PlayerCapabilities): RadarAxis[] {
+    return CAPABILITY_KEYS.map((key) => ({
+        label: capabilityShortLabelMap[key],
+        value: capabilities[key],
     }));
 }
 
@@ -79,7 +79,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ axes, size = 200, tierRating, c
             viewBox={`0 0 ${size} ${size}`}
             className="select-none"
             role="img"
-            aria-label={compare ? "Player comparison radar chart" : "Player play style radar chart"}
+            aria-label={compare ? "Player comparison radar chart" : "Player capability radar chart"}
         >
             {/* Background rings */}
             {rings.map((scale) => (

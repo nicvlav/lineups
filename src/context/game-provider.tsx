@@ -3,28 +3,23 @@ import type React from "react";
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
-import { autoBalance } from "@/auto-balance";
+import { balanceTeams } from "@/auto-balance";
 import { useAuth } from "@/context/auth-context";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
-import { usePlayers } from "@/hooks/use-players";
+import { type PlayerV2, usePlayers } from "@/hooks/use-players";
 import { logger } from "@/lib/logger";
 import { gameStateSchema } from "@/lib/schemas";
+import { getPointForPosition } from "@/lib/utils/pitch-rendering";
 import { decodeStateFromURL } from "@/lib/utils/url-state";
-import type { GamePlayer, Player, ScoredGamePlayer } from "@/types/players";
-import { calculateScoresForStats } from "@/types/players";
-import {
-    emptyZoneScores,
-    type Formation,
-    getPointForPosition,
-    normalizedDefaultWeights,
-    type Point,
-    type Position,
-} from "@/types/positions";
+import type { Formation } from "@/types/formations";
+import type { Position } from "@/types/positions";
+import { POSITIONS } from "@/types/positions";
 
 const DB_NAME = "GameDB";
 const STORE_NAME = "gameState";
 
-// IndexedDB utility functions
+// ─── IndexedDB Utilities ────────────────────────────────────────────────────
+
 const initDB = async () => {
     return openDB(DB_NAME, 1, {
         upgrade(db) {
@@ -81,15 +76,29 @@ const clearCorruptedDB = async () => {
     }
 };
 
+// ─── Game Player Type ───────────────────────────────────────────────────────
+// Minimal type for players in an active game session.
+
+export interface GamePlayer {
+    id: string;
+    name: string;
+    isGuest: boolean;
+    team: string;
+    position: { x: number; y: number };
+    exactPosition: Position;
+}
+
+// ─── Context ────────────────────────────────────────────────────────────────
+
 interface GameContextType {
-    gamePlayers: Record<string, ScoredGamePlayer>;
+    gamePlayers: Record<string, GamePlayer>;
     currentFormation: Formation | null;
 
     clearGame: () => void;
-    removeFromGame: (playerToRemove: ScoredGamePlayer) => void;
-    switchToRealPlayer: (oldPlayer: ScoredGamePlayer, newID: string) => void;
+    removeFromGame: (playerToRemove: GamePlayer) => void;
+    switchToRealPlayer: (oldPlayer: GamePlayer, newID: string) => void;
     applyFormation: (formation: Formation) => void;
-    generateTeams: (filteredPlayers: Player[]) => void;
+    generateTeams: (filteredPlayers: PlayerV2[]) => void;
     rebalanceCurrentGame: () => void;
 }
 
@@ -105,15 +114,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const { triggerAnimation } = usePitchAnimation();
     const location = useLocation();
 
-    // Routes that should NOT have game state management
     const isStaticRoute = location.pathname.startsWith("/auth") || location.pathname === "/data-deletion";
 
-    const [gamePlayers, setGamePlayers] = useState<Record<string, ScoredGamePlayer>>({});
+    const [gamePlayers, setGamePlayers] = useState<Record<string, GamePlayer>>({});
     const [currentFormation, setCurrentFormation] = useState<Formation | null>(null);
     const loadingState = useRef(false);
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-    // Create unique tab key per browser tab (survives refresh but not tab sharing)
     const getOrCreateTabKey = () => {
         let tabKey = sessionStorage.getItem("tabKey");
 
@@ -135,7 +142,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
     const tabKeyRef = useRef(getOrCreateTabKey());
 
-    // Clean up old tab data on startup (prevent IndexedDB bloat)
+    // Clean up old tab data on startup
     useEffect(() => {
         const cleanupOldTabs = async () => {
             try {
@@ -176,39 +183,26 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             return;
         }
 
-        const updatedPlayers: Record<string, ScoredGamePlayer> = Object.fromEntries(
-            Object.entries(newGamePlayers).map(([key, value]) => {
-                if (!players[value.id]) {
-                    return [key, { ...value, zoneFit: structuredClone(emptyZoneScores) }];
-                }
-
-                const realPlayer = players[value.id];
-                const zoneFit = calculateScoresForStats(realPlayer.stats, normalizedDefaultWeights);
-
-                return [key, { ...value, zoneFit }];
-            })
-        );
-        saveState(updatedPlayers, formation || null);
-        setGamePlayers(updatedPlayers);
+        saveState(newGamePlayers, formation || null);
+        setGamePlayers(newGamePlayers);
         setCurrentFormation(formation || null);
     };
 
-    // Initialize game state
     const initializeGameState = async () => {
-        if (loadingState.current || isStaticRoute) {
-            return;
-        }
+        if (loadingState.current || isStaticRoute) return;
 
         loadingState.current = true;
 
         try {
-            // Handle URL state first (takes precedence)
             if (urlState) {
                 const currentUrl = new URL(window.location.href);
                 const decoded = decodeStateFromURL(urlState);
 
                 if (decoded) {
-                    await loadJSONGamePlayers(decoded.gamePlayers, decoded.currentFormation);
+                    await loadJSONGamePlayers(
+                        decoded.gamePlayers as Record<string, GamePlayer>,
+                        decoded.currentFormation
+                    );
                     currentUrl.searchParams.delete("state");
                     window.history.replaceState({}, "", currentUrl.toString());
                 }
@@ -217,7 +211,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 return;
             }
 
-            // Fall back to IndexedDB state
             logger.debug("GAME: Loading game state with tab key:", tabKeyRef.current);
             const savedState = await getFromDB(tabKeyRef.current);
             if (savedState) {
@@ -232,7 +225,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                             Object.keys(parsed.data.gamePlayers).length,
                             "players"
                         );
-                        await loadJSONGamePlayers(parsed.data.gamePlayers, parsed.data.currentFormation ?? null);
+                        await loadJSONGamePlayers(
+                            parsed.data.gamePlayers as Record<string, GamePlayer>,
+                            parsed.data.currentFormation ?? null
+                        );
                     }
                 } catch (error) {
                     logger.error("GAME: Error loading from IndexedDB:", error);
@@ -247,7 +243,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         }
     };
 
-    // Initialize on mount and URL state changes
     // biome-ignore lint/correctness/useExhaustiveDependencies: initializeGameState excluded to prevent re-init loops; urlState triggers re-init on URL change
     useEffect(() => {
         if (isStaticRoute) return;
@@ -257,7 +252,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         });
     }, [urlState, isStaticRoute]);
 
-    // Auto-save to IndexedDB when game state changes (debounced)
+    // Auto-save debounced
     // biome-ignore lint/correctness/useExhaustiveDependencies: saveState excluded to prevent save loops on every render
     useEffect(() => {
         if (isStaticRoute) return;
@@ -272,14 +267,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         return () => clearTimeout(saveTimeoutRef.current);
     }, [gamePlayers, currentFormation, isStaticRoute]);
 
-    const saveState = async (
-        gamePlayersToSave: Record<string, ScoredGamePlayer>,
-        formation: Formation | null = null
-    ) => {
-        const stateObject = {
-            gamePlayers: gamePlayersToSave,
-            currentFormation: formation,
-        };
+    const saveState = async (gamePlayersToSave: Record<string, GamePlayer>, formation: Formation | null = null) => {
+        const stateObject = { gamePlayers: gamePlayersToSave, currentFormation: formation };
         logger.debug(
             "GAME: Saving game state with tab key:",
             tabKeyRef.current,
@@ -291,7 +280,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         await saveToDB(tabKeyRef.current, JSON.stringify(stateObject));
     };
 
-    // Clear game data (also clears IndexedDB so refresh doesn't restore old state)
     const clearGame = async () => {
         clearTimeout(saveTimeoutRef.current);
         setGamePlayers({});
@@ -299,192 +287,132 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         await saveToDB(tabKeyRef.current, JSON.stringify({ gamePlayers: {}, currentFormation: null }));
     };
 
-    // switch a player to a dummy player
-    const removeFromGame = async (playerToRemove: ScoredGamePlayer) => {
-        setGamePlayers((prevGamePlayers) => {
-            const newGamePlayers = { ...prevGamePlayers };
-            delete newGamePlayers[playerToRemove.id];
-            return newGamePlayers;
-        });
-
-        setGamePlayers((prevGamePlayers) => {
-            const newGamePlayers = { ...prevGamePlayers };
+    const removeFromGame = async (playerToRemove: GamePlayer) => {
+        setGamePlayers((prev) => {
+            const updated = { ...prev };
             const newID = uuidv4();
-            newGamePlayers[newID] = {
+            updated[newID] = {
                 id: newID,
                 name: "[Player]",
                 isGuest: true,
                 team: playerToRemove.team,
                 position: playerToRemove.position,
                 exactPosition: playerToRemove.exactPosition,
-                zoneFit: structuredClone(emptyZoneScores),
             };
-            delete newGamePlayers[playerToRemove.id];
-            return newGamePlayers;
+            delete updated[playerToRemove.id];
+            return updated;
         });
     };
 
-    const switchToRealPlayer = async (oldPlayer: ScoredGamePlayer, newID: string) => {
+    const switchToRealPlayer = async (oldPlayer: GamePlayer, newID: string) => {
         if (oldPlayer.id === newID || !(oldPlayer.id in gamePlayers) || !(newID in players)) return;
 
         if (newID in gamePlayers) {
             const newPlayer = gamePlayers[newID];
-
-            setGamePlayers((prevGamePlayers) => {
-                const newGamePlayers = { ...prevGamePlayers };
-                newGamePlayers[oldPlayer.id] = {
+            setGamePlayers((prev) => ({
+                ...prev,
+                [oldPlayer.id]: {
                     ...oldPlayer,
                     team: newPlayer.team,
                     position: newPlayer.position,
                     exactPosition: newPlayer.exactPosition,
-                };
-                newGamePlayers[newID] = {
+                },
+                [newID]: {
                     ...newPlayer,
                     team: oldPlayer.team,
                     position: oldPlayer.position,
                     exactPosition: oldPlayer.exactPosition,
-                };
-                return newGamePlayers;
-            });
+                },
+            }));
         } else {
-            const newPlayer = players[newID];
-            setGamePlayers((prevGamePlayers) => {
-                const newGamePlayers = { ...prevGamePlayers };
-                const zoneFit = calculateScoresForStats(newPlayer.stats, normalizedDefaultWeights);
-
-                newGamePlayers[newID] = {
-                    id: newPlayer.id,
-                    name: newPlayer.name,
+            const realPlayer = players[newID];
+            setGamePlayers((prev) => {
+                const updated = { ...prev };
+                updated[newID] = {
+                    id: realPlayer.id,
+                    name: realPlayer.name,
                     isGuest: false,
                     team: oldPlayer.team,
                     position: oldPlayer.position,
                     exactPosition: oldPlayer.exactPosition,
-                    zoneFit,
                 };
-                delete newGamePlayers[oldPlayer.id];
-                return newGamePlayers;
+                delete updated[oldPlayer.id];
+                return updated;
             });
         }
     };
 
-    const applyFormationToTeam = (team: string, formation: Formation) => {
-        const teamPlayers = Object.values(gamePlayers).filter((player) => player.team === team);
-        const newTeamPlayers: Record<string, ScoredGamePlayer> = {};
+    const applyFormation = async (formation: Formation) => {
+        const applyToTeam = (team: string): Record<string, GamePlayer> => {
+            const teamPlayers = Object.values(gamePlayers).filter((p) => p.team === team);
+            const result: Record<string, GamePlayer> = {};
 
-        for (const [key, value] of Object.entries(formation.positions)) {
-            for (let i = 0; i < value; i++) {
-                const player = teamPlayers.shift();
-                const position = getPointForPosition(normalizedDefaultWeights[key as Position], i, value, formation);
+            for (const [key, count] of Object.entries(formation.positions)) {
+                for (let i = 0; i < (count as number); i++) {
+                    const player = teamPlayers.shift();
+                    const pos = getPointForPosition(POSITIONS[key as Position], i, count as number, formation);
+                    const exactPosition = key as Position;
 
-                if (player) {
-                    const exactPosition = key as Position;
-                    newTeamPlayers[player.id] = {
-                        ...player,
-                        team,
-                        position,
-                        exactPosition,
-                    };
-                } else {
-                    const newID = uuidv4();
-                    const zoneFit = structuredClone(emptyZoneScores);
-                    const exactPosition = key as Position;
-                    newTeamPlayers[newID] = {
-                        id: newID,
-                        name: "[Player]",
-                        isGuest: true,
-                        team,
-                        position,
-                        zoneFit,
-                        exactPosition,
-                    };
+                    if (player) {
+                        result[player.id] = { ...player, team, position: pos, exactPosition };
+                    } else {
+                        const newID = uuidv4();
+                        result[newID] = {
+                            id: newID,
+                            name: "[Player]",
+                            isGuest: true,
+                            team,
+                            position: pos,
+                            exactPosition,
+                        };
+                    }
                 }
             }
-        }
-
-        return newTeamPlayers;
-    };
-
-    const applyFormation = async (formation: Formation) => {
-        const teamA = applyFormationToTeam("A", formation);
-        const teamB = applyFormationToTeam("B", formation);
+            return result;
+        };
 
         triggerAnimation("formation");
-
-        setGamePlayers({ ...teamA, ...teamB });
+        setGamePlayers({ ...applyToTeam("A"), ...applyToTeam("B") });
         setCurrentFormation(formation);
     };
 
-    const handleGenerateTeams = async (gamePlayersWithScores: ScoredGamePlayer[]) => {
-        let teamA: ScoredGamePlayer[] = [];
-        let teamB: ScoredGamePlayer[] = [];
-        let formation: Formation | undefined;
+    // ─── Team Generation (V2 balance-first algorithm) ───────────────────────
 
+    const generateTeams = async (filteredPlayers: PlayerV2[]) => {
         try {
-            const balanced = autoBalance(gamePlayersWithScores);
-            teamA = balanced.teams.a;
-            teamB = balanced.teams.b;
-            // Both teams should use the same formation (they're the same size after balancing)
-            formation = balanced.formationA || balanced.formationB;
+            const result = balanceTeams(filteredPlayers.map((p) => ({ id: p.id, name: p.name, traits: p.traits })));
+
+            const playerRecord: Record<string, GamePlayer> = {};
+
+            for (const assigned of [...result.teams.a, ...result.teams.b]) {
+                playerRecord[assigned.id] = {
+                    id: assigned.id,
+                    name: assigned.name,
+                    isGuest: false,
+                    team: assigned.team === "a" ? "A" : "B",
+                    position: assigned.assignedPoint,
+                    exactPosition: assigned.assignedPosition,
+                };
+            }
+
+            triggerAnimation("generation");
+            setGamePlayers(playerRecord);
+            setCurrentFormation(result.formations.a);
         } catch (error) {
             logger.error("Team generation error", error);
-            return;
         }
-
-        const playerRecord: Record<string, ScoredGamePlayer> = {};
-        teamA.forEach((player) => {
-            playerRecord[player.id] = { ...player };
-        });
-        teamB.forEach((player) => {
-            playerRecord[player.id] = { ...player };
-        });
-
-        triggerAnimation("generation");
-
-        setGamePlayers(playerRecord);
-        setCurrentFormation(formation || null);
-    };
-
-    const generateTeams = async (filteredPlayers: Player[]) => {
-        const normalizedWeights = normalizedDefaultWeights;
-        handleGenerateTeams(
-            filteredPlayers.map((player) => {
-                const position = { x: 0.5, y: 0.5 } as Point;
-                const zoneFit = calculateScoresForStats(player.stats, normalizedWeights);
-
-                // Determine best position based on zone scores (will be replaced by auto-balance)
-                const bestPosition = (Object.entries(zoneFit) as [Position, number][]).reduce(
-                    (best, [pos, score]) => (score > best.score ? { position: pos, score } : best),
-                    { position: "CM" as Position, score: 0 }
-                ).position;
-
-                return {
-                    id: player.id,
-                    name: player.name,
-                    isGuest: false,
-                    team: "A",
-                    position: position,
-                    exactPosition: bestPosition,
-                    zoneFit: zoneFit,
-                    stats: player.stats,
-                } as ScoredGamePlayer;
-            })
-        );
     };
 
     const rebalanceCurrentGame = async () => {
-        const filteredPlayers: ScoredGamePlayer[] = [];
+        const activePlayers: PlayerV2[] = [];
 
-        Object.entries(gamePlayers).forEach(([id, player]) => {
-            if (!(id in players)) return;
+        for (const [id] of Object.entries(gamePlayers)) {
+            if (id in players) {
+                activePlayers.push(players[id]);
+            }
+        }
 
-            const playerWithStats = {
-                ...player,
-                stats: players[id].stats,
-            };
-            filteredPlayers.push(playerWithStats);
-        });
-
-        await handleGenerateTeams(filteredPlayers);
+        await generateTeams(activePlayers);
     };
 
     return (
@@ -492,7 +420,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             value={{
                 gamePlayers,
                 currentFormation,
-
                 clearGame,
                 removeFromGame,
                 switchToRealPlayer,

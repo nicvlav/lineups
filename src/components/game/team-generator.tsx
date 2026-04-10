@@ -3,7 +3,7 @@ import { CheckCircle2, Users, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { MAX_PLAYERS_FOR_BALANCE, MIN_PLAYERS_FOR_BALANCE } from "@/auto-balance";
+import { MAX_PLAYERS, MIN_PLAYERS } from "@/auto-balance";
 import { ActionBarSingle } from "@/components/ui/action-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,8 +39,8 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
     }, [players, gamePlayers]);
 
     const handleGenerateTeams = async () => {
-        if (selectedPlayers.length < MIN_PLAYERS_FOR_BALANCE) {
-            toast.error(`Need at least ${MIN_PLAYERS_FOR_BALANCE} players`, {
+        if (selectedPlayers.length < MIN_PLAYERS) {
+            toast.error(`Need at least ${MIN_PLAYERS} players`, {
                 description: "Select more players to generate teams",
                 duration: 3000,
             });
@@ -70,8 +70,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
         );
     };
 
-    const canGenerate =
-        selectedPlayers.length >= MIN_PLAYERS_FOR_BALANCE && selectedPlayers.length <= MAX_PLAYERS_FOR_BALANCE;
+    const canGenerate = selectedPlayers.length >= MIN_PLAYERS && selectedPlayers.length <= MAX_PLAYERS;
     const allSelected = selectedPlayers.length === playersArr.length;
 
     return (
@@ -159,12 +158,12 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                 "h-1.5 rounded-full transition-all duration-300",
                                 canGenerate
                                     ? "bg-primary"
-                                    : selectedPlayers.length > MAX_PLAYERS_FOR_BALANCE
+                                    : selectedPlayers.length > MAX_PLAYERS
                                       ? "bg-destructive"
                                       : "bg-muted-foreground/40"
                             )}
                             style={{
-                                width: `${Math.min((selectedPlayers.length / MAX_PLAYERS_FOR_BALANCE) * 100, 100)}%`,
+                                width: `${Math.min((selectedPlayers.length / MAX_PLAYERS) * 100, 100)}%`,
                             }}
                         />
                     </div>
@@ -178,7 +177,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                         >
                             {selectedPlayers.length}
                         </motion.span>
-                        /{MAX_PLAYERS_FOR_BALANCE}
+                        /{MAX_PLAYERS}
                     </Badge>
 
                     <Button

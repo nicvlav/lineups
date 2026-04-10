@@ -30,7 +30,7 @@ export function PlayerRow({ player, animationDelay }: PlayerRowProps) {
     const { data: userVotes = new Map() } = useUserVotes();
     const { user } = useAuth();
 
-    const canDelete = player.vote_count === 0;
+    const canDelete = player.voteCount === 0;
     const hasVoted = userVotes.has(player.id);
     const userVote = userVotes.get(player.id);
     const isAssociatedPlayer = user?.profile?.associated_player_id === player.id;
@@ -179,11 +179,11 @@ export function PlayerRow({ player, animationDelay }: PlayerRowProps) {
                 </TableCell>
 
                 <TableCell>
-                    <Badge variant={player.vote_count > 0 ? "default" : "secondary"}>{player.vote_count}</Badge>
+                    <Badge variant={player.voteCount > 0 ? "default" : "secondary"}>{player.voteCount}</Badge>
                 </TableCell>
 
                 <TableCell className="text-muted-foreground text-sm">
-                    {player.created_at ? format(new Date(player.created_at), "MMM d, yyyy") : "—"}
+                    {player.createdAt ? format(new Date(player.createdAt), "MMM d, yyyy") : "—"}
                 </TableCell>
 
                 <TableCell className="w-24">
@@ -229,7 +229,7 @@ export function PlayerRow({ player, animationDelay }: PlayerRowProps) {
                                 <TooltipContent>
                                     {canDelete
                                         ? "Delete player"
-                                        : `Cannot delete - player has ${player.vote_count} vote${player.vote_count !== 1 ? "s" : ""}`}
+                                        : `Cannot delete - player has ${player.voteCount} vote${player.voteCount !== 1 ? "s" : ""}`}
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>

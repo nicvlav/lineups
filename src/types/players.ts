@@ -1,11 +1,25 @@
 /**
- * Player Type Definitions
+ * Player Type Definitions (V2)
  *
- * Core player types with archetype support and game-specific extensions.
+ * Re-exports PlayerV2 as Player for backward compatibility across the codebase.
+ * The canonical player type lives in use-players.ts; this file ensures all
+ * existing `import type { Player } from "@/types/players"` keep working.
  */
 
+import type { GamePlayer as GamePlayerType } from "@/context/game-provider";
+import type { PlayerV2 } from "@/hooks/use-players";
 import type { Position } from "./positions";
-import type { PlayerStats, StatCategory } from "./stats";
+
+export type { PlayerV2 };
+
+/** Player is now an alias for PlayerV2 */
+export type Player = PlayerV2;
+
+/** Game player in an active session */
+export type GamePlayer = GamePlayerType;
+
+/** @deprecated Use GamePlayer instead */
+export type ScoredGamePlayer = GamePlayerType;
 
 /**
  * Point on pitch (0-1 normalized coordinates)
@@ -16,13 +30,10 @@ export interface Point {
 }
 
 /**
- * Position scores for all 9 positions
+ * Position scores for all 9 positions (legacy — used by formations and pitch rendering)
  */
-export type ZoneScores = Record<Position, number>;
+export type ZoneScores = Record<string, number>;
 
-/**
- * Empty zone scores (all zeros)
- */
 export const emptyZoneScores: ZoneScores = {
     GK: 0,
     CB: 0,
@@ -35,163 +46,70 @@ export const emptyZoneScores: ZoneScores = {
     WR: 0,
 } as const;
 
-// ============ Core Player Types ============
+// ─── Legacy stubs (old UI components use these until fully migrated) ────────
 
-/**
- * Player's calculated archetype scores for all positions
- * Structure: position -> { best archetype info + all archetype scores }
- */
-export interface PlayerArchetypeScores {
-    [position: string]: {
-        /** Best archetype score for this position (for quick lookup) */
+/** @deprecated Use PlayerCapabilities from @/types/traits */
+export type PlayerArchetypeScores = Record<
+    string,
+    {
         bestScore: number;
-
-        /** ID of best archetype for this position */
         bestArchetypeId: string;
+        archetypes: Record<string, number>;
+    }
+>;
 
-        /** All archetype scores for this position */
-        archetypes: Record<string, number>; // archetypeId -> normalized score (0-100)
+/** @deprecated Use PlayerCapabilities */
+export type ZoneAverages = Record<string, number>;
+
+/** @deprecated Zone averages are now capabilities on PlayerV2 */
+export function getZoneAverages(player: PlayerV2): ZoneAverages {
+    return {
+        attacking: player.capabilities.goalThreat,
+        creative: player.capabilities.playmaking,
+        defending: player.capabilities.defending,
+        physical: player.capabilities.athleticism,
+        mental: (player.capabilities.engine + player.capabilities.technique) / 2,
     };
 }
 
-/**
- * Core player data from database
- */
-export interface Player {
-    id: string;
-    name: string;
-    stats: PlayerStats;
-    avatar_url?: string;
-    vote_count: number;
-    created_at?: string;
+/** @deprecated Positions are derived from zone effectiveness */
+export function getTopPositions(
+    _archetypeScores: PlayerArchetypeScores,
+    _count = 3
+): Array<{ position: Position; score: number; archetypeId: string }> {
+    return [];
 }
 
-/**
- * Player enriched with archetype scores
- */
-export interface PlayerWithArchetypes {
-    id: string;
-    name: string;
-    rawStats: PlayerStats;
-    avatar_url?: string;
-    vote_count: number;
-    /** Calculated archetype scores for all positions */
-    archetypeScores: PlayerArchetypeScores;
+/** @deprecated */
+export function getBestArchetypeForPosition(
+    _archetypeScores: PlayerArchetypeScores,
+    _position: Position
+): { archetypeId: string; score: number } | null {
+    return null;
 }
 
-// ============ Game-Specific Player Types ============
-
-/**
- * Player in a game session (local-only attributes)
- * Position is stored as Point for rendering, exactPosition is required for analysis
- */
-export interface GamePlayer {
-    id: string;
-    name: string;
-    isGuest: boolean;
-    team: string;
-    position: Point;
-    exactPosition: Position;
+/** @deprecated */
+export function isPositionSpecialist(_best: number, _secondBest: number, _threshold = 3): boolean {
+    return false;
 }
 
-/**
- * Game player with stats
- */
-export interface FilledGamePlayer extends GamePlayer {
-    stats: PlayerStats;
+/** @deprecated Use PlayerTraits directly */
+export type PlayerStats = Record<string, number>;
+
+/** @deprecated */
+export function calculateScoresForStats(_stats: Record<string, number>, _weights: Record<string, unknown>): ZoneScores {
+    return { ...emptyZoneScores };
 }
 
-/**
- * Game player with position scores
- */
-export interface ScoredGamePlayer extends GamePlayer {
-    zoneFit: ZoneScores;
-    stats?: PlayerStats;
-}
-
-// ============ Formation-Specific Player Types ============
-
-/**
- * Game player with exact position for formation
- */
-export interface PositionedGamePlayer extends GamePlayer {
-    exactPosition: Position;
-}
-
-/**
- * Positioned game player with stats
- */
-export interface PositionedFilledGamePlayer extends PositionedGamePlayer {
-    stats: PlayerStats;
-}
-
-/**
- * Positioned game player with scores
- */
-export interface PositionedScoredGamePlayer extends PositionedGamePlayer {
-    zoneFit: ZoneScores;
-}
-
-// ============ Helper Types ============
-
-/**
- * Position with score for display
- */
+/** @deprecated */
 export interface PositionAndScore {
     position: string;
     score: number;
 }
 
-/**
- * Zone averages by stat category
- */
-export type ZoneAverages = Record<StatCategory, number>;
-
-// ============ Helper Functions ============
-
-/**
- * Get best N positions for a player with archetype info
- */
-export function getTopPositions(
-    archetypeScores: PlayerArchetypeScores,
-    count: number = 3
-): Array<{ position: Position; score: number; archetypeId: string }> {
-    return Object.entries(archetypeScores)
-        .map(([pos, data]) => ({
-            position: pos as Position,
-            score: data.bestScore,
-            archetypeId: data.bestArchetypeId,
-        }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, count);
-}
-
-/**
- * Get best archetype for a specific position
- */
-export function getBestArchetypeForPosition(
-    archetypeScores: PlayerArchetypeScores,
-    position: Position
-): { archetypeId: string; score: number } | null {
-    const posData = archetypeScores[position];
-    if (!posData) return null;
-
-    return {
-        archetypeId: posData.bestArchetypeId,
-        score: posData.bestScore,
-    };
-}
-
-/**
- * Check if player is specialist (>97% threshold for one position)
- */
-export function isPositionSpecialist(best: number, secondBest: number, threshold: number = 3): boolean {
-    return best - secondBest >= threshold;
-}
-
-// Re-export legacy utility functions for backward compatibility
-export {
-    calculateScoresForStats,
-    getZoneAverages,
-    type ZoneAverages as ZoneAveragesType,
-} from "../lib/utils/player-scoring";
+/** @deprecated */
+export type FilledGamePlayer = GamePlayerType & { stats?: Record<string, number> };
+export type PositionedGamePlayer = GamePlayerType;
+export type PositionedFilledGamePlayer = GamePlayerType;
+export type PositionedScoredGamePlayer = GamePlayerType;
+export type PlayerWithArchetypes = PlayerV2;

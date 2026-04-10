@@ -14,12 +14,8 @@ import Modal from "@/components/shared/modal";
 import { Input } from "@/components/ui/input";
 import { usePlayers } from "@/hooks/use-players";
 import { getTierCssVar } from "@/lib/color-system";
-import { calculateArchetypeScores, getTopArchetypes } from "@/lib/positions/calculator";
-import { getZoneAverages } from "@/lib/utils/player-scoring";
-import { getArchetypeById } from "@/types/archetypes";
 import type { Player } from "@/types/players";
-import { getTopPositions } from "@/types/players";
-import { type StatCategory, StatCategoryKeys, StatCategoryNameMap } from "@/types/stats";
+import { CAPABILITY_KEYS, capabilityLabelMap } from "@/types/traits";
 
 interface PlayerCompareModalProps {
     player: Player;
@@ -29,13 +25,9 @@ interface PlayerCompareModalProps {
 
 function usePlayerData(player: Player) {
     return useMemo(() => {
-        const archetypeScores = calculateArchetypeScores(player.stats);
-        const topScores = getTopPositions(archetypeScores, 3);
-        const overall = Math.round(Math.max(...topScores.map((t) => t.score)));
-        const averages = getZoneAverages(player);
-        const topArchetypes = getTopArchetypes(archetypeScores);
+        const overall = Math.round(player.overall);
         const tierVar = getTierCssVar(overall);
-        return { overall, averages, topArchetypes, tierVar };
+        return { overall, capabilities: player.capabilities, tierVar };
     }, [player]);
 }
 
@@ -52,8 +44,8 @@ const CompareView: React.FC<CompareViewProps> = ({ playerA, playerB, onBack }) =
     const a = usePlayerData(playerA);
     const b = usePlayerData(playerB);
 
-    const axesA = calculateRadarAxes(a.averages);
-    const axesB = calculateRadarAxes(b.averages);
+    const axesA = calculateRadarAxes(a.capabilities);
+    const axesB = calculateRadarAxes(b.capabilities);
 
     return (
         <div className="flex flex-col h-[85vh] min-w-75 max-w-275">
@@ -102,17 +94,15 @@ const CompareView: React.FC<CompareViewProps> = ({ playerA, playerB, onBack }) =
                     </div>
                 </div>
 
-                {/* Category breakdown — dual bars, no numbers */}
+                {/* Capability breakdown — dual bars */}
                 <div className="space-y-2">
-                    {StatCategoryKeys.map((category: StatCategory) => {
-                        const aVal = Math.round(a.averages[category]);
-                        const bVal = Math.round(b.averages[category]);
+                    {CAPABILITY_KEYS.map((key) => {
+                        const aVal = Math.round(playerA.capabilities[key]);
+                        const bVal = Math.round(playerB.capabilities[key]);
 
                         return (
-                            <div key={category} className="bg-card border border-border/30 rounded-lg p-3">
-                                <span className="text-xs font-semibold mb-2 block">
-                                    {StatCategoryNameMap[category]}
-                                </span>
+                            <div key={key} className="bg-card border border-border/30 rounded-lg p-3">
+                                <span className="text-xs font-semibold mb-2 block">{capabilityLabelMap[key]}</span>
 
                                 <div className="space-y-1.5">
                                     <div className="flex-1 h-1.5 bg-muted/40 rounded-full overflow-hidden">
@@ -137,40 +127,6 @@ const CompareView: React.FC<CompareViewProps> = ({ playerA, playerB, onBack }) =
                             </div>
                         );
                     })}
-                </div>
-
-                {/* Top archetypes side by side */}
-                <div className="grid grid-cols-2 gap-3 pb-2">
-                    <div>
-                        <h4 className="text-[11px] font-semibold mb-1.5" style={{ color: `var(${a.tierVar})` }}>
-                            {playerA.name}
-                        </h4>
-                        <div className="space-y-1">
-                            {a.topArchetypes.slice(0, 3).map((arch) => (
-                                <div key={`${arch.position}-${arch.archetypeId}`} className="text-[11px]">
-                                    <span className="font-semibold" style={{ color: `var(${a.tierVar})` }}>
-                                        {arch.position}
-                                    </span>
-                                    <span className="text-muted-foreground ml-1">
-                                        {getArchetypeById(arch.archetypeId)?.name ?? ""}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div>
-                        <h4 className="text-[11px] font-semibold text-muted-foreground mb-1.5">{playerB.name}</h4>
-                        <div className="space-y-1">
-                            {b.topArchetypes.slice(0, 3).map((arch) => (
-                                <div key={`${arch.position}-${arch.archetypeId}`} className="text-[11px]">
-                                    <span className="font-semibold text-muted-foreground">{arch.position}</span>
-                                    <span className="text-muted-foreground/70 ml-1">
-                                        {getArchetypeById(arch.archetypeId)?.name ?? ""}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
