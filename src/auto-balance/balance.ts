@@ -113,29 +113,50 @@ export function scoreBalance(
     const topSumB = topB.reduce((s, p) => s + p.overall, 0);
     const starRatio = strictRatio(topSumA, topSumB);
 
-    // 4. Zone effectiveness balance — both teams should be competitive in all 3 zones
+    // 4. Zone effectiveness balance — both teams competitive in all 3 zones
     const zoneSum = (team: BalancePlayer[], zone: "def" | "mid" | "att") =>
         team.reduce((s, p) => s + p.zoneEffectiveness[zone], 0);
     const defRatio = strictRatio(zoneSum(teamA, "def"), zoneSum(teamB, "def"));
     const midRatio = strictRatio(zoneSum(teamA, "mid"), zoneSum(teamB, "mid"));
     const attRatio = strictRatio(zoneSum(teamA, "att"), zoneSum(teamB, "att"));
-    // Worst zone matters most — prevents lopsided teams
     const zoneScore = Math.min(defRatio, midRatio, attRatio);
 
-    // 5. Combine all factors
-    // Geometric mean of capability dimensions
+    // 5. Peak talent balance — both teams should have comparable top-end
+    // players in EACH capability, not just comparable sums.
+    // This catches "all the best strikers on one team" without fragile
+    // role-counting logic.
+    const peakBalance = (() => {
+        const topN = Math.max(1, Math.floor(teamA.length / 4));
+
+        const topCapSum = (team: BalancePlayer[], key: CapabilityKey) => {
+            const sorted = [...team].map((p) => p.capabilities[key]).sort((a, b) => b - a);
+            return sorted.slice(0, topN).reduce((s, v) => s + v, 0);
+        };
+
+        let worstRatio = 1.0;
+        for (const key of CAPABILITY_KEYS) {
+            const ratio = strictRatio(topCapSum(teamA, key), topCapSum(teamB, key));
+            worstRatio = Math.min(worstRatio, ratio);
+        }
+
+        return worstRatio;
+    })();
+
+    // 6. Combine all factors
     const capValues = Object.values(dimensions);
     const capProduct = capValues.reduce((product, v) => product * v, 1.0);
     const capScore = capProduct ** (1 / capValues.length);
 
     // Weighted composite:
-    //   Zones 30% — both teams competitive in all areas of the pitch
-    //   Overall 25% — total quality parity
-    //   Caps 25% — per-skill balance
-    //   Stars 20% — top talent distributed
-    const overall = zoneScore * 0.3 + overallRatio * 0.25 + capScore * 0.25 + starRatio * 0.2;
+    //   Zones 25% — both teams competitive in all areas
+    //   Overall 20% — total quality parity
+    //   Caps 20% — per-skill balance
+    //   Stars 15% — top talent distributed
+    //   Peaks 20% — top individual talent per skill balanced
+    const overall =
+        zoneScore * 0.25 + overallRatio * 0.2 + capScore * 0.2 + starRatio * 0.15 + peakBalance * 0.2;
 
-    const allScores = [...capValues, overallRatio, starRatio, defRatio, midRatio, attRatio];
+    const allScores = [...capValues, overallRatio, starRatio, defRatio, midRatio, attRatio, peakBalance];
     const worst = Math.min(...allScores);
     const mean = allScores.reduce((s, v) => s + v, 0) / allScores.length;
 

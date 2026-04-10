@@ -84,23 +84,65 @@ const POSITION_PROFILES: Record<Position, PositionProfile> = {
     },
 };
 
-/** Score a player for a specific position using capability profile */
+/**
+ * Score a player for a specific position.
+ *
+ * Two factors:
+ * 1. FIT — how well the player's capabilities match what the position needs
+ * 2. WASTE — how much of the player's talent goes unused in this position
+ *
+ * JP at CB: high fit (defending 95) but high waste (playmaking 92, technique 89 unused).
+ * JP at CM: high fit (playmaking + defending) and low waste (uses more of his toolkit).
+ *
+ * This naturally pushes elite all-rounders to spine positions where more
+ * of their abilities matter, and saves simpler positions for specialists
+ * or weaker players.
+ */
 function positionScore(player: BalancePlayer, position: Position): number {
     if (position === "GK") {
-        // GK: weakest outfield player. Lower overall = more likely GK.
         return -player.overall;
     }
 
     const profile = POSITION_PROFILES[position];
-    let score = 0;
-    score += player.capabilities.defending * profile.weights.defending;
-    score += player.capabilities.playmaking * profile.weights.playmaking;
-    score += player.capabilities.goalThreat * profile.weights.goalThreat;
-    score += player.capabilities.athleticism * profile.weights.athleticism;
-    score += player.capabilities.engine * profile.weights.engine;
-    score += player.capabilities.technique * profile.weights.technique;
+    const caps = player.capabilities;
 
-    return score;
+    // 1. Fit: weighted sum of capabilities × position weights
+    let fit = 0;
+    fit += caps.defending * profile.weights.defending;
+    fit += caps.playmaking * profile.weights.playmaking;
+    fit += caps.goalThreat * profile.weights.goalThreat;
+    fit += caps.athleticism * profile.weights.athleticism;
+    fit += caps.engine * profile.weights.engine;
+    fit += caps.technique * profile.weights.technique;
+
+    // 2. Waste: how much capability goes unused
+    // For each capability, the "unused" portion is: capability × (1 - weight)
+    // High capability with low weight = wasted talent
+    // Only penalize waste for capabilities significantly above average (> 75)
+    // so weak players don't get penalized for having nothing to waste
+    let waste = 0;
+    const capEntries: [string, number][] = [
+        ["defending", caps.defending],
+        ["playmaking", caps.playmaking],
+        ["goalThreat", caps.goalThreat],
+        ["athleticism", caps.athleticism],
+        ["engine", caps.engine],
+        ["technique", caps.technique],
+    ];
+
+    for (const [key, value] of capEntries) {
+        if (value > 75) {
+            const weight = profile.weights[key as keyof typeof profile.weights];
+            // Unused = high capability × how little this position values it
+            waste += (value - 75) * (1 - weight) * 0.15;
+        }
+    }
+
+    // Spine bonus: spine positions get a small boost for high-overall players
+    // This nudges stars toward the spine rather than getting parked wide
+    const spineBonus = profile.isSpine ? player.overall * 0.05 : 0;
+
+    return fit + spineBonus - waste;
 }
 
 /** Pick the best formation for a team based on player profiles */
