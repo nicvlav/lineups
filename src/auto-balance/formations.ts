@@ -60,8 +60,8 @@ const POSITION_PROFILES: Record<Position, PositionProfile> = {
         isSpine: false,
     },
     DM: {
-        // Destroyer/shield. Needs defending + engine. The midfield anchor.
-        weights: { defending: 0.35, playmaking: 0.15, goalThreat: 0, athleticism: 0.1, engine: 0.3, technique: 0.1 },
+        // Destroyer/shield. Defending is non-negotiable. Engine secondary.
+        weights: { defending: 0.45, playmaking: 0.1, goalThreat: 0, athleticism: 0.1, engine: 0.25, technique: 0.1 },
         isSpine: true,
     },
     CM: {
@@ -119,6 +119,15 @@ const POSITION_PROFILES: Record<Position, PositionProfile> = {
  * of their abilities matter, and saves simpler positions for specialists
  * or weaker players.
  */
+/** Minimum capability thresholds for critical positions.
+ * Below these, the player gets a heavy penalty — they simply can't do the job. */
+const POSITION_FLOOR: Partial<Record<Position, { cap: keyof BalancePlayer["capabilities"]; min: number }>> = {
+    DM: { cap: "defending", min: 70 },
+    CB: { cap: "defending", min: 60 },
+    ST: { cap: "goalThreat", min: 60 },
+    AM: { cap: "playmaking", min: 60 },
+};
+
 function positionScore(player: BalancePlayer, position: Position): number {
     if (position === "GK") {
         return -player.overall;
@@ -135,6 +144,15 @@ function positionScore(player: BalancePlayer, position: Position): number {
     fit += caps.athleticism * profile.weights.athleticism;
     fit += caps.engine * profile.weights.engine;
     fit += caps.technique * profile.weights.technique;
+
+    // Floor check: if the player lacks the minimum capability, they simply
+    // cannot play this position. Hard penalty — halve the score and then
+    // scale further by how far below the floor they are.
+    const floor = POSITION_FLOOR[position];
+    if (floor && caps[floor.cap] < floor.min) {
+        const deficit = (floor.min - caps[floor.cap]) / floor.min;
+        fit *= 0.5 * (1 - deficit); // Below floor → at least halved, then scaled down further
+    }
 
     // 2. Waste: how much capability goes unused
     // For each capability, the "unused" portion is: capability × (1 - weight)

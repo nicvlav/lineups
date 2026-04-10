@@ -42,48 +42,59 @@ export function computeCapabilities(traits: PlayerTraits): PlayerCapabilities {
 // ones more than the bottom. This means specialists get rewarded while
 // all-rounders also score well.
 
-function topWeightedScore(values: number[]): number {
-    const sorted = [...values].sort((a, b) => b - a);
-    // Weights: best capability matters most, diminishing for each additional one
-    const weights = [0.45, 0.3, 0.15, 0.1];
-    let total = 0;
-    let weightSum = 0;
-    for (let i = 0; i < sorted.length && i < weights.length; i++) {
-        total += sorted[i] * weights[i];
-        weightSum += weights[i];
-    }
-    return total / weightSum;
-}
-
 /**
  * Zone effectiveness: primary capability is the anchor (50%), supporting
  * capabilities fill the rest via top-weighted scoring.
  * This prevents high engine/athleticism from inflating a zone where the
  * core skill is lacking.
  */
+/**
+ * Each zone has multiple valid player profiles. A slow reader of the game
+ * and a fast aggressive tackler are both good defenders — just different types.
+ * Take the BEST route for each player, never penalize a valid specialist.
+ */
 export function computeZoneEffectiveness(capabilities: PlayerCapabilities): ZoneEffectiveness {
+    const c = capabilities;
+
     return {
-        def: capabilities.defending * 0.55 + topWeightedScore([capabilities.engine, capabilities.athleticism]) * 0.45,
-        mid:
-            capabilities.playmaking * 0.35 +
-            topWeightedScore([
-                capabilities.defending,
-                capabilities.engine,
-                capabilities.technique,
-                capabilities.athleticism,
-            ]) *
-                0.65,
-        att:
-            capabilities.goalThreat * 0.4 +
-            topWeightedScore([capabilities.technique, capabilities.athleticism, capabilities.playmaking]) * 0.6,
+        def: Math.max(
+            // Anchor/wall (Piqué, Christian): defending dominates, composure matters
+            c.defending * 0.65 + c.playmaking * 0.15 + c.technique * 0.1 + c.engine * 0.1,
+            // Athletic defender (Varane, Greg): defending + athleticism + engine
+            c.defending * 0.4 + c.athleticism * 0.4 + c.engine * 0.15 + c.defending * 0.05,
+        ),
+        mid: Math.max(
+            // Creative AM (Nav, Santos): playmaking + technique dominant
+            c.playmaking * 0.45 + c.technique * 0.35 + c.goalThreat * 0.1 + c.engine * 0.1,
+            // Deep playmaker (Christian, Pirlo): playmaking + defending
+            c.playmaking * 0.35 + c.defending * 0.3 + c.technique * 0.25 + c.engine * 0.1,
+            // Box-to-box (Kanté, Connor): engine + athleticism + defending
+            c.engine * 0.25 + c.athleticism * 0.3 + c.defending * 0.25 + c.playmaking * 0.2,
+        ),
+        att: (() => {
+            const clinical = c.goalThreat * 0.5 + c.technique * 0.3 + c.playmaking * 0.15 + c.engine * 0.05;
+            const athletic = c.goalThreat * 0.35 + c.athleticism * 0.35 + c.technique * 0.2 + c.engine * 0.1;
+            const base = Math.max(clinical, athletic);
+
+            // Midfield drag: if playmaking rivals goalThreat, they're a midfielder
+            // who can shoot, not a natural attacker. KDB, Nav, Santos types.
+            // The more playmaking exceeds goalThreat, the harder the drag.
+            if (c.playmaking >= c.goalThreat * 0.95) {
+                const ratio = c.playmaking / Math.max(c.goalThreat, 1);
+                // ratio ~1.0 = slight drag, ratio ~1.3 = heavy drag
+                const drag = Math.min(0.15, (ratio - 0.95) * 0.5);
+                return base * (1 - drag);
+            }
+            return base;
+        })(),
     };
 }
 
 // ─── Overall Quality ────────────────────────────────────────────────────────
 
 /**
- * Overall = best zone effectiveness.
- * A player is rated by what they do best — like FIFA.
+ * Overall = best zone effectiveness. Period.
+ * A player is rated by what they do best.
  */
 export function computeOverall(capabilities: PlayerCapabilities): number {
     const zones = computeZoneEffectiveness(capabilities);
