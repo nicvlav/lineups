@@ -143,60 +143,68 @@ function selectFormation(team: BalancePlayer[]): Formation | null {
     return bestFormation;
 }
 
-/** Assign players to positions within a formation */
+/**
+ * Assign players to positions using global best-fit.
+ *
+ * Instead of filling slots sequentially (which can trap good players in
+ * wrong positions), score EVERY (player, slot) combination and greedily
+ * assign the highest-scoring pair first. This ensures Edwin goes to AM
+ * instead of getting grabbed for CB just because CB filled first.
+ */
 function assignPositions(team: BalancePlayer[], formation: Formation, teamId: "a" | "b"): AssignedPlayer[] {
-    const assigned: AssignedPlayer[] = [];
-    const available = [...team];
-
-    // Build position slots, sorted: spine first (high priority), then wide positions
-    const slots: Position[] = [];
+    // Build all position slots
+    const slots: { position: Position; slotIndex: number; totalInPosition: number }[] = [];
     for (const [pos, count] of Object.entries(formation.positions)) {
         for (let i = 0; i < (count as number); i++) {
-            slots.push(pos as Position);
+            slots.push({ position: pos as Position, slotIndex: i, totalInPosition: count as number });
         }
     }
 
-    // Sort: GK last, spine positions first (so best players fill the spine)
-    slots.sort((a, b) => {
-        if (a === "GK") return 1;
-        if (b === "GK") return -1;
+    // Score every (player, slot) pair
+    interface Candidate {
+        playerIdx: number;
+        slotIdx: number;
+        score: number;
+    }
 
-        const aSpine = POSITION_PROFILES[a].isSpine ? 0 : 1;
-        const bSpine = POSITION_PROFILES[b].isSpine ? 0 : 1;
-        if (aSpine !== bSpine) return aSpine - bSpine;
+    const players = [...team];
+    const candidates: Candidate[] = [];
 
-        return POSITIONS[a].priority - POSITIONS[b].priority;
-    });
-
-    const positionIndexes: Record<string, number> = {};
-
-    for (const position of slots) {
-        if (available.length === 0) break;
-
-        let bestIdx = 0;
-        let bestScore = positionScore(available[0], position);
-
-        for (let i = 1; i < available.length; i++) {
-            const score = positionScore(available[i], position);
-            if (score > bestScore) {
-                bestScore = score;
-                bestIdx = i;
-            }
+    for (let p = 0; p < players.length; p++) {
+        for (let s = 0; s < slots.length; s++) {
+            candidates.push({
+                playerIdx: p,
+                slotIdx: s,
+                score: positionScore(players[p], slots[s].position),
+            });
         }
+    }
 
-        const player = available[bestIdx];
-        available.splice(bestIdx, 1);
+    // Sort by score descending — best fits first
+    candidates.sort((a, b) => b.score - a.score);
 
-        const posIndex = positionIndexes[position] ?? 0;
-        const numInPosition = formation.positions[position] ?? 1;
-        positionIndexes[position] = posIndex + 1;
+    // Greedy assignment: take the best unassigned (player, slot) pair
+    const assignedPlayers = new Set<number>();
+    const assignedSlots = new Set<number>();
+    const assigned: AssignedPlayer[] = [];
+
+    for (const candidate of candidates) {
+        if (assignedPlayers.has(candidate.playerIdx) || assignedSlots.has(candidate.slotIdx)) continue;
+
+        const player = players[candidate.playerIdx];
+        const slot = slots[candidate.slotIdx];
+
+        assignedPlayers.add(candidate.playerIdx);
+        assignedSlots.add(candidate.slotIdx);
 
         assigned.push({
             ...player,
             team: teamId,
-            assignedPosition: position,
-            assignedPoint: getPointForPosition(POSITIONS[position], posIndex, numInPosition, formation),
+            assignedPosition: slot.position,
+            assignedPoint: getPointForPosition(POSITIONS[slot.position], slot.slotIndex, slot.totalInPosition, formation),
         });
+
+        if (assigned.length === players.length) break;
     }
 
     return assigned;
