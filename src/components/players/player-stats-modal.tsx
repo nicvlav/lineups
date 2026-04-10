@@ -1,22 +1,21 @@
 /**
- * Player Stats Modal
+ * Player Stats Modal (V2)
  *
- * Opened from player cards or pitch players. Shows:
- * - Radar chart for zone averages (play style shape)
- * - Standout traits (top stats above player's own average)
- * - Position fit with archetype clusters and relative bars
- * - Admin-only detailed stats breakdown
+ * Shows:
+ * - Hexagon radar chart (6 capabilities)
+ * - Player label + zone classification
+ * - Zone effectiveness (Defence/Midfield/Attack)
+ * - Admin-only: 11 trait breakdown
  */
 
-import { GitCompareArrows, List } from "lucide-react";
+import { GitCompareArrows } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
 import PlayerCompareModal from "@/components/players/player-compare-modal";
 import RadarChart, { calculateRadarAxes } from "@/components/players/radar-chart";
-
-import RelativeArchetypeBars from "@/components/players/relative-archetype-bars";
 import Modal from "@/components/shared/modal";
 import { useAuth } from "@/context/auth-context";
+import { computeLabel } from "@/lib/capabilities";
 import {
     getRatingTierScheme,
     getStatBarColor,
@@ -24,88 +23,58 @@ import {
     getTierBgClass,
     getTierCssVar,
 } from "@/lib/color-system";
-import { classifyPlayerByZone, getPlayStyleBuzzwords, getPrimaryArchetypeId } from "@/lib/player-quality";
-import { getAllPositionArchetypeGroups, getTopPositionGroups } from "@/lib/positions/calculator";
-import { getArchetypeById } from "@/types/archetypes";
-import type { Player, PlayerArchetypeScores, ZoneAverages } from "@/types/players";
-import type { Position } from "@/types/positions";
-import { emptyZoneScores } from "@/types/positions";
-import type { StatCategory, StatsKey } from "@/types/stats";
-import { CategorizedStats, statLabelMap } from "@/types/stats";
+import type { Player } from "@/types/players";
+import {
+    CAPABILITY_KEYS,
+    capabilityLabelMap,
+    TRAIT_KEYS,
+    traitLabelMap,
+    ZONE_KEYS,
+    zoneLabelMap,
+} from "@/types/traits";
 
-interface ModernPlayerStatsModalProps {
+interface PlayerStatsModalProps {
     player: Player | null;
     isOpen: boolean;
     onClose: () => void;
-    overall: number;
-    archetypeScores: PlayerArchetypeScores;
-    averages: ZoneAverages;
-    stats: Record<StatsKey, number>;
 }
 
 const ADMIN_USER_ID = "24115871-04fe-4111-b048-18f7e3e976fc";
 const isAdmin = (userId: string | undefined): boolean => userId === ADMIN_USER_ID;
 
-/** Number of standout traits to show */
-const STANDOUT_COUNT = 4;
-/** A stat must be this many points above the player's own average to count as standout */
+/** Threshold above player's own trait average to count as standout */
 const STANDOUT_THRESHOLD = 8;
+const STANDOUT_COUNT = 4;
 
-const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
-    player,
-    isOpen,
-    onClose,
-    overall,
-    archetypeScores,
-    averages,
-    stats,
-}) => {
+const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({ player, isOpen, onClose }) => {
     const { user } = useAuth();
     const [showDetailedStats, setShowDetailedStats] = useState(false);
-    const [showAllPositions, setShowAllPositions] = useState(false);
     const [showCompare, setShowCompare] = useState(false);
 
-    // Compute standout traits — stats well above this player's own average
     const standoutTraits = useMemo(() => {
-        const entries = Object.entries(stats) as [StatsKey, number][];
-        const avg = entries.reduce((sum, [_, v]) => sum + v, 0) / (entries.length || 1);
+        if (!player) return [];
+        const entries = TRAIT_KEYS.map((key) => ({ key, value: player.traits[key] }));
+        const avg = entries.reduce((sum, e) => sum + e.value, 0) / entries.length;
         return entries
-            .filter(([_, v]) => v - avg >= STANDOUT_THRESHOLD)
-            .sort((a, b) => b[1] - a[1])
+            .filter((e) => e.value - avg >= STANDOUT_THRESHOLD)
+            .sort((a, b) => b.value - a.value)
             .slice(0, STANDOUT_COUNT)
-            .map(([key]) => statLabelMap[key]);
-    }, [stats]);
+            .map((e) => traitLabelMap[e.key]);
+    }, [player]);
 
     if (!player) return null;
 
-    const overallRounded = Math.round(overall);
+    const overallRounded = Math.round(player.overall);
     const tierScheme = getRatingTierScheme(overallRounded);
     const tierBg = getTierBgClass(overallRounded);
     const tierVar = getTierCssVar(overallRounded);
-
-    const primaryArchetypeId = getPrimaryArchetypeId(archetypeScores);
-    const buzzwords = primaryArchetypeId ? getPlayStyleBuzzwords(primaryArchetypeId) : [];
-
-    const zoneScores = structuredClone(emptyZoneScores);
-    for (const position in archetypeScores) {
-        zoneScores[position as Position] = archetypeScores[position].bestScore;
-    }
-    const zoneClassification = classifyPlayerByZone(zoneScores);
-
-    const topPositionGroups = getTopPositionGroups(archetypeScores);
-    const bestScore = topPositionGroups.length
-        ? topPositionGroups[0].archetypes.reduce((prev, current) => (prev.score > current.score ? prev : current)).score
-        : 0;
-    const allPositionGroups = getAllPositionArchetypeGroups(archetypeScores);
-
-    const values = Object.entries(stats).map(([_, value]) => value);
-    const allStatAverage = values.reduce((sum, v) => sum + v, 0) / (values.length || 1);
+    const label = computeLabel(player.capabilities);
 
     return (
         <>
             <Modal title={player.name} isOpen={isOpen} onClose={onClose}>
                 <div className="flex flex-col h-[85vh] min-w-75 max-w-275">
-                    {/* Header — tier + zone + admin toggle */}
+                    {/* Header */}
                     <div className="border-b border-border/40 pt-3 pb-3 flex gap-3">
                         <div className={`w-0.5 rounded-full my-1 ${tierBg}`} />
                         <div className="flex-1 space-y-2">
@@ -121,7 +90,8 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                                         {tierScheme.label}
                                     </span>
                                     <span className="text-xs font-medium text-muted-foreground">
-                                        {zoneClassification.specialistType}
+                                        {label.primary}
+                                        {label.secondary ? ` · ${label.secondary}` : ""}
                                     </span>
                                 </div>
 
@@ -135,20 +105,6 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                                     </button>
                                 )}
                             </div>
-
-                            {/* Buzzwords */}
-                            {buzzwords.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                    {buzzwords.map((word) => (
-                                        <span
-                                            key={word}
-                                            className="text-[11px] px-1.5 py-0.5 rounded-full border border-border/40 bg-muted/40 text-foreground"
-                                        >
-                                            {word}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -156,19 +112,24 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                     <div className="mt-3 space-y-4 pb-4 px-1 overflow-y-auto custom-scrollbar">
                         {/* Radar chart + standout traits */}
                         <div className="flex flex-col items-center gap-3">
-                            <RadarChart axes={calculateRadarAxes(averages)} size={200} tierRating={overallRounded} />
+                            <RadarChart
+                                axes={calculateRadarAxes(player.capabilities)}
+                                size={200}
+                                tierRating={overallRounded}
+                            />
 
-                            {/* Standout traits + compare button */}
-                            <div className="flex flex-wrap justify-center gap-1.5">
-                                {standoutTraits.map((trait) => (
-                                    <span
-                                        key={trait}
-                                        className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted/50 text-foreground"
-                                    >
-                                        {trait}
-                                    </span>
-                                ))}
-                            </div>
+                            {standoutTraits.length > 0 && (
+                                <div className="flex flex-wrap justify-center gap-1.5">
+                                    {standoutTraits.map((trait) => (
+                                        <span
+                                            key={trait}
+                                            className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted/50 text-foreground"
+                                        >
+                                            {trait}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                             <button
                                 type="button"
                                 onClick={() => setShowCompare(true)}
@@ -179,81 +140,64 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                             </button>
                         </div>
 
-                        {/* Position Fit */}
+                        {/* Zone Effectiveness */}
                         <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <div>
-                                    <h3 className="text-sm font-semibold">Position Fit</h3>
-                                    <p className="text-[11px] text-muted-foreground">
-                                        {showAllPositions ? "All positions" : "Top positions relative to best"}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAllPositions(!showAllPositions)}
-                                    className="flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
-                                >
-                                    <List className="w-3 h-3" />
-                                    {showAllPositions ? "Top" : "All"}
-                                </button>
-                            </div>
-
+                            <h3 className="text-sm font-semibold mb-2">Zone Effectiveness</h3>
                             <div className="space-y-2">
-                                {(showAllPositions ? allPositionGroups : topPositionGroups).map((posGroup) => {
-                                    const position = posGroup.position;
-                                    const bestArchetypeId =
-                                        "bestArchetypeId" in posGroup
-                                            ? posGroup.bestArchetypeId
-                                            : (posGroup.archetypes.find((a) => a.isBest)?.archetypeId ?? "");
-                                    const archetypes =
-                                        "allArchetypes" in posGroup ? posGroup.allArchetypes : posGroup.archetypes;
-
-                                    const archetypeData = getArchetypeById(bestArchetypeId);
-                                    const bestArchetype =
-                                        archetypes.find((a) => a.archetypeId === bestArchetypeId) ?? archetypes[0];
-
+                                {ZONE_KEYS.map((zone) => {
+                                    const value = Math.round(player.zoneEffectiveness[zone]);
                                     return (
-                                        <div key={position} className="bg-card border border-border/30 rounded-lg p-3">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div>
-                                                    <span className="font-bold text-sm">{position}</span>
-                                                    {archetypeData && (
-                                                        <span className="text-[11px] text-muted-foreground ml-2">
-                                                            {archetypeData.strengthLabels.slice(0, 2).join(" · ")}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {showDetailedStats && bestArchetype && (
+                                        <div key={zone} className="space-y-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-medium">{zoneLabelMap[zone]}</span>
+                                                {showDetailedStats && (
                                                     <span
-                                                        className={`text-xs font-semibold ${getStatTextColor(
-                                                            Math.round(bestArchetype.score)
-                                                        )}`}
+                                                        className={`text-xs font-bold tabular-nums ${getStatTextColor(value)}`}
                                                     >
-                                                        {Math.round(bestArchetype.score)}
+                                                        {value}
                                                     </span>
                                                 )}
                                             </div>
-
-                                            <RelativeArchetypeBars
-                                                archetypes={archetypes.map((a) => ({
-                                                    archetypeId: a.archetypeId,
-                                                    score: a.score,
-                                                }))}
-                                                bestScore={bestScore}
-                                                maxVisibleDefault={showAllPositions ? 999 : 3}
-                                                showNumbers={showDetailedStats}
-                                                compact={true}
-                                            />
+                                            <div className="w-full h-2 bg-muted rounded-full">
+                                                <div
+                                                    className={`${getStatBarColor(value)} h-2 rounded-full transition-all`}
+                                                    style={{ width: `${Math.min(value, 100)}%` }}
+                                                />
+                                            </div>
                                         </div>
                                     );
                                 })}
                             </div>
                         </div>
 
-                        {/* Admin: Detailed Stats */}
+                        {/* Capabilities */}
+                        <div>
+                            <h3 className="text-sm font-semibold mb-2">Capabilities</h3>
+                            <div className="grid grid-cols-2 gap-1.5">
+                                {CAPABILITY_KEYS.map((key) => {
+                                    const value = Math.round(player.capabilities[key]);
+                                    return (
+                                        <div
+                                            key={key}
+                                            className="flex justify-between items-center bg-muted/30 rounded px-2 py-1.5"
+                                        >
+                                            <span className="text-[11px] text-muted-foreground">
+                                                {capabilityLabelMap[key]}
+                                            </span>
+                                            <span
+                                                className={`text-[11px] font-bold tabular-nums ${getStatTextColor(value)}`}
+                                            >
+                                                {value}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Admin: Trait Breakdown */}
                         {isAdmin(user?.id) && showDetailedStats && (
                             <div className="space-y-3 pt-2 border-t border-border/30">
-                                {/* Summary */}
                                 <div className="flex gap-4 text-xs">
                                     <div className="flex gap-1">
                                         <span className="text-muted-foreground">Overall:</span>
@@ -261,60 +205,29 @@ const PlayerStatsModal: React.FC<ModernPlayerStatsModalProps> = ({
                                             {overallRounded}
                                         </span>
                                     </div>
-                                    <div className="flex gap-1">
-                                        <span className="text-muted-foreground">Avg:</span>
-                                        <span className={`font-bold ${getStatTextColor(allStatAverage)}`}>
-                                            {Math.round(allStatAverage)}
-                                        </span>
-                                    </div>
                                 </div>
 
-                                {/* Category breakdown */}
-                                {Object.entries(CategorizedStats).map(([category, keys]) => {
-                                    const avg = averages[category as StatCategory] ?? 0;
-                                    const avgRounded = Math.round(avg);
-
-                                    return (
-                                        <div key={category} className="space-y-1.5">
-                                            <div className="flex items-center justify-between">
-                                                <h4 className="font-bold text-xs uppercase tracking-wider">
-                                                    {category}
-                                                </h4>
-                                                <span className={`text-xs font-bold ${getStatTextColor(avgRounded)}`}>
-                                                    {avgRounded}
+                                <h4 className="font-bold text-xs uppercase tracking-wider">Traits</h4>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                    {TRAIT_KEYS.map((key) => {
+                                        const value = Math.round(player.traits[key]);
+                                        return (
+                                            <div
+                                                key={key}
+                                                className="flex justify-between items-center bg-muted/30 rounded px-2 py-1"
+                                            >
+                                                <span className="text-[11px] text-muted-foreground">
+                                                    {traitLabelMap[key]}
+                                                </span>
+                                                <span
+                                                    className={`text-[11px] font-bold tabular-nums ${getStatTextColor(value)}`}
+                                                >
+                                                    {value}
                                                 </span>
                                             </div>
-
-                                            <div className="w-full h-2 bg-muted rounded-full">
-                                                <div
-                                                    className={`${getStatBarColor(avgRounded)} h-2 rounded-full`}
-                                                    style={{ width: `${Math.min(avgRounded, 100)}%` }}
-                                                />
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-1.5">
-                                                {keys.map((key) => {
-                                                    const statRounded = Math.round(stats[key] ?? 0);
-                                                    return (
-                                                        <div
-                                                            key={key}
-                                                            className="flex justify-between items-center bg-muted/30 rounded px-2 py-1"
-                                                        >
-                                                            <span className="text-[11px] text-muted-foreground">
-                                                                {statLabelMap[key]}
-                                                            </span>
-                                                            <span
-                                                                className={`text-[11px] font-bold tabular-nums ${getStatTextColor(statRounded)}`}
-                                                            >
-                                                                {statRounded}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
                             </div>
                         )}
                     </div>

@@ -1,12 +1,16 @@
 /**
  * Auto-Balance V2 Core Algorithm
  *
- * Balance-first, positions-last. Three phases:
- * 1. Greedy seed — sort by quality, alternate assignment
- * 2. Swap search — pairwise swaps improving minimax across 6 dimensions
- * 3. Restarts — perturbations to escape local optima
+ * Balance-first, positions-last. Phases:
+ * 1. Greedy seed (with randomization on restarts)
+ * 2. Swap search with strict multi-dimensional scoring
+ * 3. Restarts with perturbations
  *
- * ~300 LOC replacing ~5,500 LOC of Monte Carlo + star penalties + zone affinity.
+ * Key design decisions:
+ * - Overall quality balance is a first-class constraint, not just capability ratios
+ * - Score uses multiplicative penalties so one bad dimension tanks everything
+ * - Variance penalty prevents star+weak combos in critical dimensions
+ * - Greedy seed randomizes player order on restarts for exploration
  */
 
 import { logger } from "@/lib/logger";
@@ -27,7 +31,6 @@ function teamCapabilities(team: BalancePlayer[], config: BalanceConfig): PlayerC
         technique: 0,
     };
 
-    // Count how many players are "strong" in each dimension (above 65)
     const strongCount: Record<CapabilityKey, number> = {
         defending: 0,
         playmaking: 0,
@@ -37,14 +40,12 @@ function teamCapabilities(team: BalancePlayer[], config: BalanceConfig): PlayerC
         technique: 0,
     };
 
-    // Sort by overall descending so best players get full contribution
     const sorted = [...team].sort((a, b) => b.overall - a.overall);
 
     for (const player of sorted) {
         for (const key of CAPABILITY_KEYS) {
             const val = player.capabilities[key];
             if (val >= 65) {
-                // Diminishing returns: Nth strong player contributes less
                 const multiplier = 1.0 / (1.0 + strongCount[key] * config.diminishingReturnsFactor);
                 sums[key] += val * multiplier;
                 strongCount[key]++;
@@ -65,45 +66,84 @@ function variancePenalty(team: BalancePlayer[], key: CapabilityKey, sensitivity:
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
     const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length;
 
-    // Higher variance → lower multiplier (penalty)
     return 1.0 - (Math.sqrt(variance) / 100) * sensitivity;
 }
 
-/** Score how balanced two teams are across all 6 dimensions */
-export function scoreBalance(teamA: BalancePlayer[], teamB: BalancePlayer[], config: BalanceConfig): BalanceScore {
+/**
+ * Ratio helper: min/max, but penalized exponentially as the gap grows.
+ * A 95% ratio scores much better than 90%, and 90% much better than 85%.
+ * This prevents the algorithm from accepting "good enough" when better exists.
+ */
+function strictRatio(a: number, b: number): number {
+    if (a === 0 && b === 0) return 1.0;
+    const raw = Math.min(a, b) / Math.max(a, b);
+    // Square the ratio so gaps are penalized more aggressively
+    // 0.95 → 0.9025, 0.90 → 0.81, 0.85 → 0.7225
+    return raw * raw;
+}
+
+/** Score how balanced two teams are across ALL dimensions */
+export function scoreBalance(
+    teamA: BalancePlayer[],
+    teamB: BalancePlayer[],
+    config: BalanceConfig,
+): BalanceScore {
     const capsA = teamCapabilities(teamA, config);
     const capsB = teamCapabilities(teamB, config);
 
+    // 1. Capability dimension ratios (squared for strictness)
     const dimensions = {} as Record<CapabilityKey, number>;
-
     for (const key of CAPABILITY_KEYS) {
-        const a = capsA[key];
-        const b = capsB[key];
-        const ratio = a === 0 && b === 0 ? 1.0 : Math.min(a, b) / Math.max(a, b);
-
-        // Apply variance penalty — penalizes teams with star+weak combos
+        const ratio = strictRatio(capsA[key], capsB[key]);
         const vpA = variancePenalty(teamA, key, config.varianceSensitivity[key]);
         const vpB = variancePenalty(teamB, key, config.varianceSensitivity[key]);
-        const vpAvg = (vpA + vpB) / 2;
-
-        dimensions[key] = ratio * vpAvg;
+        dimensions[key] = ratio * ((vpA + vpB) / 2);
     }
 
-    const values = Object.values(dimensions);
-    const worst = Math.min(...values);
-    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    // 2. Overall quality balance — sum of all player overalls must be close
+    const sumA = teamA.reduce((s, p) => s + p.overall, 0);
+    const sumB = teamB.reduce((s, p) => s + p.overall, 0);
+    const overallRatio = strictRatio(sumA, sumB);
 
-    return {
-        dimensions,
-        worst,
-        mean,
-        overall: worst * 0.6 + mean * 0.4,
-    };
+    // 3. Star balance — top 3 players per team should be comparable
+    const topN = Math.min(3, Math.floor(teamA.length / 3));
+    const topA = [...teamA].sort((a, b) => b.overall - a.overall).slice(0, topN);
+    const topB = [...teamB].sort((a, b) => b.overall - a.overall).slice(0, topN);
+    const topSumA = topA.reduce((s, p) => s + p.overall, 0);
+    const topSumB = topB.reduce((s, p) => s + p.overall, 0);
+    const starRatio = strictRatio(topSumA, topSumB);
+
+    // 4. Zone effectiveness balance — both teams should be competitive in all 3 zones
+    const zoneSum = (team: BalancePlayer[], zone: "def" | "mid" | "att") =>
+        team.reduce((s, p) => s + p.zoneEffectiveness[zone], 0);
+    const defRatio = strictRatio(zoneSum(teamA, "def"), zoneSum(teamB, "def"));
+    const midRatio = strictRatio(zoneSum(teamA, "mid"), zoneSum(teamB, "mid"));
+    const attRatio = strictRatio(zoneSum(teamA, "att"), zoneSum(teamB, "att"));
+    // Worst zone matters most — prevents lopsided teams
+    const zoneScore = Math.min(defRatio, midRatio, attRatio);
+
+    // 5. Combine all factors
+    // Geometric mean of capability dimensions
+    const capValues = Object.values(dimensions);
+    const capProduct = capValues.reduce((product, v) => product * v, 1.0);
+    const capScore = capProduct ** (1 / capValues.length);
+
+    // Weighted composite:
+    //   Zones 30% — both teams competitive in all areas of the pitch
+    //   Overall 25% — total quality parity
+    //   Caps 25% — per-skill balance
+    //   Stars 20% — top talent distributed
+    const overall = zoneScore * 0.3 + overallRatio * 0.25 + capScore * 0.25 + starRatio * 0.2;
+
+    const allScores = [...capValues, overallRatio, starRatio, defRatio, midRatio, attRatio];
+    const worst = Math.min(...allScores);
+    const mean = allScores.reduce((s, v) => s + v, 0) / allScores.length;
+
+    return { dimensions, worst, mean, overall };
 }
 
 // ─── Formation Feasibility ──────────────────────────────────────────────────
 
-/** Check that a team can field a real formation (adequate zone coverage) */
 function isFormationFeasible(team: BalancePlayer[], threshold: number): boolean {
     const zoneCoverage = { def: 0, mid: 0, att: 0 };
     const minPerZone = Math.max(1, Math.floor(team.length / 4));
@@ -120,11 +160,46 @@ function isFormationFeasible(team: BalancePlayer[], threshold: number): boolean 
 
 // ─── Phase 1: Greedy Seed ───────────────────────────────────────────────────
 
-function greedySeed(players: BalancePlayer[]): { teamA: BalancePlayer[]; teamB: BalancePlayer[] } {
+/**
+ * Greedy balanced partition with randomization.
+ *
+ * Stars (top ~25% by quality) are always sorted strictly by overall —
+ * their placement matters too much to randomize.
+ * Non-stars get shuffled within quality bands to explore different seeds.
+ * This gives natural variation on reshuffles without disrupting star balance.
+ */
+function greedySeed(
+    players: BalancePlayer[],
+    intensity: number, // 0 = deterministic, 1+ = increasing randomization
+): { teamA: BalancePlayer[]; teamB: BalancePlayer[] } {
     const sorted = [...players].sort((a, b) => b.overall - a.overall);
+
+    // Stars = top 25%, always in strict order
+    const starCount = Math.max(2, Math.ceil(sorted.length * 0.25));
+
+    if (intensity > 0) {
+        // Only shuffle non-stars (index starCount onwards)
+        const stars = sorted.slice(0, starCount);
+        const rest = sorted.slice(starCount);
+
+        // Shuffle rest with intensity-scaled band width
+        const bandWidth = 3 + intensity * 3; // intensity 1 → ±6, intensity 2 → ±9
+        for (let i = rest.length - 1; i > 0; i--) {
+            // Find swap candidates within band
+            let j = i;
+            while (j > 0 && Math.abs(rest[j - 1].overall - rest[i].overall) <= bandWidth) {
+                j--;
+            }
+            const swapIdx = j + Math.floor(Math.random() * (i - j + 1));
+            [rest[i], rest[swapIdx]] = [rest[swapIdx], rest[i]];
+        }
+
+        sorted.length = 0;
+        sorted.push(...stars, ...rest);
+    }
+
     const teamA: BalancePlayer[] = [];
     const teamB: BalancePlayer[] = [];
-
     let sumA = 0;
     let sumB = 0;
 
@@ -150,27 +225,39 @@ interface SwapSearchResult {
     swaps: SwapRecord[];
 }
 
-function swapSearch(initialA: BalancePlayer[], initialB: BalancePlayer[], config: BalanceConfig): SwapSearchResult {
+/**
+ * Swap search with controlled stochasticity.
+ *
+ * @param temperature 0 = always pick best swap (deterministic).
+ *                    >0 = sometimes pick a random good swap instead of the best.
+ *                    Higher = more randomness, more variety, slightly less optimal.
+ */
+function swapSearch(
+    initialA: BalancePlayer[],
+    initialB: BalancePlayer[],
+    config: BalanceConfig,
+    temperature: number = 0,
+): SwapSearchResult {
     const teamA = [...initialA];
     const teamB = [...initialB];
     const swaps: SwapRecord[] = [];
 
     let currentScore = scoreBalance(teamA, teamB, config);
     let improved = true;
+    let maxPasses = 50;
 
-    while (improved) {
+    while (improved && maxPasses-- > 0) {
         improved = false;
-        let bestDelta = 0;
-        let bestI = -1;
-        let bestJ = -1;
 
-        // Evaluate all pairwise swaps, find the best one
+        // Collect ALL improving swaps, not just the best
+        const candidates: Array<{ i: number; j: number; delta: number }> = [];
+
         for (let i = 0; i < teamA.length; i++) {
             for (let j = 0; j < teamB.length; j++) {
-                // Swap
+                if (Math.abs(teamA[i].overall - teamB[j].overall) < 0.5) continue;
+
                 [teamA[i], teamB[j]] = [teamB[j], teamA[i]];
 
-                // Check feasibility
                 if (
                     isFormationFeasible(teamA, config.feasibilityThreshold) &&
                     isFormationFeasible(teamB, config.feasibilityThreshold)
@@ -178,30 +265,53 @@ function swapSearch(initialA: BalancePlayer[], initialB: BalancePlayer[], config
                     const candidate = scoreBalance(teamA, teamB, config);
                     const delta = candidate.overall - currentScore.overall;
 
-                    if (delta > bestDelta) {
-                        bestDelta = delta;
-                        bestI = i;
-                        bestJ = j;
+                    if (delta > 0.0001) {
+                        candidates.push({ i, j, delta });
                     }
                 }
 
-                // Swap back
                 [teamA[i], teamB[j]] = [teamB[j], teamA[i]];
             }
         }
 
-        // Execute the best swap if it improves balance
-        if (bestI >= 0 && bestJ >= 0) {
+        if (candidates.length > 0) {
+            // Sort by improvement descending
+            candidates.sort((a, b) => b.delta - a.delta);
+
+            let pick: (typeof candidates)[0];
+
+            if (temperature === 0 || candidates.length === 1) {
+                // Deterministic: always best swap
+                pick = candidates[0];
+            } else {
+                // Stochastic: weighted random from top candidates
+                // Higher temperature = consider more candidates
+                const poolSize = Math.min(candidates.length, Math.max(2, Math.ceil(candidates.length * temperature)));
+                const pool = candidates.slice(0, poolSize);
+
+                // Weight by delta (better swaps still more likely)
+                const totalDelta = pool.reduce((s, c) => s + c.delta, 0);
+                let r = Math.random() * totalDelta;
+                pick = pool[0];
+                for (const c of pool) {
+                    r -= c.delta;
+                    if (r <= 0) {
+                        pick = c;
+                        break;
+                    }
+                }
+            }
+
             const before = currentScore.overall;
-            [teamA[bestI], teamB[bestJ]] = [teamB[bestJ], teamA[bestI]];
+            [teamA[pick.i], teamB[pick.j]] = [teamB[pick.j], teamA[pick.i]];
             currentScore = scoreBalance(teamA, teamB, config);
 
             swaps.push({
-                playerA: teamA[bestI].name,
-                playerB: teamB[bestJ].name,
+                playerA: teamA[pick.i].name,
+                playerB: teamB[pick.j].name,
                 scoreBefore: before,
                 scoreAfter: currentScore.overall,
-                improvement: bestDelta,
+                improvement: pick.delta,
             });
 
             improved = true;
@@ -211,19 +321,18 @@ function swapSearch(initialA: BalancePlayer[], initialB: BalancePlayer[], config
     return { teamA, teamB, score: currentScore, swaps };
 }
 
-// ─── Phase 3: Restarts with Perturbations ───────────────────────────────────
+// ─── Phase 3: Restarts ─────────────────────────────────────────────────────
 
 const VARIATION_RUNS: Record<string, { runs: number; perturbations: number }> = {
-    low: { runs: 1, perturbations: 0 },
-    medium: { runs: 50, perturbations: 3 },
-    high: { runs: 150, perturbations: 5 },
+    low: { runs: 10, perturbations: 1 },
+    medium: { runs: 100, perturbations: 4 },
+    high: { runs: 250, perturbations: 6 },
 };
 
-/** Randomly swap N players between teams */
 function perturb(
     teamA: BalancePlayer[],
     teamB: BalancePlayer[],
-    count: number
+    count: number,
 ): { teamA: BalancePlayer[]; teamB: BalancePlayer[] } {
     const a = [...teamA];
     const b = [...teamB];
@@ -237,10 +346,9 @@ function perturb(
     return { teamA: a, teamB: b };
 }
 
-/** Main balance algorithm: greedy seed → swap search → restarts */
 export function runBalance(
     players: BalancePlayer[],
-    config: BalanceConfig
+    config: BalanceConfig,
 ): { teamA: BalancePlayer[]; teamB: BalancePlayer[]; score: BalanceScore; audit: SwapRecord[] } {
     const { runs, perturbations } = VARIATION_RUNS[config.variation];
 
@@ -248,13 +356,21 @@ export function runBalance(
 
     for (let i = 0; i < runs; i++) {
         // Phase 1: Greedy seed
-        const seed = greedySeed(players);
+        // Run 0: deterministic (baseline)
+        // Runs 1-39: moderate shuffle (intensity 1)
+        // Runs 40-79: wider shuffle (intensity 2)
+        const intensity = i === 0 ? 0 : 1 + Math.floor(i / 40);
+        const seed = greedySeed(players, intensity);
 
-        // Phase 3: Perturb (skip on first run to keep the pure greedy baseline)
-        const { teamA, teamB } = i === 0 ? seed : perturb(seed.teamA, seed.teamB, perturbations);
+        // Phase 3: Perturb on restarts
+        const { teamA, teamB } =
+            i === 0 ? seed : perturb(seed.teamA, seed.teamB, perturbations);
 
         // Phase 2: Swap search
-        const result = swapSearch(teamA, teamB, config);
+        // Run 0: deterministic (temperature 0) — algorithm's best answer
+        // Restarts: increasing temperature for variety
+        const temperature = i === 0 ? 0 : 0.3 + (i / runs) * 0.4;
+        const result = swapSearch(teamA, teamB, config, temperature);
 
         if (!bestResult || result.score.overall > bestResult.score.overall) {
             bestResult = result;
@@ -268,7 +384,7 @@ export function runBalance(
     logger.debug(
         `Balance complete: score=${bestResult.score.overall.toFixed(4)}, ` +
             `worst=${bestResult.score.worst.toFixed(4)}, ` +
-            `swaps=${bestResult.swaps.length}, runs=${runs}`
+            `swaps=${bestResult.swaps.length}, runs=${runs}`,
     );
 
     return {

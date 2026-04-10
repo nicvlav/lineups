@@ -382,6 +382,32 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         try {
             const result = balanceTeams(filteredPlayers.map((p) => ({ id: p.id, name: p.name, traits: p.traits })));
 
+            // Debug: compare teams
+            const debugTeam = (team: typeof result.teams.a, label: string) => {
+                const rows = team.map((p) => ({
+                    name: p.name,
+                    pos: p.assignedPosition,
+                    ovr: Math.round(p.overall),
+                    def: Math.round(p.zoneEffectiveness.def),
+                    mid: Math.round(p.zoneEffectiveness.mid),
+                    att: Math.round(p.zoneEffectiveness.att),
+                }));
+                const totals = {
+                    name: "TOTAL",
+                    pos: "",
+                    ovr: rows.reduce((s, r) => s + r.ovr, 0),
+                    def: rows.reduce((s, r) => s + r.def, 0),
+                    mid: rows.reduce((s, r) => s + r.mid, 0),
+                    att: rows.reduce((s, r) => s + r.att, 0),
+                };
+                console.log(`\n=== ${label} (${result.formations[label === "TEAM A" ? "a" : "b"].name}) ===`);
+                console.table([...rows.sort((a, b) => b.ovr - a.ovr), totals]);
+            };
+            debugTeam(result.teams.a, "TEAM A");
+            debugTeam(result.teams.b, "TEAM B");
+            console.log("Balance score:", result.score);
+            console.log("Swaps:", result.audit.length);
+
             const playerRecord: Record<string, GamePlayer> = {};
 
             for (const assigned of [...result.teams.a, ...result.teams.b]) {

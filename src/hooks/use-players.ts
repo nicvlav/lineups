@@ -6,7 +6,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { v4 as uuidv4 } from "uuid";
-import { computeCapabilities, computeOverall, computeZoneEffectiveness } from "@/lib/capabilities";
+import { computeCapabilities, computeLabel, computeOverall, computeZoneEffectiveness } from "@/lib/capabilities";
 import { logger } from "@/lib/logger";
 import { playerRowSchema } from "@/lib/schemas";
 import { categorizeError, ensureValidSession } from "@/lib/session-manager";
@@ -101,6 +101,7 @@ async function fetchPlayers(): Promise<Record<string, PlayerV2>> {
 
     if (!data || data.length === 0) return {};
 
+    const debugRows: Array<{ name: string; ovr: number; label: string; def: number; mid: number; att: number }> = [];
     const playerRecord: Record<string, PlayerV2> = {};
     for (const row of data) {
         const parsed = playerRowSchema.safeParse(row);
@@ -111,8 +112,9 @@ async function fetchPlayers(): Promise<Record<string, PlayerV2>> {
         const p = parsed.data;
         const traits = convertRowToTraits(p as Record<string, unknown>);
         const capabilities = convertRowToCapabilities(p as Record<string, unknown>);
-        const overall = typeof p.overall === "number" ? p.overall : computeOverall(capabilities);
+        const overall = computeOverall(capabilities);
 
+        const ze = computeZoneEffectiveness(capabilities);
         playerRecord[p.id] = {
             id: p.id,
             name: p.name,
@@ -121,10 +123,24 @@ async function fetchPlayers(): Promise<Record<string, PlayerV2>> {
             createdAt: p.created_at ?? undefined,
             traits,
             capabilities,
-            zoneEffectiveness: computeZoneEffectiveness(capabilities),
+            zoneEffectiveness: ze,
             overall,
         };
+        debugRows.push({
+            name: p.name,
+            ovr: Math.round(overall),
+            label: `${computeLabel(capabilities).primary}`,
+            def: Math.round(ze.def),
+            mid: Math.round(ze.mid),
+            att: Math.round(ze.att),
+        });
     }
+
+    debugRows.sort((a, b) => b.ovr - a.ovr);
+    console.table(debugRows);
+
+    // Expose for console debugging: window.__players = playerRecord
+    (window as unknown as Record<string, unknown>).__players = playerRecord;
 
     return playerRecord;
 }
