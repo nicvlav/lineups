@@ -90,21 +90,25 @@ export interface PlayerLabel {
     secondary: string;
 }
 
-/** Threshold for a capability to be considered "dominant" (vs player's own capability mean) */
+/**
+ * Player labels have two tiers:
+ *
+ * ELITE labels (overall >= 75): Specific identities — Destroyer, Maestro, Deep Playmaker.
+ * These mean something. You earn them by being good enough that your profile matters.
+ *
+ * BASIC labels (overall < 75): Zone-based descriptions — Defensive, Creative, Athletic.
+ * At lower quality, the nuance of "Destroyer vs Enforcer" doesn't matter.
+ * You're just a player who's better at defending than attacking.
+ */
+const ELITE_THRESHOLD = 75;
 const DOMINANCE_THRESHOLD = 1.1;
+
 export function computeLabel(capabilities: PlayerCapabilities): PlayerLabel {
     const values = Object.values(capabilities);
     const capMean = values.reduce((sum, v) => sum + v, 0) / values.length;
     if (capMean === 0) return { primary: "Unknown", secondary: "" };
 
-    const dominant: CapabilityKey[] = [];
-
-    for (const [key, value] of Object.entries(capabilities) as [CapabilityKey, number][]) {
-        if (value > capMean * DOMINANCE_THRESHOLD) dominant.push(key);
-    }
-
-    const primary = derivePrimaryLabel(dominant, capabilities);
-
+    const overall = computeOverall(capabilities);
     const zones = computeZoneEffectiveness(capabilities);
     const bestZone =
         zones.def >= zones.mid && zones.def >= zones.att
@@ -113,10 +117,24 @@ export function computeLabel(capabilities: PlayerCapabilities): PlayerLabel {
               ? "Attacking"
               : "Midfield";
 
+    // Below elite threshold: simple zone-based labels
+    if (overall < ELITE_THRESHOLD) {
+        const spread = Math.max(...values) - Math.min(...values);
+        if (spread < 8) return { primary: "Versatile", secondary: "" };
+        return { primary: bestZone, secondary: "" };
+    }
+
+    // Elite: find dominant capabilities for specific labels
+    const dominant: CapabilityKey[] = [];
+    for (const [key, value] of Object.entries(capabilities) as [CapabilityKey, number][]) {
+        if (value > capMean * DOMINANCE_THRESHOLD) dominant.push(key);
+    }
+
+    const primary = deriveEliteLabel(dominant, capabilities);
     return { primary, secondary: dominant.length <= 1 ? bestZone : "" };
 }
 
-function derivePrimaryLabel(dominant: CapabilityKey[], caps: PlayerCapabilities): string {
+function deriveEliteLabel(dominant: CapabilityKey[], caps: PlayerCapabilities): string {
     const has = (key: CapabilityKey) => dominant.includes(key);
     const count = dominant.length;
 
@@ -135,7 +153,7 @@ function derivePrimaryLabel(dominant: CapabilityKey[], caps: PlayerCapabilities)
     if (has("defending") && has("athleticism")) return "Enforcer";
     if (has("defending") && has("engine")) return "Destroyer";
     if (has("defending") && has("technique")) return "Ball Player";
-    if (has("defending")) return "Defender";
+    if (has("defending")) return "Anchor";
 
     if (has("playmaking") && has("technique")) return "Maestro";
     if (has("playmaking") && has("engine")) return "Conductor";
@@ -151,11 +169,24 @@ function derivePrimaryLabel(dominant: CapabilityKey[], caps: PlayerCapabilities)
     if (has("engine")) return "Engine";
     if (has("technique")) return "Technician";
 
-    // No dominant capability
+    // Elite but no dominant cap — genuinely good at everything
     const values = Object.values(caps);
-    const max = Math.max(...values);
-    const min = Math.min(...values);
-    if (max - min < 10) return "All-Rounder";
+    const spread = Math.max(...values) - Math.min(...values);
+    if (spread < 12) return "Complete";
 
-    return "Balanced";
+    // Has clear strengths but nothing crosses the 10% threshold
+    // Find the top 2 capabilities and describe the profile
+    const sorted = (Object.entries(caps) as [CapabilityKey, number][]).sort((a, b) => b[1] - a[1]);
+    const top = sorted[0][0];
+
+    const topLabels: Record<CapabilityKey, string> = {
+        defending: "Anchor",
+        playmaking: "Playmaker",
+        goalThreat: "Goal Threat",
+        athleticism: "Athlete",
+        engine: "Engine",
+        technique: "Technician",
+    };
+
+    return topLabels[top];
 }
