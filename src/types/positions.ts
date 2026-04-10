@@ -177,24 +177,11 @@ export function getPositionsSortedByPriority(): PositionDefinition[] {
     return Object.values(POSITIONS).sort((a, b) => a.priority - b.priority);
 }
 
-// Re-export legacy utilities for backward compatibility
-export {
-    emptyZoneScores,
-    getPointForPosition,
-} from "../lib/utils/pitch-rendering";
-// Export default zone weights as defaultZoneWeights for backward compatibility
-export {
-    normalizedDefaultWeights,
-    normalizedDefaultWeights as defaultZoneWeights,
-    PositionLabels,
-    PositionShortLabels,
-    type PositionWeighting,
-    type Weighting,
-} from "../lib/utils/player-scoring";
-// Re-export Formation for backward compatibility
-export type { Formation } from "./formations";
+// Re-export pitch rendering utilities
+export { emptyZoneScores, getPointForPosition } from "../lib/utils/pitch-rendering";
 
-// Re-export formationTemplates for backward compatibility
+// Re-export Formation for convenience
+export type { Formation } from "./formations";
 export { formationTemplates } from "./formations";
 
 // Re-export Point and ZoneScores from players

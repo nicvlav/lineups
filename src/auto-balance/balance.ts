@@ -83,11 +83,7 @@ function strictRatio(a: number, b: number): number {
 }
 
 /** Score how balanced two teams are across ALL dimensions */
-export function scoreBalance(
-    teamA: BalancePlayer[],
-    teamB: BalancePlayer[],
-    config: BalanceConfig,
-): BalanceScore {
+export function scoreBalance(teamA: BalancePlayer[], teamB: BalancePlayer[], config: BalanceConfig): BalanceScore {
     const capsA = teamCapabilities(teamA, config);
     const capsB = teamCapabilities(teamB, config);
 
@@ -153,8 +149,7 @@ export function scoreBalance(
     //   Caps 20% — per-skill balance
     //   Stars 15% — top talent distributed
     //   Peaks 20% — top individual talent per skill balanced
-    const overall =
-        zoneScore * 0.25 + overallRatio * 0.2 + capScore * 0.2 + starRatio * 0.15 + peakBalance * 0.2;
+    const overall = zoneScore * 0.25 + overallRatio * 0.2 + capScore * 0.2 + starRatio * 0.15 + peakBalance * 0.2;
 
     const allScores = [...capValues, overallRatio, starRatio, defRatio, midRatio, attRatio, peakBalance];
     const worst = Math.min(...allScores);
@@ -191,7 +186,7 @@ function isFormationFeasible(team: BalancePlayer[], threshold: number): boolean 
  */
 function greedySeed(
     players: BalancePlayer[],
-    intensity: number, // 0 = deterministic, 1+ = increasing randomization
+    intensity: number // 0 = deterministic, 1+ = increasing randomization
 ): { teamA: BalancePlayer[]; teamB: BalancePlayer[] } {
     const sorted = [...players].sort((a, b) => b.overall - a.overall);
 
@@ -257,7 +252,7 @@ function swapSearch(
     initialA: BalancePlayer[],
     initialB: BalancePlayer[],
     config: BalanceConfig,
-    temperature: number = 0,
+    temperature: number = 0
 ): SwapSearchResult {
     const teamA = [...initialA];
     const teamB = [...initialB];
@@ -353,7 +348,7 @@ const VARIATION_RUNS: Record<string, { runs: number; perturbations: number }> = 
 function perturb(
     teamA: BalancePlayer[],
     teamB: BalancePlayer[],
-    count: number,
+    count: number
 ): { teamA: BalancePlayer[]; teamB: BalancePlayer[] } {
     const a = [...teamA];
     const b = [...teamB];
@@ -369,7 +364,7 @@ function perturb(
 
 export function runBalance(
     players: BalancePlayer[],
-    config: BalanceConfig,
+    config: BalanceConfig
 ): { teamA: BalancePlayer[]; teamB: BalancePlayer[]; score: BalanceScore; audit: SwapRecord[] } {
     const { runs, perturbations } = VARIATION_RUNS[config.variation];
 
@@ -384,8 +379,7 @@ export function runBalance(
         const seed = greedySeed(players, intensity);
 
         // Phase 3: Perturb on restarts
-        const { teamA, teamB } =
-            i === 0 ? seed : perturb(seed.teamA, seed.teamB, perturbations);
+        const { teamA, teamB } = i === 0 ? seed : perturb(seed.teamA, seed.teamB, perturbations);
 
         // Phase 2: Swap search
         // Run 0: deterministic (temperature 0) — algorithm's best answer
@@ -405,7 +399,7 @@ export function runBalance(
     logger.debug(
         `Balance complete: score=${bestResult.score.overall.toFixed(4)}, ` +
             `worst=${bestResult.score.worst.toFixed(4)}, ` +
-            `swaps=${bestResult.swaps.length}, runs=${runs}`,
+            `swaps=${bestResult.swaps.length}, runs=${runs}`
     );
 
     return {

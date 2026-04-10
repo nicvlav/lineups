@@ -27,7 +27,8 @@ export function computeCapabilities(traits: PlayerTraits): PlayerCapabilities {
             const intentScore = maxIntent * 0.8 + minIntent * 0.2;
             return intentScore * 0.4 + traits.stamina * 0.3 + traits.speed * 0.15 + gs * 0.15;
         })(),
-        technique: traits.dribbling * 0.3 + traits.passing * 0.25 + traits.flair * 0.2 + traits.shooting * 0.1 + gs * 0.15,
+        technique:
+            traits.dribbling * 0.3 + traits.passing * 0.25 + traits.flair * 0.2 + traits.shooting * 0.1 + gs * 0.15,
     };
 }
 
@@ -65,7 +66,13 @@ export function computeZoneEffectiveness(capabilities: PlayerCapabilities): Zone
         def: capabilities.defending * 0.55 + topWeightedScore([capabilities.engine, capabilities.athleticism]) * 0.45,
         mid:
             capabilities.playmaking * 0.35 +
-            topWeightedScore([capabilities.defending, capabilities.engine, capabilities.technique, capabilities.athleticism]) * 0.65,
+            topWeightedScore([
+                capabilities.defending,
+                capabilities.engine,
+                capabilities.technique,
+                capabilities.athleticism,
+            ]) *
+                0.65,
         att:
             capabilities.goalThreat * 0.4 +
             topWeightedScore([capabilities.technique, capabilities.athleticism, capabilities.playmaking]) * 0.6,

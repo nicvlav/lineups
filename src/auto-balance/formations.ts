@@ -49,7 +49,14 @@ const POSITION_PROFILES: Record<Position, PositionProfile> = {
     },
     FB: {
         // Wide defender. Needs athleticism + engine. Good spot for athletic but limited players.
-        weights: { defending: 0.25, playmaking: 0.1, goalThreat: 0.05, athleticism: 0.3, engine: 0.25, technique: 0.05 },
+        weights: {
+            defending: 0.25,
+            playmaking: 0.1,
+            goalThreat: 0.05,
+            athleticism: 0.3,
+            engine: 0.25,
+            technique: 0.05,
+        },
         isSpine: false,
     },
     DM: {
@@ -59,7 +66,14 @@ const POSITION_PROFILES: Record<Position, PositionProfile> = {
     },
     CM: {
         // Box-to-box. Needs engine + playmaking + defending. The all-rounder spot.
-        weights: { defending: 0.15, playmaking: 0.3, goalThreat: 0.05, athleticism: 0.1, engine: 0.25, technique: 0.15 },
+        weights: {
+            defending: 0.15,
+            playmaking: 0.3,
+            goalThreat: 0.05,
+            athleticism: 0.1,
+            engine: 0.25,
+            technique: 0.15,
+        },
         isSpine: true,
     },
     WM: {
@@ -69,7 +83,14 @@ const POSITION_PROFILES: Record<Position, PositionProfile> = {
     },
     AM: {
         // Playmaker/creator. Needs playmaking + technique. The creative hub.
-        weights: { defending: 0.05, playmaking: 0.35, goalThreat: 0.15, athleticism: 0.05, engine: 0.1, technique: 0.3 },
+        weights: {
+            defending: 0.05,
+            playmaking: 0.35,
+            goalThreat: 0.15,
+            athleticism: 0.05,
+            engine: 0.1,
+            technique: 0.3,
+        },
         isSpine: true,
     },
     ST: {
@@ -243,7 +264,12 @@ function assignPositions(team: BalancePlayer[], formation: Formation, teamId: "a
             ...player,
             team: teamId,
             assignedPosition: slot.position,
-            assignedPoint: getPointForPosition(POSITIONS[slot.position], slot.slotIndex, slot.totalInPosition, formation),
+            assignedPoint: getPointForPosition(
+                POSITIONS[slot.position],
+                slot.slotIndex,
+                slot.totalInPosition,
+                formation
+            ),
         });
 
         if (assigned.length === players.length) break;
@@ -255,7 +281,7 @@ function assignPositions(team: BalancePlayer[], formation: Formation, teamId: "a
 /** Assign formations and positions to both teams */
 export function assignFormations(
     teamA: BalancePlayer[],
-    teamB: BalancePlayer[],
+    teamB: BalancePlayer[]
 ): {
     a: AssignedPlayer[];
     b: AssignedPlayer[];
