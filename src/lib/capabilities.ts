@@ -61,7 +61,7 @@ export function computeZoneEffectiveness(capabilities: PlayerCapabilities): Zone
             // Anchor/wall (Piqué, Christian): defending dominates, composure matters
             c.defending * 0.65 + c.playmaking * 0.15 + c.technique * 0.1 + c.engine * 0.1,
             // Athletic defender (Varane, Greg): defending + athleticism + engine
-            c.defending * 0.4 + c.athleticism * 0.4 + c.engine * 0.15 + c.defending * 0.05,
+            c.defending * 0.4 + c.athleticism * 0.4 + c.engine * 0.15 + c.defending * 0.05
         ),
         mid: Math.max(
             // Creative AM (Nav, Santos): playmaking + technique dominant
@@ -69,7 +69,7 @@ export function computeZoneEffectiveness(capabilities: PlayerCapabilities): Zone
             // Deep playmaker (Christian, Pirlo): playmaking + defending
             c.playmaking * 0.35 + c.defending * 0.3 + c.technique * 0.25 + c.engine * 0.1,
             // Box-to-box (Kanté, Connor): engine + athleticism + defending
-            c.engine * 0.25 + c.athleticism * 0.3 + c.defending * 0.25 + c.playmaking * 0.2,
+            c.engine * 0.25 + c.athleticism * 0.3 + c.defending * 0.25 + c.playmaking * 0.2
         ),
         att: (() => {
             const clinical = c.goalThreat * 0.5 + c.technique * 0.3 + c.playmaking * 0.15 + c.engine * 0.05;
