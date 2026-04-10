@@ -6,7 +6,7 @@
  */
 
 import { z } from "zod";
-import { STAT_TO_DB } from "@/lib/stat-mapping";
+import { TRAIT_TO_DB } from "@/types/traits";
 
 // =====================================================
 // POSITION ENUM (shared across schemas)
@@ -15,13 +15,24 @@ import { STAT_TO_DB } from "@/lib/stat-mapping";
 const positionEnum = z.enum(["GK", "CB", "FB", "DM", "CM", "WM", "AM", "ST", "WR"]);
 
 // =====================================================
-// SUPABASE: players TABLE
+// SUPABASE: players TABLE (V2 — 11 traits + 6 capabilities)
 // =====================================================
 
-/** Stat columns generated from STAT_TO_DB — no second list to maintain */
-const statColumnSchemas = Object.fromEntries(
-    Object.values(STAT_TO_DB).map((dbCol) => [`${dbCol}_avg`, z.number().nullable().optional()])
+/** Trait avg columns generated from TRAIT_TO_DB */
+const traitAvgSchemas = Object.fromEntries(
+    Object.values(TRAIT_TO_DB).map((dbCol) => [`${dbCol}_avg`, z.number().nullable().optional()])
 );
+
+/** Capability columns */
+const capabilitySchemas = {
+    cap_defending: z.number().nullable().optional(),
+    cap_playmaking: z.number().nullable().optional(),
+    cap_goal_threat: z.number().nullable().optional(),
+    cap_athleticism: z.number().nullable().optional(),
+    cap_engine: z.number().nullable().optional(),
+    cap_technique: z.number().nullable().optional(),
+    overall: z.number().nullable().optional(),
+};
 
 /** Raw row from `supabase.from("players").select("*")` */
 export const playerRowSchema = z
@@ -31,7 +42,8 @@ export const playerRowSchema = z
         vote_count: z.number().nullable().optional(),
         created_at: z.string().nullable().optional(),
         avatar_url: z.string().nullable().optional(),
-        ...statColumnSchemas,
+        ...traitAvgSchemas,
+        ...capabilitySchemas,
     })
     .passthrough();
 

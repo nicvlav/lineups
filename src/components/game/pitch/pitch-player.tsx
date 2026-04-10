@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import PitchPlayerDialog from "@/components/players/player-dialog";
+import type { GamePlayer } from "@/context/game-provider";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
 import { usePlayers } from "@/hooks/use-players";
 import { useTapHandler } from "@/hooks/use-tap-handler";
-import type { ScoredGamePlayer } from "@/types/players";
 
 interface PitchPlayerProps {
-    player: ScoredGamePlayer;
+    player: GamePlayer;
     name: string;
     playerSize: number;
     initialLeft: number;
@@ -117,9 +117,9 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
                                 : "0 0 12px 3px hsl(84 70% 55%/0.25), 0 0 4px 1px hsl(84 70% 55%/0.1)",
                     }}
                 >
-                    {fullPlayer?.avatar_url ? (
+                    {fullPlayer?.avatarUrl ? (
                         <img
-                            src={fullPlayer.avatar_url}
+                            src={fullPlayer.avatarUrl}
                             alt={name}
                             className="w-full h-full object-cover rounded-full"
                             onError={(e) => {
@@ -129,7 +129,7 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
                         />
                     ) : null}
                     <span
-                        className={`font-bold select-none ${fullPlayer?.avatar_url ? "hidden" : ""}`}
+                        className={`font-bold select-none ${fullPlayer?.avatarUrl ? "hidden" : ""}`}
                         style={{ fontSize: `${Math.max(circleSize * 0.35, 12)}px` }}
                     >
                         {posLabel}

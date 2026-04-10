@@ -5,67 +5,54 @@ import { ActionBarSingle } from "@/components/ui/action-bar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { usePlayers } from "@/hooks/use-players";
-import { calculateArchetypeScores, getTopArchetypes, TOP_ARCHETYPE_THRESHOLD } from "@/lib/positions/calculator";
 import { cn } from "@/lib/utils";
-import { getTopPositions, getZoneAverages } from "@/types/players";
-import type { Position, Zone } from "@/types/positions";
-import { ZONE_POSITIONS } from "@/types/positions";
+import type { ZoneKey } from "@/types/traits";
 
-export type CardViewMode = "minimal" | "archetypes" | "face-stats";
+export type CardViewMode = "minimal" | "capabilities" | "zones";
 
-type ZoneFilter = "all" | Zone;
+type ZoneFilter = "all" | ZoneKey;
 
 const ZONE_FILTERS: { value: ZoneFilter; label: string }[] = [
     { value: "all", label: "All" },
-    { value: "attack", label: "Attackers" },
-    { value: "midfield", label: "Midfielders" },
-    { value: "defense", label: "Defenders" },
+    { value: "att", label: "Attackers" },
+    { value: "mid", label: "Midfielders" },
+    { value: "def", label: "Defenders" },
 ];
 
 const PlayerCards = () => {
     const { data: players = {} } = usePlayers();
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [cardViewMode, setCardViewMode] = useState<CardViewMode>("archetypes");
+    const [cardViewMode, setCardViewMode] = useState<CardViewMode>("capabilities");
     const [zoneFilter, setZoneFilter] = useState<ZoneFilter>("all");
 
     const allPlayers = useMemo(
         () =>
-            Object.values(players).map((player) => {
-                const archetypeScores = calculateArchetypeScores(player.stats);
-                const topScores = getTopPositions(archetypeScores, 3);
-                const topArchetypes = getTopArchetypes(archetypeScores);
-
-                return {
+            Object.values(players)
+                .map((player) => ({
                     player,
-                    overall: Math.max(...topScores.map((t) => t.score)),
-                    archetypeScores,
-                    averages: getZoneAverages(player),
-                    topArchetypes,
-                };
-            }),
+                    overall: player.overall,
+                    bestZone: (["def", "mid", "att"] as const).reduce(
+                        (best, z) => (player.zoneEffectiveness[z] > player.zoneEffectiveness[best] ? z : best),
+                        "mid" as ZoneKey
+                    ),
+                }))
+                .sort((a, b) => b.overall - a.overall),
         [players]
     );
 
     const filteredPlayers = useMemo(() => {
         let result = allPlayers;
 
-        // Text search
         if (searchQuery) {
             const lower = searchQuery.toLowerCase();
             result = result.filter((p) => p.player.name.toLowerCase().includes(lower));
         }
 
-        // Zone filter — show player if their best score for any position in this zone
-        // is within the threshold (3 points) of their overall best
         if (zoneFilter !== "all") {
-            const zonePositions = ZONE_POSITIONS[zoneFilter];
-            result = result.filter((p) => {
-                const threshold = p.overall - TOP_ARCHETYPE_THRESHOLD;
-                return zonePositions.some((pos: Position) => (p.archetypeScores[pos]?.bestScore ?? 0) >= threshold);
-            });
+            result = result.filter((p) => p.bestZone === zoneFilter);
         }
 
-        return [...result].sort((a, b) => b.overall - a.overall);
+        return result;
     }, [allPlayers, searchQuery, zoneFilter]);
 
     return (
@@ -133,10 +120,7 @@ const PlayerCards = () => {
                                         <PlayerCard
                                             player={item.player}
                                             playerName={item.player.name}
-                                            stats={item.player.stats}
                                             overall={item.overall}
-                                            archetypeScores={item.archetypeScores}
-                                            averages={item.averages}
                                             viewMode={cardViewMode}
                                         />
                                     </motion.div>
@@ -153,9 +137,9 @@ const PlayerCards = () => {
                 </CardContent>
             </Card>
 
-            {/* View mode selector — bottom */}
+            {/* View mode selector */}
             <div className="flex items-center justify-center gap-1 bg-muted/30 rounded-xl p-1">
-                {(["minimal", "archetypes", "face-stats"] as const).map((mode) => (
+                {(["minimal", "capabilities", "zones"] as const).map((mode) => (
                     <button
                         key={mode}
                         type="button"
@@ -172,9 +156,7 @@ const PlayerCards = () => {
                                 transition={{ type: "spring", stiffness: 380, damping: 30 }}
                             />
                         )}
-                        <span className="relative z-10">
-                            {mode === "face-stats" ? "Stats" : mode.charAt(0).toUpperCase() + mode.slice(1)}
-                        </span>
+                        <span className="relative z-10">{mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
                     </button>
                 ))}
             </div>
