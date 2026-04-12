@@ -22,7 +22,6 @@ const ZONE_FILTERS: { value: ZoneFilter; label: string }[] = [
 const PlayerCards = () => {
     const { data: players = {} } = usePlayers();
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [cardViewMode, setCardViewMode] = useState<CardViewMode>("capabilities");
     const [zoneFilter, setZoneFilter] = useState<ZoneFilter>("all");
 
     const allPlayers = useMemo(
@@ -121,7 +120,6 @@ const PlayerCards = () => {
                                             player={item.player}
                                             playerName={item.player.name}
                                             overall={item.overall}
-                                            viewMode={cardViewMode}
                                         />
                                     </motion.div>
                                 ))}
@@ -136,30 +134,6 @@ const PlayerCards = () => {
                     </div>
                 </CardContent>
             </Card>
-
-            {/* View mode selector */}
-            <div className="flex items-center justify-center gap-1 bg-muted/30 rounded-xl p-1">
-                {(["minimal", "capabilities", "zones"] as const).map((mode) => (
-                    <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setCardViewMode(mode)}
-                        className={cn(
-                            "relative flex-1 text-xs font-medium py-1.5 rounded-lg transition-colors duration-200",
-                            cardViewMode === mode ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        {cardViewMode === mode && (
-                            <motion.span
-                                layoutId="card-view-mode"
-                                className="absolute inset-0 rounded-lg bg-background shadow-sm"
-                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                            />
-                        )}
-                        <span className="relative z-10">{mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
-                    </button>
-                ))}
-            </div>
         </div>
     );
 };
