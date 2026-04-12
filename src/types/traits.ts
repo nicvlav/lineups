@@ -1,8 +1,9 @@
 /**
  * Player Trait & Capability Definitions
  *
- * 11 observable traits (what voters rate) → 6 capability dimensions (what the algorithm balances).
- * Replaces the old 28-stat system with a cleaner, more meaningful model.
+ * 13 observable traits (what voters rate) → 6 capability dimensions (what the radar displays).
+ * Archetypes (src/lib/archetypes.ts) are the structural source of truth for labels,
+ * zones, and position fits — capabilities are display-only.
  */
 
 // ─── Traits (voter input) ───────────────────────────────────────────────────
@@ -18,18 +19,26 @@ export type TraitKey =
     | "gameSense"
     | "flair"
     | "attIntent"
-    | "defIntent";
+    | "defIntent"
+    | "finishing"
+    | "aerial";
 
 export const TRAIT_KEYS: TraitKey[] = [
+    // Physical
     "speed",
     "stamina",
     "strength",
+    "aerial",
+    // Defending
     "tackling",
+    // Technical
     "passing",
     "dribbling",
     "shooting",
-    "gameSense",
     "flair",
+    // Mental
+    "gameSense",
+    "finishing",
     "attIntent",
     "defIntent",
 ] as const;
@@ -46,6 +55,8 @@ export const traitLabelMap: Record<TraitKey, string> = {
     flair: "Flair",
     attIntent: "Attacking Intent",
     defIntent: "Defensive Intent",
+    finishing: "Finishing",
+    aerial: "Aerial",
 };
 
 export const traitShortLabelMap: Record<TraitKey, string> = {
@@ -60,9 +71,11 @@ export const traitShortLabelMap: Record<TraitKey, string> = {
     flair: "FLA",
     attIntent: "ATT",
     defIntent: "DEF",
+    finishing: "FIN",
+    aerial: "AER",
 };
 
-/** Player's 11 trait scores (1-100) */
+/** Player's 13 trait scores (1-100) */
 export type PlayerTraits = Record<TraitKey, number>;
 
 export const defaultTraits: PlayerTraits = Object.fromEntries(TRAIT_KEYS.map((key) => [key, 50])) as PlayerTraits;
@@ -131,6 +144,8 @@ export const TRAIT_TO_DB: Record<TraitKey, string> = {
     flair: "flair",
     attIntent: "att_intent",
     defIntent: "def_intent",
+    finishing: "finishing",
+    aerial: "aerial",
 };
 
 /** DB snake_case → frontend camelCase */

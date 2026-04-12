@@ -23,18 +23,10 @@ const traitAvgSchemas = Object.fromEntries(
     Object.values(TRAIT_TO_DB).map((dbCol) => [`${dbCol}_avg`, z.number().nullable().optional()])
 );
 
-/** Capability columns */
-const capabilitySchemas = {
-    cap_defending: z.number().nullable().optional(),
-    cap_playmaking: z.number().nullable().optional(),
-    cap_goal_threat: z.number().nullable().optional(),
-    cap_athleticism: z.number().nullable().optional(),
-    cap_engine: z.number().nullable().optional(),
-    cap_technique: z.number().nullable().optional(),
-    overall: z.number().nullable().optional(),
-};
-
-/** Raw row from `supabase.from("players").select("*")` */
+/** Raw row from `supabase.from("players").select("*")`
+ *  Capabilities and overall are computed in the frontend from trait averages —
+ *  see `src/lib/capabilities.ts`. The DB cap_* / overall columns (if still
+ *  present) are ignored and pass through harmlessly via .passthrough(). */
 export const playerRowSchema = z
     .object({
         id: z.string(),
@@ -43,7 +35,6 @@ export const playerRowSchema = z
         created_at: z.string().nullable().optional(),
         avatar_url: z.string().nullable().optional(),
         ...traitAvgSchemas,
-        ...capabilitySchemas,
     })
     .passthrough();
 

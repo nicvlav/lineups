@@ -6,12 +6,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { v4 as uuidv4 } from "uuid";
-import { computeCapabilities, computeOverall, computeZoneEffectiveness } from "@/lib/capabilities";
+import { type ArchetypeScore, computeArchetypeProfile, type PlayerArchetype } from "@/lib/archetypes";
+import { computeCapabilities } from "@/lib/capabilities";
 import { logger } from "@/lib/logger";
 import { playerRowSchema } from "@/lib/schemas";
 import { categorizeError, ensureValidSession } from "@/lib/session-manager";
 import { supabase } from "@/lib/supabase";
-import type { CapabilityKey, PlayerCapabilities, PlayerTraits, ZoneEffectiveness } from "@/types/traits";
+import type { PlayerCapabilities, PlayerTraits, ZoneEffectiveness } from "@/types/traits";
 import { AVG_COL_TO_TRAIT, defaultTraits } from "@/types/traits";
 
 // ─── Player Type (V2) ──────────────────────────────────────────────────────
@@ -23,8 +24,15 @@ export interface PlayerV2 {
     voteCount: number;
     createdAt?: string;
     traits: PlayerTraits;
+    /** 6 display capabilities — radar chart and capability bars only */
     capabilities: PlayerCapabilities;
+    /** Best-fit player type — drives label and position preference */
+    archetype: PlayerArchetype;
+    /** All archetype scores, sorted by quality descending (top 5 stored) */
+    archetypeScores: ArchetypeScore[];
+    /** Per-zone effectiveness — best archetype quality per zone (honest cross-zone view) */
     zoneEffectiveness: ZoneEffectiveness;
+    /** Overall quality = primary archetype quality score */
     overall: number;
 }
 
@@ -56,38 +64,6 @@ function convertRowToTraits(row: Record<string, unknown>): PlayerTraits {
     return traits;
 }
 
-function convertRowToCapabilities(row: Record<string, unknown>): PlayerCapabilities {
-    const caps: PlayerCapabilities = {
-        defending: 50,
-        playmaking: 50,
-        goalThreat: 50,
-        athleticism: 50,
-        engine: 50,
-        technique: 50,
-    };
-
-    const dbMap: Record<string, CapabilityKey> = {
-        cap_defending: "defending",
-        cap_playmaking: "playmaking",
-        cap_goal_threat: "goalThreat",
-        cap_athleticism: "athleticism",
-        cap_engine: "engine",
-        cap_technique: "technique",
-    };
-
-    for (const [dbCol, capKey] of Object.entries(dbMap)) {
-        const value = row[dbCol];
-        if (typeof value === "number") {
-            caps[capKey] = value;
-        } else if (typeof value === "string") {
-            const num = Number.parseFloat(value);
-            if (!Number.isNaN(num)) caps[capKey] = num;
-        }
-    }
-
-    return caps;
-}
-
 // ─── Query ──────────────────────────────────────────────────────────────────
 
 async function fetchPlayers(): Promise<Record<string, PlayerV2>> {
@@ -110,8 +86,10 @@ async function fetchPlayers(): Promise<Record<string, PlayerV2>> {
         }
         const p = parsed.data;
         const traits = convertRowToTraits(p as Record<string, unknown>);
-        const capabilities = convertRowToCapabilities(p as Record<string, unknown>);
-        const overall = computeOverall(capabilities);
+        // Frontend is the single source of truth. Archetype drives label, zones,
+        // and overall. Capabilities are kept for the radar chart only.
+        const capabilities = computeCapabilities(traits);
+        const profile = computeArchetypeProfile(traits);
 
         playerRecord[p.id] = {
             id: p.id,
@@ -121,8 +99,10 @@ async function fetchPlayers(): Promise<Record<string, PlayerV2>> {
             createdAt: p.created_at ?? undefined,
             traits,
             capabilities,
-            zoneEffectiveness: computeZoneEffectiveness(capabilities),
-            overall,
+            archetype: profile.primary,
+            archetypeScores: profile.allScores.slice(0, 5),
+            zoneEffectiveness: profile.zones,
+            overall: Math.max(profile.zones.def, profile.zones.mid, profile.zones.att),
         };
     }
 
@@ -181,6 +161,7 @@ export function useAddPlayer() {
 
             const traits = { ...defaultTraits };
             const capabilities = computeCapabilities(traits);
+            const profile = computeArchetypeProfile(traits);
 
             return {
                 id,
@@ -188,8 +169,10 @@ export function useAddPlayer() {
                 voteCount: 0,
                 traits,
                 capabilities,
-                zoneEffectiveness: computeZoneEffectiveness(capabilities),
-                overall: computeOverall(capabilities),
+                archetype: profile.primary,
+                archetypeScores: profile.allScores.slice(0, 5),
+                zoneEffectiveness: profile.zones,
+                overall: Math.max(profile.zones.def, profile.zones.mid, profile.zones.att),
             };
         },
         onSuccess: () => {
