@@ -7,7 +7,8 @@
  * @module auto-balance
  */
 
-import { computeCapabilities, computeOverall, computeZoneEffectiveness } from "@/lib/capabilities";
+import { computeArchetypeProfile } from "@/lib/archetypes";
+import { computeCapabilities } from "@/lib/capabilities";
 import { logger } from "@/lib/logger";
 import type { PlayerTraits } from "@/types/traits";
 import { runBalance } from "./balance";
@@ -25,17 +26,21 @@ export interface PlayerInput {
     id: string;
     name: string;
     traits: PlayerTraits;
+    isPlaceholder?: boolean;
 }
 
-/** Convert raw player input to BalancePlayer with computed capabilities */
+/** Convert raw player input to BalancePlayer with computed capabilities + archetype */
 function toBalancePlayer(input: PlayerInput): BalancePlayer {
     const capabilities = computeCapabilities(input.traits);
+    const profile = computeArchetypeProfile(input.traits);
     return {
         id: input.id,
         name: input.name,
         capabilities,
-        zoneEffectiveness: computeZoneEffectiveness(capabilities),
-        overall: computeOverall(capabilities),
+        archetype: profile.primary,
+        zoneEffectiveness: profile.zones,
+        overall: Math.max(profile.zones.def, profile.zones.mid, profile.zones.att),
+        isPlaceholder: input.isPlaceholder,
     };
 }
 
@@ -94,6 +99,9 @@ export function balanceTeams(
     };
 }
 
+// Re-export internals used by the debug harness for manual swap evaluation
+export { scoreBalance } from "./balance";
+export { assignFormations } from "./formations";
 // Re-export types for consumers
 export type { AssignedPlayer, BalanceConfig, BalancePlayer, BalanceResult, BalanceScore, Variation } from "./types";
 export { DEFAULT_BALANCE_CONFIG } from "./types";

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { CheckCircle2, Users, Wand2 } from "lucide-react";
+import { CheckCircle2, Minus, Plus, Users, UserX, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -14,6 +14,31 @@ import { useGame } from "@/context/game-provider";
 import { usePlayers } from "@/hooks/use-players";
 import { cn } from "@/lib/utils";
 
+// ─── Placeholder localStorage persistence ───────────────────────────────────
+
+const DRAFT_STORAGE_KEY = "lineups.generateDraft";
+
+function loadDraftPlaceholderCount(): number {
+    try {
+        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw) return 0;
+        const parsed = JSON.parse(raw);
+        return typeof parsed.placeholderCount === "number" ? parsed.placeholderCount : 0;
+    } catch {
+        return 0;
+    }
+}
+
+function saveDraftPlaceholderCount(count: number) {
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ placeholderCount: count }));
+}
+
+export function clearDraftPlaceholders() {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+}
+
+// ─── Component ──────────────────────────────────────────────────────────────
+
 interface TeamGeneratorProps {
     isCompact: boolean;
 }
@@ -21,6 +46,7 @@ interface TeamGeneratorProps {
 const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [placeholderCount, setPlaceholderCount] = useState(0);
     const { data: players = {} } = usePlayers();
     const { gamePlayers, generateTeams } = useGame();
     const navigate = useNavigate();
@@ -33,26 +59,47 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
         return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
     }, [playersArr, searchQuery]);
 
-    // Initialize selected players from game
+    // Initialize from gamePlayers (if returning to tab) or localStorage draft
     useEffect(() => {
-        setSelectedPlayers(Object.keys(players).filter((id) => id in gamePlayers));
+        const realIds = Object.keys(players).filter((id) => id in gamePlayers);
+        setSelectedPlayers(realIds);
+
+        // Derive placeholder count from guests in gamePlayers, or fall back to draft
+        const guestCount = Object.values(gamePlayers).filter((p) => p.isGuest).length;
+        if (guestCount > 0) {
+            setPlaceholderCount(guestCount);
+            saveDraftPlaceholderCount(guestCount);
+        } else if (realIds.length === 0) {
+            // No game state — restore from draft
+            setPlaceholderCount(loadDraftPlaceholderCount());
+        }
     }, [players, gamePlayers]);
 
+    // Persist placeholder count changes
+    const updatePlaceholderCount = (count: number) => {
+        const clamped = Math.max(0, count);
+        setPlaceholderCount(clamped);
+        saveDraftPlaceholderCount(clamped);
+    };
+
+    const totalSelected = selectedPlayers.length + placeholderCount;
+    const canGenerate = totalSelected >= MIN_PLAYERS && totalSelected <= MAX_PLAYERS;
+    const allSelected = selectedPlayers.length === playersArr.length;
+
     const handleGenerateTeams = async () => {
-        if (selectedPlayers.length < MIN_PLAYERS) {
-            toast.error(`Need at least ${MIN_PLAYERS} players`, {
-                description: "Select more players to generate teams",
-                duration: 3000,
-            });
-            return;
-        }
+        if (!canGenerate) return;
 
         const selectedPlayerObjects = playersArr.filter((player) => selectedPlayers.includes(player.id));
 
-        generateTeams(selectedPlayerObjects);
+        generateTeams(selectedPlayerObjects, placeholderCount);
+
+        const desc =
+            placeholderCount > 0
+                ? `${selectedPlayers.length} players + ${placeholderCount} placeholders`
+                : `${selectedPlayers.length} players`;
 
         toast.success("Teams generated!", {
-            description: `Created balanced teams with ${selectedPlayers.length} players`,
+            description: `Created balanced teams with ${desc}`,
             duration: 2000,
             icon: "⚽",
         });
@@ -70,9 +117,6 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
         );
     };
 
-    const canGenerate = selectedPlayers.length >= MIN_PLAYERS && selectedPlayers.length <= MAX_PLAYERS;
-    const allSelected = selectedPlayers.length === playersArr.length;
-
     return (
         <div className={cn("flex flex-col h-full w-full px-4 pt-2 pb-4 space-y-2")}>
             {/* Search */}
@@ -86,7 +130,7 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                 />
             </ActionBarSingle>
 
-            {/* Modern Player Selection Grid */}
+            {/* Player Selection Grid */}
             <Card className="flex-1 flex flex-col min-h-0 bg-card overflow-hidden py-2 gap-0">
                 <CardContent className="flex-1 h-full p-0">
                     <div className="h-full overflow-y-auto px-2 custom-scrollbar">
@@ -149,8 +193,43 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                 </CardContent>
             </Card>
 
-            {/* Bottom — progress row + generate button */}
+            {/* Bottom — placeholders + progress + generate */}
             <div className="space-y-2">
+                {/* Placeholder controls */}
+                <div className="flex items-center justify-between gap-2 px-1">
+                    <div className="flex items-center gap-2">
+                        <UserX className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Placeholders</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updatePlaceholderCount(placeholderCount - 1)}
+                            disabled={placeholderCount <= 0}
+                            className="h-7 w-7 p-0"
+                        >
+                            <Minus className="h-3 w-3" />
+                        </Button>
+                        <Badge
+                            variant={placeholderCount > 0 ? "default" : "outline"}
+                            className="tabular-nums min-w-7 justify-center"
+                        >
+                            {placeholderCount}
+                        </Badge>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updatePlaceholderCount(placeholderCount + 1)}
+                            disabled={totalSelected >= MAX_PLAYERS}
+                            className="h-7 w-7 p-0"
+                        >
+                            <Plus className="h-3 w-3" />
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Progress bar */}
                 <div className="flex items-center gap-2">
                     <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                         <div
@@ -158,24 +237,24 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
                                 "h-1.5 rounded-full transition-all duration-300",
                                 canGenerate
                                     ? "bg-primary"
-                                    : selectedPlayers.length > MAX_PLAYERS
+                                    : totalSelected > MAX_PLAYERS
                                       ? "bg-destructive"
                                       : "bg-muted-foreground/40"
                             )}
                             style={{
-                                width: `${Math.min((selectedPlayers.length / MAX_PLAYERS) * 100, 100)}%`,
+                                width: `${Math.min((totalSelected / MAX_PLAYERS) * 100, 100)}%`,
                             }}
                         />
                     </div>
 
                     <Badge variant={canGenerate ? "default" : "destructive"} className="gap-0.5 tabular-nums shrink-0">
                         <motion.span
-                            key={selectedPlayers.length}
+                            key={totalSelected}
                             initial={{ scale: 1.3, opacity: 0.5 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ type: "spring", stiffness: 500, damping: 25 }}
                         >
-                            {selectedPlayers.length}
+                            {totalSelected}
                         </motion.span>
                         /{MAX_PLAYERS}
                     </Badge>

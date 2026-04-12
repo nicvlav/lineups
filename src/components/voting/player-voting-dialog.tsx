@@ -1,8 +1,8 @@
 /**
  * Player Voting Dialog (V2)
  *
- * 11 trait sliders on 1-100 scale with snap-to-5 behavior.
- * Single page — no category pagination needed with only 11 traits.
+ * 13 trait sliders on 1-100 scale with snap-to-5 behavior.
+ * Single page — no category pagination needed with 13 traits.
  */
 
 import { Save } from "lucide-react";
@@ -92,7 +92,7 @@ export function PlayerVoting({ player, onVoteComplete, onClose, isEditing = fals
                     <DialogTitle>{isEditing ? "Edit Player Evaluation" : "Player Evaluation"}</DialogTitle>
                     <div className="bg-muted p-4 rounded-lg">
                         <h3 className="font-semibold text-lg">{player.name}</h3>
-                        <p className="text-sm text-muted-foreground">Rate 11 traits (1-100)</p>
+                        <p className="text-sm text-muted-foreground">Rate 13 traits (1-100)</p>
                     </div>
                 </DialogHeader>
 
