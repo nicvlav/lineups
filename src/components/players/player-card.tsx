@@ -12,7 +12,6 @@ import { useTapHandler } from "@/hooks/use-tap-handler";
 import { computeLabel } from "@/lib/capabilities";
 import { getStatBarColor, getTierBorderClass } from "@/lib/color-system";
 import type { Player } from "@/types/players";
-import { CAPABILITY_KEYS, capabilityShortLabelMap } from "@/types/traits";
 
 interface PlayerCardProps {
     player: Player;
@@ -71,7 +70,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, playerName, overall }) 
                         );
                     })}
                 </div>
-
             </div>
 
             <PlayerStatsModal player={player} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
