@@ -47,7 +47,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ fullPlayer }) => {
 
     const overallRounded = Math.round(fullPlayer.overall);
     const tierVar = getTierCssVar(overallRounded);
-    const label = computeLabel(fullPlayer.capabilities);
+    const label = computeLabel(fullPlayer.traits);
     const tierScheme = getRatingTierScheme(overallRounded);
 
     // Standout traits
@@ -105,9 +105,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ fullPlayer }) => {
                         <div key={zone} className="bg-card border border-border/30 rounded-lg p-2.5">
                             <div className="flex justify-between items-center mb-1">
                                 <span className="text-xs font-medium">{zoneLabelMap[zone]}</span>
-                                <span className="text-[11px] font-bold tabular-nums text-muted-foreground">
-                                    {value}
-                                </span>
                             </div>
                             <div className="w-full h-1.5 bg-muted rounded-full">
                                 <div
