@@ -68,12 +68,12 @@ const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({ player, isOpen, onC
     const tierScheme = getRatingTierScheme(overallRounded);
     const tierBg = getTierBgClass(overallRounded);
     const tierVar = getTierCssVar(overallRounded);
-    const label = computeLabel(player.capabilities);
+    const label = computeLabel(player.traits);
 
     return (
         <>
             <Modal title={player.name} isOpen={isOpen} onClose={onClose}>
-                <div className="flex flex-col h-[85vh] min-w-75 max-w-275">
+                <div className="flex flex-col max-h-[85vh] min-w-75 max-w-275">
                     {/* Header */}
                     <div className="border-b border-border/40 pt-3 pb-3 flex gap-3">
                         <div className={`w-0.5 rounded-full my-1 ${tierBg}`} />
@@ -170,63 +170,63 @@ const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({ player, isOpen, onC
                             </div>
                         </div>
 
-                        {/* Capabilities */}
-                        <div>
-                            <h3 className="text-sm font-semibold mb-2">Capabilities</h3>
-                            <div className="grid grid-cols-2 gap-1.5">
-                                {CAPABILITY_KEYS.map((key) => {
-                                    const value = Math.round(player.capabilities[key]);
-                                    return (
-                                        <div
-                                            key={key}
-                                            className="flex justify-between items-center bg-muted/30 rounded px-2 py-1.5"
-                                        >
-                                            <span className="text-[11px] text-muted-foreground">
-                                                {capabilityLabelMap[key]}
-                                            </span>
-                                            <span
-                                                className={`text-[11px] font-bold tabular-nums ${getStatTextColor(value)}`}
-                                            >
-                                                {value}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Admin: Trait Breakdown */}
+                        {/* Admin: Trait Capabilities and Trait Breakdown*/}
                         {isAdmin(user?.id) && showDetailedStats && (
-                            <div className="space-y-3 pt-2 border-t border-border/30">
-                                <div className="flex gap-4 text-xs">
-                                    <div className="flex gap-1">
-                                        <span className="text-muted-foreground">Overall:</span>
-                                        <span className={`font-bold ${getStatTextColor(overallRounded)}`}>
-                                            {overallRounded}
-                                        </span>
+                            <div>
+                                <div>
+                                    <h3 className="text-sm font-semibold mb-2">Capabilities</h3>
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        {CAPABILITY_KEYS.map((key) => {
+                                            const value = Math.round(player.capabilities[key]);
+                                            return (
+                                                <div
+                                                    key={key}
+                                                    className="flex justify-between items-center bg-muted/30 rounded px-2 py-1.5"
+                                                >
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        {capabilityLabelMap[key]}
+                                                    </span>
+                                                    <span
+                                                        className={`text-[11px] font-bold tabular-nums ${getStatTextColor(value)}`}
+                                                    >
+                                                        {value}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
+                                <div className="space-y-3 pt-2 border-t border-border/30">
+                                    <div className="flex gap-4 text-xs">
+                                        <div className="flex gap-1">
+                                            <span className="text-muted-foreground">Overall:</span>
+                                            <span className={`font-bold ${getStatTextColor(overallRounded)}`}>
+                                                {overallRounded}
+                                            </span>
+                                        </div>
+                                    </div>
 
-                                <h4 className="font-bold text-xs uppercase tracking-wider">Traits</h4>
-                                <div className="grid grid-cols-2 gap-1.5">
-                                    {TRAIT_KEYS.map((key) => {
-                                        const value = Math.round(player.traits[key]);
-                                        return (
-                                            <div
-                                                key={key}
-                                                className="flex justify-between items-center bg-muted/30 rounded px-2 py-1"
-                                            >
-                                                <span className="text-[11px] text-muted-foreground">
-                                                    {traitLabelMap[key]}
-                                                </span>
-                                                <span
-                                                    className={`text-[11px] font-bold tabular-nums ${getStatTextColor(value)}`}
+                                    <h4 className="font-bold text-xs uppercase tracking-wider">Traits</h4>
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        {TRAIT_KEYS.map((key) => {
+                                            const value = Math.round(player.traits[key]);
+                                            return (
+                                                <div
+                                                    key={key}
+                                                    className="flex justify-between items-center bg-muted/30 rounded px-2 py-1"
                                                 >
-                                                    {value}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        {traitLabelMap[key]}
+                                                    </span>
+                                                    <span
+                                                        className={`text-[11px] font-bold tabular-nums ${getStatTextColor(value)}`}
+                                                    >
+                                                        {value}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         )}

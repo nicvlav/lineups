@@ -1,25 +1,49 @@
 /**
  * Capability Computation
  *
- * Derives 6 capability dimensions from 11 traits, zone effectiveness from
- * capabilities, overall quality, and player labels. Single source of truth
- * for all player evaluation — replaces the old archetype/calculator system.
+ * Computes the 6 display capabilities (defending, playmaking, goal threat,
+ * athleticism, engine, technique) from the 11 raw traits. These are used for
+ * the radar chart and per-player capability bars ONLY.
+ *
+ * Structural decisions — labels, zones, position fits, overall — all live in
+ * `src/lib/archetypes.ts` now. Capabilities are display data; archetypes are
+ * the source of truth for what kind of player someone is and where they play.
  */
 
-import type { CapabilityKey, PlayerCapabilities, PlayerTraits, ZoneEffectiveness } from "@/types/traits";
+import { computeArchetypeProfile } from "@/lib/archetypes";
+import type { PlayerCapabilities, PlayerTraits, ZoneEffectiveness, ZoneKey } from "@/types/traits";
 
 // ─── Capability Formulas ────────────────────────────────────────────────────
 // Each capability is a weighted sum of traits. Weights sum to 1.0.
+// These exist for the radar chart and capability bars only — they no longer
+// drive zone classification, position assignment, or overall computation.
+
+/**
+ * Asymmetric intent penalty (Herzberg-style "hygiene factor").
+ *
+ * Intent acts as a downward gate on capability, never as an upward boost.
+ * Floored at 0.5 so even worst-case you keep half your skill ceiling.
+ */
+const INTENT_BASELINE = 65;
+const INTENT_MIN_MULTIPLIER = 0.5;
+
+function intentMultiplier(intent: number, skill: number): number {
+    if (intent >= INTENT_BASELINE) return 1.0;
+    const deficit = (INTENT_BASELINE - intent) / INTENT_BASELINE;
+    const skillFactor = skill / 100;
+    return Math.max(INTENT_MIN_MULTIPLIER, 1 - deficit * skillFactor);
+}
 
 export function computeCapabilities(traits: PlayerTraits): PlayerCapabilities {
-    // Game sense is the universal quality multiplier — the "composure" that
-    // separates good from elite in every capability.
     const gs = traits.gameSense;
 
+    const defendingSkill = traits.tackling * 0.35 + gs * 0.3 + traits.strength * 0.2 + traits.stamina * 0.15;
+    const goalThreatSkill = traits.shooting * 0.4 + traits.dribbling * 0.25 + gs * 0.2 + traits.flair * 0.15;
+
     return {
-        defending: traits.tackling * 0.3 + gs * 0.25 + traits.strength * 0.25 + traits.stamina * 0.2,
-        playmaking: traits.passing * 0.3 + gs * 0.3 + traits.flair * 0.2 + traits.dribbling * 0.2,
-        goalThreat: traits.shooting * 0.35 + gs * 0.2 + traits.flair * 0.2 + traits.dribbling * 0.25,
+        defending: defendingSkill * intentMultiplier(traits.defIntent, defendingSkill),
+        playmaking: traits.passing * 0.35 + gs * 0.3 + traits.dribbling * 0.25 + traits.flair * 0.1,
+        goalThreat: goalThreatSkill * intentMultiplier(traits.attIntent, goalThreatSkill),
         athleticism: traits.speed * 0.35 + traits.stamina * 0.35 + traits.strength * 0.15 + gs * 0.15,
         engine: (() => {
             const maxIntent = Math.max(traits.attIntent, traits.defIntent);
@@ -28,76 +52,30 @@ export function computeCapabilities(traits: PlayerTraits): PlayerCapabilities {
             return intentScore * 0.4 + traits.stamina * 0.3 + traits.speed * 0.15 + gs * 0.15;
         })(),
         technique:
-            traits.dribbling * 0.3 + traits.passing * 0.25 + traits.flair * 0.2 + traits.shooting * 0.1 + gs * 0.15,
+            traits.dribbling * 0.35 + traits.passing * 0.3 + gs * 0.15 + traits.shooting * 0.1 + traits.flair * 0.1,
     };
 }
 
-// ─── Zone Effectiveness ─────────────────────────────────────────────────────
-//
-// Key insight: zone effectiveness uses a player's TOP 2 relevant capabilities
-// weighted more heavily. A deep playmaker (defending + playmaking) doesn't
-// need athleticism to dominate midfield — just like Busquets.
-//
-// Formula: take all relevant capabilities, sort by strength, weight the top
-// ones more than the bottom. This means specialists get rewarded while
-// all-rounders also score well.
+// ─── Archetype-Driven Quantities ────────────────────────────────────────────
+// Overall, zone effectiveness, and labels all derive from the archetype now.
+// These thin wrappers exist so callers don't need to know about archetypes.
 
 /**
- * Zone effectiveness: primary capability is the anchor (50%), supporting
- * capabilities fill the rest via top-weighted scoring.
- * This prevents high engine/athleticism from inflating a zone where the
- * core skill is lacking.
+ * Zone effectiveness — best archetype quality per zone across ALL archetypes.
+ * A complete player like JP shows high def (from Anchor score), high mid
+ * (from Destroyer score), and high att (from Target Striker score) — an
+ * honest cross-zone picture regardless of their primary label.
  */
-/**
- * Each zone has multiple valid player profiles. A slow reader of the game
- * and a fast aggressive tackler are both good defenders — just different types.
- * Take the BEST route for each player, never penalize a valid specialist.
- */
-export function computeZoneEffectiveness(capabilities: PlayerCapabilities): ZoneEffectiveness {
-    const c = capabilities;
-
-    return {
-        def: Math.max(
-            // Anchor/wall (Piqué, Christian): defending dominates, composure matters
-            c.defending * 0.65 + c.playmaking * 0.15 + c.technique * 0.1 + c.engine * 0.1,
-            // Athletic defender (Varane, Greg): defending + athleticism + engine
-            c.defending * 0.4 + c.athleticism * 0.4 + c.engine * 0.15 + c.defending * 0.05
-        ),
-        mid: Math.max(
-            // Creative AM (Nav, Santos): playmaking + technique dominant
-            c.playmaking * 0.45 + c.technique * 0.35 + c.goalThreat * 0.1 + c.engine * 0.1,
-            // Deep playmaker (Christian, Pirlo): playmaking + defending
-            c.playmaking * 0.35 + c.defending * 0.3 + c.technique * 0.25 + c.engine * 0.1,
-            // Box-to-box (Kanté, Connor): engine + athleticism + defending
-            c.engine * 0.25 + c.athleticism * 0.3 + c.defending * 0.25 + c.playmaking * 0.2
-        ),
-        att: (() => {
-            const clinical = c.goalThreat * 0.5 + c.technique * 0.3 + c.playmaking * 0.15 + c.engine * 0.05;
-            const athletic = c.goalThreat * 0.35 + c.athleticism * 0.35 + c.technique * 0.2 + c.engine * 0.1;
-            const base = Math.max(clinical, athletic);
-
-            // Midfield drag: if playmaking rivals goalThreat, they're a midfielder
-            // who can shoot, not a natural attacker. KDB, Nav, Santos types.
-            // The more playmaking exceeds goalThreat, the harder the drag.
-            if (c.playmaking >= c.goalThreat * 0.95) {
-                const ratio = c.playmaking / Math.max(c.goalThreat, 1);
-                // ratio ~1.0 = slight drag, ratio ~1.3 = heavy drag
-                const drag = Math.min(0.15, (ratio - 0.95) * 0.5);
-                return base * (1 - drag);
-            }
-            return base;
-        })(),
-    };
+export function computeZoneEffectiveness(traits: PlayerTraits): ZoneEffectiveness {
+    return computeArchetypeProfile(traits).zones;
 }
 
-// ─── Overall Quality ────────────────────────────────────────────────────────
-
 /**
- * Overall = best zone effectiveness. Period.
- * A player is rated by what they do best.
+ * Overall = the player's quality score under their best-fit archetype.
+ * A Destroyer is rated as a destroyer; a Maestro is rated as a maestro.
  */
-export function computeOverall(capabilities: PlayerCapabilities): number {
-    const zones = computeZoneEffectiveness(capabilities);
+export function computeOverall(traits: PlayerTraits): number {
+    const zones = computeArchetypeProfile(traits).zones;
     return Math.max(zones.def, zones.mid, zones.att);
 }
 
@@ -108,103 +86,25 @@ export interface PlayerLabel {
     secondary: string;
 }
 
+const ZONE_LABEL: Record<ZoneKey, string> = {
+    def: "Defensive",
+    mid: "Midfield",
+    att: "Attacking",
+};
+
 /**
- * Player labels have two tiers:
- *
- * ELITE labels (overall >= 75): Specific identities — Destroyer, Maestro, Deep Playmaker.
- * These mean something. You earn them by being good enough that your profile matters.
- *
- * BASIC labels (overall < 75): Zone-based descriptions — Defensive, Creative, Athletic.
- * At lower quality, the nuance of "Destroyer vs Enforcer" doesn't matter.
- * You're just a player who's better at defending than attacking.
+ * Display label for a player. Primary = archetype display name, secondary =
+ * primary zone of that archetype. The same archetype always produces the same
+ * label, which means the label and the position assignment can never disagree.
  */
-const ELITE_THRESHOLD = 75;
-const DOMINANCE_THRESHOLD = 1.1;
-
-export function computeLabel(capabilities: PlayerCapabilities): PlayerLabel {
-    const values = Object.values(capabilities);
-    const capMean = values.reduce((sum, v) => sum + v, 0) / values.length;
-    if (capMean === 0) return { primary: "Unknown", secondary: "" };
-
-    const overall = computeOverall(capabilities);
-    const zones = computeZoneEffectiveness(capabilities);
-    const bestZone =
-        zones.def >= zones.mid && zones.def >= zones.att
-            ? "Defensive"
-            : zones.att >= zones.mid
-              ? "Attacking"
-              : "Midfield";
-
-    // Below elite threshold: simple zone-based labels
-    if (overall < ELITE_THRESHOLD) {
-        const spread = Math.max(...values) - Math.min(...values);
-        if (spread < 8) return { primary: "Versatile", secondary: "" };
-        return { primary: bestZone, secondary: "" };
-    }
-
-    // Elite: find dominant capabilities for specific labels
-    const dominant: CapabilityKey[] = [];
-    for (const [key, value] of Object.entries(capabilities) as [CapabilityKey, number][]) {
-        if (value > capMean * DOMINANCE_THRESHOLD) dominant.push(key);
-    }
-
-    const primary = deriveEliteLabel(dominant, capabilities);
-    return { primary, secondary: dominant.length <= 1 ? bestZone : "" };
-}
-
-function deriveEliteLabel(dominant: CapabilityKey[], caps: PlayerCapabilities): string {
-    const has = (key: CapabilityKey) => dominant.includes(key);
-    const count = dominant.length;
-
-    // Triple+ dominant — elite multi-dimensional players
-    if (count >= 3) {
-        if (has("defending") && has("engine") && has("athleticism")) return "Destroyer";
-        if (has("defending") && has("playmaking") && has("engine")) return "Deep Playmaker";
-        if (has("defending") && has("playmaking") && has("technique")) return "Deep Playmaker";
-        if (has("goalThreat") && has("athleticism") && has("technique")) return "Complete Forward";
-        if (has("playmaking") && has("technique") && has("engine")) return "Maestro";
-        if (has("goalThreat") && has("athleticism") && has("engine")) return "Pressing Forward";
-    }
-
-    // Dual dominant
-    if (has("defending") && has("playmaking")) return "Deep Playmaker";
-    if (has("defending") && has("athleticism")) return "Enforcer";
-    if (has("defending") && has("engine")) return "Destroyer";
-    if (has("defending") && has("technique")) return "Ball Player";
-    if (has("defending")) return "Anchor";
-
-    if (has("playmaking") && has("technique")) return "Maestro";
-    if (has("playmaking") && has("engine")) return "Conductor";
-    if (has("playmaking")) return "Playmaker";
-
-    if (has("goalThreat") && has("athleticism")) return "Speedster";
-    if (has("goalThreat") && has("technique")) return "Finisher";
-    if (has("goalThreat")) return "Goal Threat";
-
-    if (has("athleticism") && has("engine")) return "Pressing Machine";
-    if (has("athleticism")) return "Athlete";
-
-    if (has("engine")) return "Engine";
-    if (has("technique")) return "Technician";
-
-    // Elite but no dominant cap — genuinely good at everything
-    const values = Object.values(caps);
-    const spread = Math.max(...values) - Math.min(...values);
-    if (spread < 12) return "Complete";
-
-    // Has clear strengths but nothing crosses the 10% threshold
-    // Find the top 2 capabilities and describe the profile
-    const sorted = (Object.entries(caps) as [CapabilityKey, number][]).sort((a, b) => b[1] - a[1]);
-    const top = sorted[0][0];
-
-    const topLabels: Record<CapabilityKey, string> = {
-        defending: "Anchor",
-        playmaking: "Playmaker",
-        goalThreat: "Goal Threat",
-        athleticism: "Athlete",
-        engine: "Engine",
-        technique: "Technician",
+export function computeLabel(traits: PlayerTraits): PlayerLabel {
+    const profile = computeArchetypeProfile(traits);
+    return {
+        primary: profile.primary.def.displayName,
+        secondary: ZONE_LABEL[profile.primary.def.primaryZone],
     };
-
-    return topLabels[top];
 }
+
+export type { ArchetypeProfile, PlayerArchetype } from "@/lib/archetypes";
+// Re-export archetype types and helpers for callers that want richer info
+export { computeArchetypeProfile };

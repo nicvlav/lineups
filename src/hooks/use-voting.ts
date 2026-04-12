@@ -1,5 +1,5 @@
 /**
- * TanStack Query hooks for Voting (V2 — 11 traits, 1-100 scale)
+ * TanStack Query hooks for Voting (V2 — 13 traits, 1-100 scale)
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -59,37 +59,24 @@ async function fetchPlayersWithVotes(): Promise<Set<string>> {
     return new Set(data?.map((p) => p.id) || []);
 }
 
-/** Fetch user's votes — 11 traits per player */
+/** Fetch user's votes — 13 traits per player */
 async function fetchUserVotes(userId: string | undefined): Promise<Map<string, UserVoteEntry>> {
     if (!userId) return new Map();
 
     const { data: userProfile } = await supabase.from("user_profiles").select("id").eq("user_id", userId).single();
     if (!userProfile) return new Map();
 
-    const { data } = await supabase
-        .from("player_votes")
-        .select(
-            "player_id, created_at, speed, stamina, strength, tackling, passing, dribbling, shooting, game_sense, flair, att_intent, def_intent"
-        )
-        .eq("voter_id", userProfile.id);
+    const { data } = await supabase.from("player_votes").select("*").eq("voter_id", userProfile.id);
 
     const votesMap = new Map<string, UserVoteEntry>();
     for (const row of data ?? []) {
         if (!row.player_id) continue;
 
-        const votes: Record<string, number> = {
-            speed: row.speed || 50,
-            stamina: row.stamina || 50,
-            strength: row.strength || 50,
-            tackling: row.tackling || 50,
-            passing: row.passing || 50,
-            dribbling: row.dribbling || 50,
-            shooting: row.shooting || 50,
-            gameSense: row.game_sense || 50,
-            flair: row.flair || 50,
-            attIntent: row.att_intent || 50,
-            defIntent: row.def_intent || 50,
-        };
+        // Map DB columns back to frontend trait keys dynamically
+        const votes: Record<string, number> = {};
+        for (const [traitKey, dbCol] of Object.entries(TRAIT_TO_DB)) {
+            votes[traitKey] = ((row as Record<string, unknown>)[dbCol] as number) || 50;
+        }
 
         votesMap.set(row.player_id, {
             player_id: row.player_id,

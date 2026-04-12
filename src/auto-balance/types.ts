@@ -4,6 +4,7 @@
  * Clean type definitions for the balance-first, swap-based algorithm.
  */
 
+import type { PlayerArchetype } from "@/lib/archetypes";
 import type { Formation } from "@/types/formations";
 import type { Position } from "@/types/positions";
 import type { CapabilityKey, PlayerCapabilities, ZoneEffectiveness } from "@/types/traits";
@@ -15,8 +16,13 @@ export interface BalancePlayer {
     id: string;
     name: string;
     capabilities: PlayerCapabilities;
+    /** Best-fit player type — drives position assignment */
+    archetype: PlayerArchetype;
     zoneEffectiveness: ZoneEffectiveness;
     overall: number;
+    /** Local placeholder players follow the preference-order assignment rule
+     *  instead of the fit-based one. They never claim spine slots unless forced. */
+    isPlaceholder?: boolean;
 }
 
 // ─── Configuration ──────────────────────────────────────────────────────────

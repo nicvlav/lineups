@@ -3,7 +3,7 @@ import type React from "react";
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
-import { balanceTeams } from "@/auto-balance";
+import { balanceTeams, type PlayerInput } from "@/auto-balance";
 import { useAuth } from "@/context/auth-context";
 import { usePitchAnimation } from "@/context/pitch-animation-context";
 import { type PlayerV2, usePlayers } from "@/hooks/use-players";
@@ -14,6 +14,7 @@ import { decodeStateFromURL } from "@/lib/utils/url-state";
 import type { Formation } from "@/types/formations";
 import type { Position } from "@/types/positions";
 import { POSITIONS } from "@/types/positions";
+import { type PlayerTraits, TRAIT_KEYS } from "@/types/traits";
 
 const DB_NAME = "GameDB";
 const STORE_NAME = "gameState";
@@ -98,7 +99,7 @@ interface GameContextType {
     removeFromGame: (playerToRemove: GamePlayer) => void;
     switchToRealPlayer: (oldPlayer: GamePlayer, newID: string) => void;
     applyFormation: (formation: Formation) => void;
-    generateTeams: (filteredPlayers: PlayerV2[]) => void;
+    generateTeams: (filteredPlayers: PlayerV2[], placeholderCount?: number) => void;
     rebalanceCurrentGame: () => void;
 }
 
@@ -285,6 +286,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         setGamePlayers({});
         setCurrentFormation(null);
         await saveToDB(tabKeyRef.current, JSON.stringify({ gamePlayers: {}, currentFormation: null }));
+        // Clear placeholder draft so the generate tab resets
+        localStorage.removeItem("lineups.generateDraft");
     };
 
     const removeFromGame = async (playerToRemove: GamePlayer) => {
@@ -378,9 +381,24 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
     // ─── Team Generation (V2 balance-first algorithm) ───────────────────────
 
-    const generateTeams = async (filteredPlayers: PlayerV2[]) => {
+    const generateTeams = async (filteredPlayers: PlayerV2[], placeholderCount = 0) => {
         try {
-            const result = balanceTeams(filteredPlayers.map((p) => ({ id: p.id, name: p.name, traits: p.traits })));
+            // Build real player inputs
+            const realInputs: PlayerInput[] = filteredPlayers.map((p) => ({
+                id: p.id,
+                name: p.name,
+                traits: p.traits,
+            }));
+
+            // Build placeholder inputs — flat 60 across all traits
+            const placeholderInputs: PlayerInput[] = Array.from({ length: placeholderCount }, (_, i) => ({
+                id: `placeholder-${i + 1}-${Date.now()}`,
+                name: "[Player]",
+                traits: Object.fromEntries(TRAIT_KEYS.map((k) => [k, 60])) as PlayerTraits,
+                isPlaceholder: true,
+            }));
+
+            const result = balanceTeams([...realInputs, ...placeholderInputs]);
 
             const playerRecord: Record<string, GamePlayer> = {};
 
@@ -388,7 +406,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 playerRecord[assigned.id] = {
                     id: assigned.id,
                     name: assigned.name,
-                    isGuest: false,
+                    isGuest: !!assigned.isPlaceholder,
                     team: assigned.team === "a" ? "A" : "B",
                     position: assigned.assignedPoint,
                     exactPosition: assigned.assignedPosition,
@@ -405,14 +423,17 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
     const rebalanceCurrentGame = async () => {
         const activePlayers: PlayerV2[] = [];
+        let placeholderCount = 0;
 
-        for (const [id] of Object.entries(gamePlayers)) {
-            if (id in players) {
+        for (const [id, gp] of Object.entries(gamePlayers)) {
+            if (gp.isGuest) {
+                placeholderCount++;
+            } else if (id in players) {
                 activePlayers.push(players[id]);
             }
         }
 
-        await generateTeams(activePlayers);
+        await generateTeams(activePlayers, placeholderCount);
     };
 
     return (

@@ -10,23 +10,19 @@ import { useState } from "react";
 import PlayerStatsModal from "@/components/players/player-stats-modal";
 import { useTapHandler } from "@/hooks/use-tap-handler";
 import { computeLabel } from "@/lib/capabilities";
-import { getStatBarColor, getTierBorderClass, getTierCssVar } from "@/lib/color-system";
+import { getStatBarColor, getTierBorderClass } from "@/lib/color-system";
 import type { Player } from "@/types/players";
-import { CAPABILITY_KEYS, capabilityShortLabelMap } from "@/types/traits";
-import type { CardViewMode } from "./player-cards";
 
 interface PlayerCardProps {
     player: Player;
     playerName: string;
     overall: number;
-    viewMode: CardViewMode;
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, playerName, overall, viewMode }) => {
+const PlayerCard: React.FC<PlayerCardProps> = ({ player, playerName, overall }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const tierBorderClass = getTierBorderClass(Math.round(overall));
-    const tierVar = getTierCssVar(Math.round(overall));
-    const label = computeLabel(player.capabilities);
+    const label = computeLabel(player.traits);
 
     const handleTap = useTapHandler({ onTap: () => setIsModalOpen(true) });
 
@@ -47,9 +43,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, playerName, overall, vi
                             )}
                         </div>
                     </div>
-                    <span className="text-lg font-bold tabular-nums shrink-0" style={{ color: `var(${tierVar})` }}>
-                        {Math.round(overall)}
-                    </span>
                 </div>
 
                 {/* Avatar */}
@@ -59,49 +52,24 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, playerName, overall, vi
                     </div>
                 )}
 
-                {/* View mode content */}
-                {viewMode === "capabilities" && (
-                    <div className="mt-auto space-y-1">
-                        {CAPABILITY_KEYS.map((key) => {
-                            const value = Math.round(player.capabilities[key]);
-                            return (
-                                <div key={key} className="flex items-center gap-1.5">
-                                    <span className="text-[10px] text-muted-foreground w-7 shrink-0">
-                                        {capabilityShortLabelMap[key]}
-                                    </span>
-                                    <div className="flex-1 h-1.5 bg-muted rounded-full">
-                                        <div
-                                            className={`${getStatBarColor(value)} h-1.5 rounded-full`}
-                                            style={{ width: `${Math.min(value, 100)}%` }}
-                                        />
-                                    </div>
+                {/* Card content */}
+                <div className="mt-auto space-y-1">
+                    {(["def", "mid", "att"] as const).map((zone) => {
+                        const value = Math.round(player.zoneEffectiveness[zone]);
+                        const zoneLabel = zone === "def" ? "DEF" : zone === "mid" ? "MID" : "ATT";
+                        return (
+                            <div key={zone} className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-muted-foreground w-7 shrink-0">{zoneLabel}</span>
+                                <div className="flex-1 h-1.5 bg-muted rounded-full">
+                                    <div
+                                        className={`${getStatBarColor(value)} h-1.5 rounded-full`}
+                                        style={{ width: `${Math.min(value, 100)}%` }}
+                                    />
                                 </div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {viewMode === "zones" && (
-                    <div className="mt-auto space-y-1">
-                        {(["def", "mid", "att"] as const).map((zone) => {
-                            const value = Math.round(player.zoneEffectiveness[zone]);
-                            const zoneLabel = zone === "def" ? "DEF" : zone === "mid" ? "MID" : "ATT";
-                            return (
-                                <div key={zone} className="flex items-center gap-1.5">
-                                    <span className="text-[10px] text-muted-foreground w-7 shrink-0">{zoneLabel}</span>
-                                    <div className="flex-1 h-1.5 bg-muted rounded-full">
-                                        <div
-                                            className={`${getStatBarColor(value)} h-1.5 rounded-full`}
-                                            style={{ width: `${Math.min(value, 100)}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {viewMode === "minimal" && <div className="mt-2" />}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             <PlayerStatsModal player={player} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
