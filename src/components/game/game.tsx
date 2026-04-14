@@ -43,10 +43,20 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
     };
 
     const handleRegenerate = () => {
-        const currentIds = Object.keys(gamePlayers);
-        const currentPlayers = playersArr.filter((p) => currentIds.includes(p.id));
-        if (currentPlayers.length > 0) {
-            generateTeams(currentPlayers);
+        const realPlayers: typeof playersArr = [];
+        let placeholderCount = 0;
+
+        for (const [id, gp] of Object.entries(gamePlayers)) {
+            if (gp.isGuest) {
+                placeholderCount++;
+            } else if (playersArr.some((p) => p.id === id)) {
+                const player = playersArr.find((p) => p.id === id);
+                if (player) realPlayers.push(player);
+            }
+        }
+
+        if (realPlayers.length > 0 || placeholderCount > 0) {
+            generateTeams(realPlayers, placeholderCount);
             toast.success("Teams reshuffled!", {
                 description: "New balanced teams from the same players",
                 duration: 2000,

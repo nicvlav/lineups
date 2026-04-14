@@ -138,20 +138,48 @@ export function scoreBalance(teamA: BalancePlayer[], teamB: BalancePlayer[], con
         return worstRatio;
     })();
 
-    // 6. Combine all factors
+    // 6. Archetype distribution — both teams should have natural attackers
+    // if the player pool contains them. Penalizes splits that stack all
+    // strikers (Target Striker, Inside Forward, Pressing Forward) on one team.
+    const countAttackers = (team: BalancePlayer[]) =>
+        team.filter((p) => !p.isPlaceholder && p.archetype.def.primaryZone === "att").length;
+    const attA = countAttackers(teamA);
+    const attB = countAttackers(teamB);
+    // If 2+ attackers exist and one team has 0: heavy penalty.
+    // If only 1 attacker total: no penalty (can't split).
+    // Otherwise: reward balanced distribution.
+    const archetypeDistribution = attA + attB <= 1 ? 1.0 : attA === 0 || attB === 0 ? 0.6 : strictRatio(attA, attB);
+
+    // 7. Combine all factors
     const capValues = Object.values(dimensions);
     const capProduct = capValues.reduce((product, v) => product * v, 1.0);
     const capScore = capProduct ** (1 / capValues.length);
 
     // Weighted composite:
-    //   Zones 25% — both teams competitive in all areas
-    //   Overall 20% — total quality parity
-    //   Caps 20% — per-skill balance
+    //   Overall 30% — total quality parity (the "feels fair" factor)
+    //   Zones 20% — both teams competitive in all areas
+    //   Caps 15% — per-skill balance
     //   Stars 15% — top talent distributed
-    //   Peaks 20% — top individual talent per skill balanced
-    const overall = zoneScore * 0.25 + overallRatio * 0.2 + capScore * 0.2 + starRatio * 0.15 + peakBalance * 0.2;
+    //   Archetypes 10% — attacker distribution across teams
+    //   Peaks 10% — top individual talent per skill balanced
+    const overall =
+        overallRatio * 0.3 +
+        zoneScore * 0.2 +
+        capScore * 0.15 +
+        starRatio * 0.15 +
+        archetypeDistribution * 0.1 +
+        peakBalance * 0.1;
 
-    const allScores = [...capValues, overallRatio, starRatio, defRatio, midRatio, attRatio, peakBalance];
+    const allScores = [
+        ...capValues,
+        overallRatio,
+        starRatio,
+        defRatio,
+        midRatio,
+        attRatio,
+        peakBalance,
+        archetypeDistribution,
+    ];
     const worst = Math.min(...allScores);
     const mean = allScores.reduce((s, v) => s + v, 0) / allScores.length;
 

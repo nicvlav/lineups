@@ -64,13 +64,13 @@ const TeamGenerator: React.FC<TeamGeneratorProps> = () => {
         const realIds = Object.keys(players).filter((id) => id in gamePlayers);
         setSelectedPlayers(realIds);
 
-        // Derive placeholder count from guests in gamePlayers, or fall back to draft
+        // Derive placeholder count: guests in gamePlayers take priority,
+        // otherwise always restore from localStorage draft.
         const guestCount = Object.values(gamePlayers).filter((p) => p.isGuest).length;
         if (guestCount > 0) {
             setPlaceholderCount(guestCount);
             saveDraftPlaceholderCount(guestCount);
-        } else if (realIds.length === 0) {
-            // No game state — restore from draft
+        } else {
             setPlaceholderCount(loadDraftPlaceholderCount());
         }
     }, [players, gamePlayers]);

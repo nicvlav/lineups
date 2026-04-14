@@ -24,7 +24,21 @@ import type { Formation } from "@/types/formations";
 import { getFormationsForCount } from "@/types/formations";
 import type { Position } from "@/types/positions";
 import { POSITIONS } from "@/types/positions";
+import type { ZoneKey } from "@/types/traits";
 import type { AssignedPlayer, BalancePlayer } from "./types";
+
+/** Maps each position to its primary zone for leftover assignment scoring */
+const POSITION_ZONE: Record<Position, ZoneKey> = {
+    GK: "def",
+    CB: "def",
+    FB: "def",
+    DM: "mid",
+    CM: "mid",
+    WM: "mid",
+    AM: "mid",
+    ST: "att",
+    WR: "att",
+};
 
 // ─── Slot Building ──────────────────────────────────────────────────────────
 
@@ -65,7 +79,9 @@ const PLACEHOLDER_EXEMPT_FROM_LEAVE_ONE = new Set<Position>(["GK", "FB"]);
 
 function assignPlaceholdersByPreference(
     placeholders: BalancePlayer[],
-    slots: Slot[]
+    slots: Slot[],
+    /** How many slots per position are needed by real players (from their #1 archetype pref) */
+    reservedForReals: Map<Position, number>
 ): { assignments: { player: BalancePlayer; slot: Slot }[]; remainingSlots: Slot[] } {
     const assignments: { player: BalancePlayer; slot: Slot }[] = [];
     const queue = [...placeholders];
@@ -90,11 +106,16 @@ function assignPlaceholdersByPreference(
         return take;
     };
 
-    // Pass 1 — soft rule (leave at least 1 slot per position for a real, except GK/FB)
+    // Pass 1 — leave enough slots for real players who need them.
+    // GK/FB: exempt (placeholders can fill all).
+    // Others: leave at least max(1, reservedCount) slots for reals.
+    // This prevents placeholders from stealing CB slots when real Anchors need them.
     for (const position of PLACEHOLDER_PREFERENCE) {
         if (queue.length === 0) break;
         const available = slotsByPosition.get(position)?.length ?? 0;
-        const allowed = PLACEHOLDER_EXEMPT_FROM_LEAVE_ONE.has(position) ? available : Math.max(0, available - 1);
+        const reserved = reservedForReals.get(position) ?? 0;
+        const leaveOpen = PLACEHOLDER_EXEMPT_FROM_LEAVE_ONE.has(position) ? 0 : Math.max(1, reserved);
+        const allowed = Math.max(0, available - leaveOpen);
         placeFromPosition(position, allowed);
     }
 
@@ -151,8 +172,9 @@ function realFitScore(player: BalancePlayer, position: Position): number {
 }
 
 /**
- * Special handling for GK: the lowest-quality outfield player fills it.
- * Returns the GK assignment + the remaining players/slots minus GK.
+ * Special handling for GK: the lowest-quality player fills it — real or
+ * placeholder. This prevents weak real players (Tony 57) from falling
+ * through to ST while a placeholder (60) sits comfortably at GK.
  */
 function pickGoalkeeper(
     players: BalancePlayer[],
@@ -169,7 +191,7 @@ function pickGoalkeeper(
 
     let weakestIdx = 0;
     for (let i = 1; i < players.length; i++) {
-        if (players[i].archetype.quality < players[weakestIdx].archetype.quality) {
+        if (players[i].overall < players[weakestIdx].overall) {
             weakestIdx = i;
         }
     }
@@ -227,16 +249,35 @@ function assignRealsByArchetype(
         assignments.push({ player: players[c.playerIdx], slot: slots[c.slotIdx] });
     }
 
-    // Pass 2: any unassigned players go into any leftover slots, ranked by quality.
-    // This handles the rare case where preferred-position assignment leaves gaps.
-    const unassignedPlayers = players
-        .map((p, i) => ({ p, i }))
-        .filter(({ i }) => !assignedPlayers.has(i))
-        .sort((a, b) => b.p.archetype.quality - a.p.archetype.quality);
-    const unassignedSlots = slots.map((s, i) => ({ s, i })).filter(({ i }) => !assignedSlots.has(i));
+    // Pass 2: leftover players go into leftover slots via ZONE AFFINITY.
+    // Instead of dumping by raw quality (which puts midfielders at ST),
+    // score each (player, slot) pair by how well the player's zone effectiveness
+    // matches the slot's zone. A midfielder should go to a midfield slot, not
+    // a striker slot, even when their archetype doesn't list it explicitly.
+    const unassignedPlayers = players.map((p, i) => ({ p, i })).filter(({ i }) => !assignedPlayers.has(i));
+    const unassignedSlotEntries = slots.map((s, i) => ({ s, i })).filter(({ i }) => !assignedSlots.has(i));
 
-    for (let k = 0; k < unassignedPlayers.length && k < unassignedSlots.length; k++) {
-        assignments.push({ player: unassignedPlayers[k].p, slot: unassignedSlots[k].s });
+    if (unassignedPlayers.length > 0 && unassignedSlotEntries.length > 0) {
+        const leftoverCandidates: Candidate[] = [];
+        for (let p = 0; p < unassignedPlayers.length; p++) {
+            for (let s = 0; s < unassignedSlotEntries.length; s++) {
+                const player = unassignedPlayers[p].p;
+                const slotZone = POSITION_ZONE[unassignedSlotEntries[s].s.position];
+                // Score by zone effectiveness at that slot's zone
+                const score = player.zoneEffectiveness[slotZone];
+                leftoverCandidates.push({ playerIdx: p, slotIdx: s, score });
+            }
+        }
+        leftoverCandidates.sort((a, b) => b.score - a.score);
+
+        const assignedLeftoverPlayers = new Set<number>();
+        const assignedLeftoverSlots = new Set<number>();
+        for (const c of leftoverCandidates) {
+            if (assignedLeftoverPlayers.has(c.playerIdx) || assignedLeftoverSlots.has(c.slotIdx)) continue;
+            assignedLeftoverPlayers.add(c.playerIdx);
+            assignedLeftoverSlots.add(c.slotIdx);
+            assignments.push({ player: unassignedPlayers[c.playerIdx].p, slot: unassignedSlotEntries[c.slotIdx].s });
+        }
     }
 
     return { assignments };
@@ -293,27 +334,162 @@ function selectFormation(team: BalancePlayer[]): Formation | null {
     return bestFormation;
 }
 
+// ─── Slot Polish: center-outward ordering ───────────────────────────────────
+
+/**
+ * Generate slot indices ordered from center outward, matching pitch-rendering.ts
+ * which treats index 0 as center (x=0.5) for central positions with odd count.
+ *
+ * For 3 slots: [0, 1, 2] — index 0 = center, 1 = left, 2 = right
+ * For 4 slots: [0, 1, 2, 3] — 0,1 = inner pair, 2,3 = outer pair
+ *
+ * Best players get the first (central) indices, placeholders get the last (edge).
+ */
+function centerOutwardIndices(count: number): number[] {
+    // pitch-rendering.ts already lays out index 0 as center for odd counts,
+    // and spreads outward from there. So natural index order IS center-out.
+    return Array.from({ length: count }, (_, i) => i);
+}
+
+/**
+ * Polish pass: within each position group of 3+, reorder so that:
+ *   - Best real players get the central slot indices
+ *   - Placeholders and weaker players drift to the edges
+ *
+ * Only recomputes the pitch point (visual position), doesn't change the
+ * position assignment itself.
+ */
+function polishSlotOrder(assigned: AssignedPlayer[], formation: Formation): AssignedPlayer[] {
+    const groups = new Map<Position, AssignedPlayer[]>();
+    for (const a of assigned) {
+        const list = groups.get(a.assignedPosition) ?? [];
+        list.push(a);
+        groups.set(a.assignedPosition, list);
+    }
+
+    const result: AssignedPlayer[] = [];
+    for (const [position, players] of groups) {
+        if (players.length < 3) {
+            result.push(...players);
+            continue;
+        }
+
+        // Sort: real players by quality descending, placeholders last
+        const sorted = [...players].sort((a, b) => {
+            if (a.isPlaceholder && !b.isPlaceholder) return 1;
+            if (!a.isPlaceholder && b.isPlaceholder) return -1;
+            return b.overall - a.overall;
+        });
+
+        const indices = centerOutwardIndices(sorted.length);
+        for (let i = 0; i < sorted.length; i++) {
+            result.push({
+                ...sorted[i],
+                assignedPoint: getPointForPosition(POSITIONS[position], indices[i], sorted.length, formation),
+            });
+        }
+    }
+
+    return result;
+}
+
+// ─── Striker Quality Post-Pass ───────────────────────────────────────────────
+
+/**
+ * Ensure the ST player is the one LEAST WASTED there.
+ *
+ * ST suitability = att / max(def, mid). A player whose attacking zone is
+ * close to or exceeds their other zones is a natural fit. A player whose
+ * mid or def dwarfs their att is wasted at ST and belongs deeper.
+ *
+ * Swaps ST ↔ AM only (attacking-adjacent). Fires when an AM has higher
+ * suitability than the current ST. This naturally handles both:
+ *   - Creator at ST when a balanced player is at AM (Santos/Dylan case)
+ *   - Generalist at ST when a specialist is at AM (JP/Bojan case)
+ */
+function ensureStrikerQuality(assigned: AssignedPlayer[]): void {
+    const stIdx = assigned.findIndex((a) => a.assignedPosition === "ST" && !a.isPlaceholder);
+    if (stIdx < 0) return;
+
+    const st = assigned[stIdx];
+    const amEntries = assigned
+        .map((a, i) => ({ a, i }))
+        .filter(({ a }) => a.assignedPosition === "AM" && !a.isPlaceholder);
+
+    if (amEntries.length === 0) return;
+
+    // How concentrated toward attacking is this player?
+    // Higher = less wasted at ST (natural striker fit)
+    const stSuitability = (p: AssignedPlayer) => {
+        const bestNonAtt = Math.max(p.zoneEffectiveness.def, p.zoneEffectiveness.mid);
+        return bestNonAtt > 0 ? p.zoneEffectiveness.att / bestNonAtt : 1.0;
+    };
+
+    const currentScore = stSuitability(st);
+
+    // Find the AM who'd be least wasted at ST
+    let bestSwapIdx = -1;
+    let bestSwapScore = currentScore;
+    for (const { a, i } of amEntries) {
+        const score = stSuitability(a);
+        if (score > bestSwapScore) {
+            bestSwapScore = score;
+            bestSwapIdx = i;
+        }
+    }
+
+    if (bestSwapIdx < 0) return;
+
+    // Swap positions and points
+    const swapTarget = assigned[bestSwapIdx];
+    const stPos = st.assignedPosition;
+    const stPoint = st.assignedPoint;
+    assigned[stIdx] = { ...st, assignedPosition: swapTarget.assignedPosition, assignedPoint: swapTarget.assignedPoint };
+    assigned[bestSwapIdx] = { ...swapTarget, assignedPosition: stPos, assignedPoint: stPoint };
+}
+
 // ─── Top-Level Position Assignment ──────────────────────────────────────────
 
 function assignPositions(team: BalancePlayer[], formation: Formation, teamId: "a" | "b"): AssignedPlayer[] {
     const slots = buildSlots(formation);
-    const placeholders = team.filter((p) => p.isPlaceholder);
-    const reals = team.filter((p) => !p.isPlaceholder);
 
-    // Phase A: placeholders
+    // Phase 0: GK — weakest player overall (real or placeholder).
+    // This prevents weak reals (Tony 57) from falling through to ST while
+    // a placeholder (60) sits at GK. If a placeholder IS the weakest, it
+    // takes GK as before.
+    const { gkAssignment, remainingPlayers: afterGK, remainingSlots: slotsAfterGK } = pickGoalkeeper(team, slots);
+
+    // Phase A: remaining placeholders via preference order.
+    // Reserve slots for real players who need them (e.g. Anchors need CB).
+    const remainingPlaceholders = afterGK.filter((p) => p.isPlaceholder);
+    const remainingReals = afterGK.filter((p) => !p.isPlaceholder);
+
+    const reservedForReals = new Map<Position, number>();
+    for (const real of remainingReals) {
+        const topPref = real.archetype.def.positionPreference[0];
+        if (topPref) {
+            reservedForReals.set(topPref, (reservedForReals.get(topPref) ?? 0) + 1);
+        }
+    }
+
     const { assignments: placeholderAssignments, remainingSlots: afterPlaceholders } = assignPlaceholdersByPreference(
-        placeholders,
-        slots
+        remainingPlaceholders,
+        slotsAfterGK,
+        reservedForReals
     );
 
-    // Phase B(0): GK is the weakest real player
-    const { gkAssignment, remainingPlayers, remainingSlots } = pickGoalkeeper(reals, afterPlaceholders);
+    // Phase B: remaining reals via archetype-driven fit
+    const { assignments: realAssignments } = assignRealsByArchetype(remainingReals, afterPlaceholders);
 
-    // Phase B(1): rest of the reals via archetype-driven fit
-    const { assignments: realAssignments } = assignRealsByArchetype(remainingPlayers, remainingSlots);
+    const all = [...(gkAssignment ? [gkAssignment] : []), ...placeholderAssignments, ...realAssignments];
+    const assigned = all.map(({ player, slot }) => makeAssigned(player, slot, formation, teamId));
 
-    const all = [...placeholderAssignments, ...(gkAssignment ? [gkAssignment] : []), ...realAssignments];
-    return all.map(({ player, slot }) => makeAssigned(player, slot, formation, teamId));
+    // Post-pass: ensure ST has the player least wasted there (natural attacker
+    // over versatile midfielder). Swaps ST ↔ AM based on attack concentration.
+    ensureStrikerQuality(assigned);
+
+    // Final polish: within positions with 3+ players, push best to center, placeholders to edges
+    return polishSlotOrder(assigned, formation);
 }
 
 /** Assign formations and positions to both teams */
