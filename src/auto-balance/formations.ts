@@ -216,6 +216,21 @@ function assignRealsByArchetype(
 
     candidates.sort((a, b) => b.score - a.score);
 
+    // Near-tie shuffle: within 2% score bands, randomly reorder so that
+    // equally-qualified players can land in different positions across reshuffles.
+    for (let i = 0; i < candidates.length; ) {
+        let j = i + 1;
+        while (j < candidates.length && candidates[j].score >= candidates[i].score * 0.98) {
+            j++;
+        }
+        // Fisher-Yates shuffle of candidates[i..j)
+        for (let k = j - 1; k > i; k--) {
+            const swap = i + Math.floor(Math.random() * (k - i + 1));
+            [candidates[k], candidates[swap]] = [candidates[swap], candidates[k]];
+        }
+        i = j;
+    }
+
     const assignedPlayers = new Set<number>();
     const assignedSlots = new Set<number>();
     const assignments: { player: BalancePlayer; slot: Slot }[] = [];

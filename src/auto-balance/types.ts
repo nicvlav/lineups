@@ -7,7 +7,7 @@
 import type { PlayerArchetype } from "@/lib/archetypes";
 import type { Formation } from "@/types/formations";
 import type { Position } from "@/types/positions";
-import type { CapabilityKey, PlayerCapabilities, ZoneEffectiveness } from "@/types/traits";
+import type { CapabilityKey, PlayerCapabilities, PlayerTraits, ZoneEffectiveness } from "@/types/traits";
 
 // ─── Input ──────────────────────────────────────────────────────────────────
 
@@ -15,6 +15,7 @@ import type { CapabilityKey, PlayerCapabilities, ZoneEffectiveness } from "@/typ
 export interface BalancePlayer {
     id: string;
     name: string;
+    traits: PlayerTraits;
     capabilities: PlayerCapabilities;
     /** Best-fit player type — drives position assignment */
     archetype: PlayerArchetype;
@@ -29,6 +30,21 @@ export interface BalancePlayer {
 
 export type Variation = "low" | "medium" | "high";
 
+/** Weights for the additive balance scoring factors. Must sum to ~1.0.
+ *  peakBalance, archetypeDistribution, and capScore are applied as
+ *  multipliers and are not part of the additive weights. */
+export interface ScoreWeights {
+    overallRatio: number;
+    zoneScore: number;
+    starRatio: number;
+}
+
+export const DEFAULT_SCORE_WEIGHTS: ScoreWeights = {
+    overallRatio: 0.4,
+    zoneScore: 0.2,
+    starRatio: 0.25,
+};
+
 export interface BalanceConfig {
     /** Controls how many restarts with perturbations (low=1, medium=50, high=150) */
     variation: Variation;
@@ -41,20 +57,24 @@ export interface BalanceConfig {
 
     /** Minimum zone coverage ratio for a team to be considered formation-feasible (0-1) */
     feasibilityThreshold: number;
+
+    /** Base scoring weights (default: DEFAULT_SCORE_WEIGHTS) */
+    scoreWeights: ScoreWeights;
 }
 
 export const DEFAULT_BALANCE_CONFIG: BalanceConfig = {
     variation: "medium",
     varianceSensitivity: {
         defending: 0.5,
-        playmaking: 0.2,
-        goalThreat: 0.2,
+        playmaking: 0.4,
+        goalThreat: 0.6,
         athleticism: 0.4,
-        engine: 0.3,
-        technique: 0.15,
+        engine: 0.2,
+        technique: 0.35,
     },
     diminishingReturnsFactor: 0.15,
     feasibilityThreshold: 0.7,
+    scoreWeights: DEFAULT_SCORE_WEIGHTS,
 };
 
 // ─── Output ─────────────────────────────────────────────────────────────────

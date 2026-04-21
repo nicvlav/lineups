@@ -52,7 +52,7 @@ export function computeCapabilities(traits: PlayerTraits): PlayerCapabilities {
             return intentScore * 0.4 + traits.stamina * 0.3 + traits.speed * 0.15 + gs * 0.15;
         })(),
         technique:
-            traits.dribbling * 0.35 + traits.passing * 0.3 + gs * 0.15 + traits.shooting * 0.1 + traits.flair * 0.1,
+            traits.passing * 0.25 + gs * 0.25 + traits.dribbling * 0.2 + traits.shooting * 0.2 + traits.flair * 0.1,
     };
 }
 

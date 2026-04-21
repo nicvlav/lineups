@@ -94,13 +94,14 @@ export interface GamePlayer {
 interface GameContextType {
     gamePlayers: Record<string, GamePlayer>;
     currentFormation: Formation | null;
+    shuffleCount: number;
 
     clearGame: () => void;
     removeFromGame: (playerToRemove: GamePlayer) => void;
     switchToRealPlayer: (oldPlayer: GamePlayer, newID: string) => void;
     applyFormation: (formation: Formation) => void;
     generateTeams: (filteredPlayers: PlayerV2[], placeholderCount?: number) => void;
-    rebalanceCurrentGame: () => void;
+    reshuffleTeams: () => void;
 }
 
 export const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -118,6 +119,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const isStaticRoute = location.pathname.startsWith("/auth") || location.pathname === "/data-deletion";
 
     const [gamePlayers, setGamePlayers] = useState<Record<string, GamePlayer>>({});
+    const [shuffleCount, setShuffleCount] = useState(0);
     const [currentFormation, setCurrentFormation] = useState<Formation | null>(null);
     const loadingState = useRef(false);
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -398,7 +400,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 isPlaceholder: true,
             }));
 
-            const result = balanceTeams([...realInputs, ...placeholderInputs]);
+            const result = balanceTeams([...realInputs, ...placeholderInputs], "medium", 0);
 
             const playerRecord: Record<string, GamePlayer> = {};
 
@@ -413,15 +415,55 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 };
             }
 
+            // ─── Debug: squad analysis ────────────────────────────────
+            const debugTeam = (label: string, team: typeof result.teams.a) => {
+                const sorted = [...team].sort(
+                    (a, b) =>
+                        ["GK", "CB", "FB", "DM", "CM", "WM", "AM", "WR", "ST"].indexOf(a.assignedPosition) -
+                        ["GK", "CB", "FB", "DM", "CM", "WM", "AM", "WR", "ST"].indexOf(b.assignedPosition)
+                );
+                const rows = sorted.map((p) => ({
+                    pos: p.assignedPosition,
+                    name: p.name.padEnd(12).slice(0, 12),
+                    arch: p.archetype.def.displayName.padEnd(18).slice(0, 18),
+                    ovr: Math.round(p.overall),
+                    def: Math.round(p.zoneEffectiveness.def),
+                    mid: Math.round(p.zoneEffectiveness.mid),
+                    att: Math.round(p.zoneEffectiveness.att),
+                    DEF: Math.round(p.capabilities.defending),
+                    PLY: Math.round(p.capabilities.playmaking),
+                    GOL: Math.round(p.capabilities.goalThreat),
+                    ATH: Math.round(p.capabilities.athleticism),
+                    ENG: Math.round(p.capabilities.engine),
+                    TEC: Math.round(p.capabilities.technique),
+                }));
+                console.log(`\n${label} (${result.formations[label === "TEAM A" ? "a" : "b"].name}):`);
+                console.table(rows);
+                const sumOvr = sorted.reduce((s, p) => s + p.overall, 0);
+                const sumDef = sorted.reduce((s, p) => s + p.zoneEffectiveness.def, 0);
+                const sumMid = sorted.reduce((s, p) => s + p.zoneEffectiveness.mid, 0);
+                const sumAtt = sorted.reduce((s, p) => s + p.zoneEffectiveness.att, 0);
+                console.log(
+                    `  Totals → OVR: ${Math.round(sumOvr)} | DEF: ${Math.round(sumDef)} | MID: ${Math.round(sumMid)} | ATT: ${Math.round(sumAtt)}`
+                );
+            };
+            debugTeam("TEAM A", result.teams.a);
+            debugTeam("TEAM B", result.teams.b);
+            console.log(
+                `\nBalance score: ${result.score.overall.toFixed(4)} (worst: ${result.score.worst.toFixed(4)}, mean: ${result.score.mean.toFixed(4)})`
+            );
+            // ─── End debug ───────────────────────────────────────────
+
             triggerAnimation("generation");
             setGamePlayers(playerRecord);
             setCurrentFormation(result.formations.a);
+            setShuffleCount(0);
         } catch (error) {
             logger.error("Team generation error", error);
         }
     };
 
-    const rebalanceCurrentGame = async () => {
+    const reshuffleTeams = async () => {
         const activePlayers: PlayerV2[] = [];
         let placeholderCount = 0;
 
@@ -433,7 +475,46 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             }
         }
 
-        await generateTeams(activePlayers, placeholderCount);
+        const nextShuffle = shuffleCount + 1;
+        const randomness = Math.min(1.0, nextShuffle / 5);
+
+        try {
+            const realInputs: PlayerInput[] = activePlayers.map((p) => ({
+                id: p.id,
+                name: p.name,
+                traits: p.traits,
+            }));
+
+            const placeholderInputs: PlayerInput[] = Array.from({ length: placeholderCount }, (_, i) => ({
+                id: `placeholder-${i + 1}-${Date.now()}`,
+                name: "[Player]",
+                traits: Object.fromEntries(TRAIT_KEYS.map((k) => [k, 60])) as PlayerTraits,
+                isPlaceholder: true,
+            }));
+
+            const result = balanceTeams([...realInputs, ...placeholderInputs], "medium", randomness);
+
+            const playerRecord: Record<string, GamePlayer> = {};
+            for (const assigned of [...result.teams.a, ...result.teams.b]) {
+                playerRecord[assigned.id] = {
+                    id: assigned.id,
+                    name: assigned.name,
+                    isGuest: !!assigned.isPlaceholder,
+                    team: assigned.team === "a" ? "A" : "B",
+                    position: assigned.assignedPoint,
+                    exactPosition: assigned.assignedPosition,
+                };
+            }
+
+            triggerAnimation("generation");
+            setGamePlayers(playerRecord);
+            setCurrentFormation(result.formations.a);
+            setShuffleCount(nextShuffle);
+
+            logger.debug(`Reshuffle #${nextShuffle} (randomness: ${randomness.toFixed(2)})`);
+        } catch (error) {
+            logger.error("Reshuffle error", error);
+        }
     };
 
     return (
@@ -441,12 +522,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             value={{
                 gamePlayers,
                 currentFormation,
+                shuffleCount,
                 clearGame,
                 removeFromGame,
                 switchToRealPlayer,
                 applyFormation,
                 generateTeams,
-                rebalanceCurrentGame,
+                reshuffleTeams,
             }}
         >
             {children}
