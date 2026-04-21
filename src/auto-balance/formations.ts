@@ -24,7 +24,21 @@ import type { Formation } from "@/types/formations";
 import { getFormationsForCount } from "@/types/formations";
 import type { Position } from "@/types/positions";
 import { POSITIONS } from "@/types/positions";
+import type { ZoneKey } from "@/types/traits";
 import type { AssignedPlayer, BalancePlayer } from "./types";
+
+/** Maps each position to its primary zone for leftover assignment scoring */
+const POSITION_ZONE: Record<Position, ZoneKey> = {
+    GK: "def",
+    CB: "def",
+    FB: "def",
+    DM: "mid",
+    CM: "mid",
+    WM: "mid",
+    AM: "mid",
+    ST: "att",
+    WR: "att",
+};
 
 // ─── Slot Building ──────────────────────────────────────────────────────────
 
@@ -242,16 +256,78 @@ function assignRealsByArchetype(
         assignments.push({ player: players[c.playerIdx], slot: slots[c.slotIdx] });
     }
 
-    // Pass 2: any unassigned players go into any leftover slots, ranked by quality.
-    // This handles the rare case where preferred-position assignment leaves gaps.
-    const unassignedPlayers = players
-        .map((p, i) => ({ p, i }))
-        .filter(({ i }) => !assignedPlayers.has(i))
-        .sort((a, b) => b.p.archetype.quality - a.p.archetype.quality);
-    const unassignedSlots = slots.map((s, i) => ({ s, i })).filter(({ i }) => !assignedSlots.has(i));
+    // Pass 2: leftover players go into leftover slots via OPTIMAL MATCHING.
+    // Greedy best-first gives Juan C (better zone fit at CB) the CB slot, which
+    // forces Tony (att 47!) into the ST slot. Enumerating all permutations finds
+    // the globally optimal total (Tony→CB + Juan C→ST = higher than greedy).
+    //
+    // For N leftover slots, enumerates N! permutations. Cap at N=6 (720 perms,
+    // still sub-millisecond). Above that, fall back to greedy.
+    const unassignedPlayers = players.map((p, i) => ({ p, i })).filter(({ i }) => !assignedPlayers.has(i));
+    const unassignedSlotEntries = slots.map((s, i) => ({ s, i })).filter(({ i }) => !assignedSlots.has(i));
 
-    for (let k = 0; k < unassignedPlayers.length && k < unassignedSlots.length; k++) {
-        assignments.push({ player: unassignedPlayers[k].p, slot: unassignedSlots[k].s });
+    if (unassignedPlayers.length > 0 && unassignedSlotEntries.length > 0) {
+        const n = Math.min(unassignedPlayers.length, unassignedSlotEntries.length);
+        const zoneFit = (playerIdx: number, slotIdx: number): number => {
+            const player = unassignedPlayers[playerIdx].p;
+            const slotZone = POSITION_ZONE[unassignedSlotEntries[slotIdx].s.position];
+            return player.zoneEffectiveness[slotZone];
+        };
+
+        let bestAssignment: number[] | null = null;
+        if (n <= 6) {
+            // Enumerate all permutations to find optimal matching.
+            let bestTotal = -Infinity;
+            const tryPermutation = (perm: number[], used: boolean[], depth: number) => {
+                if (depth === n) {
+                    let total = 0;
+                    for (let i = 0; i < n; i++) total += zoneFit(i, perm[i]);
+                    if (total > bestTotal) {
+                        bestTotal = total;
+                        bestAssignment = [...perm];
+                    }
+                    return;
+                }
+                for (let s = 0; s < unassignedSlotEntries.length; s++) {
+                    if (used[s]) continue;
+                    used[s] = true;
+                    perm[depth] = s;
+                    tryPermutation(perm, used, depth + 1);
+                    used[s] = false;
+                }
+            };
+            tryPermutation(new Array(n), new Array(unassignedSlotEntries.length).fill(false), 0);
+        } else {
+            // Fallback for very large leftover sets: greedy best-first.
+            const candidates: Candidate[] = [];
+            for (let p = 0; p < unassignedPlayers.length; p++) {
+                for (let s = 0; s < unassignedSlotEntries.length; s++) {
+                    candidates.push({ playerIdx: p, slotIdx: s, score: zoneFit(p, s) });
+                }
+            }
+            candidates.sort((a, b) => b.score - a.score);
+            const assignedP = new Set<number>();
+            const assignedS = new Set<number>();
+            bestAssignment = new Array(n);
+            for (const c of candidates) {
+                if (assignedP.has(c.playerIdx) || assignedS.has(c.slotIdx)) continue;
+                assignedP.add(c.playerIdx);
+                assignedS.add(c.slotIdx);
+                bestAssignment[c.playerIdx] = c.slotIdx;
+            }
+        }
+
+        if (bestAssignment) {
+            for (let i = 0; i < n; i++) {
+                const slotIdx = bestAssignment[i];
+                if (slotIdx !== undefined) {
+                    assignments.push({
+                        player: unassignedPlayers[i].p,
+                        slot: unassignedSlotEntries[slotIdx].s,
+                    });
+                }
+            }
+        }
     }
 
     return { assignments };

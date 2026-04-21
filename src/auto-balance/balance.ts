@@ -196,7 +196,21 @@ export function scoreBalance(
     // Worst of attacker, defender, and striker-capable distribution — applied
     // as a MULTIPLIER. Striker balance is weighted tightest because a
     // mismatch in who can score kills the game more than any other imbalance.
-    const archetypeDistribution = Math.min(zoneDistribution("att"), zoneDistribution("def"), strikerBalance);
+    // Geometric mean across att/def/striker dimensions (instead of MIN).
+    // MIN capped everything at the worst dimension, killing incentive to fix
+    // others. Geo mean rewards improvement in ANY dimension — the algorithm
+    // can now prefer a swap that balances attackers even if defenders stay 1-2.
+    const archetypeDistribution = (zoneDistribution("att") * zoneDistribution("def") * strikerBalance) ** (1 / 3);
+
+    // 6b. Placeholder distribution — both teams should have similar numbers of
+    // placeholders so real players fill comparable proportions on each side.
+    // A 3-1 split means one team is 30% unknown filler while the other is 10% —
+    // fundamentally uneven regardless of how OVR balances.
+    const placeholdersA = teamA.filter((p) => p.isPlaceholder).length;
+    const placeholdersB = teamB.filter((p) => p.isPlaceholder).length;
+    const placeholderDiff = Math.abs(placeholdersA - placeholdersB);
+    const placeholderBalance = placeholderDiff <= 1 ? 1.0 : Math.max(0.4, 1.0 - (placeholderDiff - 1) * 0.2);
+    // diff 0-1: 1.0, diff 2: 0.8, diff 3: 0.6, diff 4+: 0.4
 
     // 7. Capability balance — geometric mean of per-dimension ratios.
     // A moderate additive factor, not a multiplier. A technical-vs-physical
@@ -213,7 +227,7 @@ export function scoreBalance(
         zoneScore * weights.zoneScore +
         starRatio * weights.starRatio +
         capScore * 0.15;
-    const overall = additive * peakBalance * archetypeDistribution;
+    const overall = additive * peakBalance * archetypeDistribution * placeholderBalance;
 
     const allScores = [...capValues, overallRatio, starRatio, defRatio, midRatio, attRatio, peakBalance];
     const worst = Math.min(...allScores);
