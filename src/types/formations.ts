@@ -126,11 +126,7 @@ export const formationTemplates: Record<number, Formation[]> = {
     13: [
         {
             name: "3-6-3",
-            positions: { GK: 1, CB: 3, FB: 0, DM: 1, CM: 0, WM: 2, AM: 2, ST: 2, WR: 2 },
-        },
-        {
-            name: "3-7-2",
-            positions: { GK: 1, CB: 3, FB: 2, DM: 1, CM: 2, WM: 0, AM: 2, ST: 2, WR: 0 },
+            positions: { GK: 1, CB: 3, FB: 0, DM: 2, CM: 0, WM: 2, AM: 2, ST: 1, WR: 2 },
         },
     ],
 } as const;

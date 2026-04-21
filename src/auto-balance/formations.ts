@@ -384,6 +384,62 @@ function selectFormation(team: BalancePlayer[]): Formation | null {
     return bestFormation;
 }
 
+// ─── Phase C: Striker Polish ────────────────────────────────────────────────
+
+/**
+ * Post-assignment pass: archetype-fit may put a striker-archetype player at ST
+ * even when another assigned player has much better att-zone effectiveness.
+ * Swap them if the total zone-fit (sum of both slots) strictly improves by a
+ * meaningful margin.
+ *
+ * Mirrors the Phase B(1) leftover optimal-matching fix: both are global 2-swaps
+ * that catch locally-good-globally-bad decisions. Uses zone effectiveness rather
+ * than archetype preferences so a Playmaker with att=84 can be moved to ST even
+ * though ST isn't in their archetype's preference list.
+ */
+const ST_POLISH_MIN_NET_GAIN = 8;
+
+function polishStrikers(assignments: { player: BalancePlayer; slot: Slot }[]): { player: BalancePlayer; slot: Slot }[] {
+    const out = assignments.map((a) => ({ ...a }));
+
+    for (let i = 0; i < out.length; i++) {
+        if (out[i].slot.position !== "ST" || out[i].player.isPlaceholder) continue;
+
+        const stPlayer = out[i].player;
+
+        let bestSwap = -1;
+        let bestGain = 0;
+
+        for (let j = 0; j < out.length; j++) {
+            if (i === j) continue;
+            const cand = out[j].player;
+            if (cand.isPlaceholder || out[j].slot.position === "GK") continue;
+
+            const otherZone = POSITION_ZONE[out[j].slot.position];
+            const attGain = cand.zoneEffectiveness.att - stPlayer.zoneEffectiveness.att;
+            const otherChange = stPlayer.zoneEffectiveness[otherZone] - cand.zoneEffectiveness[otherZone];
+            // Weight att-gain heavier: ST needs finishing/att-zone, while the other slot
+            // can often absorb a mid/def drop without hurting team shape much.
+            const netGain = attGain * 1.5 + otherChange;
+
+            if (netGain < ST_POLISH_MIN_NET_GAIN) continue;
+
+            if (netGain > bestGain) {
+                bestGain = netGain;
+                bestSwap = j;
+            }
+        }
+
+        if (bestSwap >= 0) {
+            const tmp = out[i].player;
+            out[i].player = out[bestSwap].player;
+            out[bestSwap].player = tmp;
+        }
+    }
+
+    return out;
+}
+
 // ─── Top-Level Position Assignment ──────────────────────────────────────────
 
 function assignPositions(team: BalancePlayer[], formation: Formation, teamId: "a" | "b"): AssignedPlayer[] {
@@ -404,7 +460,8 @@ function assignPositions(team: BalancePlayer[], formation: Formation, teamId: "a
     const { assignments: realAssignments } = assignRealsByArchetype(remainingPlayers, remainingSlots);
 
     const all = [...placeholderAssignments, ...(gkAssignment ? [gkAssignment] : []), ...realAssignments];
-    return all.map(({ player, slot }) => makeAssigned(player, slot, formation, teamId));
+    const polished = polishStrikers(all);
+    return polished.map(({ player, slot }) => makeAssigned(player, slot, formation, teamId));
 }
 
 /** Assign formations and positions to both teams */
