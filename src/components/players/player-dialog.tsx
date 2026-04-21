@@ -146,8 +146,9 @@ const PitchTab: React.FC<PitchTabProps> = ({ player, onClose }) => {
         onClose();
     };
 
+    const firstName = player.name.split(/\s+/)[0];
     const teamViews: { value: "own" | "other"; label: string }[] = [
-        { value: "own", label: "Your team" },
+        { value: "own", label: `${firstName}'s team` },
         { value: "other", label: "Other team" },
     ];
 
@@ -331,61 +332,61 @@ const PitchPlayerDialog: React.FC<PlayerDialogProps> = ({ player, isOpen, onClos
                     </div>
                 </div>
 
-                {player.isGuest ? (
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                        <SubstituteTab player={player} players={players} onClose={onClose} />
-                    </div>
-                ) : (
-                    <Tabs
-                        value={activeTab}
-                        onValueChange={(v) => setActiveTab(v as typeof activeTab)}
-                        className="flex-1 flex flex-col overflow-hidden"
-                    >
-                        <div className="flex gap-1 justify-center mt-2 mb-1 border-b border-border/40 pb-1">
-                            {TAB_ITEMS.map((tab) => {
-                                const isActive = activeTab === tab.value;
-                                return (
-                                    <button
-                                        key={tab.value}
-                                        type="button"
-                                        onClick={() => setActiveTab(tab.value)}
-                                        className="relative text-sm font-medium px-4 py-1.5 rounded-lg transition-colors duration-200 active:scale-[0.97]"
-                                    >
-                                        {isActive && (
-                                            <motion.span
-                                                layoutId="player-dialog-tab"
-                                                className="absolute inset-0 rounded-lg bg-primary/15"
-                                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                            />
-                                        )}
-                                        <span
-                                            className={cn(
-                                                "relative z-10",
-                                                isActive
-                                                    ? "text-primary"
-                                                    : "text-muted-foreground hover:text-foreground"
-                                            )}
+                {(() => {
+                    const visibleTabs = player.isGuest ? TAB_ITEMS.filter((t) => t.value !== "stats") : TAB_ITEMS;
+                    const tabValue = player.isGuest && activeTab === "stats" ? "pitch" : activeTab;
+                    return (
+                        <Tabs
+                            value={tabValue}
+                            onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+                            className="flex-1 flex flex-col overflow-hidden"
+                        >
+                            <div className="flex gap-1 justify-center mt-2 mb-1 border-b border-border/40 pb-1">
+                                {visibleTabs.map((tab) => {
+                                    const isActive = tabValue === tab.value;
+                                    return (
+                                        <button
+                                            key={tab.value}
+                                            type="button"
+                                            onClick={() => setActiveTab(tab.value)}
+                                            className="relative text-sm font-medium px-4 py-1.5 rounded-lg transition-colors duration-200 active:scale-[0.97]"
                                         >
-                                            {tab.label}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                            {isActive && (
+                                                <motion.span
+                                                    layoutId="player-dialog-tab"
+                                                    className="absolute inset-0 rounded-lg bg-primary/15"
+                                                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                                />
+                                            )}
+                                            <span
+                                                className={cn(
+                                                    "relative z-10",
+                                                    isActive
+                                                        ? "text-primary"
+                                                        : "text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                {tab.label}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
 
-                        <TabsContent value="pitch" className="flex-1 flex flex-col overflow-hidden">
-                            <PitchTab player={player} onClose={onClose} />
-                        </TabsContent>
+                            <TabsContent value="pitch" className="flex-1 flex flex-col overflow-hidden">
+                                <PitchTab player={player} onClose={onClose} />
+                            </TabsContent>
 
-                        <TabsContent value="stats" className="flex-1 overflow-y-auto">
-                            <StatsTab fullPlayer={fullPlayer} />
-                        </TabsContent>
+                            <TabsContent value="stats" className="flex-1 overflow-y-auto">
+                                <StatsTab fullPlayer={fullPlayer} />
+                            </TabsContent>
 
-                        <TabsContent value="sub" className="flex-1 flex flex-col overflow-hidden">
-                            <SubstituteTab player={player} players={players} onClose={onClose} />
-                        </TabsContent>
-                    </Tabs>
-                )}
+                            <TabsContent value="sub" className="flex-1 flex flex-col overflow-hidden">
+                                <SubstituteTab player={player} players={players} onClose={onClose} />
+                            </TabsContent>
+                        </Tabs>
+                    );
+                })()}
 
                 <div className="pt-3 border-t border-border/40">
                     <Button
