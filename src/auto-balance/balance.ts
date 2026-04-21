@@ -16,7 +16,8 @@
 import { logger } from "@/lib/logger";
 import type { CapabilityKey, PlayerCapabilities } from "@/types/traits";
 import { CAPABILITY_KEYS } from "@/types/traits";
-import type { BalanceConfig, BalancePlayer, BalanceScore, SwapRecord } from "./types";
+import type { BalanceConfig, BalancePlayer, BalanceScore, ScoreWeights, SwapRecord } from "./types";
+import { DEFAULT_SCORE_WEIGHTS } from "./types";
 
 // ─── Score Computation ──────────────────────────────────────────────────────
 
@@ -83,7 +84,12 @@ function strictRatio(a: number, b: number): number {
 }
 
 /** Score how balanced two teams are across ALL dimensions */
-export function scoreBalance(teamA: BalancePlayer[], teamB: BalancePlayer[], config: BalanceConfig): BalanceScore {
+export function scoreBalance(
+    teamA: BalancePlayer[],
+    teamB: BalancePlayer[],
+    config: BalanceConfig,
+    weights: ScoreWeights = config.scoreWeights ?? DEFAULT_SCORE_WEIGHTS
+): BalanceScore {
     const capsA = teamCapabilities(teamA, config);
     const capsB = teamCapabilities(teamB, config);
 
@@ -101,8 +107,10 @@ export function scoreBalance(teamA: BalancePlayer[], teamB: BalancePlayer[], con
     const sumB = teamB.reduce((s, p) => s + p.overall, 0);
     const overallRatio = strictRatio(sumA, sumB);
 
-    // 3. Star balance — top 3 players per team should be comparable
-    const topN = Math.min(3, Math.floor(teamA.length / 3));
+    // 3. Star balance — top 40% of each team should be comparable.
+    // Wider window (was top 3) catches star DEPTH imbalance, not just the
+    // very top. For 11 players: top 5. For 10: top 4.
+    const topN = Math.max(2, Math.ceil(teamA.length * 0.4));
     const topA = [...teamA].sort((a, b) => b.overall - a.overall).slice(0, topN);
     const topB = [...teamB].sort((a, b) => b.overall - a.overall).slice(0, topN);
     const topSumA = topA.reduce((s, p) => s + p.overall, 0);
@@ -117,58 +125,109 @@ export function scoreBalance(teamA: BalancePlayer[], teamB: BalancePlayer[], con
     const attRatio = strictRatio(zoneSum(teamA, "att"), zoneSum(teamB, "att"));
     const zoneScore = Math.min(defRatio, midRatio, attRatio);
 
-    // 5. Peak talent balance — both teams should have comparable top-end
-    // players in EACH capability, not just comparable sums.
-    // This catches "all the best strikers on one team" without fragile
-    // role-counting logic.
+    // 5. Zone peak balance — both teams should have comparable top-end
+    // players in EACH zone, not just comparable zone totals. This catches
+    // "Greg + Christian both on one team" by checking whether the best
+    // defenders/midfielders/attackers are distributed, not just summed.
     const peakBalance = (() => {
         const topN = Math.max(1, Math.floor(teamA.length / 4));
 
-        const topCapSum = (team: BalancePlayer[], key: CapabilityKey) => {
-            const sorted = [...team].map((p) => p.capabilities[key]).sort((a, b) => b - a);
+        const topZoneSum = (team: BalancePlayer[], zone: "def" | "mid" | "att") => {
+            const sorted = [...team].map((p) => p.zoneEffectiveness[zone]).sort((a, b) => b - a);
             return sorted.slice(0, topN).reduce((s, v) => s + v, 0);
         };
 
-        let worstRatio = 1.0;
-        for (const key of CAPABILITY_KEYS) {
-            const ratio = strictRatio(topCapSum(teamA, key), topCapSum(teamB, key));
-            worstRatio = Math.min(worstRatio, ratio);
-        }
+        const defPeak = strictRatio(topZoneSum(teamA, "def"), topZoneSum(teamB, "def"));
+        const midPeak = strictRatio(topZoneSum(teamA, "mid"), topZoneSum(teamB, "mid"));
+        const attPeak = strictRatio(topZoneSum(teamA, "att"), topZoneSum(teamB, "att"));
 
-        return worstRatio;
+        return Math.min(defPeak, midPeak, attPeak);
     })();
 
-    // 6. Archetype distribution — both teams should have natural attackers
-    // if the player pool contains them. Penalizes splits that stack all
-    // strikers (Target Striker, Inside Forward, Pressing Forward) on one team.
-    const countAttackers = (team: BalancePlayer[]) =>
-        team.filter((p) => !p.isPlaceholder && p.archetype.def.primaryZone === "att").length;
-    const attA = countAttackers(teamA);
-    const attB = countAttackers(teamB);
-    // If 2+ attackers exist and one team has 0: heavy penalty.
-    // If only 1 attacker total: no penalty (can't split).
-    // Otherwise: reward balanced distribution.
-    const archetypeDistribution = attA + attB <= 1 ? 1.0 : attA === 0 || attB === 0 ? 0.6 : strictRatio(attA, attB);
+    // 6. Archetype distribution — both teams should have balanced specialist types.
+    // Counts players by their archetype's declared primaryZone — a crisp signal
+    // that doesn't get compressed by the multi-archetype zone scoring system.
+    // A Winger is always "att", an Anchor is always "def", a Destroyer is "mid".
+    const countByArchetypeZone = (team: BalancePlayer[], zone: "att" | "def" | "mid") =>
+        team.filter((p) => !p.isPlaceholder && p.archetype.def.primaryZone === zone).length;
 
-    // 7. Combine all factors
+    // Distribution penalty: MONOTONIC — 0-N must always be worse than 1-N,
+    // so the algorithm never prefers stacking all specialists on one team
+    // just because the "1-N" strictRatio math was harsher than the "0-N" floor.
+    // Uses raw ratio (not squared) with a floor to avoid over-penalizing.
+    const distributionPenalty = (a: number, b: number) => {
+        if (a + b === 0) return 1.0;
+        if (a === 0 || b === 0) {
+            const other = Math.max(a, b);
+            if (other === 1) return 0.95;
+            return Math.max(0.25, 0.7 - other * 0.1); // 0-2: 0.50, 0-3: 0.40, 0-4: 0.30
+        }
+        const ratio = Math.min(a, b) / Math.max(a, b);
+        return Math.max(0.55, ratio); // 1-2: 0.55, 1-3: 0.55, 2-3: 0.67, 3-3: 1.0
+    };
+
+    const zoneDistribution = (zone: "att" | "def") =>
+        distributionPenalty(countByArchetypeZone(teamA, zone), countByArchetypeZone(teamB, zone));
+
+    // Striker capability — counts players who are mentally and technically
+    // wired to be a team's main attacking threat. Uses a RELATIVE check:
+    // finishing close to or exceeding playmaking = striker-leaning mindset.
+    // Santos and Dylan Soto might have the same finishing value, but Santos'
+    // playmaking towers over his finishing (creator), while Dylan's playmaking
+    // is close (hybrid striker). The ratio captures this naturally.
+    //
+    // Criteria:
+    //   att zone ≥ 70 (attacking context)
+    //   finishing ≥ 60 (absolute floor — can actually finish)
+    //   finishing ≥ playmaking × 0.9 (relative — finishing is their edge)
+    const STRIKER_ZONE_THRESHOLD = 70;
+    const STRIKER_FINISHING_FLOOR = 60;
+    const STRIKER_RELATIVE_RATIO = 0.9;
+    const countStrikerCapable = (team: BalancePlayer[]) =>
+        team.filter(
+            (p) =>
+                !p.isPlaceholder &&
+                p.zoneEffectiveness.att >= STRIKER_ZONE_THRESHOLD &&
+                p.traits.finishing >= STRIKER_FINISHING_FLOOR &&
+                p.traits.finishing >= p.traits.passing * STRIKER_RELATIVE_RATIO
+        ).length;
+    const strikerBalance = distributionPenalty(countStrikerCapable(teamA), countStrikerCapable(teamB));
+
+    // Worst of attacker, defender, and striker-capable distribution — applied
+    // as a MULTIPLIER. Striker balance is weighted tightest because a
+    // mismatch in who can score kills the game more than any other imbalance.
+    // Geometric mean across att/def/striker dimensions (instead of MIN).
+    // MIN capped everything at the worst dimension, killing incentive to fix
+    // others. Geo mean rewards improvement in ANY dimension — the algorithm
+    // can now prefer a swap that balances attackers even if defenders stay 1-2.
+    const archetypeDistribution = (zoneDistribution("att") * zoneDistribution("def") * strikerBalance) ** (1 / 3);
+
+    // 6b. Placeholder distribution — both teams should have similar numbers of
+    // placeholders so real players fill comparable proportions on each side.
+    // A 3-1 split means one team is 30% unknown filler while the other is 10% —
+    // fundamentally uneven regardless of how OVR balances.
+    const placeholdersA = teamA.filter((p) => p.isPlaceholder).length;
+    const placeholdersB = teamB.filter((p) => p.isPlaceholder).length;
+    const placeholderDiff = Math.abs(placeholdersA - placeholdersB);
+    const placeholderBalance = placeholderDiff <= 1 ? 1.0 : Math.max(0.4, 1.0 - (placeholderDiff - 1) * 0.2);
+    // diff 0-1: 1.0, diff 2: 0.8, diff 3: 0.6, diff 4+: 0.4
+
+    // 7. Capability balance — geometric mean of per-dimension ratios.
+    // A moderate additive factor, not a multiplier. A technical-vs-physical
+    // lean creates an interesting game, not a broken split. Only truly degenerate
+    // scenarios (peakBalance, archetypeDistribution) deserve hard multiplier gates.
     const capValues = Object.values(dimensions);
     const capProduct = capValues.reduce((product, v) => product * v, 1.0);
     const capScore = capProduct ** (1 / capValues.length);
 
-    // Weighted composite:
-    //   Overall 30% — total quality parity (the "feels fair" factor)
-    //   Zones 20% — both teams competitive in all areas
-    //   Caps 15% — per-skill balance
-    //   Stars 15% — top talent distributed
-    //   Archetypes 10% — attacker distribution across teams
-    //   Peaks 10% — top individual talent per skill balanced
-    const overall =
-        overallRatio * 0.3 +
-        zoneScore * 0.2 +
-        capScore * 0.15 +
-        starRatio * 0.15 +
-        archetypeDistribution * 0.1 +
-        peakBalance * 0.1;
+    // Weighted composite — additive factors for quality/zones/stars/caps.
+    // peakBalance and archetypeDistribution are multipliers (hard constraints).
+    const additive =
+        overallRatio * weights.overallRatio +
+        zoneScore * weights.zoneScore +
+        starRatio * weights.starRatio +
+        capScore * 0.15;
+    const overall = additive * peakBalance * archetypeDistribution * placeholderBalance;
 
     const allScores = [
         ...capValues,
@@ -280,13 +339,14 @@ function swapSearch(
     initialA: BalancePlayer[],
     initialB: BalancePlayer[],
     config: BalanceConfig,
-    temperature: number = 0
+    temperature: number = 0,
+    weights?: ScoreWeights
 ): SwapSearchResult {
     const teamA = [...initialA];
     const teamB = [...initialB];
     const swaps: SwapRecord[] = [];
 
-    let currentScore = scoreBalance(teamA, teamB, config);
+    let currentScore = scoreBalance(teamA, teamB, config, weights);
     let improved = true;
     let maxPasses = 50;
 
@@ -306,7 +366,7 @@ function swapSearch(
                     isFormationFeasible(teamA, config.feasibilityThreshold) &&
                     isFormationFeasible(teamB, config.feasibilityThreshold)
                 ) {
-                    const candidate = scoreBalance(teamA, teamB, config);
+                    const candidate = scoreBalance(teamA, teamB, config, weights);
                     const delta = candidate.overall - currentScore.overall;
 
                     if (delta > 0.0001) {
@@ -348,7 +408,7 @@ function swapSearch(
 
             const before = currentScore.overall;
             [teamA[pick.i], teamB[pick.j]] = [teamB[pick.j], teamA[pick.i]];
-            currentScore = scoreBalance(teamA, teamB, config);
+            currentScore = scoreBalance(teamA, teamB, config, weights);
 
             swaps.push({
                 playerA: teamA[pick.i].name,
@@ -360,6 +420,67 @@ function swapSearch(
 
             improved = true;
         }
+    }
+
+    // ─── Polish pass: mid-tier lean swaps ───────────────────────────────
+    // After single-swap convergence, look for one final "cherry on top" swap:
+    // similar-quality non-elite players with opposite zone leans. Accepts tiny
+    // score regressions (within 1%) to get cleaner lean distribution.
+    //
+    // Only runs at randomness = 0 style deterministic calls (doesn't need
+    // weights check since weights only affect the evaluation — the pass uses
+    // the same weights as the rest of the run).
+    const ELITE_CUTOFF = 85;
+    const QUALITY_WINDOW = 6;
+    const REGRESSION_TOLERANCE = 0.99;
+
+    // Lean detection via capability profile (not zone scores — those are too
+    // compressed by multi-archetype scoring). Defending cap vs goalThreat cap
+    // gives a much cleaner signal of which direction a player leans.
+    const leanOf = (p: BalancePlayer): "def" | "att" | "mid" => {
+        const defCap = p.capabilities.defending;
+        const attCap = p.capabilities.goalThreat;
+        const gap = defCap - attCap;
+        if (gap >= 10) return "def";
+        if (gap <= -10) return "att";
+        return "mid";
+    };
+
+    const currentOverall = currentScore.overall;
+    let bestLeanSwap: { i: number; j: number; newScore: BalanceScore } | null = null;
+    let bestLeanDelta = -Infinity;
+
+    for (let i = 0; i < teamA.length; i++) {
+        const pA = teamA[i];
+        if (pA.isPlaceholder || pA.overall >= ELITE_CUTOFF) continue;
+        const leanA = leanOf(pA);
+        if (leanA === "mid") continue;
+
+        for (let j = 0; j < teamB.length; j++) {
+            const pB = teamB[j];
+            if (pB.isPlaceholder || pB.overall >= ELITE_CUTOFF) continue;
+            if (Math.abs(pA.overall - pB.overall) > QUALITY_WINDOW) continue;
+            const leanB = leanOf(pB);
+            if (leanB === "mid" || leanB === leanA) continue;
+
+            [teamA[i], teamB[j]] = [teamB[j], teamA[i]];
+            const candidate = scoreBalance(teamA, teamB, config, weights);
+            [teamA[i], teamB[j]] = [teamB[j], teamA[i]];
+
+            // Accept if within tolerance of current score
+            if (candidate.overall >= currentOverall * REGRESSION_TOLERANCE) {
+                const delta = candidate.overall - currentOverall;
+                if (delta > bestLeanDelta) {
+                    bestLeanDelta = delta;
+                    bestLeanSwap = { i, j, newScore: candidate };
+                }
+            }
+        }
+    }
+
+    if (bestLeanSwap) {
+        [teamA[bestLeanSwap.i], teamB[bestLeanSwap.j]] = [teamB[bestLeanSwap.j], teamA[bestLeanSwap.i]];
+        currentScore = bestLeanSwap.newScore;
     }
 
     return { teamA, teamB, score: currentScore, swaps };
@@ -390,50 +511,98 @@ function perturb(
     return { teamA: a, teamB: b };
 }
 
+// ─── Weight Jitter ──────────────────────────────────────────────────────────
+
+/**
+ * Jitter scoring weights by a bounded random amount, then normalize to sum to 1.0.
+ * Each weight is multiplied by (1 ± magnitude), where magnitude controls how far
+ * the weights can drift from their base values.
+ *
+ * At magnitude 0: no jitter (returns base weights).
+ * At magnitude 0.25: each weight can vary by up to ±25%.
+ */
+function jitterWeights(base: ScoreWeights, magnitude: number): ScoreWeights {
+    if (magnitude <= 0) return base;
+
+    const jitter = () => 1.0 + (Math.random() * 2 - 1) * magnitude;
+    const raw = {
+        overallRatio: base.overallRatio * jitter(),
+        zoneScore: base.zoneScore * jitter(),
+        starRatio: base.starRatio * jitter(),
+    };
+
+    const sum = raw.overallRatio + raw.zoneScore + raw.starRatio;
+    return {
+        overallRatio: raw.overallRatio / sum,
+        zoneScore: raw.zoneScore / sum,
+        starRatio: raw.starRatio / sum,
+    };
+}
+
+// ─── Main Loop ──────────────────────────────────────────────────────────────
+
+/**
+ * @param randomness 0 = deterministic (initial generate), up to 1.0 = max variety (5th reshuffle)
+ *   Controls jitter magnitude (0→0.25) and quality floor (100%→97%).
+ *   At 0: no jitter, returns single best result (original behavior).
+ *   At 1: full jitter + random pick from top-N qualifying pool.
+ */
 export function runBalance(
     players: BalancePlayer[],
-    config: BalanceConfig
+    config: BalanceConfig,
+    randomness = 0
 ): { teamA: BalancePlayer[]; teamB: BalancePlayer[]; score: BalanceScore; audit: SwapRecord[] } {
     const { runs, perturbations } = VARIATION_RUNS[config.variation];
+    const baseWeights = config.scoreWeights ?? DEFAULT_SCORE_WEIGHTS;
+    const jitterMagnitude = 0.25 * randomness;
+    const qualityFloor = 1.0 - 0.03 * randomness;
 
-    let bestResult: SwapSearchResult | null = null;
-
-    for (let i = 0; i < runs; i++) {
-        // Phase 1: Greedy seed
-        // Run 0: deterministic (baseline)
-        // Runs 1-39: moderate shuffle (intensity 1)
-        // Runs 40-79: wider shuffle (intensity 2)
-        const intensity = i === 0 ? 0 : 1 + Math.floor(i / 40);
-        const seed = greedySeed(players, intensity);
-
-        // Phase 3: Perturb on restarts
-        const { teamA, teamB } = i === 0 ? seed : perturb(seed.teamA, seed.teamB, perturbations);
-
-        // Phase 2: Swap search
-        // Run 0: deterministic (temperature 0) — algorithm's best answer
-        // Restarts: increasing temperature for variety
-        const temperature = i === 0 ? 0 : 0.3 + (i / runs) * 0.4;
-        const result = swapSearch(teamA, teamB, config, temperature);
-
-        if (!bestResult || result.score.overall > bestResult.score.overall) {
-            bestResult = result;
-        }
+    interface PoolEntry extends SwapSearchResult {
+        baseScore: BalanceScore;
     }
 
-    if (!bestResult) {
-        throw new Error("Balance algorithm produced no result");
+    const pool: PoolEntry[] = [];
+
+    for (let i = 0; i < runs; i++) {
+        // Jitter weights per iteration (run 0 always uses base weights)
+        const weights = i === 0 || randomness === 0 ? baseWeights : jitterWeights(baseWeights, jitterMagnitude);
+
+        const intensity = i === 0 ? 0 : 1 + Math.floor(i / 40);
+        const seed = greedySeed(players, intensity);
+        const { teamA, teamB } = i === 0 ? seed : perturb(seed.teamA, seed.teamB, perturbations);
+        const temperature = i === 0 ? 0 : 0.3 + (i / runs) * 0.4;
+        const result = swapSearch(teamA, teamB, config, temperature, weights);
+
+        // Re-score with BASE weights for consistent quality comparison
+        const baseScore = scoreBalance(result.teamA, result.teamB, config, baseWeights);
+        pool.push({ ...result, baseScore });
+    }
+
+    // Selection: at randomness 0, just pick the best. Otherwise pick randomly
+    // from results within the quality floor of the best.
+    pool.sort((a, b) => b.baseScore.overall - a.baseScore.overall);
+
+    let picked: PoolEntry;
+    if (randomness === 0 || pool.length <= 1) {
+        picked = pool[0];
+    } else {
+        const threshold = pool[0].baseScore.overall * qualityFloor;
+        const qualifying = pool.filter((r) => r.baseScore.overall >= threshold);
+        picked = qualifying[Math.floor(Math.random() * qualifying.length)];
     }
 
     logger.debug(
-        `Balance complete: score=${bestResult.score.overall.toFixed(4)}, ` +
-            `worst=${bestResult.score.worst.toFixed(4)}, ` +
-            `swaps=${bestResult.swaps.length}, runs=${runs}`
+        `Balance complete: score=${picked.baseScore.overall.toFixed(4)}, ` +
+            `worst=${picked.baseScore.worst.toFixed(4)}, ` +
+            `swaps=${picked.swaps.length}, runs=${runs}, ` +
+            `randomness=${randomness.toFixed(1)}, pool=${pool.length}, ` +
+            `qualifying=${randomness > 0 ? pool.filter((r) => r.baseScore.overall >= pool[0].baseScore.overall * qualityFloor).length : 1}`
     );
 
     return {
-        teamA: bestResult.teamA,
-        teamB: bestResult.teamB,
-        score: bestResult.score,
-        audit: bestResult.swaps,
+        teamA: picked.teamA,
+        teamB: picked.teamB,
+        score: picked.baseScore,
+        audit: picked.swaps,
     };
 }

@@ -8,7 +8,7 @@ import Panel from "@/components/shared/panel";
 import { ActionBarTwoColumn } from "@/components/ui/action-bar";
 import { Button } from "@/components/ui/button";
 import { useGame } from "@/context/game-provider";
-import { usePlayers } from "@/hooks/use-players";
+
 import { cn } from "@/lib/utils";
 import { encodeStateToURL } from "@/lib/utils/url-state";
 
@@ -18,12 +18,10 @@ interface GameProps {
 }
 
 const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
-    const { clearGame, gamePlayers, currentFormation, generateTeams } = useGame();
-    const { data: players = {} } = usePlayers();
+    const { clearGame, gamePlayers, currentFormation, reshuffleTeams, shuffleCount } = useGame();
     const navigate = useNavigate();
 
     const hasTeams = Object.keys(gamePlayers).length > 0;
-    const playersArr = Object.values(players);
 
     const handleShare = async () => {
         try {
@@ -43,22 +41,12 @@ const Game: React.FC<GameProps> = ({ isCompact, playerSize }) => {
     };
 
     const handleRegenerate = () => {
-        const realPlayers: typeof playersArr = [];
-        let placeholderCount = 0;
-
-        for (const [id, gp] of Object.entries(gamePlayers)) {
-            if (gp.isGuest) {
-                placeholderCount++;
-            } else if (playersArr.some((p) => p.id === id)) {
-                const player = playersArr.find((p) => p.id === id);
-                if (player) realPlayers.push(player);
-            }
-        }
-
-        if (realPlayers.length > 0 || placeholderCount > 0) {
-            generateTeams(realPlayers, placeholderCount);
+        if (Object.keys(gamePlayers).length > 0) {
+            reshuffleTeams();
+            const nextShuffle = shuffleCount + 1;
+            const randomness = Math.min(1.0, nextShuffle / 5);
             toast.success("Teams reshuffled!", {
-                description: "New balanced teams from the same players",
+                description: `Reshuffle #${nextShuffle} (variety: ${Math.round(randomness * 100)}%)`,
                 duration: 2000,
                 icon: "🔄",
             });
