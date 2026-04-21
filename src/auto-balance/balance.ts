@@ -399,6 +399,67 @@ function swapSearch(
         }
     }
 
+    // ─── Polish pass: mid-tier lean swaps ───────────────────────────────
+    // After single-swap convergence, look for one final "cherry on top" swap:
+    // similar-quality non-elite players with opposite zone leans. Accepts tiny
+    // score regressions (within 1%) to get cleaner lean distribution.
+    //
+    // Only runs at randomness = 0 style deterministic calls (doesn't need
+    // weights check since weights only affect the evaluation — the pass uses
+    // the same weights as the rest of the run).
+    const ELITE_CUTOFF = 85;
+    const QUALITY_WINDOW = 6;
+    const REGRESSION_TOLERANCE = 0.99;
+
+    // Lean detection via capability profile (not zone scores — those are too
+    // compressed by multi-archetype scoring). Defending cap vs goalThreat cap
+    // gives a much cleaner signal of which direction a player leans.
+    const leanOf = (p: BalancePlayer): "def" | "att" | "mid" => {
+        const defCap = p.capabilities.defending;
+        const attCap = p.capabilities.goalThreat;
+        const gap = defCap - attCap;
+        if (gap >= 10) return "def";
+        if (gap <= -10) return "att";
+        return "mid";
+    };
+
+    const currentOverall = currentScore.overall;
+    let bestLeanSwap: { i: number; j: number; newScore: BalanceScore } | null = null;
+    let bestLeanDelta = -Infinity;
+
+    for (let i = 0; i < teamA.length; i++) {
+        const pA = teamA[i];
+        if (pA.isPlaceholder || pA.overall >= ELITE_CUTOFF) continue;
+        const leanA = leanOf(pA);
+        if (leanA === "mid") continue;
+
+        for (let j = 0; j < teamB.length; j++) {
+            const pB = teamB[j];
+            if (pB.isPlaceholder || pB.overall >= ELITE_CUTOFF) continue;
+            if (Math.abs(pA.overall - pB.overall) > QUALITY_WINDOW) continue;
+            const leanB = leanOf(pB);
+            if (leanB === "mid" || leanB === leanA) continue;
+
+            [teamA[i], teamB[j]] = [teamB[j], teamA[i]];
+            const candidate = scoreBalance(teamA, teamB, config, weights);
+            [teamA[i], teamB[j]] = [teamB[j], teamA[i]];
+
+            // Accept if within tolerance of current score
+            if (candidate.overall >= currentOverall * REGRESSION_TOLERANCE) {
+                const delta = candidate.overall - currentOverall;
+                if (delta > bestLeanDelta) {
+                    bestLeanDelta = delta;
+                    bestLeanSwap = { i, j, newScore: candidate };
+                }
+            }
+        }
+    }
+
+    if (bestLeanSwap) {
+        [teamA[bestLeanSwap.i], teamB[bestLeanSwap.j]] = [teamB[bestLeanSwap.j], teamA[bestLeanSwap.i]];
+        currentScore = bestLeanSwap.newScore;
+    }
+
     return { teamA, teamB, score: currentScore, swaps };
 }
 
