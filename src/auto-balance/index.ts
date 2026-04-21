@@ -36,6 +36,7 @@ function toBalancePlayer(input: PlayerInput): BalancePlayer {
     return {
         id: input.id,
         name: input.name,
+        traits: input.traits,
         capabilities,
         archetype: profile.primary,
         zoneEffectiveness: profile.zones,
@@ -49,12 +50,15 @@ function toBalancePlayer(input: PlayerInput): BalancePlayer {
  *
  * @param players - Array of players with traits (10-26 players)
  * @param variation - How much randomness: "low" (deterministic), "medium", "high"
+ * @param randomness - Progressive variety: 0 = deterministic (initial generate),
+ *   ramps to 1.0 = max variety (5th reshuffle). Controls weight jitter + pool selection.
  * @param customConfig - Optional overrides for balance configuration
  * @returns Balanced teams with formations, scores, and audit trail
  */
 export function balanceTeams(
     players: PlayerInput[],
     variation: Variation = "medium",
+    randomness = 0,
     customConfig?: Partial<BalanceConfig>
 ): BalanceResult {
     if (players.length < MIN_PLAYERS) {
@@ -79,8 +83,8 @@ export function balanceTeams(
     // Convert to balance-ready format
     const balancePlayers = players.map(toBalancePlayer);
 
-    // Phase 1-3: Balance teams
-    const { teamA, teamB, score, audit } = runBalance(balancePlayers, config);
+    // Phase 1-3: Balance teams (randomness controls progressive variety on reshuffles)
+    const { teamA, teamB, score, audit } = runBalance(balancePlayers, config, randomness);
 
     // Phase 4: Assign formations and positions
     const { a, b, formationA, formationB } = assignFormations(teamA, teamB);
