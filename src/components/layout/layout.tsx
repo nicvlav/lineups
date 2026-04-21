@@ -56,7 +56,12 @@ const LayoutContent = () => {
                 )}
 
                 {/* Main content area */}
-                <main className={cn("flex-1 overflow-auto", !isAuthRoute && isCompact && "pb-16")}>
+                <main
+                    className={cn(
+                        "flex-1 overflow-auto",
+                        !isAuthRoute && isCompact && "pb-[calc(4rem+env(safe-area-inset-bottom))]"
+                    )}
+                >
                     <Routes>
                         {/* Auth routes - accessible to all */}
                         <Route path="auth/sign-in" element={<SignInPage />} />

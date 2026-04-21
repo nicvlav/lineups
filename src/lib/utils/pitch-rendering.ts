@@ -73,6 +73,11 @@ export function getPointForPosition(
         }
     }
 
+    // Drop DM deeper when CM is also on the pitch — otherwise DM/CM bunch up
+    if (formation && position.shortName === "DM" && formation.positions.CM > 0) {
+        yPosition = 0.55;
+    }
+
     return {
         x: getXForPlayerPosition(position, positionIndex, numPositionEntries),
         y: yPosition,
