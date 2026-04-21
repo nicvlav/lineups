@@ -37,12 +37,13 @@ export type ArchetypeId =
     | "deep_playmaker"
     | "box_to_box"
     | "maestro"
-    | "pace_merchant"
+    | "speedster"
     | "winger"
     | "inside_forward"
     | "target_striker"
     | "playmaker"
     | "pressing_forward"
+    | "number_9"
     | "versatile";
 
 export interface ArchetypeDef {
@@ -213,8 +214,8 @@ export const ARCHETYPES: ArchetypeDef[] = [
             t.shooting * 0.1,
     },
     {
-        id: "pace_merchant",
-        displayName: "Pace Merchant",
+        id: "speedster",
+        displayName: "Speedster",
         primaryZone: "att",
         zoneAffinity: { def: 0.45, mid: 0.7, att: 1.0 },
         positionPreference: ["WR", "WM", "ST"],
@@ -251,7 +252,7 @@ export const ARCHETYPES: ArchetypeDef[] = [
         displayName: "Inside Forward",
         primaryZone: "att",
         zoneAffinity: { def: 0.45, mid: 0.8, att: 1.0 },
-        positionPreference: ["WR", "ST", "AM"],
+        positionPreference: ["ST", "WR", "AM"],
         scale: 1.0,
         detect: (t) => t.speed >= 70 && t.shooting >= 70 && t.dribbling >= 70 && t.attIntent >= 70 && t.finishing >= 60,
         quality: (t) =>
